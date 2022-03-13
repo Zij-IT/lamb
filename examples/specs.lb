@@ -1,0 +1,37 @@
+
+-- Lamb Idea:
+
+---- SIMPLE TYPES:
+-- * string  | "string"
+-- * char    | 'c'
+-- * atom    | :my_atom   // anonymous enum
+-- * int     | 1
+-- * real    | 1.0
+-- * bool    | true
+
+---- COMPOUND TYPES:
+-- * tuples  | (type1, type2, type3)
+-- * tables  | { key: value, key: value }
+
+---- FIRST: Lua with different syntax + atoms
+-- * Dynamically and strongly typed
+-- * Functional
+
+---- NEXT: Lua with different syntax
+-- * Pattern Matching
+-- * Mutationless... (?)
+
+---- Keywords:
+-- * true / false
+-- * for / in / break / continue / return
+-- * if / elif / else
+-- * while / loop
+-- * import, export
+
+---- Operators:
+-- * Arithmatic: + - * / %
+-- * Bitwise:    & | ^ ~
+-- * Logical:    && || ~
+-- * Comparison: > >= < <= == ~=
+-- * Misc:       ++ :=
+

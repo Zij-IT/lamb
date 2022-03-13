@@ -1,0 +1,13 @@
+x := 3
+
+add_one := x -> {
+    x + 1
+}
+
+add_two_vars := x, y -> {
+    y := if cond { 3 } else { 4 }
+}
+
+y := add_two_vars(3, 3)
+
+assert(y == 6)
