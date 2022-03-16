@@ -4,7 +4,6 @@
 ---- SIMPLE TYPES:
 -- * string  | "string"
 -- * char    | 'c'
--- * atom    | :my_atom   // anonymous enum
 -- * int     | 1
 -- * real    | 1.0
 -- * bool    | true
