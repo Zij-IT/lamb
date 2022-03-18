@@ -1,11 +1,12 @@
 use super::ast;
 use super::token::Token;
+use super::error::ParseError;
 
 use chumsky::prelude::*;
 
-trait LambParser<T> = Parser<Token, T, Error = Simple<Token>> + Clone;
+trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone;
 
-pub fn parse(toks: &[Token]) -> Result<Vec<ast::Expr>, Vec<Simple<Token>>> {
+pub fn parse(toks: &[Token]) -> Result<Vec<ast::Expr>, Vec<ParseError>> {
     parse_expr().repeated().then_ignore(end()).parse(toks)
 }
 
@@ -158,7 +159,8 @@ fn parse_literal() -> impl LambParser<ast::Literal> {
             Token::Bool(b) => ast::Literal::Bool(b),
             Token::Int(i) => ast::Literal::Int(i.parse().unwrap()),
             Token::Real(r) => ast::Literal::Real(r.parse().unwrap()),
-            _ => return Err(Simple::custom(span, "Expected literal.")),
+            // TODO: Figure out what to make the 'expected' Literal
+            _ => return Err(ParseError::expected_input_found(span, [], Some(tok))),
         })
     })
 }
@@ -167,7 +169,8 @@ fn parse_raw_ident() -> impl LambParser<ast::Ident> {
     filter_map(|span, tok: Token| {
         Ok(match tok {
             Token::Ident(s) => ast::Ident::new(s),
-            _ => return Err(Simple::custom(span, "Expected unary operator.")),
+            // TODO: Figure out what to make the 'expected' Ident
+            _ => return Err(ParseError::expected_input_found(span, [], Some(tok))),
         })
     })
 }

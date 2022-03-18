@@ -1,9 +1,10 @@
+use super::error::LexError;
 use super::span::Spanned;
 use super::token::Token;
 
 use chumsky::prelude::*;
 
-pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Simple<char>>> {
+pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<LexError>> {
     let reals = lex_real();
     let ints = lex_int();
     let chars = lex_char();
@@ -18,7 +19,12 @@ pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Simple<char>>> {
         choice((
             operators, chars, control, reals, ints, strings, keywords, misc,
         ))
-        .or(any().map(Token::Error))
+        .or(any()
+            .validate(|x, span, emit| {
+                emit(LexError::expected_input_found(span, None, Some(x)));
+                x
+            })
+            .map(Token::Error))
         .map_with_span(Spanned::new)
         .padded()
         .recover_with(skip_then_retry_until([])),
@@ -27,7 +33,7 @@ pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Simple<char>>> {
     token.repeated().padded().then_ignore(end()).parse(src)
 }
 
-fn lex_real() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_real() -> impl Parser<char, Token, Error = LexError> + Clone {
     text::int(10)
         .chain(just('.'))
         .chain::<char, _, _>(text::digits(10))
@@ -35,11 +41,11 @@ fn lex_real() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
         .map(Token::Real)
 }
 
-fn lex_int() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_int() -> impl Parser<char, Token, Error = LexError> + Clone {
     text::int(10).map(Token::Int)
 }
 
-fn escape() -> impl Parser<char, char, Error = Simple<char>> + Clone {
+fn escape() -> impl Parser<char, char, Error = LexError> + Clone {
     just('\\').ignore_then(
         just('\\')
             .or(just('/'))
@@ -53,7 +59,7 @@ fn escape() -> impl Parser<char, char, Error = Simple<char>> + Clone {
     )
 }
 
-fn lex_char() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_char() -> impl Parser<char, Token, Error = LexError> + Clone {
     just('\'')
         .ignore_then(filter(|c| *c != '\\' && *c != '\'').or(escape()))
         .then_ignore(just('\''))
@@ -61,7 +67,7 @@ fn lex_char() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
         .labelled("Char")
 }
 
-fn lex_string() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_string() -> impl Parser<char, Token, Error = LexError> + Clone {
     just('"')
         .ignore_then(filter(|c| *c != '\\' && *c != '"').or(escape()).repeated())
         .then_ignore(just('"'))
@@ -70,7 +76,7 @@ fn lex_string() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
         .labelled("String")
 }
 
-fn lex_keywords() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_keywords() -> impl Parser<char, Token, Error = LexError> + Clone {
     text::ident().map(|s: String| match s.as_str() {
         "true" => Token::Bool(true),
         "false" => Token::Bool(false),
@@ -91,7 +97,7 @@ fn lex_keywords() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
     })
 }
 
-fn lex_control() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_control() -> impl Parser<char, Token, Error = LexError> + Clone {
     choice((
         just('(').to(Token::ParenOpen),
         just(')').to(Token::ParenClose),
@@ -102,7 +108,7 @@ fn lex_control() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
     ))
 }
 
-fn lex_operators() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_operators() -> impl Parser<char, Token, Error = LexError> + Clone {
     choice((
         just("->").to(Token::Arrow),
         just(":=").to(Token::Assign),
@@ -127,10 +133,10 @@ fn lex_operators() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
     ))
 }
 
-fn lex_misc() -> impl Parser<char, Token, Error = Simple<char>> + Clone {
+fn lex_misc() -> impl Parser<char, Token, Error = LexError> + Clone {
     choice((just(',').to(Token::Comma), just(':').to(Token::Colon)))
 }
 
-fn lex_comments() -> impl Parser<char, (), Error = Simple<char>> + Clone {
+fn lex_comments() -> impl Parser<char, (), Error = LexError> + Clone {
     just("--").then(take_until(text::newline())).ignored()
 }
