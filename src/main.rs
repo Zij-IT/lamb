@@ -4,8 +4,10 @@
 use std::io::Write;
 
 mod ast;
+mod error;
 mod lexer;
 mod parser;
+mod span;
 mod token;
 
 fn main() {
@@ -28,7 +30,7 @@ fn main() {
 fn process_input(src: &str) -> Result<(), ()> {
     let tokens = ok_and_print(lexer::lex(src)).map(|x| {
         x.into_iter()
-            .map(lexer::Spanned::into_inner)
+            .map(span::Spanned::into_inner)
             .collect::<Vec<_>>()
     })?;
 

@@ -1,16 +1,7 @@
+use super::span::Spanned;
 use super::token::Token;
+
 use chumsky::prelude::*;
-use std::fmt::Debug;
-use std::ops::Range;
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Spanned<T: Clone + Debug + PartialEq>(T, Range<usize>);
-
-impl<T: Clone + Debug + PartialEq> Spanned<T> {
-    pub fn into_inner(self) -> T {
-        self.0
-    }
-}
 
 pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Simple<char>>> {
     let reals = lex_real();
@@ -28,7 +19,7 @@ pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<Simple<char>>> {
             operators, chars, control, reals, ints, strings, keywords, misc,
         ))
         .or(any().map(Token::Error))
-        .map_with_span(Spanned)
+        .map_with_span(Spanned::new)
         .padded()
         .recover_with(skip_then_retry_until([])),
     );
