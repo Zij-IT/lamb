@@ -1,5 +1,5 @@
 use super::ast;
-use super::error::ParseError;
+use super::error::{ParseError, SyntaxPattern};
 use super::token::Token;
 
 use chumsky::prelude::*;
@@ -160,7 +160,13 @@ fn parse_literal() -> impl LambParser<ast::Literal> {
             Token::Int(i) => ast::Literal::Int(i.parse().unwrap()),
             Token::Real(r) => ast::Literal::Real(r.parse().unwrap()),
             // TODO: Figure out what to make the 'expected' Literal
-            _ => return Err(ParseError::expected_input_found(span, [], Some(tok))),
+            _ => {
+                return Err(ParseError::expected_input_found(
+                    span,
+                    [Some(SyntaxPattern::Literal)],
+                    Some(SyntaxPattern::Token(tok)),
+                ))
+            }
         })
     })
 }
@@ -170,7 +176,13 @@ fn parse_raw_ident() -> impl LambParser<ast::Ident> {
         Ok(match tok {
             Token::Ident(s) => ast::Ident::new(s),
             // TODO: Figure out what to make the 'expected' Ident
-            _ => return Err(ParseError::expected_input_found(span, [], Some(tok))),
+            _ => {
+                return Err(ParseError::expected_input_found(
+                    span,
+                    [Some(SyntaxPattern::Ident)],
+                    Some(SyntaxPattern::Token(tok)),
+                ))
+            }
         })
     })
 }

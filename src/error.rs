@@ -1,71 +1,50 @@
-#![allow(clippy::module_name_repetitions)]
-
 use std::collections::HashSet;
+use std::hash::Hash;
 use std::ops::Range;
+
+use ariadne::{Color, Fmt, Label, Report, ReportKind, Source, Span};
 
 use super::token::Token;
 
-pub type LexError = SyntaxError<char>;
-pub type ParseError = SyntaxError<Token>;
-
-pub trait ErrorElement = std::hash::Hash + std::cmp::Eq + std::fmt::Display;
-
 #[derive(Debug, Clone)]
-pub enum ErrorKind<T> {
-    UnexpectedEnd,
-    Unexpected { found: Option<T> },
+pub enum SyntaxError {
+    ParseError(ParseError),
+    LexError(LexError),
 }
 
-#[derive(Debug, Clone)]
-pub struct SyntaxError<T: ErrorElement> {
-    kind: ErrorKind<T>,
-    span: Range<usize>,
-    expected: HashSet<Option<T>>,
-    label: Option<&'static str>,
+impl SyntaxError {
+    pub fn eprint(&self, src: &str) -> std::io::Result<()> {
+        match self {
+            Self::ParseError(p) => p.eprint(src),
+            Self::LexError(l) => l.eprint(src),
+        }
+    }
 }
 
-impl<T: ErrorElement> SyntaxError<T> {
+impl From<LexError> for SyntaxError {
+    fn from(l: LexError) -> Self {
+        Self::LexError(l)
+    }
+}
+
+impl From<ParseError> for SyntaxError {
+    fn from(p: ParseError) -> Self {
+        Self::ParseError(p)
+    }
+}
+
+// --- LEX ERROR --- {
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LexError(Details<char>);
+
+impl LexError {
     pub fn eprint(&self, sample: &str) -> std::io::Result<()> {
-        use ariadne::{Color, Fmt, Label, Report, ReportKind, Source, Span};
-
-        let expectations = {
-            let expected_end = self.expected.contains(&None) || self.expected.is_empty();
-
-            let mut expectations = self
-                .expected
-                .iter()
-                .filter_map(|x| {
-                    x.as_ref()
-                        .map(|x| x.to_string().fg(Color::Blue).to_string())
-                })
-                .collect::<Vec<String>>();
-
-            if expected_end {
-                expectations.push("the end of the expression".to_string());
+        let msg = match self.0.kind {
+            Kind::Unexpected { found: Some(t) } => {
+                format!("Character not recognized by Lamb: '{}'", t.fg(Color::Red))
             }
-
-            expectations.join(", ")
-        };
-
-        let msg = match &self.kind {
-            ErrorKind::UnexpectedEnd => {
-                format!("Unexpected end of source")
-            }
-            ErrorKind::Unexpected { found } => {
-                let base = format!("Expected {}", expectations);
-                if let Some(found) = found {
-                    format!("{}, but found '{}'", base, found.to_string().fg(Color::Red))
-                } else {
-                    base
-                }
-            }
-        };
-
-        let label = match &self.kind {
-            ErrorKind::UnexpectedEnd => String::from("End of input"),
-            ErrorKind::Unexpected { .. } => {
-                format!("Expected {}", expectations)
-            }
+            _ => unreachable!("Constructed invalid LexError"),
         };
 
         Report::build(ReportKind::Error, (), self.start())
@@ -74,14 +53,53 @@ impl<T: ErrorElement> SyntaxError<T> {
             .with_label(
                 Label::new(self.start()..self.end())
                     .with_color(Color::Red)
-                    .with_message(label),
+                    .with_message("This character has no meaning."),
             )
             .finish()
             .eprint(Source::from(sample))
     }
 }
 
-impl<T: ErrorElement> ariadne::Span for SyntaxError<T> {
+impl chumsky::Error<char> for LexError {
+    type Span = Range<usize>;
+    type Label = &'static str;
+
+    fn expected_input_found<Iter: IntoIterator<Item = Option<char>>>(
+        span: Self::Span,
+        expected: Iter,
+        found: Option<char>,
+    ) -> Self {
+        Self(Details {
+            span,
+            expected: expected.into_iter().collect(),
+            kind: found.map_or(Kind::UnexpectedEnd, |found| Kind::Unexpected {
+                found: Some(found),
+            }),
+            label: None,
+        })
+    }
+
+    fn with_label(self, label: Self::Label) -> Self {
+        Self(Details {
+            label: Some(label),
+            ..self.0
+        })
+    }
+
+    fn merge(self, other: Self) -> Self {
+        Self(Details {
+            expected: self
+                .0
+                .expected
+                .into_iter()
+                .chain(other.0.expected.into_iter())
+                .collect(),
+            ..self.0
+        })
+    }
+}
+
+impl ariadne::Span for LexError {
     type SourceId = ();
 
     fn source(&self) -> &Self::SourceId {
@@ -89,15 +107,134 @@ impl<T: ErrorElement> ariadne::Span for SyntaxError<T> {
     }
 
     fn start(&self) -> usize {
-        self.span.start
+        self.0.span.start
     }
 
     fn end(&self) -> usize {
-        self.span.end
+        self.0.span.end
     }
 }
 
-impl<T: ErrorElement> chumsky::Error<T> for SyntaxError<T> {
+// --- LEX ERROR --- }
+// --- PARSE ERROR --- {
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SyntaxPattern {
+    Token(Token),
+    Ident,
+    Literal,
+}
+
+impl SyntaxPattern {
+    pub fn is_operator(&self) -> bool {
+        match self {
+            SyntaxPattern::Ident => false,
+            SyntaxPattern::Literal => false,
+            SyntaxPattern::Token(t) => t.is_operator(),
+        }
+    }
+}
+
+impl std::fmt::Display for SyntaxPattern {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Literal => write!(f, "literal"),
+            Self::Ident => write!(f, "identifier"),
+            Self::Token(tok) => write!(f, "{}", tok),
+        }
+    }
+}
+
+impl From<Token> for SyntaxPattern {
+    fn from(t: Token) -> Self {
+        Self::Token(t)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParseError(Details<SyntaxPattern>);
+
+impl ParseError {
+    pub fn eprint(&self, sample: &str) -> std::io::Result<()> {
+        let expectations = self.expectations_as_string();
+        let msg = match &self.0.kind {
+            Kind::Unexpected { found: Some(t) } => {
+                format!(
+                    "Expected {}, but found '{}'",
+                    expectations,
+                    t.to_string().fg(Color::Red)
+                )
+            }
+            Kind::Unexpected { .. } => {
+                format!("Expected {}", expectations)
+            }
+            Kind::UnexpectedEnd => {
+                format!("Unexpected end of input")
+            }
+        };
+
+        Report::build(ReportKind::Error, (), self.start())
+            .with_code("ES01")
+            .with_message(msg)
+            .with_label(
+                Label::new(self.start()..self.end())
+                    .with_color(Color::Red)
+                    .with_message(""),
+            )
+            .finish()
+            .eprint(Source::from(sample))
+    }
+
+    fn expects_operator(&self) -> bool {
+        self.0
+            .expected
+            .iter()
+            .any(|x| x.as_ref().map_or(false, |inner| inner.is_operator()))
+    }
+
+    fn expectations_as_string(&self) -> String {
+        let mut msg = String::new();
+
+        let early_end = self.0.expected.contains(&None) || self.0.expected.is_empty();
+        let wants_op = self.expects_operator();
+
+        let mut expectations = self
+            .0
+            .expected
+            .iter()
+            .filter_map(|x| x.as_ref())
+            .filter(|x| !x.is_operator())
+            .map(|x| format!("'{}'", x.to_string().fg(Color::Blue)))
+            .collect::<Vec<String>>();
+
+        expectations.sort_by(|a, b| a.len().cmp(&b.len()));
+
+        match expectations.len() {
+            0 => {}
+            1 => msg.push_str("a "),
+            _ => msg.push_str("one of "),
+        }
+
+        msg.push_str(&expectations.join(", "));
+
+        // 2 § 2;
+
+        if wants_op {
+            msg.push_str(", or an operator");
+        }
+
+        if early_end {
+            msg.push_str(", or the end of the expression");
+        }
+
+        msg
+    }
+}
+
+impl<T> chumsky::Error<T> for ParseError
+where
+    T: Into<SyntaxPattern>,
+{
     type Span = Range<usize>;
     type Label = &'static str;
 
@@ -106,31 +243,64 @@ impl<T: ErrorElement> chumsky::Error<T> for SyntaxError<T> {
         expected: Iter,
         found: Option<T>,
     ) -> Self {
-        Self {
+        Self(Details {
             span,
-            expected: expected.into_iter().collect(),
-            kind: found.map_or(ErrorKind::UnexpectedEnd, |found| ErrorKind::Unexpected {
-                found: Some(found),
+            expected: expected.into_iter().map(|x| x.map(Into::into)).collect(),
+            kind: found.map_or(Kind::UnexpectedEnd, |found| Kind::Unexpected {
+                found: Some(found.into()),
             }),
             label: None,
-        }
+        })
     }
 
     fn with_label(self, label: Self::Label) -> Self {
-        Self {
+        Self(Details {
             label: Some(label),
-            ..self
-        }
+            ..self.0
+        })
     }
 
     fn merge(self, other: Self) -> Self {
-        Self {
+        Self(Details {
             expected: self
+                .0
                 .expected
                 .into_iter()
-                .chain(other.expected.into_iter())
+                .chain(other.0.expected.into_iter())
                 .collect(),
-            ..self
-        }
+            ..self.0
+        })
     }
+}
+
+impl ariadne::Span for ParseError {
+    type SourceId = ();
+
+    fn source(&self) -> &Self::SourceId {
+        todo!("Syntax Errors are not connected to a source, but to a magical range.")
+    }
+
+    fn start(&self) -> usize {
+        self.0.span.start
+    }
+
+    fn end(&self) -> usize {
+        self.0.span.end
+    }
+}
+
+// --- PARSE ERROR --- }
+
+#[derive(Debug, Clone, PartialEq)]
+enum Kind<T> {
+    UnexpectedEnd,
+    Unexpected { found: Option<T> },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Details<T: Hash + PartialEq + Eq> {
+    kind: Kind<T>,
+    span: Range<usize>,
+    expected: HashSet<Option<T>>,
+    label: Option<&'static str>,
 }

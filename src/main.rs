@@ -13,7 +13,6 @@ fn main() {
     let sample_src = "../examples/errors.lb";
 
     let _res = ast_from_source(sample, sample_src);
-
 }
 
 fn ast_from_source(src_code: &str, _src_name: &str) -> Result<Vec<ast::Expr>, ()> {

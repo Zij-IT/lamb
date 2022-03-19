@@ -63,6 +63,32 @@ pub enum Token {
     Error(char),
 }
 
+impl Token {
+    pub fn is_operator(&self) -> bool {
+        matches!(
+            self,
+            Self::Plus
+                | Self::Minus
+                | Self::Mul
+                | Self::Div
+                | Self::Rem
+                | Self::BitAnd
+                | Self::BitOr
+                | Self::BitXor
+                | Self::LogAnd
+                | Self::LogOr
+                | Self::Lt
+                | Self::Gt
+                | Self::Le
+                | Self::Ge
+                | Self::EqEq
+                | Self::NotEq
+                | Self::Not
+                | Self::Concat
+        )
+    }
+}
+
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[allow(clippy::match_same_arms)]
