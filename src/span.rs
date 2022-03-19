@@ -9,6 +9,10 @@ impl<T: Clone + Debug + PartialEq> Spanned<T> {
         Self(item, span)
     }
 
+    pub fn into_tuple(self) -> (T, Range<usize>) {
+        (self.0, self.1)
+    }
+
     pub fn into_inner(self) -> T {
         self.0
     }
