@@ -1,8 +1,6 @@
 #![warn(clippy::pedantic)]
 #![feature(trait_alias)]
 
-use std::io::Write;
-
 mod ast;
 mod error;
 mod lexer;
@@ -11,6 +9,12 @@ mod span;
 mod token;
 
 fn main() {
+    repl();
+}
+
+fn repl() {
+    use std::io::Write;
+
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
     let mut buffer = String::new();
