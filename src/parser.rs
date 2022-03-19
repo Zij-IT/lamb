@@ -1,13 +1,13 @@
 use super::ast;
-use super::token::Token;
 use super::error::ParseError;
+use super::token::Token;
 
 use chumsky::prelude::*;
 
-trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone;
+pub trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone;
 
-pub fn parse(toks: &[Token]) -> Result<Vec<ast::Expr>, Vec<ParseError>> {
-    parse_expr().repeated().then_ignore(end()).parse(toks)
+pub fn parser() -> impl LambParser<Vec<ast::Expr>> {
+    parse_expr().repeated().then_ignore(end())
 }
 
 // TODO: Refactor this... somehow...

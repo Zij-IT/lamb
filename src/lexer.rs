@@ -4,7 +4,7 @@ use super::token::Token;
 
 use chumsky::prelude::*;
 
-pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<LexError>> {
+pub fn lexer() -> impl Parser<char, Vec<Spanned<Token>>, Error = LexError> + Clone {
     let reals = lex_real();
     let ints = lex_int();
     let chars = lex_char();
@@ -30,7 +30,7 @@ pub fn lex(src: &str) -> Result<Vec<Spanned<Token>>, Vec<LexError>> {
         .recover_with(skip_then_retry_until([])),
     );
 
-    token.repeated().padded().then_ignore(end()).parse(src)
+    token.repeated().padded().then_ignore(end())
 }
 
 fn lex_real() -> impl Parser<char, Token, Error = LexError> + Clone {
