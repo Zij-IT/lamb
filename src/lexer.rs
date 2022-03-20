@@ -15,22 +15,35 @@ pub fn lexer() -> impl Parser<char, Vec<Spanned<Token>>, Error = LexError> + Clo
     let comments = lex_comments();
     let misc = lex_misc();
 
-    let token = comments.or_not().ignore_then(
-        choice((
-            operators, chars, control, reals, ints, strings, keywords, misc,
-        ))
-        .or(any()
-            .validate(|x, span, emit| {
-                emit(LexError::expected_input_found(span, None, Some(x)));
-                x
-            })
-            .map(Token::Error))
-        .map_with_span(Spanned::new)
-        .padded()
-        .recover_with(skip_then_retry_until([])),
-    );
+    let token = choice((
+        comments.to(None),
+        operators.map(Some),
+        chars.map(Some),
+        control.map(Some),
+        reals.map(Some),
+        ints.map(Some),
+        strings.map(Some),
+        keywords.map(Some),
+        misc.map(Some),
+    ))
+    .or(any()
+        .validate(|x, span, emit| {
+            emit(LexError::expected_input_found(span, None, Some(x)));
+            x
+        })
+        .map(|ch| Some(Token::Error(ch))))
+    .map_with_span(Spanned::new)
+    .padded()
+    .recover_with(skip_then_retry_until([]));
 
-    token.repeated().padded().then_ignore(end())
+    token.repeated().map(|v| v
+        .into_iter()
+        .filter_map(|x| {
+            let (opt, span): (Option<Token>, std::ops::Range<usize>) = x.into_tuple();
+            opt.map(|x| Spanned::new(x, span))
+        })
+        .collect()
+    ).padded().then_ignore(end())
 }
 
 fn lex_real() -> impl Parser<char, Token, Error = LexError> + Clone {
@@ -138,5 +151,5 @@ fn lex_misc() -> impl Parser<char, Token, Error = LexError> + Clone {
 }
 
 fn lex_comments() -> impl Parser<char, (), Error = LexError> + Clone {
-    just("--").then(take_until(text::newline())).ignored()
+    just("--").then(take_until(text::newline().or(end()))).ignored()
 }

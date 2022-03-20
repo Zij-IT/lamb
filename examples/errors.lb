@@ -1,1 +1,23 @@
-z := 2 ! 2
+x := 2!
+-- The parser reads the above line as:
+-- x := 2
+-- !
+-- 2
+
+print(2 2)
+-- PROBLEM:
+-- * This will produce very unexpected errors such as 'Expected one of "(", "[", "{"'
+
+y := z, x -> z + x
+-- The parser reads the above line as:
+-- y := z
+-- x -> z + x
+
+-- PROBLEM:
+-- * This will produce very unexpected errors such as z is not defined
+
+-- SOLUTIONS:
+-- * Single expression per line
+-- * Semicolons otherwise
+-- OR
+-- * Semicolons always to end an expression
