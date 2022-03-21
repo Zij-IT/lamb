@@ -36,14 +36,18 @@ pub fn lexer() -> impl Parser<char, Vec<Spanned<Token>>, Error = LexError> + Clo
     .padded()
     .recover_with(skip_then_retry_until([]));
 
-    token.repeated().map(|v| v
-        .into_iter()
-        .filter_map(|x| {
-            let (opt, span): (Option<Token>, std::ops::Range<usize>) = x.into_tuple();
-            opt.map(|x| Spanned::new(x, span))
+    token
+        .repeated()
+        .map(|v| {
+            v.into_iter()
+                .filter_map(|x| {
+                    let (opt, span): (Option<Token>, std::ops::Range<usize>) = x.into_tuple();
+                    opt.map(|x| Spanned::new(x, span))
+                })
+                .collect()
         })
-        .collect()
-    ).padded().then_ignore(end())
+        .padded()
+        .then_ignore(end())
 }
 
 fn lex_real() -> impl Parser<char, Token, Error = LexError> + Clone {
@@ -147,9 +151,17 @@ fn lex_operators() -> impl Parser<char, Token, Error = LexError> + Clone {
 }
 
 fn lex_misc() -> impl Parser<char, Token, Error = LexError> + Clone {
-    choice((just(',').to(Token::Comma), just(':').to(Token::Colon)))
+    choice((
+        just(',').to(Token::Comma),
+        just(':').to(Token::Colon),
+        just(';').to(Token::Semicolon),
+        just("..").to(Token::DotDot),
+        just('\\').to(Token::Lambda),
+    ))
 }
 
 fn lex_comments() -> impl Parser<char, (), Error = LexError> + Clone {
-    just("--").then(take_until(text::newline().or(end()))).ignored()
+    just("--")
+        .then(take_until(text::newline().or(end())))
+        .ignored()
 }

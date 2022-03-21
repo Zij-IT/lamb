@@ -1,14 +1,37 @@
 #![warn(clippy::pedantic)]
 #![feature(trait_alias)]
 
+use chumsky::prelude::todo;
 use lamb_parse::ast;
+use lamb_parse::error::LexError;
+use lamb_parse::span::Spanned;
+use lamb_parse::token::Token;
+
 mod lamb_parse;
 
 fn main() {
-    let sample = include_str!("../examples/errors.lb");
-    let sample_src = "../examples/errors.lb";
+    let sample = include_str!("../examples/parse_test.lb");
+    let sample_src = "../examples/parse_test.lb";
 
-    let _res = ast_from_source(sample, sample_src);
+    let _res = dbg!(tokens_from_source(sample, sample_src));
+}
+
+fn tokens_from_source(
+    src_code: &str,
+    _src_name: &str,
+) -> Result<Vec<Spanned<Token>>, Vec<LexError>> {
+    use chumsky::Parser;
+    use lamb_parse::{lexer, parser, span};
+
+    let len = src_code.chars().count();
+    let eof = len..len;
+
+    let (tokens, lex_errors) = lexer::lexer().parse_recovery(chumsky::Stream::from_iter(
+        eof.clone(),
+        src_code.chars().enumerate().map(|(i, c)| (c, i..i + 1)),
+    ));
+
+    tokens.ok_or(lex_errors)
 }
 
 fn ast_from_source(src_code: &str, _src_name: &str) -> Result<Vec<ast::Expr>, ()> {

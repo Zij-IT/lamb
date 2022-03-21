@@ -1,3 +1,5 @@
+use std::fmt::write;
+
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum Token {
     // Operators
@@ -54,8 +56,11 @@ pub enum Token {
 
     // Misc
     Colon,
+    Lambda,
     Arrow,
     Comma,
+    DotDot,
+    Semicolon,
     Wildcard,
     Import,
     Export,
@@ -147,9 +152,12 @@ impl std::fmt::Display for Token {
 
             // Misc
             Self::Arrow => write!(f, "->"),
+            Self::Lambda => write!(f, "\\"),
             Self::Colon => write!(f, ":"),
+            Self::Semicolon => write!(f, ";"),
             Self::Comma => write!(f, ","),
             Self::Wildcard => write!(f, "_"),
+            Self::DotDot => write!(f, ".."),
             Self::Import => write!(f, "import"),
             Self::Export => write!(f, "export"),
             Self::Ident(i) => write!(f, "{}", i),
