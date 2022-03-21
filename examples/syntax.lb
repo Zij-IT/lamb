@@ -1,0 +1,38 @@
+-- Program ::= [Exports] { Imports } { Statement } [ Expression ]
+
+-- Exports ::= 'export' '(' [ Ident {',' Ident }] ')'
+
+-- Imports ::= 'import' Ident ['(' [ Ident {',' Ident }] ')'
+
+-- Statement ::= ';'
+--             | Definition
+--             | ExpressionStatement
+
+-- Definition ::= Ident ':=' Expression ';'
+
+-- ExpressionStatement ::= ExpressionWithoutBlock ';'
+--                       | ExpressionWithBlock [';']
+
+-- Expression ::= ExpressionWithBlock
+--              | ExpressionWithoutBlock
+
+-- ExpressionWithoutBlock ::= Literal
+--                          | Ident
+--                          | OperatorExpression    -- BinaryOp | UnaryOp
+--                          | GroupedExpression     -- '(' Expression ')'
+--                          | ArrayExpression       -- '[' [ Expression {',' Expression } ] ']'
+--                          | IndexExpression       -- Expression '[' Expression ']'
+--                          | TupleExpression       -- '(' { Expression ',' } ')'
+--                          | TupleIndexExpression  -- Expression '.' IntegerLiteral
+--                          | CallExpression        -- Expression '(' [ Expression {',' Expression } ] ')'
+--                          | LambdaExpression      -- '\'[ Ident {',' Ident } ] '->' Expression
+--                          | RangeExpression       -- Expression .. Expression
+--                          | ContinueExpression    -- 'continue'
+--                          | BreakExpression       -- 'break' [ Expression ]
+--                          | ReturnExpression      -- 'return' [ Expression ]
+
+-- ExpressionWithBlock ::= BlockExpression          -- '{' Statement { Statement } [ ExpressionWithoutBlock ] | ExpressionWithoutBlock '}'
+--                       | LoopExpression           -- 'loop' BlockExpression
+--                       | ForExpression            -- 'for' Ident 'in' Expression BlockExpression
+--                       | WhileExpression          -- 'while' Expression BlockExpression
+--                       | IfExpression             -- 'if' Expression BlockExpression { 'elif' BlockExpression } [ 'else' BlockExpression ]

@@ -1,0 +1,35 @@
+-- This file should be able to be parsed without error
+-- and all items should parse correctly.
+
+export (add_two)
+
+import io(read_file)
+
+-- Literals
+a := 1;
+b := 1.0;
+c := 'c';
+d := "Hello World";
+e := true;
+
+-- Functions
+f := \x -> return x;
+
+-- Operators
+g := 1 - 10 / 2 + 2 * 3 % 1;
+h := 1 ^ 2 | 5 & 1;
+i := true && false || true;
+j := 2 > 3 && 4 < 5 && 6 >= 7 && 8 <= 9 && 10 ~= 11 && 12 == 13;
+k := ~1;
+l := "Hello" ++ " World";
+
+-- Control Flow
+m := if true { 2 } elif false { 3 } else { 5 };
+
+-- Loops
+n := for i in 1..2 { continue; };
+o := while false { };
+p := loop { break "nope"; };
+
+-- Brackets
+q := [1, 2, 3][((((0))))];
