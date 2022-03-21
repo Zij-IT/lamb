@@ -1,12 +1,8 @@
 #![warn(clippy::pedantic)]
 #![feature(trait_alias)]
 
-mod ast;
-mod error;
-mod lexer;
-mod parser;
-mod span;
-mod token;
+use lamb_parse::ast;
+mod lamb_parse;
 
 fn main() {
     let sample = include_str!("../examples/errors.lb");
@@ -17,6 +13,7 @@ fn main() {
 
 fn ast_from_source(src_code: &str, _src_name: &str) -> Result<Vec<ast::Expr>, ()> {
     use chumsky::Parser;
+    use lamb_parse::{lexer, parser, span};
 
     let len = src_code.chars().count();
     let eof = len..len;
@@ -67,6 +64,7 @@ fn repl() {
 
 fn process_input(src: &str) -> Result<(), ()> {
     use chumsky::Parser;
+    use lamb_parse::{lexer, parser, span};
 
     let tokens = ok_and_print(lexer::lexer().parse(src)).map(|x| {
         x.into_iter()
