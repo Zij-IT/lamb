@@ -1,4 +1,17 @@
 -- This file serves to catch common syntax errors in order
 -- to make sure the compiler provides helpful and useful errors
 
-9223372036854779999
+export (add_two)
+
+import other_mod(add_one)
+
+if true { ; } else { ; }
+
+for x in some_range { }
+
+while true { }
+
+loop { ; }
+
+test := if true { 3 } else { 2 };
+test := {{{{{{99999999999999999999999999}}}}}};

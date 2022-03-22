@@ -13,7 +13,7 @@ fn main() {
     let sample = include_str!("../examples/errors.lb");
     let sample_src = "../examples/errors.lb";
 
-    let _res = ast_from_source(sample, sample_src);
+    let _res = dbg!(ast_from_source(sample, sample_src));
 }
 
 fn tokens_from_source(
@@ -34,7 +34,7 @@ fn tokens_from_source(
     tokens.ok_or(lex_errors)
 }
 
-fn ast_from_source(src_code: &str, _src_name: &str) -> Result<Vec<ast::Expr>, ()> {
+fn ast_from_source(src_code: &str, _src_name: &str) -> Result<ast::Program, ()> {
     use chumsky::Parser;
     use lamb_parse::{lexer, parser, span};
 
@@ -47,13 +47,13 @@ fn ast_from_source(src_code: &str, _src_name: &str) -> Result<Vec<ast::Expr>, ()
     ));
 
     let tokens = tokens.ok_or(())?;
-    let (exprs, parse_errors) = parser::parser().parse_recovery(chumsky::Stream::from_iter(
+    let (exprs, parse_errors) = parser::parse_program().parse_recovery(chumsky::Stream::from_iter(
         eof,
         tokens.into_iter().map(span::Spanned::into_tuple),
     ));
 
     if lex_errors.is_empty() && parse_errors.is_empty() {
-        Ok(exprs.unwrap_or_default())
+        Ok(exprs.unwrap())
     } else {
         for e in lex_errors.into_iter() {
             e.eprint(src_code).unwrap();

@@ -1,29 +1,95 @@
+// Program ::= [Exports] { Imports } { Statement } [ Expression ]
+#[derive(Clone, PartialEq, Debug)]
+pub struct Program {
+    pub exports: Option<Export>,
+    pub imports: Vec<Import>,
+    pub statements: Vec<Statement>,
+    pub final_expr: Option<Expr>,
+}
+
+// Exports ::= 'export' '(' [ Ident {',' Ident }] ')'
+#[derive(Clone, PartialEq, Debug)]
+pub struct Export {
+    pub exports: Vec<Ident>,
+}
+
+// Imports ::= 'import' Ident ['(' [ Ident {',' Ident }] ')'
+#[derive(Clone, PartialEq, Debug)]
+pub struct Import {
+    pub from: Ident,
+    pub imports: Vec<Ident>,
+}
+
+// Statement ::= ';'
+//             | Definition
+//             | ExpressionStatement
+#[derive(Clone, PartialEq, Debug)]
+pub enum Statement {
+    // ;
+    Empty,
+
+    // Expression ';'
+    ExprStmt(Expr),
+
+    // Ident := Expression ';'
+    ValueDefinition(Ident, Expr),
+
+    // Ident := [ Ident {',' Ident } ] '->' Expression ';'
+    FunctionDefinition(Ident, Vec<Ident>, Expr),
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Expr {
-    // Values
+    // --- ExpressionsWithoutBlock ---{
+    // 1 1.0 'c' "string" true
     Literal(Literal),
+
+    // (a-z|A-Z|'_') { (a-z|A-Z|'_') }
     Ident(Ident),
+
+    // Expression BinaryOp Expression
+    Binary(BinaryOp, Box<Self>, Box<Self>),
+
+    // UnaryOp Expression
+    Unary(UnaryOp, Box<Self>),
+
+    // '[' [ Expression {',' Expression } ] ']'
     List(Vec<Self>),
+
+    // Expression '[' Expression ']'
+    ListIndex(Box<Self>, Box<Self>),
+
+    // '(' Expression ',' { Expression ',' } ')'
     Tuple(Vec<Self>),
 
-    // Definitions
-    ValueDef(Ident, Box<Self>),
-    FunctionDef(Ident, Vec<Ident>, Box<Self>),
+    // Expression '.' IntegerLiteral
+    TupleIndex(Box<Self>, Box<Self>),
 
-    // Operations
-    Unary(UnaryOp, Box<Self>),
-    Binary(Box<Self>, BinaryOp, Box<Self>),
+    // Expression '(' [ Expression {',' Expression } ] ')'
+    Call(Box<Self>, Vec<Self>),
 
-    // Control Flow
-    // if (cond, <block_expr>) elif (cond, <block_expr>) else <block_expr>
-    // if (cond, <block_expr>) else <block_expr>
-    // if (cond, <block_expr>)
-    If((Box<Self>, Box<Self>), Vec<(Self, Self)>, Option<Box<Self>>),
-    Block(Vec<Self>),
+    // '\'[ Ident {',' Ident } ] '->' Expression
+    Lambda(Vec<Ident>, Box<Self>),
 
-    // Misc
-    Call(Ident, Vec<Self>),
-    Error,
+    // Expression '..' Expression
+    Range(Box<Self>, Box<Self>),
+
+    // 'continue'
+    Continue,
+
+    // 'break' [ Expression ]
+    Break(Box<Self>),
+
+    // 'return' [ Expression ]
+    Return(Box<Self>),
+    // --- ExpressionsWithoutBlock ---}
+
+    // --- ExpressionWithBlock ---{
+    BlockExpression(Vec<Statement>, Option<Box<Self>>),
+    Loop(Box<Self>),
+    For(Ident, Box<Self>, Box<Self>),
+    While(Box<Self>, Box<Self>),
+    If(Box<Self>, Box<Self>, Vec<(Self, Self)>, Option<Box<Self>>), // --- ExpressionWithBlock ---}
 }
 
 #[derive(Clone, PartialEq, Debug)]

@@ -26,12 +26,12 @@
 --                          | TupleIndexExpression  -- Expression '.' IntegerLiteral
 --                          | CallExpression        -- Expression '(' [ Expression {',' Expression } ] ')'
 --                          | LambdaExpression      -- '\'[ Ident {',' Ident } ] '->' Expression
---                          | RangeExpression       -- Expression .. Expression
+--                          | RangeExpression       -- Expression '..' Expression
 --                          | ContinueExpression    -- 'continue'
 --                          | BreakExpression       -- 'break' [ Expression ]
 --                          | ReturnExpression      -- 'return' [ Expression ]
 
--- ExpressionWithBlock ::= BlockExpression          -- '{' Statement { Statement } [ ExpressionWithoutBlock ] | ExpressionWithoutBlock '}'
+-- ExpressionWithBlock ::= BlockExpression          -- '{' { Statement } [ Expression ] '}'
 --                       | LoopExpression           -- 'loop' BlockExpression
 --                       | ForExpression            -- 'for' Ident 'in' Expression BlockExpression
 --                       | WhileExpression          -- 'while' Expression BlockExpression
