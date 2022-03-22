@@ -10,10 +10,10 @@ use lamb_parse::token::Token;
 mod lamb_parse;
 
 fn main() {
-    let sample = include_str!("../examples/parse_test.lb");
-    let sample_src = "../examples/parse_test.lb";
+    let sample = include_str!("../examples/errors.lb");
+    let sample_src = "../examples/errors.lb";
 
-    let _res = dbg!(tokens_from_source(sample, sample_src));
+    let _res = ast_from_source(sample, sample_src);
 }
 
 fn tokens_from_source(

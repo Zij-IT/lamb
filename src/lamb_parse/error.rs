@@ -155,8 +155,18 @@ impl From<Token> for SyntaxPattern {
 pub struct ParseError(Details<SyntaxPattern>);
 
 impl ParseError {
+    pub fn invalid_int_literal(span: Range<usize>) -> Self {
+        Self(Details {
+            kind: Kind::InvalidIntLiteral,
+            span,
+            expected: Default::default(),
+            label: None,
+        })
+    }
+
     pub fn eprint(&self, sample: &str) -> std::io::Result<()> {
         let expectations = self.expectations_as_string();
+
         let msg = match &self.0.kind {
             Kind::Unexpected { found: Some(t) } => {
                 format!(
@@ -171,6 +181,20 @@ impl ParseError {
             Kind::UnexpectedEnd => {
                 format!("Unexpected end of input")
             }
+            Kind::InvalidIntLiteral => {
+                format!("Invalid int literal")
+            }
+        };
+
+        let label = match &self.0.kind {
+            Kind::InvalidIntLiteral => {
+                format!(
+                    "An int literal must be between: {} and {}",
+                    "-9223372036854775808".fg(Color::Blue),
+                    "9223372036854775807".fg(Color::Blue),
+                )
+            }
+            _ => "".into(),
         };
 
         Report::build(ReportKind::Error, (), self.start())
@@ -179,7 +203,7 @@ impl ParseError {
             .with_label(
                 Label::new(self.start()..self.end())
                     .with_color(Color::Red)
-                    .with_message(""),
+                    .with_message(label),
             )
             .finish()
             .eprint(Source::from(sample))
@@ -295,6 +319,7 @@ impl ariadne::Span for ParseError {
 enum Kind<T> {
     UnexpectedEnd,
     Unexpected { found: Option<T> },
+    InvalidIntLiteral,
 }
 
 #[derive(Debug, Clone, PartialEq)]

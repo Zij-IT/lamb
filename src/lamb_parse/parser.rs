@@ -7,7 +7,7 @@ use chumsky::prelude::*;
 pub trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone;
 
 pub fn parser() -> impl LambParser<Vec<ast::Expr>> {
-    any().to(todo!("Implement a parser for expressions"))
+    parse_literal().map(ast::Expr::Literal).map(|x| vec![x])
 }
 
 fn parse_literal() -> impl LambParser<ast::Literal> {
@@ -18,9 +18,13 @@ fn parse_literal() -> impl LambParser<ast::Literal> {
             Token::Str(s) => ast::Literal::Str(s),
             Token::Char(c) => ast::Literal::Char(c),
             Token::Bool(b) => ast::Literal::Bool(b),
-            Token::Int(i) => ast::Literal::Int(i.parse().unwrap()),
-            Token::Real(r) => ast::Literal::Real(r.parse().unwrap()),
-            // TODO: Figure out what to make the 'expected' Literal
+            Token::Int(i) => match i.parse() {
+                Ok(i) => ast::Literal::Int(i),
+                Err(_) => return Err(ParseError::invalid_int_literal(span)),
+            },
+            Token::Real(r) => {
+                ast::Literal::Real(r.parse().expect(&format!("Invalid real literal: {}", r)))
+            }
             _ => {
                 return Err(ParseError::expected_input_found(
                     span,
