@@ -11,10 +11,12 @@ use lamb_parse::token::Token;
 mod lamb_parse;
 
 fn main() {
-    let sample = include_str!("../examples/parse_test.lb");
-    let sample_src = "../examples/parse_test.lb";
+    let sample = include_str!("../examples/errors.lb");
+    let sample_src = "../examples/errors.lb";
 
-    let _res = dbg!(ast_from_source(sample, sample_src));
+    // let _res = dbg!(ast_from_source(sample, sample_src));
+
+    repl();
 }
 
 fn tokens_from_source(
@@ -54,7 +56,9 @@ fn ast_from_source(src_code: &str, _src_name: &str) -> Result<ast::Program, ()> 
     ));
 
     if lex_errors.is_empty() && parse_errors.is_empty() {
-        Ok(exprs.unwrap())
+        let exprs = exprs.unwrap();
+        println!("{:?}", exprs);
+        Ok(exprs)
     } else {
         for e in lex_errors {
             e.eprint(src_code).unwrap();
@@ -77,41 +81,10 @@ fn repl() {
     loop {
         buffer.clear();
 
-        let _res = stdout.write_all(".> ".as_bytes());
+        let _res = stdout.write_all("|> ".as_bytes());
         let _res = stdout.flush();
 
-        if stdin.read_line(&mut buffer).is_ok() && process_input(&buffer).is_err() {
-            continue;
-        }
-    }
-}
-
-fn process_input(src: &str) -> Result<(), ()> {
-    use chumsky::Parser;
-    use lamb_parse::{lexer, parser, span};
-
-    let tokens = ok_and_print(lexer::lexer().parse(src)).map(|x| {
-        x.into_iter()
-            .map(span::Spanned::into_inner)
-            .collect::<Vec<_>>()
-    })?;
-
-    ok_and_print(parser::parse_program().parse(&*tokens)).map(|_| ())
-}
-
-fn ok_and_print<T, E>(res: Result<T, E>) -> Result<T, ()>
-where
-    T: std::fmt::Debug,
-    E: std::fmt::Debug,
-{
-    match res {
-        Ok(ok) => {
-            println!("OK: {:?}", ok);
-            Ok(ok)
-        }
-        Err(e) => {
-            println!("ERR: {:?}", e);
-            Err(())
-        }
+        let _ = stdin.read_line(&mut buffer).is_ok()
+            &&  ast_from_source(&buffer, "").is_ok();
     }
 }
