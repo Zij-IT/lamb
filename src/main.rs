@@ -1,7 +1,8 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::range_plus_one)]
+#![allow(clippy::module_name_repetitions)]
 #![feature(trait_alias)]
 
-use chumsky::prelude::todo;
 use lamb_parse::ast;
 use lamb_parse::error::LexError;
 use lamb_parse::span::Spanned;
@@ -10,8 +11,8 @@ use lamb_parse::token::Token;
 mod lamb_parse;
 
 fn main() {
-    let sample = include_str!("../examples/errors.lb");
-    let sample_src = "../examples/errors.lb";
+    let sample = include_str!("../examples/parse_test.lb");
+    let sample_src = "../examples/parse_test.lb";
 
     let _res = dbg!(ast_from_source(sample, sample_src));
 }
@@ -27,7 +28,7 @@ fn tokens_from_source(
     let eof = len..len;
 
     let (tokens, lex_errors) = lexer::lexer().parse_recovery(chumsky::Stream::from_iter(
-        eof.clone(),
+        eof,
         src_code.chars().enumerate().map(|(i, c)| (c, i..i + 1)),
     ));
 
@@ -55,10 +56,10 @@ fn ast_from_source(src_code: &str, _src_name: &str) -> Result<ast::Program, ()> 
     if lex_errors.is_empty() && parse_errors.is_empty() {
         Ok(exprs.unwrap())
     } else {
-        for e in lex_errors.into_iter() {
+        for e in lex_errors {
             e.eprint(src_code).unwrap();
         }
-        for e in parse_errors.into_iter() {
+        for e in parse_errors {
             e.eprint(src_code).unwrap();
         }
 

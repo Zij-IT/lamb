@@ -1,5 +1,3 @@
-use std::fmt::write;
-
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum Token {
     // Operators

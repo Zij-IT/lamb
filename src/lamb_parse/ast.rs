@@ -63,16 +63,13 @@ pub enum Expr {
     Tuple(Vec<Self>),
 
     // Expression '.' IntegerLiteral
-    TupleIndex(Box<Self>, Box<Self>),
+    // TupleIndex(Box<Self>, Box<Self>),
 
     // Expression '(' [ Expression {',' Expression } ] ')'
     Call(Box<Self>, Vec<Self>),
 
     // '\'[ Ident {',' Ident } ] '->' Expression
     Lambda(Vec<Ident>, Box<Self>),
-
-    // Expression '..' Expression
-    Range(Box<Self>, Box<Self>),
 
     // 'continue'
     Continue,

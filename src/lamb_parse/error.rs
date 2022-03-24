@@ -128,8 +128,7 @@ pub enum SyntaxPattern {
 impl SyntaxPattern {
     pub fn is_operator(&self) -> bool {
         match self {
-            SyntaxPattern::Ident => false,
-            SyntaxPattern::Literal => false,
+            SyntaxPattern::Ident | SyntaxPattern::Literal => false,
             SyntaxPattern::Token(t) => t.is_operator(),
         }
     }
@@ -159,7 +158,7 @@ impl ParseError {
         Self(Details {
             kind: Kind::InvalidIntLiteral,
             span,
-            expected: Default::default(),
+            expected: HashSet::default(),
             label: None,
         })
     }
@@ -178,12 +177,8 @@ impl ParseError {
             Kind::Unexpected { .. } => {
                 format!("Expected {}", expectations)
             }
-            Kind::UnexpectedEnd => {
-                format!("Unexpected end of input")
-            }
-            Kind::InvalidIntLiteral => {
-                format!("Invalid int literal")
-            }
+            Kind::UnexpectedEnd => "Unexpected end of input".to_string(),
+            Kind::InvalidIntLiteral => "Invalid int literal".to_string(),
         };
 
         let label = match &self.0.kind {
@@ -213,7 +208,7 @@ impl ParseError {
         self.0
             .expected
             .iter()
-            .any(|x| x.as_ref().map_or(false, |inner| inner.is_operator()))
+            .any(|x| x.as_ref().map_or(false, SyntaxPattern::is_operator))
     }
 
     fn expectations_as_string(&self) -> String {
@@ -226,12 +221,12 @@ impl ParseError {
             .0
             .expected
             .iter()
-            .filter_map(|x| x.as_ref())
+            .filter_map(Option::as_ref)
             .filter(|x| !x.is_operator())
             .map(|x| format!("'{}'", x.to_string().fg(Color::Blue)))
             .collect::<Vec<String>>();
 
-        expectations.sort_by(|a, b| a.len().cmp(&b.len()));
+        expectations.sort_by_key(String::len);
 
         match expectations.len() {
             0 => {}
