@@ -95,12 +95,12 @@ fn process_input(src: &str) -> Result<(), ()> {
             .collect::<Vec<_>>()
     })?;
 
-    ok_and_print(parser::parser().parse(&*tokens)).map(|_| ())
+    ok_and_print(parser::parse_program().parse(&*tokens)).map(|_| ())
 }
 
 fn ok_and_print<T, E>(res: Result<T, E>) -> Result<T, ()>
 where
-    T: IntoIterator + std::fmt::Debug,
+    T: std::fmt::Debug,
     E: std::fmt::Debug,
 {
     match res {

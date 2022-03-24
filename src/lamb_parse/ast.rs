@@ -156,6 +156,7 @@ pub enum BinaryOp {
 
     // Other
     Concat,
+    Range,
 }
 
 impl std::fmt::Display for BinaryOp {
@@ -183,6 +184,7 @@ impl std::fmt::Display for BinaryOp {
             Self::NotEq => write!(f, "~="),
 
             Self::Concat => write!(f, "++"),
+            Self::Range => write!(f, ".."),
         }
     }
 }

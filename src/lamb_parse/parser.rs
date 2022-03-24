@@ -4,25 +4,25 @@ use super::token::Token;
 
 use chumsky::prelude::*;
 
-pub trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone;
-
-pub fn parser() -> impl LambParser<Vec<ast::Expr>> {
-    parse_raw_literal().map(ast::Expr::Literal).map(|x| vec![x])
-}
+pub trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone + 'static;
 
 pub fn parse_program() -> impl LambParser<ast::Program> {
+    let stmt = parse_statement();
+
     parse_exports()
         .or_not()
         .then(parse_imports().repeated())
-        .then(parse_statement().repeated())
+        .then(stmt.clone().repeated())
+        .then(parse_expression(stmt).or_not())
         .then_ignore(end())
-        // .then(parse_expression().or_not())
-        .map(|((exports, imports), statements)| ast::Program {
-            exports,
-            imports,
-            statements,
-            final_expr: None,
-        })
+        .map(
+            |(((exports, imports), statements), final_expr)| ast::Program {
+                exports,
+                imports,
+                statements,
+                final_expr,
+            },
+        )
 }
 
 fn parse_exports() -> impl LambParser<ast::Export> {
@@ -52,28 +52,244 @@ fn parse_imports() -> impl LambParser<ast::Import> {
 
 fn parse_statement() -> impl LambParser<ast::Statement> {
     recursive(|stmt| {
-        let expr = recursive(|expr| {
-            let with_block = parse_expression_with_block(expr.clone(), stmt.clone());
-            let without_block = parse_expression_without_block(expr, stmt.clone());
-
-            without_block.or(with_block)
-        });
-
-        let with_block = parse_expression_with_block(expr.clone(), stmt.clone());
-        let without_block = parse_expression_without_block(expr.clone(), stmt);
+        let expr = parse_expression(stmt.clone());
+        let with_block = parse_expression_with_block(expr.clone(), stmt);
 
         choice((
-            parse_definition(expr),
-            parse_expression_statement(with_block, without_block),
+            parse_definition(expr.clone()),
+            parse_expression_statement(with_block, expr),
             just(Token::Semicolon).to(ast::Statement::Empty),
         ))
     })
 }
 
-fn parse_expression_with_block<Expr, Stmt>(expr: Expr, stmt: Stmt) -> impl LambParser<ast::Expr>
+fn parse_definition(expr: impl LambParser<ast::Expr>) -> impl LambParser<ast::Statement> {
+    let value_def = parse_raw_ident()
+        .then_ignore(just(Token::Assign))
+        .then(expr.clone())
+        .then_ignore(just(Token::Semicolon))
+        .map(|(ident, val)| ast::Statement::ValueDefinition(ident, val));
+
+    let func_def = parse_raw_ident()
+        .then_ignore(just(Token::Assign))
+        .then_ignore(just(Token::Lambda))
+        .then(parse_raw_ident().separated_by(just(Token::Comma)))
+        .then(expr)
+        .then_ignore(just(Token::Semicolon))
+        .map(|((ident, params), expr)| ast::Statement::FunctionDefinition(ident, params, expr));
+
+    func_def.or(value_def)
+}
+
+fn parse_expression_statement<Block, NoBlock>(
+    block: Block,
+    no_block: NoBlock,
+) -> impl LambParser<ast::Statement>
 where
-    Expr: LambParser<ast::Expr>,
-    Stmt: LambParser<ast::Statement>,
+    Block: LambParser<ast::Expr>,
+    NoBlock: LambParser<ast::Expr>,
+{
+    no_block
+        .then_ignore(just(Token::Semicolon))
+        .or(block.then_ignore(just(Token::Semicolon).or_not()))
+        .map(ast::Statement::ExprStmt)
+}
+
+fn parse_expression<StmtP>(stmt: StmtP) -> impl LambParser<ast::Expr>
+where
+    StmtP: LambParser<ast::Statement>,
+{
+    recursive(|expr| {
+        // Expression Elements -- {
+        let lit = parse_raw_literal().map(ast::Expr::Literal);
+
+        let ident = parse_raw_ident().map(ast::Expr::Ident);
+
+        let comma_list = {
+            expr.clone()
+                .separated_by(just(Token::Comma))
+                .allow_trailing()
+        };
+
+        let list = {
+            just(Token::BrackOpen)
+                .ignore_then(comma_list.clone())
+                .then_ignore(just(Token::BrackClose))
+                .map(ast::Expr::List)
+        };
+
+        let group = {
+            expr.clone()
+                .delimited_by(just(Token::ParenOpen), just(Token::ParenClose))
+        };
+
+        let tuple = {
+            just(Token::ParenOpen)
+                .ignore_then(expr.clone().then_ignore(just(Token::Comma)))
+                .then(expr.clone().repeated())
+                .then_ignore(just(Token::ParenClose))
+                .map(|(first, mut other)| {
+                    other.insert(0, first);
+                    ast::Expr::Tuple(other)
+                })
+        };
+
+        let lambda = {
+            just(Token::Lambda)
+                .ignore_then(parse_raw_ident().separated_by(just(Token::Comma)))
+                .then_ignore(just(Token::Arrow))
+                .then(expr.clone())
+                .map(|(params, body)| ast::Expr::Lambda(params, Box::new(body)))
+        };
+
+        let block_expr = parse_expression_with_block(expr.clone(), stmt.clone());
+
+        let atom = {
+            lit.or(tuple)
+                .or(lambda)
+                .or(ident.clone())
+                .or(group.clone())
+                .or(list.clone())
+                .or(block_expr.clone())
+        };
+        // Expression Elements -- }
+
+        // Chained Expressions -- {
+        enum Chain {
+            ListIndex(ast::Expr),
+            Call(Vec<ast::Expr>),
+        }
+
+        let chainable = atom;
+
+        let call = {
+            just(Token::ParenOpen)
+                .ignore_then(comma_list.clone())
+                .then_ignore(just(Token::ParenClose))
+                .map(Chain::Call)
+        };
+
+        let list_index = {
+            just(Token::BrackOpen)
+                .ignore_then(expr.clone())
+                .then_ignore(just(Token::BrackClose))
+                .map(Chain::ListIndex)
+        };
+
+        let chains = call.or(list_index);
+
+        let chained = {
+            chainable
+                .then(chains.repeated())
+                .foldl(|expr, link| match link {
+                    Chain::Call(args) => ast::Expr::Call(Box::new(expr), args),
+                    Chain::ListIndex(idx) => ast::Expr::ListIndex(Box::new(expr), Box::new(idx)),
+                })
+        };
+
+        // Chained Expressions -- }
+
+        // Operators -- {
+        let op = {
+            just(Token::Not)
+                .to(ast::UnaryOp::Not)
+                .or(just(Token::Minus).to(ast::UnaryOp::Neg))
+        };
+
+        let unary = {
+            op.repeated()
+                .then(chained)
+                .foldr(|op, expr| ast::Expr::Unary(op, Box::new(expr)))
+        };
+
+        // Arithmetic
+        let op = {
+            just(Token::Div)
+                .to(ast::BinaryOp::Div)
+                .or(just(Token::Mul).to(ast::BinaryOp::Mul))
+                .or(just(Token::Rem).to(ast::BinaryOp::Rem))
+        };
+
+        let binary = next_binary(unary, op);
+
+        let op = {
+            just(Token::Plus)
+                .to(ast::BinaryOp::Add)
+                .or(just(Token::Minus).to(ast::BinaryOp::Sub))
+        };
+
+        let binary = next_binary(binary, op);
+
+        // Bitwise
+        let op = just(Token::BitAnd).to(ast::BinaryOp::BitAnd);
+
+        let binary = next_binary(binary, op);
+
+        let op = just(Token::BitXor).to(ast::BinaryOp::BitXor);
+
+        let binary = next_binary(binary, op);
+
+        let op = just(Token::BitOr).to(ast::BinaryOp::BitOr);
+
+        let binary = next_binary(binary, op);
+
+        // Concat
+        let op = just(Token::Concat).to(ast::BinaryOp::Concat);
+
+        let binary = next_binary(binary, op);
+
+        let op = just(Token::DotDot).to(ast::BinaryOp::Range);
+        let binary = next_binary(binary, op);
+
+        // Logical
+        let op = {
+            just(Token::Gt)
+                .to(ast::BinaryOp::Gt)
+                .or(just(Token::Lt).to(ast::BinaryOp::Lt))
+                .or(just(Token::Ge).to(ast::BinaryOp::Ge))
+                .or(just(Token::Le).to(ast::BinaryOp::Le))
+        };
+
+        let binary = next_binary(binary, op);
+
+        // Comparison
+        let op = {
+            just(Token::NotEq)
+                .to(ast::BinaryOp::NotEq)
+                .or(just(Token::EqEq).to(ast::BinaryOp::EqEq))
+        };
+
+        let binary = next_binary(binary, op);
+
+        // Logical
+        let op = {
+            just(Token::LogAnd)
+                .to(ast::BinaryOp::LogAnd)
+                .or(just(Token::LogOr).to(ast::BinaryOp::LogOr))
+        };
+
+        let binary = next_binary(binary, op);
+        // Operators -- }
+
+        // Loop Expressions -- {
+        let loop_exprs = just(Token::Continue)
+            .to(ast::Expr::Continue)
+            .or(just(Token::Return)
+                .ignore_then(expr.clone())
+                .map(|x| ast::Expr::Return(Box::new(x))))
+            .or(just(Token::Break)
+                .ignore_then(expr.clone())
+                .map(|x| ast::Expr::Break(Box::new(x))));
+
+        // Loop Expressions -- }
+        binary.or(loop_exprs)
+    })
+}
+
+fn parse_expression_with_block<ExprP, StmtP>(expr: ExprP, stmt: StmtP) -> impl LambParser<ast::Expr>
+where
+    ExprP: LambParser<ast::Expr>,
+    StmtP: LambParser<ast::Statement>,
 {
     let block_expr = just(Token::BraceOpen)
         .ignore_then(stmt.clone().repeated().then(expr.clone().or_not()))
@@ -117,48 +333,14 @@ where
         .or(if_expr)
 }
 
-fn parse_expression_without_block<Expr, Stmt>(expr: Expr, stmt: Stmt) -> impl LambParser<ast::Expr>
-where
-    Expr: LambParser<ast::Expr>,
-    Stmt: LambParser<ast::Statement>,
-{
-    let lit = parse_raw_literal().map(ast::Expr::Literal);
-
-    let ident = parse_raw_ident().map(ast::Expr::Ident);
-
-    lit.or(ident)
-}
-
-fn parse_definition(expr: impl LambParser<ast::Expr>) -> impl LambParser<ast::Statement> {
-    let value_def = parse_raw_ident()
-        .then_ignore(just(Token::Assign))
-        .then(expr.clone())
-        .then_ignore(just(Token::Semicolon))
-        .map(|(ident, val)| ast::Statement::ValueDefinition(ident, val));
-
-    let func_def = parse_raw_ident()
-        .then_ignore(just(Token::Assign))
-        .then_ignore(just(Token::Lambda))
-        .then(parse_raw_ident().separated_by(just(Token::Comma)))
-        .then(expr)
-        .then_ignore(just(Token::Semicolon))
-        .map(|((ident, params), expr)| ast::Statement::FunctionDefinition(ident, params, expr));
-
-    func_def.or(value_def)
-}
-
-fn parse_expression_statement<Block, NoBlock>(
-    block: Block,
-    no_block: NoBlock,
-) -> impl LambParser<ast::Statement>
-where
-    Block: LambParser<ast::Expr>,
-    NoBlock: LambParser<ast::Expr>,
-{
-    no_block
-        .then_ignore(just(Token::Semicolon))
-        .or(block.then_ignore(just(Token::Semicolon).or_not()))
-        .map(ast::Statement::ExprStmt)
+fn next_binary(
+    prev: impl LambParser<ast::Expr>,
+    op: impl LambParser<ast::BinaryOp>,
+) -> impl LambParser<ast::Expr> {
+    prev.clone()
+        .then(op.then(prev).repeated())
+        .foldl(|a, (op, b)| ast::Expr::Binary(op, Box::new(a), Box::new(b)))
+        .boxed()
 }
 
 fn parse_raw_literal() -> impl LambParser<ast::Literal> {

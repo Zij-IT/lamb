@@ -3,7 +3,7 @@
 
 export (add_two)
 
-import io(read_file)
+import other_mod(add_one)
 
 -- Literals
 a := 1;
@@ -33,3 +33,42 @@ p := loop { break "nope"; };
 
 -- Brackets
 q := [1, 2, 3][((((0))))];
+
+-- SAMPLE PROGRAM --
+
+if true { ; } else { ; }
+
+for x in some_range { }
+
+while true { }
+
+loop { ; }
+
+test := if true { 3 } else { 2 };
+test := {{{{{{4}}}}}};
+
+-- Functions
+add_two := \x, y -> if false { x } else { y };
+add_two_lambda := \-> \x, y -> if false { x } else { y };
+add_two(2, 2);
+add_two_lambda()(2, 3);
+
+-- A wild literal hidden in parenthesis
+surrounded := (((((2)))));
+
+-- A wild tuple hidden in parenthesis
+tuple := (((((2,)))));
+
+-- Lists with brace
+list_trailing_comma := [2,];
+list_separating_comma := [2, 3];
+list_indexing := [2, 1, 0][0][1];
+
+-- Mixing calls and indexes
+what[0]()[1]();
+
+-- Operators!!!
+arithmetic := 2 + 3 / 3 - 4 - -5 * 6;
+bitwise := 3 & 4 | 15 ^ 7;
+
+2 + 2
