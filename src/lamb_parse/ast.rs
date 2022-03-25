@@ -1,3 +1,5 @@
+use std::fmt::write;
+
 // Program ::= [Exports] { Imports } { Statement } [ Expression ]
 #[derive(Clone, PartialEq, Debug)]
 pub struct Program {
@@ -154,6 +156,12 @@ pub enum BinaryOp {
     // Other
     Concat,
     Range,
+
+    // Function
+    ApplyLeft,
+    ApplyRight,
+    ComposeLeft,
+    ComposeRight,
 }
 
 impl std::fmt::Display for BinaryOp {
@@ -182,6 +190,11 @@ impl std::fmt::Display for BinaryOp {
 
             Self::Concat => write!(f, "++"),
             Self::Range => write!(f, ".."),
+
+            Self::ApplyLeft => write!(f, "<$"),
+            Self::ApplyRight => write!(f, "$>"),
+            Self::ComposeLeft => write!(f, "<."),
+            Self::ComposeRight => write!(f, ".>"),
         }
     }
 }

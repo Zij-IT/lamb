@@ -250,6 +250,14 @@ fn parse_operator_expression(expr: impl LambParser<ast::Expr>) -> impl LambParse
         .to(ast::BinaryOp::LogAnd)
         .or(just(Token::LogOr).to(ast::BinaryOp::LogOr));
 
+    let binary = next_binary(binary, op);
+
+    // Function
+    let op = just(Token::ApplyLeft).to(ast::BinaryOp::ApplyLeft)
+        .or(just(Token::ApplyRight).to(ast::BinaryOp::ApplyRight))
+        .or(just(Token::ComposeLeft).to(ast::BinaryOp::ComposeLeft))
+        .or(just(Token::ComposeRight).to(ast::BinaryOp::ComposeRight));
+
     next_binary(binary, op)
 }
 

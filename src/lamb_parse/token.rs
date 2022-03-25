@@ -25,6 +25,11 @@ pub enum Token {
     Concat,
     Assign,
 
+    ApplyRight,
+    ApplyLeft,
+    ComposeRight,
+    ComposeLeft,
+
     // Values
     Int(String),
     Real(String),
@@ -88,6 +93,10 @@ impl Token {
                 | Self::NotEq
                 | Self::Not
                 | Self::Concat
+                | Self::ApplyLeft
+                | Self::ApplyRight
+                | Self::ComposeLeft
+                | Self::ComposeRight
         )
     }
 }
@@ -160,6 +169,10 @@ impl std::fmt::Display for Token {
             Self::Export => write!(f, "export"),
             Self::Ident(i) => write!(f, "{}", i),
             Self::Error(c) => write!(f, "{}", c),
+            Self::ApplyRight => write!(f, "$>"),
+            Self::ApplyLeft => write!(f, "<$"),
+            Self::ComposeRight => write!(f, ".>"),
+            Self::ComposeLeft => write!(f, "<."),
         }
     }
 }

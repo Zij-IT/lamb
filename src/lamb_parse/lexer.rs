@@ -127,6 +127,10 @@ fn lex_control() -> impl Parser<char, Token, Error = LexError> + Clone {
 
 fn lex_operators() -> impl Parser<char, Token, Error = LexError> + Clone {
     choice((
+        just("$>").to(Token::ApplyRight),
+        just("<$").to(Token::ApplyLeft),
+        just(".>").to(Token::ComposeRight),
+        just("<.").to(Token::ComposeLeft),
         just("->").to(Token::Arrow),
         just(":=").to(Token::Assign),
         just("<=").to(Token::Le),
