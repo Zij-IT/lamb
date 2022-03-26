@@ -149,22 +149,19 @@ fn parse_atom_expression(expr: impl LambParser<ast::Expr>) -> impl LambParser<as
         .then(expr)
         .map(|(params, body)| ast::Expr::Lambda(params, Box::new(body)));
 
-    literal
-        .or(tuple)
-        .or(lambda)
-        .or(ident)
-        .or(group)
-        .or(list)
-
-
+    literal.or(tuple).or(lambda).or(ident).or(group).or(list)
 }
 
-fn parse_expression_chain(expr: impl LambParser<ast::Expr>, chainable: impl LambParser<ast::Expr>) -> impl LambParser<ast::Expr> {
+fn parse_expression_chain(
+    expr: impl LambParser<ast::Expr>,
+    chainable: impl LambParser<ast::Expr>,
+) -> impl LambParser<ast::Expr> {
     let call = just(Token::ParenOpen)
-        .ignore_then(expr
-            .clone()
-            .separated_by(just(Token::Comma))
-            .allow_trailing())
+        .ignore_then(
+            expr.clone()
+                .separated_by(just(Token::Comma))
+                .allow_trailing(),
+        )
         .then_ignore(just(Token::ParenClose))
         .map(Chain::Call);
 
@@ -253,7 +250,8 @@ fn parse_operator_expression(expr: impl LambParser<ast::Expr>) -> impl LambParse
     let binary = next_binary(binary, op);
 
     // Function
-    let op = just(Token::ApplyLeft).to(ast::BinaryOp::ApplyLeft)
+    let op = just(Token::ApplyLeft)
+        .to(ast::BinaryOp::ApplyLeft)
         .or(just(Token::ApplyRight).to(ast::BinaryOp::ApplyRight))
         .or(just(Token::ComposeLeft).to(ast::BinaryOp::ComposeLeft))
         .or(just(Token::ComposeRight).to(ast::BinaryOp::ComposeRight));
