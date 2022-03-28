@@ -30,13 +30,13 @@ pub enum Statement {
     Empty,
 
     // Expression ';'
-    ExprStmt(Expr),
+    ExprStmt(Spanned<Expr>),
 
     // Ident := Expression ';'
-    ValueDefinition(Ident, Expr),
+    ValueDefinition(Spanned<Ident>, Spanned<Expr>),
 
     // Ident := [ Ident {',' Ident } ] '->' Expression ';'
-    FunctionDefinition(Ident, Vec<Ident>, Expr),
+    FunctionDefinition(Spanned<Ident>, Vec<Spanned<Ident>>, Spanned<Expr>),
 }
 
 #[derive(Clone, PartialEq, Debug)]

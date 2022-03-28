@@ -76,16 +76,18 @@ fn parse_statement() -> impl LambParser<ast::Statement> {
 
 fn parse_definition(expr: impl LambParser<ast::Expr>) -> impl LambParser<ast::Statement> {
     let value_def = parse_raw_ident()
+        .map_with_span(Spanned::new)
         .then_ignore(just(Token::Assign))
-        .then(expr.clone())
+        .then(expr.clone().map_with_span(Spanned::new))
         .then_ignore(just(Token::Semicolon))
         .map(|(ident, val)| ast::Statement::ValueDefinition(ident, val));
 
     let func_def = parse_raw_ident()
+        .map_with_span(Spanned::new)
         .then_ignore(just(Token::Assign))
         .then_ignore(just(Token::Lambda))
-        .then(parse_raw_ident().separated_by(just(Token::Comma)))
-        .then(expr)
+        .then(parse_raw_ident().map_with_span(Spanned::new).separated_by(just(Token::Comma)))
+        .then(expr.map_with_span(Spanned::new))
         .then_ignore(just(Token::Semicolon))
         .map(|((ident, params), expr)| ast::Statement::FunctionDefinition(ident, params, expr));
 
@@ -103,7 +105,7 @@ where
     no_block
         .then_ignore(just(Token::Semicolon))
         .or(block.then_ignore(just(Token::Semicolon).or_not()))
-        .map(ast::Statement::ExprStmt)
+        .map_with_span(|expr, span| ast::Statement::ExprStmt(Spanned::new(expr, span)))
 }
 
 fn parse_expression<StmtP>(stmt: StmtP) -> impl LambParser<ast::Expr>
