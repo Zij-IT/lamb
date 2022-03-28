@@ -33,7 +33,7 @@ fn repl() {
             continue;
         }
 
-        let ast = parse_source("", &buffer);
+        let ast = lamb_parse::parse_expression(&buffer);
         match ast {
             Ok(prog) => println!("{:?}", prog),
             Err(es) => {

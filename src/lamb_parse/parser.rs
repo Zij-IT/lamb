@@ -12,22 +12,23 @@ enum Chain {
 }
 
 pub fn parse_program() -> impl LambParser<ast::Program> {
-    let stmt = parse_statement();
-
     parse_exports()
         .or_not()
         .then(parse_imports().repeated())
-        .then(stmt.clone().repeated())
-        .then(parse_expression(stmt).or_not())
+        .then(parse_statement().clone().repeated())
         .then_ignore(end())
         .map(
-            |(((exports, imports), statements), final_expr)| ast::Program {
+            |((exports, imports), statements)| ast::Program {
                 exports,
                 imports,
                 statements,
-                final_expr,
             },
         )
+}
+
+pub fn parse_raw_expression() -> impl LambParser<ast::Expr> {
+    let stmt = parse_statement();
+    parse_expression(stmt)
 }
 
 fn parse_exports() -> impl LambParser<ast::Export> {

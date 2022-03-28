@@ -4,7 +4,6 @@ pub struct Program {
     pub exports: Option<Export>,
     pub imports: Vec<Import>,
     pub statements: Vec<Statement>,
-    pub final_expr: Option<Expr>,
 }
 
 // Exports ::= 'export' '(' [ Ident {',' Ident }] ')'
