@@ -8,8 +8,8 @@ use chumsky::prelude::*;
 pub trait LambParser<T> = Parser<Token, T, Error = ParseError> + Clone + 'static;
 
 enum Chain {
-    ListIndex(ast::Expr),
-    Call(Vec<ast::Expr>),
+    ListIndex(Spanned<ast::Expr>),
+    Call(Vec<Spanned<ast::Expr>>),
 }
 
 pub fn parse_program() -> impl LambParser<Spanned<ast::Program>> {
@@ -124,12 +124,17 @@ where
 }
 
 fn parse_atom_expression(expr: impl LambParser<ast::Expr>) -> impl LambParser<ast::Expr> {
-    let literal = parse_raw_literal().map(ast::Expr::Literal);
+    let literal = parse_raw_literal()
+        .map_with_span(Spanned::new)
+        .map(ast::Expr::Literal);
 
-    let ident = parse_raw_ident().map(ast::Expr::Ident);
+    let ident = parse_raw_ident()
+        .map_with_span(Spanned::new)
+        .map(ast::Expr::Ident);
 
     let comma_list = expr
         .clone()
+        .map_with_span(Spanned::new)
         .separated_by(just(Token::Comma))
         .allow_trailing();
 
@@ -143,8 +148,8 @@ fn parse_atom_expression(expr: impl LambParser<ast::Expr>) -> impl LambParser<as
         .delimited_by(just(Token::ParenOpen), just(Token::ParenClose));
 
     let tuple = just(Token::ParenOpen)
-        .ignore_then(expr.clone().then_ignore(just(Token::Comma)))
-        .then(expr.clone().repeated())
+        .ignore_then(expr.clone().map_with_span(Spanned::new).then_ignore(just(Token::Comma)))
+        .then(expr.clone().map_with_span(Spanned::new).repeated())
         .then_ignore(just(Token::ParenClose))
         .map(|(first, mut other)| {
             other.insert(0, first);
@@ -152,9 +157,9 @@ fn parse_atom_expression(expr: impl LambParser<ast::Expr>) -> impl LambParser<as
         });
 
     let lambda = just(Token::Lambda)
-        .ignore_then(parse_raw_ident().separated_by(just(Token::Comma)))
+        .ignore_then(parse_raw_ident().map_with_span(Spanned::new).separated_by(just(Token::Comma)))
         .then_ignore(just(Token::Arrow))
-        .then(expr)
+        .then(expr.map_with_span(Spanned::new))
         .map(|(params, body)| ast::Expr::Lambda(params, Box::new(body)));
 
     literal.or(tuple).or(lambda).or(ident).or(group).or(list)
@@ -164,39 +169,55 @@ fn parse_expression_chain(
     expr: impl LambParser<ast::Expr>,
     chainable: impl LambParser<ast::Expr>,
 ) -> impl LambParser<ast::Expr> {
+
     let call = just(Token::ParenOpen)
         .ignore_then(
-            expr.clone()
+            expr.clone().map_with_span(Spanned::new)
                 .separated_by(just(Token::Comma))
                 .allow_trailing(),
         )
         .then_ignore(just(Token::ParenClose))
-        .map(Chain::Call);
+        .map(Chain::Call)
+        .map_with_span(|call, span| (call, span));
 
     let list_index = just(Token::BrackOpen)
-        .ignore_then(expr)
+        .ignore_then(expr.map_with_span(Spanned::new))
         .then_ignore(just(Token::BrackClose))
-        .map(Chain::ListIndex);
+        .map(Chain::ListIndex)
+        .map_with_span(|call, span| (call, span));
 
     let chains = call.or(list_index);
 
     chainable
+        .map_with_span(Spanned::new)
         .then(chains.repeated())
-        .foldl(|expr, link| match link {
-            Chain::Call(args) => ast::Expr::Call(Box::new(expr), args),
-            Chain::ListIndex(idx) => ast::Expr::ListIndex(Box::new(expr), Box::new(idx)),
+        .foldl(|expr, (chain, span)| match chain {
+            Chain::Call(args) => {
+                Spanned::new(ast::Expr::Call(Box::new(expr) , args), span)
+            }
+            Chain::ListIndex(idx) => {
+                Spanned::new(ast::Expr::ListIndex(Box::new(expr), Box::new(idx)), span)
+            },
         })
+        .map(Spanned::into_inner)
 }
 
 fn parse_operator_expression(expr: impl LambParser<ast::Expr>) -> impl LambParser<ast::Expr> {
     let op = just(Token::Not)
         .to(ast::UnaryOp::Not)
-        .or(just(Token::Minus).to(ast::UnaryOp::Neg));
+        .or(just(Token::Minus).to(ast::UnaryOp::Neg))
+        .map_with_span(Spanned::new);
 
     let unary = op
         .repeated()
-        .then(expr)
-        .foldr(|op, expr| ast::Expr::Unary(op, Box::new(expr)));
+        .then(expr.map_with_span(Spanned::new))
+        .foldr(|op, expr| {
+            let span = op.start() .. expr.end();
+            Spanned::new(
+                ast::Expr::Unary(op, Box::new(expr)),
+                span,
+            )
+        });
 
     // Arithmetic
     let op = just(Token::Div)
@@ -264,18 +285,19 @@ fn parse_operator_expression(expr: impl LambParser<ast::Expr>) -> impl LambParse
         .or(just(Token::ComposeLeft).to(ast::BinaryOp::ComposeLeft))
         .or(just(Token::ComposeRight).to(ast::BinaryOp::ComposeRight));
 
-    next_binary(binary, op)
+    next_binary(binary, op).map(Spanned::into_inner)
 }
 
 fn parse_loop_expression(expr: impl LambParser<ast::Expr>) -> impl LambParser<ast::Expr> {
     just(Token::Continue)
         .to(ast::Expr::Continue)
         .or(just(Token::Return)
-            .ignore_then(expr.clone())
+            .ignore_then(expr.clone().map_with_span(Spanned::new))
             .map(|x| ast::Expr::Return(Box::new(x))))
         .or(just(Token::Break)
-            .ignore_then(expr)
-            .map(|x| ast::Expr::Break(Box::new(x))))
+            .ignore_then(expr.map_with_span(Spanned::new))
+            .map(|x| ast::Expr::Break(Box::new(x)))
+        )
 }
 
 fn parse_block_expression<ExprP, StmtP>(expr: ExprP, stmt: StmtP) -> impl LambParser<ast::Expr>
@@ -284,36 +306,36 @@ where
     StmtP: LambParser<ast::Statement>,
 {
     let block_expr = just(Token::BraceOpen)
-        .ignore_then(stmt.repeated().then(expr.clone().or_not()))
+        .ignore_then(stmt.map_with_span(Spanned::new).repeated().then(expr.clone().map_with_span(Spanned::new).or_not()))
         .then_ignore(just(Token::BraceClose))
         .map(|(stmts, end_expr)| ast::Expr::BlockExpression(stmts, end_expr.map(Box::new)));
 
     let loop_loop = just(Token::Loop)
-        .ignore_then(block_expr.clone())
+        .ignore_then(block_expr.clone().map_with_span(Spanned::new))
         .map(|expr| ast::Expr::Loop(Box::new(expr)));
 
     let for_loop = just(Token::For)
-        .ignore_then(parse_raw_ident())
+        .ignore_then(parse_raw_ident().map_with_span(Spanned::new))
         .then_ignore(just(Token::In))
-        .then(expr.clone())
-        .then(block_expr.clone())
+        .then(expr.clone().map_with_span(Spanned::new))
+        .then(block_expr.clone().map_with_span(Spanned::new))
         .map(|((ident, range), block)| ast::Expr::For(ident, Box::new(range), Box::new(block)));
 
     let while_loop = just(Token::While)
-        .ignore_then(expr.clone())
-        .then(block_expr.clone())
+        .ignore_then(expr.clone().map_with_span(Spanned::new))
+        .then(block_expr.clone().map_with_span(Spanned::new))
         .map(|(cond, block)| ast::Expr::While(Box::new(cond), Box::new(block)));
 
     let if_expr = just(Token::If)
-        .ignore_then(expr.clone())
-        .then(block_expr.clone())
+        .ignore_then(expr.clone().map_with_span(Spanned::new))
+        .then(block_expr.clone().map_with_span(Spanned::new))
         .then(
             just(Token::Elif)
-                .ignore_then(expr)
-                .then(block_expr.clone())
+                .ignore_then(expr.map_with_span(Spanned::new))
+                .then(block_expr.clone().map_with_span(Spanned::new))
                 .repeated(),
         )
-        .then(just(Token::Else).ignore_then(block_expr.clone()).or_not())
+        .then(just(Token::Else).ignore_then(block_expr.clone().map_with_span(Spanned::new)).or_not())
         .map(|(((cond, block), elifs), els)| {
             ast::Expr::If(Box::new(cond), Box::new(block), elifs, els.map(Box::new))
         });
@@ -326,12 +348,16 @@ where
 }
 
 fn next_binary(
-    prev: impl LambParser<ast::Expr>,
+    prev: impl LambParser<Spanned<ast::Expr>>,
     op: impl LambParser<ast::BinaryOp>,
-) -> impl LambParser<ast::Expr> {
+) -> impl LambParser<Spanned<ast::Expr>> {
+
     prev.clone()
-        .then(op.then(prev).repeated())
-        .foldl(|a, (op, b)| ast::Expr::Binary(op, Box::new(a), Box::new(b)))
+        .then(op.map_with_span(Spanned::new).then(prev).repeated())
+        .foldl(|a, (op, b)| {
+            let span = a.start()..b.end();
+            Spanned::new(ast::Expr::Binary(op, Box::new(a), Box::new(b)), span)
+        })
         .boxed()
 }
 

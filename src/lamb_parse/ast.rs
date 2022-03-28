@@ -43,51 +43,51 @@ pub enum Statement {
 pub enum Expr {
     // --- ExpressionsWithoutBlock ---{
     // 1 1.0 'c' "string" true
-    Literal(Literal),
+    Literal(Spanned<Literal>),
 
     // (a-z|A-Z|'_') { (a-z|A-Z|'_') }
-    Ident(Ident),
+    Ident(Spanned<Ident>),
 
     // Expression BinaryOp Expression
-    Binary(BinaryOp, Box<Self>, Box<Self>),
+    Binary(Spanned<BinaryOp>, Box<Spanned<Self>>, Box<Spanned<Self>>),
 
     // UnaryOp Expression
-    Unary(UnaryOp, Box<Self>),
+    Unary(Spanned<UnaryOp>, Box<Spanned<Self>>),
 
     // '[' [ Expression {',' Expression } ] ']'
-    List(Vec<Self>),
+    List(Vec<Spanned<Self>>),
 
     // Expression '[' Expression ']'
-    ListIndex(Box<Self>, Box<Self>),
+    ListIndex(Box<Spanned<Self>>, Box<Spanned<Self>>),
 
     // '(' Expression ',' { Expression ',' } ')'
-    Tuple(Vec<Self>),
+    Tuple(Vec<Spanned<Self>>),
 
     // Expression '.' IntegerLiteral
     // TupleIndex(Box<Self>, Box<Self>),
 
     // Expression '(' [ Expression {',' Expression } ] ')'
-    Call(Box<Self>, Vec<Self>),
+    Call(Box<Spanned<Self>>, Vec<Spanned<Self>>),
 
     // '\'[ Ident {',' Ident } ] '->' Expression
-    Lambda(Vec<Ident>, Box<Self>),
+    Lambda(Vec<Spanned<Ident>>, Box<Spanned<Self>>),
 
     // 'continue'
     Continue,
 
     // 'break' [ Expression ]
-    Break(Box<Self>),
+    Break(Box<Spanned<Self>>),
 
     // 'return' [ Expression ]
-    Return(Box<Self>),
+    Return(Box<Spanned<Self>>),
     // --- ExpressionsWithoutBlock ---}
 
     // --- ExpressionWithBlock ---{
-    BlockExpression(Vec<Statement>, Option<Box<Self>>),
-    Loop(Box<Self>),
-    For(Ident, Box<Self>, Box<Self>),
-    While(Box<Self>, Box<Self>),
-    If(Box<Self>, Box<Self>, Vec<(Self, Self)>, Option<Box<Self>>), // --- ExpressionWithBlock ---}
+    BlockExpression(Vec<Spanned<Statement>>, Option<Box<Spanned<Self>>>),
+    Loop(Box<Spanned<Self>>),
+    For(Spanned<Ident>, Box<Spanned<Self>>, Box<Spanned<Self>>),
+    While(Box<Spanned<Self>>, Box<Spanned<Self>>),
+    If(Box<Spanned<Self>>, Box<Spanned<Self>>, Vec<(Spanned<Self>, Spanned<Self>)>, Option<Box<Spanned<Self>>>), // --- ExpressionWithBlock ---}
 }
 
 #[derive(Clone, PartialEq, Debug)]

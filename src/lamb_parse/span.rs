@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::ops::Range;
+use ariadne::Span;
 
 pub struct Spanned<T>(T, Range<usize>);
 
@@ -14,6 +15,14 @@ impl<T> Spanned<T> {
 
     pub fn into_inner(self) -> T {
         self.0
+    }
+
+    pub fn start(&self) -> usize {
+        self.1.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.1.end
     }
 }
 
