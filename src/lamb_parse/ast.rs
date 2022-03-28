@@ -4,7 +4,7 @@ use super::span::Spanned;
 #[derive(Clone, PartialEq, Debug)]
 pub struct Program {
     pub exports: Option<Spanned<Export>>,
-    pub imports: Vec<Import>,
+    pub imports: Vec<Spanned<Import>>,
     pub statements: Vec<Statement>,
 }
 
@@ -17,8 +17,8 @@ pub struct Export {
 // Imports ::= 'import' Ident ['(' [ Ident {',' Ident }] ')'
 #[derive(Clone, PartialEq, Debug)]
 pub struct Import {
-    pub from: Ident,
-    pub imports: Vec<Ident>,
+    pub from: Spanned<Ident>,
+    pub imports: Vec<Spanned<Ident>>,
 }
 
 // Statement ::= ';'

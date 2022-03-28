@@ -16,7 +16,7 @@ pub fn parse_program() -> impl LambParser<Spanned<ast::Program>> {
     parse_exports()
         .map_with_span(Spanned::new)
         .or_not()
-        .then(parse_imports().repeated())
+        .then(parse_imports().map_with_span(Spanned::new).repeated())
         .then(parse_statement().clone().repeated())
         .then_ignore(end())
         .map(
@@ -49,10 +49,11 @@ fn parse_exports() -> impl LambParser<ast::Export> {
 
 fn parse_imports() -> impl LambParser<ast::Import> {
     just(Token::Import)
-        .ignore_then(parse_raw_ident())
+        .ignore_then(parse_raw_ident().map_with_span(Spanned::new))
         .then_ignore(just(Token::ParenOpen))
         .then(
             parse_raw_ident()
+                .map_with_span(Spanned::new)
                 .separated_by(just(Token::Comma))
                 .allow_trailing(),
         )
