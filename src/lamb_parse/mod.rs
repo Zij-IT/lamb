@@ -86,7 +86,7 @@ where
         .collect::<Vec<_>>();
 
     if syn_errors.is_empty() {
-        Ok(exprs.unwrap())
+        Ok(exprs.unwrap().into_inner())
     } else {
         Err(syn_errors)
     }

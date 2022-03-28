@@ -1,3 +1,5 @@
+use super::span::Spanned;
+
 // Program ::= [Exports] { Imports } { Statement } [ Expression ]
 #[derive(Clone, PartialEq, Debug)]
 pub struct Program {

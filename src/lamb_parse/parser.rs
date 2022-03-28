@@ -1,6 +1,7 @@
 use super::ast;
 use super::error::{ParseError, SyntaxPattern};
 use super::token::Token;
+use super::span::Spanned;
 
 use chumsky::prelude::*;
 
@@ -11,7 +12,7 @@ enum Chain {
     Call(Vec<ast::Expr>),
 }
 
-pub fn parse_program() -> impl LambParser<ast::Program> {
+pub fn parse_program() -> impl LambParser<Spanned<ast::Program>> {
     parse_exports()
         .or_not()
         .then(parse_imports().repeated())
@@ -24,6 +25,7 @@ pub fn parse_program() -> impl LambParser<ast::Program> {
                 statements,
             },
         )
+        .map_with_span(Spanned::new)
 }
 
 pub fn parse_raw_expression() -> impl LambParser<ast::Expr> {
