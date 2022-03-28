@@ -5,7 +5,7 @@ use super::span::Spanned;
 pub struct Program {
     pub exports: Option<Spanned<Export>>,
     pub imports: Vec<Spanned<Import>>,
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Spanned<Statement>>,
 }
 
 // Exports ::= 'export' '(' [ Ident {',' Ident }] ')'

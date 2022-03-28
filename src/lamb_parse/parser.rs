@@ -17,7 +17,7 @@ pub fn parse_program() -> impl LambParser<Spanned<ast::Program>> {
         .map_with_span(Spanned::new)
         .or_not()
         .then(parse_imports().map_with_span(Spanned::new).repeated())
-        .then(parse_statement().clone().repeated())
+        .then(parse_statement().map_with_span(Spanned::new).repeated())
         .then_ignore(end())
         .map(
             |((exports, imports), statements)| ast::Program {
