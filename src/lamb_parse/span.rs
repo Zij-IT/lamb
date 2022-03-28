@@ -1,10 +1,9 @@
 use std::fmt::Debug;
 use std::ops::Range;
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct Spanned<T: Clone + Debug + PartialEq>(T, Range<usize>);
+pub struct Spanned<T>(T, Range<usize>);
 
-impl<T: Clone + Debug + PartialEq> Spanned<T> {
+impl<T> Spanned<T> {
     pub fn new(item: T, span: Range<usize>) -> Self {
         Self(item, span)
     }
@@ -15,5 +14,31 @@ impl<T: Clone + Debug + PartialEq> Spanned<T> {
 
     pub fn into_inner(self) -> T {
         self.0
+    }
+}
+
+impl<T: PartialEq> PartialEq for Spanned<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == self.0
+    }
+}
+
+impl <T: Debug> Debug for Spanned<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[{}..{}]: {:?}", self.1.start, self.1.end, self.0)
+    }
+}
+
+impl<T: Clone> Clone for Spanned<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1.clone())
+    }
+}
+
+impl<T> std::ops::Deref for Spanned<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
