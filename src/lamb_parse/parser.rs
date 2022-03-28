@@ -14,6 +14,7 @@ enum Chain {
 
 pub fn parse_program() -> impl LambParser<Spanned<ast::Program>> {
     parse_exports()
+        .map_with_span(Spanned::new)
         .or_not()
         .then(parse_imports().repeated())
         .then(parse_statement().clone().repeated())
@@ -38,6 +39,7 @@ fn parse_exports() -> impl LambParser<ast::Export> {
         .ignore_then(just(Token::ParenOpen))
         .ignore_then(
             parse_raw_ident()
+                .map_with_span(Spanned::new)
                 .separated_by(just(Token::Comma))
                 .allow_trailing(),
         )
