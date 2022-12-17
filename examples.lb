@@ -1,0 +1,121 @@
+-- Lamb Quick Overview:
+-- 
+--	Lamb should hopefully end up being a small statically-typed scripting language! But for now it's just an idea.
+--	Think Lua, Haskell and Rust had a baby. That's Lamb.
+--
+-- Types:
+--   * int
+--   * bool
+--   * char
+--   * string
+--   * array<t>
+-- 
+-- Keywords:
+--   * fn
+--   * case
+--   * if
+--   * elif
+--   * else
+--   * return
+--   * true
+--   * false
+--   * struct
+--   * enum
+
+-- Syntax Examples:
+-- 	 * Comments
+ 	 
+	 	-- This is a line comment
+		--[[ This is a multiline or inline comment ]]--
+		--[[
+			See... this works as intended. Here are some characters that
+			aren't tokens. And would error if this was lexed normally: # ? 
+		]]--
+
+-- 	 * Defining a variable:
+
+		my_var  := 2;
+		my_var  := true;
+		my_var  := 'c';
+		my_var  := "a string is here";
+		my_var  := [ 1, 2, 3, 4, 5 ];
+		
+-- 	 * Defining a function:
+
+		my_func := fn(arg1, arg2) -> { arg1 + arg2; };
+
+-- 	 * Defining a struct:
+		
+---		struct person {
+---			age: int,
+---			name: string,
+---		}
+		
+-- 	 * Defining an enum:
+
+---		enum list {
+---			cons t list,
+---			tail,
+---		}
+
+-- 	 * Operators:
+	
+		arithmetic := 1 + 2 - 3 * 4 / 5 % 6;
+
+		bitwise    := 1 & 2 | 3 << 4 >> 5 ^ ~6;
+
+		relational := 1 = 2; -- != > < <= >=;
+
+		logical    := true && false || true;
+
+		functional_left_to_right := 2 $> (increment .> decrement .> increment);
+
+		functional_right_to_left := increment <. decrement <. increment <$ 2;
+
+		index	   := [1, 2, 3, 4][0];
+
+		call	   := increment(decrement(increment(2)));
+
+-- 	 * Numbers
+
+		binary  := 0b0101;
+		hex     := 0h1234;
+		octal   := 0o1234;
+		decimal := 0d1234;
+		decimal := 1234;
+
+-- 	 * Some Examples:
+
+		my_list := [ 1, 2, 3, 4, 5 ];
+
+		not := fn(x) -> !x;
+
+		is_even := fn(x) -> x % 2 = 1;
+
+		only_evens := filter(my_list, is_even);
+
+		only_odds := filter(my_list, not <. is_even);
+
+		print(only_events);
+
+		print(only_odds);
+
+---		enum list {
+---			cons t list,
+---			tail, 
+---		}
+
+  		sum := fn(ls) -> case ls {
+  			cons -> x + sum(rest),
+  			tail -> 0,
+  		};
+		
+-- Has:
+-- * Variable defintions
+-- * Functions via closures
+-- * Array + Indexing
+-- * Binary Expressions
+-- * Unary Expressions
+-- * Struct Definitions
+-- * Enum Definitions
+-- * Branching via if + case
