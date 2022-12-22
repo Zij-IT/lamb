@@ -1,6 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "./ast/ast.h"
 #include "parsing/lexer.h"
+#include "./compiling/chunk.h"
+#include "./compiling/vm.h"
+#include "./compiling/ast.h"
+#include "./compiling/debug.h"
+
+AstNode* get_node() {
+	return new_astnode(AstntStmts);
+}
 
 int main(int argc, char** argv) {
 	FILE* file = stdin;
@@ -14,14 +23,61 @@ int main(int argc, char** argv) {
   
   set_lexer_file(file);
 
-	ParseResult res = yyparse();
-
+	AstNode** root = malloc(sizeof(AstNode*));
+	ParseResult res = yyparse(root);
 	switch(res) {
-      case ParseResultAccept: printf("Word accepted"); break;
-      case ParseResultReject: printf("Word rejected");  break;
+      case ParseResultAccept: printf("Word accepted\n"); break;
+      case ParseResultReject: printf("Word rejected\n");  break;
   }
 	
+	{
+	  printf("Unoptimized AST: \n");
+		print_ast(*root, 0);
+		printf("\n");
+	
+		Chunk chunk;
+		chunk_init(&chunk);
+
+		compile_ast(&chunk, *root);
+		chunk_write(&chunk, OpHalt);
+	
+		chunk_debug(&chunk, "Compiled Ast");
+
+		Vm vm;
+		vm_init_with_chunk(&vm, &chunk);
+		vm_run(&vm);
+	
+		chunk_free(&chunk);
+		vm_free(&vm);
+	}
+	
+	optimize_ast(*root);
+
+	{
+	  printf("Optimized AST: \n");
+		print_ast(*root, 0);
+		printf("\n");
+	
+		Chunk chunk;
+		chunk_init(&chunk);
+
+		compile_ast(&chunk, *root);
+		chunk_write(&chunk, OpHalt);
+	
+		chunk_debug(&chunk, "Compiled (Optimized) Ast");
+
+		Vm vm;
+		vm_init_with_chunk(&vm, &chunk);
+		vm_run(&vm);
+	
+		chunk_free(&chunk);
+		vm_free(&vm);
+	}
+
 	if (file != stdin && file != NULL) {
 		fclose(file);
 	}
+	
+	free_ast(*root);
+	free(root);
 }

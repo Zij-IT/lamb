@@ -100,10 +100,10 @@
 
 		print(only_odds);
 
----		enum list {
----			cons t list,
----			tail, 
----		}
+   		enum list {
+   			cons t list,
+   			tail, 
+   		}
 
   		sum := fn(ls) -> case ls {
   			cons -> x + sum(rest),

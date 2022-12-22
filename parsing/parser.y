@@ -1,8 +1,9 @@
 %{
 	#include <stdio.h>
 	#include "../../types.h"
+	#include "../../ast/ast.h"
 
-	void yyerror(char* msg) {
+	void yyerror(AstNode** node, char* msg) {
 		fprintf(stderr, "Parse Error: %s\n", msg);
 	}
 	
@@ -85,12 +86,14 @@
 	#include "../../ast/optimization.h" 
 }
 
-%type <node> LITERAL ATOM EXPR STMT STMTS ID GROUPED BLOCK IF_EXPR ELIFS ELSE CASE_EXPR CASE_ARMS PATTERN CASE_VAL ARRAY EXPR_LIST FUNC_DEF FUNC_ARGS FUNC_ARGS_LIST FUNC_CALL UNARY_EXPR INDEX FUNC_END BINARY_EXPR
+%parse-param { AstNode** parse_node }
+
+%type <node> LITERAL ATOM EXPR STMT STMTS ID GROUPED BLOCK IF_EXPR ELIFS ELSE CASE_EXPR CASE_ARMS PATTERN CASE_VAL ARRAY EXPR_LIST FUNC_DEF FUNC_ARGS FUNC_ARGS_LIST FUNC_CALL UNARY_EXPR INDEX FUNC_END BINARY_EXPR FILE
 %%
 
-FILE: STMTS			  { eval_ast($1); free_ast($1); }
-	| STRUCT FILE
-	| ENUM FILE
+FILE: FILE STRUCT 
+	| FILE ENUM
+	| STMTS 		{ *parse_node = $1; }
 
 STRUCT: TokenStruct TokenIdent TokenLBrace STRUCT_MEMS TokenRBrace
 
@@ -211,9 +214,3 @@ EXPR_LIST: EXPR TokenComma EXPR_LIST { $$ = new_astnode(AstntNodeList); $$->kids
 		 | EXPR 					 { $$ = new_astnode(AstntNodeList); $$->kids[0] = $1; $$->kids[1] = NULL; }
 
 %%
-
-ParseResult lamb_parse() {
-	// Bison apparently does this backwords for whatever reason.
-	// So don't go swapping this...
-	return yyparse() ? ParseResultReject : ParseResultAccept;
-}

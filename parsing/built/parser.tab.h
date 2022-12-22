@@ -45,7 +45,7 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 83 "./parsing/parser.y"
+#line 84 "./parsing/parser.y"
  
 	#include "../../ast/ast.h" 
 	#include "../../ast/optimization.h" 
@@ -122,7 +122,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 12 "./parsing/parser.y"
+#line 13 "./parsing/parser.y"
  
 	AstNode* node;
 	string str;
@@ -142,7 +142,7 @@ typedef union YYSTYPE YYSTYPE;
 extern YYSTYPE yylval;
 
 
-int yyparse (void);
+int yyparse (AstNode** parse_node);
 
 
 #endif /* !YY_YY_PARSING_BUILT_PARSER_TAB_H_INCLUDED  */
