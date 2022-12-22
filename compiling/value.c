@@ -20,12 +20,19 @@ Value new_double(double num) {
 }
 
 Value new_string(string st) {
-  Value val = { .kind = VkString, .as.string = st };
+  Value val = { .kind = VkObject, .as.obj = malloc(sizeof(ObjString*))};
+  val.as.obj->type = OtString;
+  as_string(val)->chars = st;
   return val;
 }
 
 Value new_char(char c) {
   Value val = { .kind = VkChar, .as.ch = c };
+  return val;
+}
+
+Value new_obj(Obj* obj) {
+  Value val = { .kind = VkObject, .as.obj = obj };
   return val;
 }
 
@@ -41,12 +48,24 @@ bool is_integer(Value val) {
   return val.kind == VkInt;
 }
 
-bool is_string(Value val) {
-  return val.kind == VkString;
-}
-
 bool is_char(Value val) {
   return val.kind == VkChar;
+}
+
+bool is_obj(Value val) {
+  return val.kind == VkObject;
+}
+
+bool is_obj_of_type(Value val, ObjectType type) {
+  return is_obj(val) && val.as.obj->type == type;
+}
+
+ObjString* as_string(Value val) {
+  return (ObjString*)val.as.obj;
+}
+
+str as_cstring(Value val) {
+  return as_string(val)->chars;
 }
 
 void arr_init(ValueArray* arr) {

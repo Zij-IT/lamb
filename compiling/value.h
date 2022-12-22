@@ -2,13 +2,14 @@
 #define VALUE_HEADER
 
 #include "../types.h"
+#include "object.h"
 
 typedef enum {
   VkBool,
   VkInt,
   VkDouble,
-  VkString,
   VkChar,
+  VkObject,
 } ValueKind;
 
 typedef struct {
@@ -17,8 +18,8 @@ typedef struct {
     bool boolean;
     i64 intn;
     f64 doubn;
-    string string;
     char ch;
+    Obj* obj;
   } as;
 } Value;
 
@@ -34,9 +35,11 @@ bool is_double(Value val);
 
 bool is_integer(Value val);
 
-bool is_string(Value val);
-
 bool is_char(Value val);
+
+bool is_obj(Value val);
+
+bool is_obj_of_type(Value val, ObjectType type);
 
 Value new_boolean(bool b);
 
@@ -47,6 +50,12 @@ Value new_double(double num);
 Value new_string(string st);
 
 Value new_char(char c);
+
+Value new_obj(Obj* obj);
+
+ObjString* as_string(Value val);
+
+str as_cstring(Value val);
 
 void arr_init(ValueArray* arr);
 

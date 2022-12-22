@@ -43,26 +43,26 @@ Value* vm_peek_stack(Vm* vm) {
   return vm->stack_top - 1;
 }
 
-#define BINARY_REL_OP(op)                                                       \
-  do {                                                                          \
-    Value  rhs = vm_pop_stack(vm);                                              \
-    Value* lhs = vm_peek_stack(vm);                                             \
-                                                                                \
-    if (rhs.kind == lhs->kind) {                                                \
-      bool rel;                                                                 \
-      switch(rhs.kind) {                                                        \
-        case VkBool:   rel = rhs.as.boolean op lhs->as.boolean;          break; \
-        case VkInt:    rel = rhs.as.intn op lhs->as.intn;                break; \
-        case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;              break; \
-        case VkString: rel = strcmp(rhs.as.string, lhs->as.string) op 0; break; \
-        case VkChar:   rel = rhs.as.ch op lhs->as.ch;                    break; \
-      }                                                                         \
-                                                                                \
-      lhs->kind = VkBool;                                                       \
-      lhs->as.boolean = rel;                                                    \
-    } else {                                                                    \
-      /* RUNTIME ERR: Operands must be of the same type */                      \
-    }                                                                           \
+#define BINARY_REL_OP(op)                                              \
+  do {                                                                 \
+    Value  rhs = vm_pop_stack(vm);                                     \
+    Value* lhs = vm_peek_stack(vm);                                    \
+                                                                       \
+    if (rhs.kind == lhs->kind) {                                       \
+      bool rel;                                                        \
+      switch(rhs.kind) {                                               \
+        case VkBool:   rel = rhs.as.boolean op lhs->as.boolean; break; \
+        case VkInt:    rel = rhs.as.intn op lhs->as.intn;       break; \
+        case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break; \
+        case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break; \
+        case VkObject: rel = false;                             break; \
+      }                                                                \
+                                                                       \
+      lhs->kind = VkBool;                                              \
+      lhs->as.boolean = rel;                                           \
+    } else {                                                           \
+      /* RUNTIME ERR: Operands must be of the same type */             \
+    }                                                                  \
   } while(0)
 
 #define BINARY_INT_DOUBLE_OP(op)                                \

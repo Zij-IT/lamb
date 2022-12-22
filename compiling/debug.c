@@ -88,8 +88,13 @@ void print_value(Value v)  {
     case VkDouble:
       printf("%g", v.as.doubn);
       return;
-    case VkString:
-      printf("%s", v.as.string);
+    case VkObject:
+      switch(v.as.obj->type) {
+        case OtString: {
+          printf("%s", as_cstring(v));
+          return;
+        }
+      }
       return;
     case VkChar:
       printf("%c", v.as.ch);
