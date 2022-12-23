@@ -12,6 +12,7 @@ typedef enum {
 
 typedef struct Object {
   ObjectType type;
+  struct Object* next;
 } Object;
 
 typedef struct LambString {
@@ -24,5 +25,7 @@ typedef struct LambString {
 Object* alloc_obj(Vm* vm, ObjectType type);
 
 bool is_of_type(Object* obj, ObjectType type);
+
+void object_free(Object* obj);
 
 #endif//OBJECT_HEADER

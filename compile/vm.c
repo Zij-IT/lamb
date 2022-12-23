@@ -212,7 +212,12 @@ void vm_run(Vm* vm) {
 }
 
 void vm_free(Vm* vm) {
-
+  Object* obj = vm->poor_mans_gc;
+  while(obj != NULL) {
+    Object* next = obj->next;    
+    object_free(obj);
+    obj = next;
+  }
 }
 
 #undef RELATIVE_BIN_OP
