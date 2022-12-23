@@ -28,4 +28,6 @@ bool is_of_type(Object* obj, ObjectType type);
 
 void object_free(Object* obj);
 
+LambString* concat(Vm* vm, LambString* lhs, LambString* rhs);
+
 #endif//OBJECT_HEADER

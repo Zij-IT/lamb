@@ -46,6 +46,10 @@ bool is_char(Value val) {
   return val.kind == VkChar;
 }
 
+bool is_object(Value val) {
+  return val.kind == VkObj;
+}
+
 void arr_init(ValueArray* arr) {
   arr->len = 0;
   arr->capacity = 0;

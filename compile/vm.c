@@ -163,6 +163,9 @@ void vm_run(Vm* vm) {
             lhs->as.intn = lhs->as.intn + rhs.as.intn;
           } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {
             lhs->as.doubn = lhs->as.doubn + rhs.as.doubn;
+          } else if (is_object(*lhs) && is_of_type(lhs->as.obj, OtString) && is_object(rhs) && is_of_type(rhs.as.obj, OtString)) {
+            LambString* st = concat(vm, (LambString*)lhs->as.obj, (LambString*)rhs.as.obj);
+            vm_push_stack(vm, new_object((Object*)st));
           } else {
             /* Runtime Error "Binary '+' is only applicable for f64, i64 and string" */
           }
