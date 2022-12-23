@@ -8,20 +8,24 @@
 void vm_init(Vm* vm) {
   vm->ip = NULL;
   vm->chunk = NULL;
+  vm->poor_mans_gc = NULL;
   vm->stack_top = vm->stack;
 }
 
-void vm_init_with_chunk(Vm* vm, Chunk* chunk) {
-  vm_init(vm);
+void vm_set_chunk(Vm* vm, Chunk* chunk) {
   vm->chunk = chunk;
-  vm->ip = chunk->bytes;
+  vm_reset_ip(vm);
+}
+
+void vm_reset_ip(Vm* vm) {
+  vm->ip = vm->chunk->bytes;
 }
 
 void vm_reset_stack(Vm* vm) {
   vm->stack_top = vm->stack;
 }
 
-void vm_push_value(Vm* vm, Value val) {
+void vm_push_stack(Vm* vm, Value val) {
   *vm->stack_top = val;
   vm->stack_top += 1;
 }
@@ -43,7 +47,7 @@ Value* vm_peek_stack(Vm* vm) {
   return vm->stack_top - 1;
 }
 
-#define BINARY_REL_OP(op)                                              \
+#define BINARY_REL_OP(vm, op)                                          \
   do {                                                                 \
     Value  rhs = vm_pop_stack(vm);                                     \
     Value* lhs = vm_peek_stack(vm);                                    \
@@ -55,7 +59,7 @@ Value* vm_peek_stack(Vm* vm) {
         case VkInt:    rel = rhs.as.intn op lhs->as.intn;       break; \
         case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break; \
         case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break; \
-        case VkObject: rel = false;                             break; \
+        case VkObj:    rel = false;                             break; \
       }                                                                \
                                                                        \
       lhs->kind = VkBool;                                              \
@@ -65,7 +69,7 @@ Value* vm_peek_stack(Vm* vm) {
     }                                                                  \
   } while(0)
 
-#define BINARY_INT_DOUBLE_OP(op)                                \
+#define BINARY_INT_DOUBLE_OP(vm, op)                            \
   do {                                                          \
     Value  rhs = vm_pop_stack(vm);                              \
     Value* lhs = vm_peek_stack(vm);                             \
@@ -77,9 +81,9 @@ Value* vm_peek_stack(Vm* vm) {
     } else {                                                    \
       /* RUNTIME ERR: Operands must be of type i64 of f64 */    \
     }                                                           \
-  } while(0)                                                    \
+  } while(0)                                                    
 
-#define BINARY_INT_OP(op)                             \
+#define BINARY_INT_OP(vm, op)                         \
   do {                                                \
     Value  rhs = vm_pop_stack(vm);                    \
     Value* lhs = vm_peek_stack(vm);                   \
@@ -91,7 +95,7 @@ Value* vm_peek_stack(Vm* vm) {
     }                                                 \
   } while(0)
 
-#define BINARY_BOOL_SS_OP(op)                              \
+#define BINARY_BOOL_SS_OP(vm, op)                          \
   do {                                                     \
     Value  rhs = vm_pop_stack(vm);                         \
     Value* lhs = vm_peek_stack(vm);                        \
@@ -109,7 +113,7 @@ void vm_run(Vm* vm) {
     switch (vm_read_byte(vm)) {
       case OpConstant: {
         Value val = vm_read_constant(vm);
-        vm_push_value(vm, val);
+        vm_push_stack(vm, val);
         break;
       }
       case OpLongConstant: {
@@ -120,7 +124,7 @@ void vm_run(Vm* vm) {
         i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
         Value val = vm->chunk->constants.values[idx];
 
-        vm_push_value(vm, val);
+        vm_push_stack(vm, val);
         break;
       }
       case OpNumNeg: {
@@ -152,22 +156,35 @@ void vm_run(Vm* vm) {
         }
         break;
       }
-      case OpAdd:    BINARY_INT_DOUBLE_OP(+); break;
-      case OpSub:    BINARY_INT_DOUBLE_OP(-); break;
-      case OpMul:    BINARY_INT_DOUBLE_OP(*); break;
-      case OpDiv:    BINARY_INT_DOUBLE_OP(/); break;
-      case OpMod:    BINARY_INT_OP(%); break;
-      case OpBinAnd: BINARY_INT_OP(&); break;
-      case OpBinOr:  BINARY_INT_OP(|); break;
-      case OpBinXor: BINARY_INT_OP(^); break;
-      case OpEq:     BINARY_REL_OP(==); break;
-      case OpNe:     BINARY_REL_OP(!=); break;
-      case OpGt:     BINARY_REL_OP(>);  break; 
-      case OpGe:     BINARY_REL_OP(>=); break;
-      case OpLt:     BINARY_REL_OP(<);  break;
-      case OpLe:     BINARY_REL_OP(<=); break;
-      case OpLogAnd: BINARY_BOOL_SS_OP(&&); break;
-      case OpLogOr:  BINARY_BOOL_SS_OP(||); break;
+      case OpAdd: {
+          Value rhs = vm_pop_stack(vm);
+          Value *lhs = vm_peek_stack(vm);
+          if (rhs.kind == lhs->kind && rhs.kind == VkInt) {
+            lhs->as.intn = lhs->as.intn + rhs.as.intn;
+          } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {
+            lhs->as.doubn = lhs->as.doubn + rhs.as.doubn;
+          } else {
+            /* Runtime Error "Binary '+' is only applicable for f64, i64 and string" */
+          }
+          break;
+        }
+      case OpSub:    BINARY_INT_DOUBLE_OP(vm, -); break;
+      case OpMul:    BINARY_INT_DOUBLE_OP(vm, *); break;
+      case OpDiv:    BINARY_INT_DOUBLE_OP(vm, /); break;
+      case OpMod:    BINARY_INT_OP(vm, %); break;
+      case OpBinAnd: BINARY_INT_OP(vm, &); break;
+      case OpBinOr:  BINARY_INT_OP(vm, |); break;
+      case OpBinXor: BINARY_INT_OP(vm, ^); break;
+      case OpLShift: BINARY_INT_OP(vm, <<); break;
+      case OpRShift: BINARY_INT_OP(vm, >>); break;
+      case OpEq:     BINARY_REL_OP(vm, ==); break;
+      case OpNe:     BINARY_REL_OP(vm, !=); break;
+      case OpGt:     BINARY_REL_OP(vm, >);  break; 
+      case OpGe:     BINARY_REL_OP(vm, >=); break;
+      case OpLt:     BINARY_REL_OP(vm, <);  break;
+      case OpLe:     BINARY_REL_OP(vm, <=); break;
+      case OpLogAnd: BINARY_BOOL_SS_OP(vm, &&); break;
+      case OpLogOr:  BINARY_BOOL_SS_OP(vm, ||); break;
       case OpReturn: {
         Value ret = vm_pop_stack(vm);
         printf("Returning: ");
@@ -189,15 +206,13 @@ void vm_run(Vm* vm) {
       case OpRApply:
       case OpLCompose:
       case OpRCompose:
-      case OpRShift:
-      case OpLShift:
         break;
       }
   }
 }
 
 void vm_free(Vm* vm) {
-  
+
 }
 
 #undef RELATIVE_BIN_OP

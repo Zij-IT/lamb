@@ -2,8 +2,8 @@
 #define COMPILING_AST_HEADER
 
 #include "../ast/ast.h"
-#include "chunk.h"
+#include "vm.h"
 
-void compile_ast(Chunk* chunk, AstNode* node);
+void compile_ast(Vm* vm, AstNode* node);
 
 #endif//COMPILING_AST_HEADER

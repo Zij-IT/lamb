@@ -6,11 +6,12 @@ ALL_SRC:= ./main.c \
           ./ast/optimization.c \
           ./parsing/built/lexer.c \
           ./parsing/built/parser.tab.c \
-		  ./compiling/vm.c \
-		  ./compiling/value.c \
-		  ./compiling/chunk.c \
-		  ./compiling/ast.c \
-		  ./compiling/debug.c \
+		  ./compile/vm.c \
+		  ./compile/value.c \
+		  ./compile/chunk.c \
+		  ./compile/ast.c \
+		  ./compile/debug.c \
+		  ./compile/object.c \
 
 lamb: $(ALL_SRC)
 	$(CC) $(ALL_SRC) -g -Wall -Wextra -lfl -o lamb

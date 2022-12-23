@@ -88,16 +88,20 @@ void print_value(Value v)  {
     case VkDouble:
       printf("%g", v.as.doubn);
       return;
-    case VkObject:
-      switch(v.as.obj->type) {
-        case OtString: {
-          printf("%s", as_cstring(v));
-          return;
-        }
-      }
-      return;
     case VkChar:
       printf("%c", v.as.ch);
       return;
+    case VkObj:
+      print_object(v.as.obj);
+      break;
+    }
+}
+
+void print_object(Object* obj) {
+  switch(obj->type) {
+    case OtString: {
+      printf("%s", ((LambString*)obj)->chars);
+      break;
+    }
   }
 }

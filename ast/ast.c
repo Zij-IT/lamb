@@ -27,20 +27,6 @@ AstNode* new_binary_astnode(AstNodeType type, AstNode* lhs, AstNode* rhs) {
   
   return node;
 }
-
-i64 eval_ast(AstNode* root) {
-  printf("Unoptimized AST: \n");
-  print_ast(root, 0);
-  printf("\n");
-  
-  printf("Optimized AST: \n");
-  optimize_ast(root);
-  print_ast(root, 0);
-  printf("\n");
-
-  return 0;
-}
-
 void free_ast(AstNode* root) {
   if (root == NULL) {
     return;

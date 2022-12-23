@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include "./ast/ast.h"
 #include "parsing/lexer.h"
-#include "./compiling/chunk.h"
-#include "./compiling/vm.h"
-#include "./compiling/ast.h"
-#include "./compiling/debug.h"
+#include "./compile/chunk.h"
+#include "./compile/vm.h"
+#include "./compile/ast.h"
+#include "./compile/debug.h"
 
 AstNode* get_node() {
 	return new_astnode(AstntStmts);
@@ -20,14 +20,19 @@ void debug_compile_ast(AstNode* root, str name) {
 		Chunk chunk;
 		chunk_init(&chunk);
 
-		compile_ast(&chunk, root);
+		Vm vm;
+		vm_init(&vm);
+		vm_set_chunk(&vm, &chunk);
+
+		compile_ast(&vm, root);
 		chunk_write(&chunk, OpHalt);
+	
+		vm_reset_ip(&vm);
 	
 		printf("\n");
 		chunk_debug(&chunk, "Compiled Ast");
 
-		Vm vm;
-		vm_init_with_chunk(&vm, &chunk);
+		vm_set_chunk(&vm, &chunk);
 		vm_run(&vm);
 	
 		chunk_free(&chunk);
@@ -57,8 +62,8 @@ int main(int argc, char** argv) {
 	
 	optimize_ast(*root);
 
-	debug_compile_ast(*root, "Optimized AST");
-
+	// debug_compile_ast(*root, "Optimized AST");
+	
 	if (file != stdin && file != NULL) {
 		fclose(file);
 	}

@@ -2,14 +2,17 @@
 #define VALUE_HEADER
 
 #include "../types.h"
-#include "object.h"
+
+// Forward declare from object.h
+typedef struct Object Object;
+typedef struct LambString LambString;
 
 typedef enum {
   VkBool,
   VkInt,
   VkDouble,
   VkChar,
-  VkObject,
+  VkObj,
 } ValueKind;
 
 typedef struct {
@@ -19,7 +22,7 @@ typedef struct {
     i64 intn;
     f64 doubn;
     char ch;
-    Obj* obj;
+    Object* obj;
   } as;
 } Value;
 
@@ -37,9 +40,7 @@ bool is_integer(Value val);
 
 bool is_char(Value val);
 
-bool is_obj(Value val);
-
-bool is_obj_of_type(Value val, ObjectType type);
+bool is_object(Value val);
 
 Value new_boolean(bool b);
 
@@ -47,15 +48,9 @@ Value new_int(i64 num);
 
 Value new_double(double num);
 
-Value new_string(string st);
-
 Value new_char(char c);
 
-Value new_obj(Obj* obj);
-
-ObjString* as_string(Value val);
-
-str as_cstring(Value val);
+Value new_object(Object* obj);
 
 void arr_init(ValueArray* arr);
 
