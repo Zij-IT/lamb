@@ -176,10 +176,10 @@ void vm_run(Vm* vm) {
       case OpSub:    BINARY_INT_DOUBLE_OP(vm, -); break;
       case OpMul:    BINARY_INT_DOUBLE_OP(vm, *); break;
       case OpDiv:    BINARY_INT_DOUBLE_OP(vm, /); break;
-      case OpMod:    BINARY_INT_OP(vm, %); break;
-      case OpBinAnd: BINARY_INT_OP(vm, &); break;
-      case OpBinOr:  BINARY_INT_OP(vm, |); break;
-      case OpBinXor: BINARY_INT_OP(vm, ^); break;
+      case OpMod:    BINARY_INT_OP(vm,  %); break;
+      case OpBinAnd: BINARY_INT_OP(vm,  &); break;
+      case OpBinOr:  BINARY_INT_OP(vm,  |); break;
+      case OpBinXor: BINARY_INT_OP(vm,  ^); break;
       case OpLShift: BINARY_INT_OP(vm, <<); break;
       case OpRShift: BINARY_INT_OP(vm, >>); break;
       case OpEq:     BINARY_REL_OP(vm, ==); break;
