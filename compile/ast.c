@@ -31,23 +31,29 @@ static void compile_ast_helper(Vm* vm, AstNode* node, i32 scope_depth) {
       // AstntIdent's are treatead as strings for the purposes of compilation. This does mean that
       // they show up in the 'strings' table of the VM, but that's not of consequence.
 
-      // Check if already interned and if not intern it
-      u64 len = strlen(node->val.s);
-      u32 hash = hash_string(node->val.s);
-      LambString* interned = table_find_string(&vm->strings, node->val.s, len, hash);
+      u64 len = strlen(node->val.i);
+      u32 hash = hash_string(node->val.i);
+      LambString* interned = table_find_string(&vm->strings, node->val.i, len, hash);
       if (interned != NULL) {
         // If the string is interned, write it as a constant and return. No need to make own string
         chunk_write_constant(vm->chunk, new_object((Object*)interned));
-        return;
-      }
-      
-      LambString* st = (LambString*)alloc_obj(vm, OtString);
-      st->chars = strdup(node->val.s);
-      st->hash = hash;
-      st->len = len;
+      } else {
+        LambString* st = (LambString*)alloc_obj(vm, OtString);
+        st->chars = strdup(node->val.i);
+        st->hash = hash;
+        st->len = len;
 
-      table_insert(&vm->strings, st, new_boolean(false));
-      chunk_write_constant(vm->chunk, new_object((Object*)st));
+        table_insert(&vm->strings, st, new_boolean(false));
+        chunk_write_constant(vm->chunk, new_object((Object*)st));       
+      }
+
+      if (scope_depth == 0) {
+        chunk_write(vm->chunk, OpGetGlobal);
+      } else {
+        printf("Reminder: GetLocal not yet implemented. Substituting with GetGlobal");
+        chunk_write(vm->chunk, OpGetGlobal);
+      }
+
       break;
     }
     case AstntNumLit: {
@@ -254,11 +260,28 @@ static void compile_ast_helper(Vm* vm, AstNode* node, i32 scope_depth) {
     case AstntAssignStmt: {
       AstNode* ident_node = node->kids[0];
       AstNode* value_node = node->kids[1];
-      
+
       // Note: These values are swapped, as it makes dealing with garbage collection
       //       easier. See OpDefineGlobal or OpDefineLocal for more details. 
       compile_ast_helper(vm, value_node, scope_depth);
-      compile_ast_helper(vm, ident_node, scope_depth);
+
+      // This next bit is basically what happens with a string node, but this node is an ident
+      u64 len = strlen(ident_node->val.i);
+      u32 hash = hash_string(ident_node->val.i);
+      LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
+      if (interned != NULL) {
+        // If the string is interned, write it as a constant and return. No need to make own string
+        chunk_write_constant(vm->chunk, new_object((Object*)interned));
+      } else {
+        LambString* st = (LambString*)alloc_obj(vm, OtString);
+        st->chars = strdup(ident_node->val.i);
+        st->hash = hash;
+        st->len = len;
+
+        table_insert(&vm->strings, st, new_boolean(false));
+        chunk_write_constant(vm->chunk, new_object((Object*)st));       
+      }
+    
 
       if (scope_depth == 0) {
         // Define global
@@ -270,6 +293,7 @@ static void compile_ast_helper(Vm* vm, AstNode* node, i32 scope_depth) {
         chunk_write(vm->chunk, OpDefineGlobal);
         fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
       }
+      
       break;
     }
     case AstntStmts: {

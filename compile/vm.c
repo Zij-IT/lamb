@@ -129,17 +129,30 @@ void vm_run(Vm* vm) {
         break;
       }
       case OpDefineGlobal: {
-        // Val is not popped off of the stack because garbage collection could run
-        // while the value 'val' is off of the stack, which could lead to it being incorrectly
-        // freed
-
-        Value id  = vm_pop_stack(vm);
+        LambString* ident = (LambString*)vm_pop_stack(vm).as.obj;
         Value* val = vm_peek_stack(vm);
-        
-        LambString* ident = (LambString*)id.as.obj;
-        table_insert(&vm->globals, ident, *val);
+       
+        if(!table_insert(&vm->globals, ident, *val)) {
+          printf("Multiple definitions found for %s\n", ident->chars);
+          // RuntimeError: Multiple definitions found for a global variable
+        }
+
         vm_pop_stack(vm);
-        
+       
+        break;
+      }
+      case OpGetGlobal: {
+        Value val = vm_pop_stack(vm);
+        LambString* ident = (LambString*)val.as.obj;
+
+        Value value;
+        if (!table_get(&vm->globals, ident, &value)) {
+          printf("Globals doesn't contain '%s'\n", ident->chars);
+          // Runtime Error "Undefined variabel '%s'"
+          return;
+        }
+
+        vm_push_stack(vm, value);
         break;
       }
       case OpNumNeg: {
