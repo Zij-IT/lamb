@@ -16,6 +16,7 @@ typedef struct Vm {
   Value stack[STACK_MAX];
   Object* poor_mans_gc;
   Table strings;
+  Table globals;
 } Vm;
 
 void vm_init(Vm* vm);

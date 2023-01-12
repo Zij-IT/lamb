@@ -34,6 +34,7 @@ static i32 print_op(Chunk* chunk, i32 offset) {
   switch(chunk->bytes[offset]) {
     case OpConstant: return print_constant(chunk, "OpConstant", offset, false);
     case OpLongConstant: return print_constant(chunk, "OpLongConstant", offset, true);
+    case OpDefineGlobal: return print_simple_op("OpDefineGlobal");
     case OpNumNeg: return print_simple_op("OpNumNeg");
     case OpBinNeg: return print_simple_op("OpBinNeg");
     case OpLogNeg: return print_simple_op("OpLogNeg");

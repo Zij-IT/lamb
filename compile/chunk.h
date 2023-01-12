@@ -7,6 +7,7 @@
 typedef enum {
   OpConstant,
   OpLongConstant,
+  OpDefineGlobal,
   OpNumNeg,
   OpBinNeg,
   OpLogNeg,

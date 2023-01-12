@@ -5,9 +5,32 @@
 #include "misc.h"
 #include "object.h"
 
-void compile_ast(Vm* vm, AstNode* node) {
+static void compile_ast_helper(Vm* vm, AstNode* node, i32 scope_depth) {
   switch (node->type) {
     case AstntStrLit: {
+      // Check if already interned and if not intern it
+      u64 len = strlen(node->val.s);
+      u32 hash = hash_string(node->val.s);
+      LambString* interned = table_find_string(&vm->strings, node->val.s, len, hash);
+      if (interned != NULL) {
+        // If the string is interned, write it as a constant and return. No need to make own string
+        chunk_write_constant(vm->chunk, new_object((Object*)interned));
+        return;
+      }
+      
+      LambString* st = (LambString*)alloc_obj(vm, OtString);
+      st->chars = strdup(node->val.s);
+      st->hash = hash;
+      st->len = len;
+
+      table_insert(&vm->strings, st, new_boolean(false));
+      chunk_write_constant(vm->chunk, new_object((Object*)st));
+      break;
+    }
+    case AstntIdent: {
+      // AstntIdent's are treatead as strings for the purposes of compilation. This does mean that
+      // they show up in the 'strings' table of the VM, but that's not of consequence.
+
       // Check if already interned and if not intern it
       u64 len = strlen(node->val.s);
       u32 hash = hash_string(node->val.s);
@@ -39,155 +62,151 @@ void compile_ast(Vm* vm, AstNode* node) {
       chunk_write_constant(vm->chunk, new_boolean(node->val.b));
       break;
     }
-    case AstntIdent: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
     case AstntUnaryNeg: {
-      compile_ast(vm, node->kids[0]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
       chunk_write(vm->chunk, OpNumNeg);
       break;
     }
     case AstntUnaryLogNot: {
-      compile_ast(vm, node->kids[0]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
       chunk_write(vm->chunk, OpLogNeg);
       break;
     }
     case AstntUnaryBitNot: {
-      compile_ast(vm, node->kids[0]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
       chunk_write(vm->chunk, OpBinNeg);
       break;
     }
     case AstntBinaryAdd: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpAdd);
       break;
     }
     case AstntBinarySub: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpSub);
       break;
     }
     case AstntBinaryMul: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpMul);
       break;
     }
     case AstntBinaryDiv: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpDiv);
       break;
     }
     case AstntBinaryMod: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpMod);
       break;
     }
     case AstntBinaryLCompose: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLCompose);
       break;
       break;
     }
     case AstntBinaryRCompose: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpRCompose);
       break;
     }
     case AstntBinaryLApply: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLApply);
       break;
     }
     case AstntBinaryRApply: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpRApply);
       break;
     }
     case AstntBinaryLogAnd: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLogAnd);
       break;
     }
     case AstntBinaryLogOr: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLogOr);
       break;
     }
     case AstntBinaryEq: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpEq);
       break;
     }
     case AstntBinaryNe: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpNe);
       break;
     }
     case AstntBinaryGt: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpGt);
       break;
     }
     case AstntBinaryGe: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpGe);
       break;
     }
     case AstntBinaryLt: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLt);
       break;
     }
     case AstntBinaryLe: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLe);
       break;
     }
     case AstntBinaryOr: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpBinOr);
       break;
     }
     case AstntBinaryXor: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpBinXor);
       break;
     }
     case AstntBinaryAnd: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpBinAnd);
       break;
     }
     case AstntBinaryRShift: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpRShift);
       break;
     }
     case AstntBinaryLShift: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
+      compile_ast_helper(vm, node->kids[1], scope_depth);
       chunk_write(vm->chunk, OpLShift);
       break;
     }
@@ -228,17 +247,34 @@ void compile_ast(Vm* vm, AstNode* node) {
       break;
     }
     case AstntExprStmt: {
-      compile_ast(vm, node->kids[0]);
+      compile_ast_helper(vm, node->kids[0], scope_depth);
       chunk_write(vm->chunk, OpPop);
       break;
     }
     case AstntAssignStmt: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+      AstNode* ident_node = node->kids[0];
+      AstNode* value_node = node->kids[1];
+      
+      // Note: These values are swapped, as it makes dealing with garbage collection
+      //       easier. See OpDefineGlobal or OpDefineLocal for more details. 
+      compile_ast_helper(vm, value_node, scope_depth);
+      compile_ast_helper(vm, ident_node, scope_depth);
+
+      if (scope_depth == 0) {
+        // Define global
+        chunk_write(vm->chunk, OpDefineGlobal);
+      } else {
+        // Define local
+        // Yes, this is wrong, but purposefully so. For now it just means that there is no such
+        // thing as local variables, and everything is global :D
+        chunk_write(vm->chunk, OpDefineGlobal);
+        fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+      }
       break;
     }
     case AstntStmts: {
       for(AstNode* stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
-        compile_ast(vm, stmt->kids[0]);        
+        compile_ast_helper(vm, stmt->kids[0], scope_depth);
       }
       break;
     }
@@ -252,3 +288,8 @@ void compile_ast(Vm* vm, AstNode* node) {
       break;
   }
 }
+
+void compile_ast(Vm* vm, AstNode* node) {
+  compile_ast_helper(vm, node, 0);
+}
+

@@ -11,6 +11,7 @@ void vm_init(Vm* vm) {
   vm->poor_mans_gc = NULL;
   vm->stack_top = vm->stack;
   table_init(&vm->strings);
+  table_init(&vm->globals);
 }
 
 void vm_set_chunk(Vm* vm, Chunk* chunk) {
@@ -108,7 +109,6 @@ Value* vm_peek_stack(Vm* vm) {
     }                                                      \
   } while(0)
 
-
 void vm_run(Vm* vm) {
   for(;;) {
     switch (vm_read_byte(vm)) {
@@ -126,6 +126,20 @@ void vm_run(Vm* vm) {
         Value val = vm->chunk->constants.values[idx];
 
         vm_push_stack(vm, val);
+        break;
+      }
+      case OpDefineGlobal: {
+        // Val is not popped off of the stack because garbage collection could run
+        // while the value 'val' is off of the stack, which could lead to it being incorrectly
+        // freed
+
+        Value id  = vm_pop_stack(vm);
+        Value* val = vm_peek_stack(vm);
+        
+        LambString* ident = (LambString*)id.as.obj;
+        table_insert(&vm->globals, ident, *val);
+        vm_pop_stack(vm);
+        
         break;
       }
       case OpNumNeg: {
@@ -225,6 +239,7 @@ void vm_free(Vm* vm) {
   }
   
   table_free(&vm->strings);
+  table_free(&vm->globals);
 }
 
 #undef RELATIVE_BIN_OP
