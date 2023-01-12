@@ -2,15 +2,28 @@
 #include <string.h>
 
 #include "ast.h"
+#include "misc.h"
 #include "object.h"
 
 void compile_ast(Vm* vm, AstNode* node) {
   switch (node->type) {
     case AstntStrLit: {
+      // Check if already interned and if not intern it
+      u64 len = strlen(node->val.s);
+      u32 hash = hash_string(node->val.s);
+      LambString* interned = table_find_string(&vm->strings, node->val.s, len, hash);
+      if (interned != NULL) {
+        // If the string is interned, write it as a constant and return. No need to make own string
+        chunk_write_constant(vm->chunk, new_object((Object*)interned));
+        return;
+      }
+      
       LambString* st = (LambString*)alloc_obj(vm, OtString);
       st->chars = strdup(node->val.s);
-      st->len = strlen(node->val.s);
-      
+      st->hash = hash;
+      st->len = len;
+
+      table_insert(&vm->strings, st, new_boolean(false));
       chunk_write_constant(vm->chunk, new_object((Object*)st));
       break;
     }

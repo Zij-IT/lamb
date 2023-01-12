@@ -10,6 +10,7 @@ void vm_init(Vm* vm) {
   vm->chunk = NULL;
   vm->poor_mans_gc = NULL;
   vm->stack_top = vm->stack;
+  table_init(&vm->strings);
 }
 
 void vm_set_chunk(Vm* vm, Chunk* chunk) {
@@ -59,7 +60,7 @@ Value* vm_peek_stack(Vm* vm) {
         case VkInt:    rel = rhs.as.intn op lhs->as.intn;       break; \
         case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break; \
         case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break; \
-        case VkObj:    rel = false;                             break; \
+        case VkObj:    rel = rhs.as.obj op lhs->as.obj;         break; \
       }                                                                \
                                                                        \
       lhs->kind = VkBool;                                              \
@@ -165,6 +166,7 @@ void vm_run(Vm* vm) {
             lhs->as.doubn = lhs->as.doubn + rhs.as.doubn;
           } else if (is_object(*lhs) && is_of_type(lhs->as.obj, OtString) && is_object(rhs) && is_of_type(rhs.as.obj, OtString)) {
             LambString* st = concat(vm, (LambString*)lhs->as.obj, (LambString*)rhs.as.obj);
+            vm_pop_stack(vm);
             vm_push_stack(vm, new_object((Object*)st));
           } else {
             /* Runtime Error "Binary '+' is only applicable for f64, i64 and string" */
@@ -221,6 +223,8 @@ void vm_free(Vm* vm) {
     object_free(obj);
     obj = next;
   }
+  
+  table_free(&vm->strings);
 }
 
 #undef RELATIVE_BIN_OP

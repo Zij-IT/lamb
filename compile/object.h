@@ -19,6 +19,7 @@ typedef struct LambString {
   Object obj;
   i32 len;
   string chars;
+  u32 hash;
 } LambString;
 
 
