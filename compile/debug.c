@@ -9,9 +9,9 @@ static i32 print_simple_op(str name) {
 
 static i32 print_constant(Chunk* chunk, str name, i32 offset, bool is_long) {
   if (is_long) {
-    u8 lo = chunk->bytes[offset + 1];
+    u8 lo = chunk->bytes[offset + 3];
     u8 mi = chunk->bytes[offset + 2];
-    u8 hi = chunk->bytes[offset + 3];
+    u8 hi = chunk->bytes[offset + 1];
     
     i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | (i32)lo;
     Value val = chunk->constants.values[idx];

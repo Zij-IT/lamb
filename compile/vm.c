@@ -119,9 +119,9 @@ void vm_run(Vm* vm) {
         break;
       }
       case OpLongConstant: {
-        u8 lo = vm_read_byte(vm);
-        u8 mi = vm_read_byte(vm);
         u8 hi = vm_read_byte(vm);
+        u8 mi = vm_read_byte(vm);
+        u8 lo = vm_read_byte(vm);
         
         i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
         Value val = vm->chunk->constants.values[idx];
