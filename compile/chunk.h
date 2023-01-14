@@ -8,7 +8,9 @@ typedef enum {
   OpConstant,
   OpLongConstant,
   OpDefineGlobal,
+  OpDefineLocal,
   OpGetGlobal,
+  OpGetLocal,
   OpNumNeg,
   OpBinNeg,
   OpLogNeg,
@@ -39,7 +41,7 @@ typedef enum {
   OpHalt,
 } OpCode;
 
-typedef struct {
+typedef struct Chunk {
   i32 capacity;
   i32 len;
   u8* bytes;

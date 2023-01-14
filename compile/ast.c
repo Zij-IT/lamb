@@ -1,9 +1,23 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "ast.h"
 #include "misc.h"
 #include "object.h"
+
+#define LOCAL_NOT_FOUND -1
+
+static i32 resolve_local(Block* block, LambString* name) {
+  for (i32 i = block->local_count - 1; i >= 0; i--) {
+    Local* local = &block->locals[i];
+    if (local->name == name) {
+      return i;
+    }
+  }
+  
+  return LOCAL_NOT_FOUND;
+}
 
 void compile_ast(Vm* vm, AstNode* node) {
   switch (node->type) {
@@ -30,30 +44,28 @@ void compile_ast(Vm* vm, AstNode* node) {
     case AstntIdent: {
       // AstntIdent's are treatead as strings for the purposes of compilation. This does mean that
       // they show up in the 'strings' table of the VM, but that's not of consequence.
-
       u64 len = strlen(node->val.i);
       u32 hash = hash_string(node->val.i);
       LambString* interned = table_find_string(&vm->strings, node->val.i, len, hash);
-      if (interned != NULL) {
-        // If the string is interned, write it as a constant and return. No need to make own string
-        chunk_write_constant(vm->chunk, new_object((Object*)interned));
-      } else {
+      if (interned == NULL) {
         LambString* st = (LambString*)alloc_obj(vm, OtString);
         st->chars = strdup(node->val.i);
         st->hash = hash;
         st->len = len;
 
         table_insert(&vm->strings, st, new_boolean(false));
-        chunk_write_constant(vm->chunk, new_object((Object*)st));       
+        interned = st;
       }
-
-      if (vm->curr_block.scope_depth == 0) {
+      
+      i32 local_slot = resolve_local(&vm->curr_block, interned); 
+      if (local_slot == LOCAL_NOT_FOUND) {
+        chunk_write_constant(vm->chunk, new_object((Object*)interned));
         chunk_write(vm->chunk, OpGetGlobal);
       } else {
-        printf("Reminder: GetLocal not yet implemented. Substituting with GetGlobal");
-        chunk_write(vm->chunk, OpGetGlobal);
+        chunk_write_constant(vm->chunk, new_int(local_slot));
+        chunk_write(vm->chunk, OpGetLocal);
       }
-
+      
       break;
     }
     case AstntNumLit: {
@@ -260,7 +272,7 @@ void compile_ast(Vm* vm, AstNode* node) {
     case AstntAssignStmt: {
       AstNode* ident_node = node->kids[0];
       AstNode* value_node = node->kids[1];
-
+      
       // Note: These values are swapped, as it makes dealing with garbage collection
       //       easier. See OpDefineGlobal or OpDefineLocal for more details. 
       compile_ast(vm, value_node);
@@ -269,31 +281,34 @@ void compile_ast(Vm* vm, AstNode* node) {
       u64 len = strlen(ident_node->val.i);
       u32 hash = hash_string(ident_node->val.i);
       LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
-      if (interned != NULL) {
-        // If the string is interned, write it as a constant and return. No need to make own string
-        chunk_write_constant(vm->chunk, new_object((Object*)interned));
-      } else {
+      if (interned == NULL) {
         LambString* st = (LambString*)alloc_obj(vm, OtString);
         st->chars = strdup(ident_node->val.i);
         st->hash = hash;
         st->len = len;
 
         table_insert(&vm->strings, st, new_boolean(false));
-        chunk_write_constant(vm->chunk, new_object((Object*)st));       
-      }
-    
-
-      if (vm->curr_block.scope_depth == 0) {
-        // Define global
-        chunk_write(vm->chunk, OpDefineGlobal);
-      } else {
-        // Define local
-        // Yes, this is wrong, but purposefully so. For now it just means that there is no such
-        // thing as local variables, and everything is global :D
-        chunk_write(vm->chunk, OpDefineGlobal);
-        fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+        interned = st;
       }
       
+      if(vm->curr_block.scope_depth == 0) {
+        chunk_write_constant(vm->chunk, new_object((Object*)interned));
+        chunk_write(vm->chunk, OpDefineGlobal);
+      } else {
+        if (vm->curr_block.local_count == MAX_LOCAL_COUNT) {
+          // TODO: Implement actual error handling so that this explodes cleanly
+          fprintf(stderr, "COMPILE_ERR: Too many local variables defined... Exiting.");
+          exit(1);
+        }
+
+        Local* local = &vm->curr_block.locals[vm->curr_block.local_count++];
+        local->name = interned;
+        local->depth = vm->curr_block.scope_depth;
+        
+        chunk_write_constant(vm->chunk, new_int(vm->curr_block.local_count - 1));
+        chunk_write(vm->chunk, OpDefineLocal);
+      }
+
       break;
     }
     case AstntStmts: {
