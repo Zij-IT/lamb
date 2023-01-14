@@ -114,6 +114,9 @@ void free_ast(AstNode* root) {
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
       break;
+    case AstntBlockStmt:
+      free_ast(root->kids[0]);
+      break;
     case AstntStmts:
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
@@ -395,6 +398,11 @@ void print_ast(AstNode* root, u16 spaces) {
       pre_pad(spaces + BASE_PADDING, "value: ");
       print_ast(root->kids[1], spaces + BASE_PADDING + 7);
       printf(",\n");
+      pre_pad(spaces, "}");
+      break;
+    case AstntBlockStmt:
+      printf("BlockStatment: {\n");
+      print_ast(root->kids[0], spaces + BASE_PADDING);
       pre_pad(spaces, "}");
       break;
     case AstntStmts:

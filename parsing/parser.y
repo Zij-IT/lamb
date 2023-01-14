@@ -117,6 +117,7 @@ STMTS : STMT STMTS { $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1]
 
 STMT : ID TokenDefine EXPR TokenSemicolon { $$ = new_astnode(AstntAssignStmt); $$->kids[0] = $1; $$->kids[1] = $3; }
 	 | EXPR TokenSemicolon				  { $$ = new_astnode(AstntExprStmt);   $$->kids[0] = $1;  				   }
+	 | BLOCK TokenSemicolon				  { $$ = new_astnode(AstntBlockStmt);  $$->kids[0] = $1; 				   }
 
 ID: TokenIdent { $$ = new_astnode(AstntIdent); $$->val.i = $1; }
 
