@@ -13,6 +13,7 @@ ALL_SRC:= ./main.c \
 		  ./compile/debug.c \
 		  ./compile/object.c \
 		  ./compile/table.c \
+		  ./compile/block.c \
 		  ./compile/misc.c \
 
 lamb: $(ALL_SRC)

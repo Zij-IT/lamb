@@ -12,6 +12,7 @@ void vm_init(Vm* vm) {
   vm->stack_top = vm->stack;
   table_init(&vm->strings);
   table_init(&vm->globals);
+  block_init(&vm->curr_block);
 }
 
 void vm_set_chunk(Vm* vm, Chunk* chunk) {
