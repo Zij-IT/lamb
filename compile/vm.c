@@ -12,7 +12,8 @@ void vm_init(Vm* vm) {
   vm->stack_top = vm->stack;
   table_init(&vm->strings);
   table_init(&vm->globals);
-  compiler_init(&vm->curr_compiler);
+  vm->curr_compiler = malloc(sizeof(Compiler));
+  compiler_init(vm->curr_compiler);
 }
 
 void vm_set_chunk(Vm* vm, Chunk* chunk) {
@@ -283,7 +284,8 @@ void vm_free(Vm* vm) {
   
   table_free(&vm->strings);
   table_free(&vm->globals);
-  compiler_free(&vm->curr_compiler);
+  compiler_free(vm->curr_compiler);
+  free(vm->curr_compiler);
 }
 
 #undef RELATIVE_BIN_OP

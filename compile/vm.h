@@ -18,7 +18,7 @@ typedef struct Vm {
   Object* poor_mans_gc;
   Table strings;
   Table globals;
-  Compiler curr_compiler;
+  Compiler* curr_compiler;
 } Vm;
 
 void vm_init(Vm* vm);
