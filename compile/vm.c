@@ -7,18 +7,19 @@
 
 void vm_init(Vm* vm) {
   vm->ip = NULL;
-  vm->chunk = NULL;
-  vm->poor_mans_gc = NULL;
   vm->stack_top = vm->stack;
+
+  vm->chunk = malloc(sizeof(Chunk));
+  chunk_init(vm->chunk);
+
   table_init(&vm->strings);
+
   table_init(&vm->globals);
+
   vm->curr_compiler = malloc(sizeof(Compiler));
   compiler_init(vm->curr_compiler);
-}
 
-void vm_set_chunk(Vm* vm, Chunk* chunk) {
-  vm->chunk = chunk;
-  vm_reset_ip(vm);
+  vm->poor_mans_gc = NULL;
 }
 
 void vm_reset_ip(Vm* vm) {
@@ -284,8 +285,12 @@ void vm_free(Vm* vm) {
   
   table_free(&vm->strings);
   table_free(&vm->globals);
+
   compiler_free(vm->curr_compiler);
   free(vm->curr_compiler);
+
+  chunk_free(vm->chunk);
+  free(vm->chunk);
 }
 
 #undef RELATIVE_BIN_OP

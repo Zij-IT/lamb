@@ -23,8 +23,6 @@ typedef struct Vm {
 
 void vm_init(Vm* vm);
 
-void vm_set_chunk(Vm* vm, Chunk* chunk);
-
 void vm_reset_ip(Vm* vm);
 
 void vm_free(Vm* vm);

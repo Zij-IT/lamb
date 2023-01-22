@@ -17,25 +17,18 @@ void debug_compile_ast(AstNode* root, str name) {
 		print_ast(root, 0);
 		printf("\n");
 	
-		Chunk chunk;
-		chunk_init(&chunk);
-
 		Vm vm;
 		vm_init(&vm);
-		vm_set_chunk(&vm, &chunk);
-
 		compile_ast(&vm, root);
-		chunk_write(&chunk, OpHalt);
-	
+		chunk_write(vm.chunk, OpHalt);
+		
+		// Must be done after chunk_write incase it forces a reallocation
 		vm_reset_ip(&vm);
 	
 		printf("\n");
-		chunk_debug(&chunk, "Compiled Ast");
+		chunk_debug(vm.chunk, "Compiled Ast");
 
-		vm_set_chunk(&vm, &chunk);
 		vm_run(&vm);
-	
-		chunk_free(&chunk);
 		vm_free(&vm);
 }
 
