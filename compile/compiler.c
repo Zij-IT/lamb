@@ -1,29 +1,29 @@
 #include <stdlib.h>
 #include "../memory.h"
-#include "block.h"
+#include "compiler.h"
 #include "chunk.h"
 #include "table.h"
 
-void block_init(Block* block) {
-  block->scope_depth = 0;
-  local_arr_init(&block->locals);
+void compiler_init(Compiler* compiler) {
+  compiler->scope_depth = 0;
+  local_arr_init(&compiler->locals);
 }
 
-void block_free(Block* block) {
-  local_arr_free(&block->locals);
-  local_arr_init(&block->locals);
+void compiler_free(Compiler* compiler) {
+  local_arr_free(&compiler->locals);
+  local_arr_init(&compiler->locals);
 }
 
-void block_new_scope(Block* block) {
-  block->scope_depth++;
+void compiler_new_scope(Compiler* compiler) {
+  compiler->scope_depth++;
 }
 
-void block_end_scope(Chunk* chunk, Block* block) {
-  block->scope_depth--;
+void compiler_end_scope(Chunk* chunk, Compiler* compiler) {
+  compiler->scope_depth--;
   
-  while(block->locals.len > 0 && block->locals.values[block->locals.len - 1].depth > block->scope_depth) {
+  while(compiler->locals.len > 0 && compiler->locals.values[compiler->locals.len - 1].depth > compiler->scope_depth) {
     chunk_write(chunk, OpPop);
-    block->locals.len--;
+    compiler->locals.len--;
   }
 }
 

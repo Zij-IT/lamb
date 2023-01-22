@@ -8,9 +8,9 @@
 
 #define LOCAL_NOT_FOUND -1
 
-static i32 resolve_local(Block* block, LambString* name) {
-  for (i32 i = block->locals.len - 1; i >= 0; i--) {
-    Local* local = &block->locals.values[i];
+static i32 resolve_local(Compiler* compiler, LambString* name) {
+  for (i32 i = compiler->locals.len - 1; i >= 0; i--) {
+    Local* local = &compiler->locals.values[i];
     if (local->name == name) {
       return i;
     }
@@ -57,7 +57,7 @@ void compile_ast(Vm* vm, AstNode* node) {
         interned = st;
       }
       
-      i32 local_slot = resolve_local(&vm->curr_block, interned); 
+      i32 local_slot = resolve_local(&vm->curr_compiler, interned); 
       if (local_slot == LOCAL_NOT_FOUND) {
         chunk_write_constant(vm->chunk, new_object((Object*)interned));
         chunk_write(vm->chunk, OpGetGlobal);
@@ -291,15 +291,15 @@ void compile_ast(Vm* vm, AstNode* node) {
         interned = st;
       }
       
-      if(vm->curr_block.scope_depth == 0) {
+      if(vm->curr_compiler.scope_depth == 0) {
         // TODO: Implement no shadowing of items in the global scope...
         chunk_write_constant(vm->chunk, new_object((Object*)interned));
         chunk_write(vm->chunk, OpDefineGlobal);
       } else {
-        Local loc = { .depth = vm->curr_block.scope_depth, .name = interned };
-        local_arr_write(&vm->curr_block.locals, loc);
+        Local loc = { .depth = vm->curr_compiler.scope_depth, .name = interned };
+        local_arr_write(&vm->curr_compiler.locals, loc);
         
-        chunk_write_constant(vm->chunk, new_int(vm->curr_block.locals.len- 1));
+        chunk_write_constant(vm->chunk, new_int(vm->curr_compiler.locals.len- 1));
         chunk_write(vm->chunk, OpDefineLocal);
       }
 
@@ -307,9 +307,9 @@ void compile_ast(Vm* vm, AstNode* node) {
     }
     case AstntBlockStmt: {
       if (node->kids[0] != NULL) {
-        block_new_scope(&vm->curr_block);
+        compiler_new_scope(&vm->curr_compiler);
         compile_ast(vm, node->kids[0]);
-        block_end_scope(vm->chunk, &vm->curr_block);
+        compiler_end_scope(vm->chunk, &vm->curr_compiler);
       }
       break;
     }

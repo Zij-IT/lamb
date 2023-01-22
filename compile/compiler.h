@@ -20,17 +20,17 @@ typedef struct {
 typedef struct {
   LocalArray locals;
   i32 scope_depth;
-} Block;
+} Compiler;
 
-void block_init(Block* block);
+void compiler_init(Compiler* compiler);
 
-void block_free(Block* block);
+void compiler_free(Compiler* compiler);
 
-void block_new_scope(Block* block);
+void compiler_new_scope(Compiler* compiler);
 
-void block_end_scope(Chunk* chunk, Block* block);
+void compiler_end_scope(Chunk* chunk, Compiler* compiler);
 
-void block_declare_var(Block* block, str name);
+void compiler_declare_var(Compiler* compiler, str name);
 
 void local_arr_init(LocalArray* arr);
 
