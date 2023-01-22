@@ -22,7 +22,6 @@ typedef struct LambString {
   u32 hash;
 } LambString;
 
-
 Object* alloc_obj(Vm* vm, ObjectType type);
 
 bool is_of_type(Object* obj, ObjectType type);
