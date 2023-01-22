@@ -1691,7 +1691,7 @@ yyreduce:
 
   case 63: /* BLOCK: TokenLBrace STMTS TokenRBrace  */
 #line 173 "./parsing/parser.y"
-                                     { (yyval.node) = (yyvsp[-1].node); }
+                                     { (yyval.node) = new_astnode(AstntBlockStmt); (yyval.node)->kids[0] = (yyvsp[-1].node); }
 #line 1696 "./parsing/built/parser.tab.c"
     break;
 

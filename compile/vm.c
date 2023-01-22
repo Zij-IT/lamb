@@ -42,6 +42,13 @@ u8 vm_read_byte(Vm* vm) {
   return *vm->ip++;
 }
 
+u16 vm_read_short(Vm* vm) {
+  u8 hi = vm_read_byte(vm);
+  u8 lo = vm_read_byte(vm);
+  
+  return ((u16)hi << 8) | (u16)lo;
+}
+
 Value vm_read_constant(Vm* vm) {
   return vm->chunk->constants.values[vm_read_byte(vm)];
 }
@@ -165,6 +172,18 @@ void vm_run(Vm* vm) {
         i32 slot = vm_pop_stack(vm).as.intn;
         vm_push_stack(vm, vm->stack[slot]);
         break; 
+      }
+      case OpJumpIfFalse: {
+        u16 offset = vm_read_short(vm);
+        if (is_bool(*vm_peek_stack(vm)) && !vm_peek_stack(vm)->as.boolean) {
+          vm->ip += offset;
+        }
+        break;
+      }
+      case OpJump: {
+        u16 offset = vm_read_short(vm);
+        vm->ip += offset;
+        break;
       }
       case OpNumNeg: {
         Value* val = vm_peek_stack(vm);

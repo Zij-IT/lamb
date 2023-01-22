@@ -37,6 +37,8 @@ typedef enum {
   OpRShift,
   OpLShift,
   OpReturn,
+  OpJump,
+  OpJumpIfFalse,
   OpPop,
   OpHalt,
 } OpCode;
@@ -56,4 +58,7 @@ void chunk_free(Chunk* chunk);
 
 void chunk_write_constant(Chunk* chunk, Value val); 
 
+i32 chunk_write_jump(Chunk* chunk, u8 op);
+
+void chunk_patch_jump(Chunk* chunk, i32 offset);
 #endif//CHUNK_HEADER

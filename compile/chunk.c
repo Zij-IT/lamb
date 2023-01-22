@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "./chunk.h"
@@ -44,6 +45,25 @@ void chunk_write_constant(Chunk* chunk, Value val) {
     chunk_write(chunk, OpConstant);
     chunk_write(chunk, (u8)idx);
   }
+}
+
+i32 chunk_write_jump(Chunk* chunk, u8 op) {
+  chunk_write(chunk, op);
+  chunk_write(chunk, 0xff);
+  chunk_write(chunk, 0xff);
+  
+  return chunk->len - 2;
+}
+
+void chunk_patch_jump(Chunk* chunk, i32 offset) {
+  i32 jump = chunk->len - offset - 2;
+  if (jump > UINT16_MAX) {
+    fprintf(stderr, "COMPILE_ERR: jump exceeds maximal bytes of %d", UINT16_MAX);
+    exit(1);
+  }
+  
+  chunk->bytes[offset] = (jump >> 8) & 0xff;
+  chunk->bytes[offset + 1] = jump & 0xff;
 }
 
 void chunk_free(Chunk* chunk) {

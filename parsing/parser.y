@@ -170,7 +170,7 @@ ELIFS: TokenElif EXPR BLOCK ELIFS { $$ = new_astnode(AstntElif); $$->kids[0] = $
 ELSE: TokenElse BLOCK			  { $$ = new_astnode(AstntElse); $$->kids[0] = $2; }
 	|							  { $$ = NULL; }
 
-BLOCK: TokenLBrace STMTS TokenRBrace { $$ = $2; }
+BLOCK: TokenLBrace STMTS TokenRBrace { $$ = new_astnode(AstntBlockStmt); $$->kids[0] = $2; }
 
 CASE_EXPR: TokenCase EXPR TokenLBrace CASE_ARMS TokenRBrace	{ $$ = new_astnode(AstntCase); $$->kids[0] = $2; $$->kids[1] = $4; }
 

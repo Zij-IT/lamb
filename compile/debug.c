@@ -7,6 +7,14 @@ static i32 print_simple_op(str name) {
   return 1;
 }
 
+static i32 print_jump(Chunk* chunk, str name, i32 offset, i32 sign) {
+  u16 jump = (u16)(chunk->bytes[offset + 1] << 8);
+  jump |= chunk->bytes[offset + 2];
+
+  printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+  return 3;
+}
+
 static i32 print_constant(Chunk* chunk, str name, i32 offset, bool is_long) {
   if (is_long) {
     u8 lo = chunk->bytes[offset + 3];
@@ -38,6 +46,8 @@ static i32 print_op(Chunk* chunk, i32 offset) {
     case OpGetGlobal: return print_simple_op("OpGetGlobal");
     case OpDefineLocal: return print_simple_op("OpDefineLocal");
     case OpGetLocal: return print_simple_op("OpGetLocal");
+    case OpJump: return print_jump(chunk, "OpJump", offset, 1);
+    case OpJumpIfFalse: return print_jump(chunk, "OpJumpIfFalse", offset, 1);
     case OpNumNeg: return print_simple_op("OpNumNeg");
     case OpBinNeg: return print_simple_op("OpBinNeg");
     case OpLogNeg: return print_simple_op("OpLogNeg");

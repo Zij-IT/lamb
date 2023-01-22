@@ -151,18 +151,34 @@ void compile_ast(Vm* vm, AstNode* node) {
       break;
     }
     case AstntBinaryLogAnd: {
+      // LHS
+      // OpJumpIfFalse -- Jump over RHS
+      // OpPop         -- Pop off the LHS because && evaluates to RHS if LHS is true
+      // RHS
       compile_ast(vm, node->kids[0]);
+      i32 if_false = chunk_write_jump(vm->chunk, OpJumpIfFalse);
+      chunk_write(vm->chunk, OpPop);
       compile_ast(vm, node->kids[1]);
       chunk_write(vm->chunk, OpLogAnd);
+      chunk_patch_jump(vm->chunk, if_false);
       break;
     }
     case AstntBinaryLogOr: {
+      // LHS
+      // OpJumpIfFalse -- Jump over the next instruction
+      // OpJump        -- Jump over the RHS
+      // OpPop         -- Pop off the LHS
+      // RHS
       compile_ast(vm, node->kids[0]);
+      i32 if_false = chunk_write_jump(vm->chunk, OpJumpIfFalse);
+      i32 skip_right = chunk_write_jump(vm->chunk, OpJump);
+      chunk_patch_jump(vm->chunk, if_false);
+      chunk_write(vm->chunk, OpPop);
       compile_ast(vm, node->kids[1]);
       chunk_write(vm->chunk, OpLogOr);
+      chunk_patch_jump(vm->chunk, skip_right);
       break;
-    }
-    case AstntBinaryEq: {
+    }    case AstntBinaryEq: {
       compile_ast(vm, node->kids[0]);
       compile_ast(vm, node->kids[1]);
       chunk_write(vm->chunk, OpEq);
@@ -229,7 +245,29 @@ void compile_ast(Vm* vm, AstNode* node) {
       break;
     }
     case AstntIf: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+      // EXPR BLOCK ELIFS ELSE
+      compile_ast(vm, node->kids[0]);
+
+      i32 then_jump = chunk_write_jump(vm->chunk, OpJumpIfFalse);
+      chunk_write(vm->chunk, OpPop);
+      compile_ast(vm, node->kids[1]);
+      
+      i32 else_jump = chunk_write_jump(vm->chunk, OpJump);
+      chunk_patch_jump(vm->chunk, then_jump);
+      chunk_write(vm->chunk, OpPop);
+      
+      // ELIFS
+      
+      // ELSE
+      if (node->kids[3] != NULL) {
+        compile_ast(vm, node->kids[3]);
+      }
+
+      chunk_patch_jump(vm->chunk, else_jump);
+      
+      // TODO: An 'if' expression should keep result of the run branch on the stack, which isn't exactly possible
+      //       right now, so we put a dummy value on the stack.
+      chunk_write_constant(vm->chunk, new_boolean(false));
       break;
     }
     case AstntElif: {

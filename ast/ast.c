@@ -401,8 +401,10 @@ void print_ast(AstNode* root, u16 spaces) {
       pre_pad(spaces, "}");
       break;
     case AstntBlockStmt:
-      printf("BlockStatment: {\n");
+      printf("BlockStatement: {\n");
+      pad(spaces + BASE_PADDING);
       print_ast(root->kids[0], spaces + BASE_PADDING);
+      printf("\n");
       pre_pad(spaces, "}");
       break;
     case AstntStmts:
