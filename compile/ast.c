@@ -9,8 +9,8 @@
 #define LOCAL_NOT_FOUND -1
 
 static i32 resolve_local(Block* block, LambString* name) {
-  for (i32 i = block->local_count - 1; i >= 0; i--) {
-    Local* local = &block->locals[i];
+  for (i32 i = block->locals.len - 1; i >= 0; i--) {
+    Local* local = &block->locals.values[i];
     if (local->name == name) {
       return i;
     }
@@ -292,23 +292,25 @@ void compile_ast(Vm* vm, AstNode* node) {
       }
       
       if(vm->curr_block.scope_depth == 0) {
+        // TODO: Implement no shadowing of items in the global scope...
         chunk_write_constant(vm->chunk, new_object((Object*)interned));
         chunk_write(vm->chunk, OpDefineGlobal);
       } else {
-        if (vm->curr_block.local_count == MAX_LOCAL_COUNT) {
-          // TODO: Implement actual error handling so that this explodes cleanly
-          fprintf(stderr, "COMPILE_ERR: Too many local variables defined... Exiting.");
-          exit(1);
-        }
-
-        Local* local = &vm->curr_block.locals[vm->curr_block.local_count++];
-        local->name = interned;
-        local->depth = vm->curr_block.scope_depth;
+        Local loc = { .depth = vm->curr_block.scope_depth, .name = interned };
+        local_arr_write(&vm->curr_block.locals, loc);
         
-        chunk_write_constant(vm->chunk, new_int(vm->curr_block.local_count - 1));
+        chunk_write_constant(vm->chunk, new_int(vm->curr_block.locals.len- 1));
         chunk_write(vm->chunk, OpDefineLocal);
       }
 
+      break;
+    }
+    case AstntBlockStmt: {
+      if (node->kids[0] != NULL) {
+        block_new_scope(&vm->curr_block);
+        compile_ast(vm, node->kids[0]);
+        block_end_scope(vm->chunk, &vm->curr_block);
+      }
       break;
     }
     case AstntStmts: {

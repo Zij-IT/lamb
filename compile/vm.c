@@ -156,6 +156,16 @@ void vm_run(Vm* vm) {
         vm_push_stack(vm, value);
         break;
       }
+      case OpDefineLocal: {
+        i32 slot = vm_pop_stack(vm).as.intn;
+        vm->stack[slot] = *vm_peek_stack(vm);
+        break; 
+      }
+      case OpGetLocal: {
+        i32 slot = vm_pop_stack(vm).as.intn;
+        vm_push_stack(vm, vm->stack[slot]);
+        break; 
+      }
       case OpNumNeg: {
         Value* val = vm_peek_stack(vm);
         if (val->kind == VkInt) {
@@ -254,6 +264,7 @@ void vm_free(Vm* vm) {
   
   table_free(&vm->strings);
   table_free(&vm->globals);
+  block_free(&vm->curr_block);
 }
 
 #undef RELATIVE_BIN_OP
