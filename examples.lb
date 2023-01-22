@@ -1,121 +1,62 @@
--- Lamb Quick Overview:
--- 
---	Lamb should hopefully end up being a small statically-typed scripting language! But for now it's just an idea.
---	Think Lua, Haskell and Rust had a baby. That's Lamb.
---
--- Types:
---   * int
---   * bool
---   * char
---   * string
---   * array<t>
--- 
--- Keywords:
---   * fn
---   * case
---   * if
---   * elif
---   * else
---   * return
---   * true
---   * false
---   * struct
---   * enum
+-- Mul Table
+table := rec fn(x, y, n) -> {
+	print(str(x * y) + " ");
 
--- Syntax Examples:
--- 	 * Comments
- 	 
-	 	-- This is a line comment
-		--[[ This is a multiline or inline comment ]]--
-		--[[
-			See... this works as intended. Here are some characters that
-			aren't tokens. And would error if this was lexed normally: # ? 
-		]]--
+	if x != n {
+		table(x + 1, y, n);
+	} elif y != n{
+		println();
+		table(0, y + 1, n);
+	}
+};
 
--- 	 * Defining a variable:
+println("Please enter a number: ");
+table(1, 1, user_int());
 
-		my_var  := 2;
-		my_var  := true;
-		my_var  := 'c';
-		my_var  := "a string is here";
-		my_var  := [ 1, 2, 3, 4, 5 ];
+-- Fib 
+fib := rec fn(n) -> if n <= 1 {
+	return n;
+} else {
+	return fib(n - 1) + fib(n - 2);
+};
+
+-- Guessing Game
+println("Enter a number! ");
+guess := rec fn(n, guess_count) -> {
+	x := user_int();
+	if x = n {
+		println("You guessed it");
+		println("You needed " + str(guess_count) + " guesses!")
+		println("Would you like to play again (y/n)");
 		
--- 	 * Defining a function:
+		if user_char() = 'y' {
+			guess(rand(), 1);
+		};
+	} else {
+		if x > n {
+			println("Your number was too high!");
+		} else {
+			println("Your number was too low!");
+		};
 
-		my_func := fn(arg1, arg2) -> { arg1 + arg2; };
+		println("Guess again!");
+		guess(n, guess_count + 1);
+	};
+};
+guess(rand(), 1);
 
--- 	 * Defining a struct:
-		
----		struct person {
----			age: int,
----			name: string,
----		}
-		
--- 	 * Defining an enum:
+-- Neat Language Features
+inc := fn(x) -> x + 1;
+dec := fn(x) -> x - 1;
 
----		enum list {
----			cons t list,
----			tail,
----		}
+five := 2 $> (inc .> dec .> inc .> inc .> inc);
+five_backwards := (inc <. inc <. inc <. inc <. dec) <$ 2;
 
--- 	 * Operators:
-	
-		arithmetic := 1 + 2 - 3 * 4 / 5 % 6;
+x := 2;
+x := "shadowing";
 
-		bitwise    := 1 & 2 | 3 << 4 >> 5 ^ ~6;
-
-		relational := 1 = 2; -- != > < <= >=;
-
-		logical    := true && false || true;
-
-		functional_left_to_right := 2 $> (increment .> decrement .> increment);
-
-		functional_right_to_left := increment <. decrement <. increment <$ 2;
-
-		index	   := [1, 2, 3, 4][0];
-
-		call	   := increment(decrement(increment(2)));
-
--- 	 * Numbers
-
-		binary  := 0b0101;
-		hex     := 0h1234;
-		octal   := 0o1234;
-		decimal := 0d1234;
-		decimal := 1234;
-
--- 	 * Some Examples:
-
-		my_list := [ 1, 2, 3, 4, 5 ];
-
-		not := fn(x) -> !x;
-
-		is_even := fn(x) -> x % 2 = 1;
-
-		only_evens := filter(my_list, is_even);
-
-		only_odds := filter(my_list, not <. is_even);
-
-		print(only_events);
-
-		print(only_odds);
-
-   		enum list {
-   			cons t list,
-   			tail, 
-   		}
-
-  		sum := fn(ls) -> case ls {
-  			cons -> x + sum(rest),
-  			tail -> 0,
-  		};
-		
--- Has:
--- * Variable defintions
--- * Functions via closures
--- * Array + Indexing
--- * Binary Expressions
--- * Unary Expressions
--- * Struct Definitions
--- * Enum Definitions
--- * Branching via if + case
+-- cooler fib when using case
+fib := rec fun(x) -> case x {
+	0 | 1 -> x,
+	_ -> fib(x - 1) + fib(x - 2),
+};

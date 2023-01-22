@@ -263,6 +263,11 @@ void vm_run(Vm* vm) {
         printf("\n");
         break;
       }
+      case OpDup: {
+        Value* ret = vm_peek_stack(vm);
+        vm_push_stack(vm, *ret);
+        break;
+      }
       case OpHalt: {
         return;
       }

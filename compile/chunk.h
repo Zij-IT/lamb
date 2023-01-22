@@ -40,6 +40,7 @@ typedef enum {
   OpJump,
   OpJumpIfFalse,
   OpPop,
+  OpDup,
   OpHalt,
 } OpCode;
 

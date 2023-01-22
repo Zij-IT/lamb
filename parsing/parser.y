@@ -178,10 +178,8 @@ CASE_ARMS: PATTERN TokenArrow CASE_VAL CASE_ARMS { $$ = new_astnode(AstntCaseArm
 		 |										 { $$ = NULL; 		  																     }
 		
 PATTERN: LITERAL { $$ = $1; }
-	   | ID 	 { $$ = $1; }
 
-CASE_VAL: EXPR TokenComma { $$ = $1; }
-		| BLOCK			  { $$ = $1; }
+CASE_VAL: BLOCK			  { $$ = $1; }
 
 FUNC_DEF: TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END { $$ = new_astnode(AstntFuncDef); $$->kids[0] = $3; $$->kids[1] = $6; }
 

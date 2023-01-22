@@ -125,36 +125,7 @@ void compile_ast(Vm* vm, AstNode* node) {
       chunk_write(vm->chunk, OpMod);
       break;
     }
-    case AstntBinaryLCompose: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
-      chunk_write(vm->chunk, OpLCompose);
-      break;
-      break;
-    }
-    case AstntBinaryRCompose: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
-      chunk_write(vm->chunk, OpRCompose);
-      break;
-    }
-    case AstntBinaryLApply: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
-      chunk_write(vm->chunk, OpLApply);
-      break;
-    }
-    case AstntBinaryRApply: {
-      compile_ast(vm, node->kids[0]);
-      compile_ast(vm, node->kids[1]);
-      chunk_write(vm->chunk, OpRApply);
-      break;
-    }
     case AstntBinaryLogAnd: {
-      // LHS
-      // OpJumpIfFalse -- Jump over RHS
-      // OpPop         -- Pop off the LHS because && evaluates to RHS if LHS is true
-      // RHS
       compile_ast(vm, node->kids[0]);
       i32 if_false = chunk_write_jump(vm->chunk, OpJumpIfFalse);
       chunk_write(vm->chunk, OpPop);
@@ -164,11 +135,6 @@ void compile_ast(Vm* vm, AstNode* node) {
       break;
     }
     case AstntBinaryLogOr: {
-      // LHS
-      // OpJumpIfFalse -- Jump over the next instruction
-      // OpJump        -- Jump over the RHS
-      // OpPop         -- Pop off the LHS
-      // RHS
       compile_ast(vm, node->kids[0]);
       i32 if_false = chunk_write_jump(vm->chunk, OpJumpIfFalse);
       i32 skip_right = chunk_write_jump(vm->chunk, OpJump);
@@ -245,61 +211,78 @@ void compile_ast(Vm* vm, AstNode* node) {
       break;
     }
     case AstntIf: {
-      // EXPR BLOCK ELIFS ELSE
+      i32* elif_jumps = malloc(sizeof(i32));
+      i32  jump_lengths = 1;
+      
       compile_ast(vm, node->kids[0]);
+      i32 if_false_jump = chunk_write_jump(vm->chunk, OpJumpIfFalse);
 
-      i32 then_jump = chunk_write_jump(vm->chunk, OpJumpIfFalse);
       chunk_write(vm->chunk, OpPop);
       compile_ast(vm, node->kids[1]);
+      i32 past_else = chunk_write_jump(vm->chunk, OpJump);
+      elif_jumps[0] = past_else;
       
-      i32 else_jump = chunk_write_jump(vm->chunk, OpJump);
-      chunk_patch_jump(vm->chunk, then_jump);
+      chunk_patch_jump(vm->chunk, if_false_jump);
       chunk_write(vm->chunk, OpPop);
       
-      // ELIFS
-      
+      for (AstNode* elif = node->kids[2]; elif != NULL; elif = elif->kids[2]) {
+        compile_ast(vm, elif->kids[0]);
+        i32 if_false_jump = chunk_write_jump(vm->chunk, OpJumpIfFalse);
+
+        chunk_write(vm->chunk, OpPop);
+        compile_ast(vm, elif->kids[1]);
+        i32 past_else = chunk_write_jump(vm->chunk, OpJump);
+        
+        elif_jumps = realloc(elif_jumps, sizeof(i32) * (++jump_lengths));
+        elif_jumps[jump_lengths - 1] = past_else;
+
+        chunk_patch_jump(vm->chunk, if_false_jump);
+        chunk_write(vm->chunk, OpPop);
+     }
+
       // ELSE
       if (node->kids[3] != NULL) {
         compile_ast(vm, node->kids[3]);
       }
 
-      chunk_patch_jump(vm->chunk, else_jump);
+      for (i32 i = 0; i < jump_lengths; i++) {
+        chunk_patch_jump(vm->chunk, elif_jumps[i]);
+      }
+      free(elif_jumps);
       
       // TODO: An 'if' expression should keep result of the run branch on the stack, which isn't exactly possible
       //       right now, so we put a dummy value on the stack.
       chunk_write_constant(vm->chunk, new_boolean(false));
       break;
     }
-    case AstntElif: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
-    case AstntElse: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
     case AstntCase: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
-    case AstntCaseArm: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
-    case AstntArray: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
-    case AstntFuncDef: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
-    case AstntFuncCall: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      break;
-    }
-    case AstntArrayIndex: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+      compile_ast(vm, node->kids[0]);
+
+      i32* out_of_case = malloc(0);
+      i32  jump_lengths = 0;
+      
+      for (AstNode* arm = node->kids[1]; arm != NULL; arm = arm->kids[2]) {
+        chunk_write(vm->chunk, OpDup);
+        compile_ast(vm, arm->kids[0]);
+        chunk_write(vm->chunk, OpEq);
+        i32 if_neq = chunk_write_jump(vm->chunk, OpJumpIfFalse);
+
+        chunk_write(vm->chunk, OpPop);
+        compile_ast(vm, arm->kids[1]);
+        i32 past_else = chunk_write_jump(vm->chunk, OpJump);
+        
+        out_of_case = realloc(out_of_case, sizeof(i32) * (++jump_lengths));
+        out_of_case[jump_lengths - 1] = past_else;
+
+        chunk_patch_jump(vm->chunk, if_neq);
+        chunk_write(vm->chunk, OpPop);
+      }
+      
+      for(i32 i = 0; i < jump_lengths; i++) {
+        chunk_patch_jump(vm->chunk, out_of_case[i]);
+      }
+      free(out_of_case);
+      
       break;
     }
     case AstntExprStmt: {
@@ -311,11 +294,8 @@ void compile_ast(Vm* vm, AstNode* node) {
       AstNode* ident_node = node->kids[0];
       AstNode* value_node = node->kids[1];
       
-      // Note: These values are swapped, as it makes dealing with garbage collection
-      //       easier. See OpDefineGlobal or OpDefineLocal for more details. 
       compile_ast(vm, value_node);
 
-      // This next bit is basically what happens with a string node, but this node is an ident
       u64 len = strlen(ident_node->val.i);
       u32 hash = hash_string(ident_node->val.i);
       LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
@@ -330,7 +310,6 @@ void compile_ast(Vm* vm, AstNode* node) {
       }
       
       if(vm->curr_compiler->scope_depth == 0) {
-        // TODO: Implement no shadowing of items in the global scope...
         chunk_write_constant(vm->chunk, new_object((Object*)interned));
         chunk_write(vm->chunk, OpDefineGlobal);
       } else {
@@ -357,10 +336,54 @@ void compile_ast(Vm* vm, AstNode* node) {
       }
       break;
     }
-    case AstntNodeList: {
-      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    case AstntElif: {
+      fprintf(stderr, "Attempting to compile a lone 'Elif' node. You done messed up.");
       break;
     }
+    case AstntElse: {
+      fprintf(stderr, "Attempting to compile a lone 'Else' node. You done messed up.");
+      break;
+    }
+    case AstntCaseArm: {
+      fprintf(stderr, "Attempting to compile a lone 'CaseArm' node. You done messed up.");
+      break;
+    }
+    // case AstntBinaryLCompose: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntBinaryRCompose: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntBinaryLApply: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntBinaryRApply: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntFuncDef: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntNodeList: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntFuncCall: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntArray: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
+    // case AstntArrayIndex: {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
     default:
       fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
       fprintf(stderr, "Default branch reached while matching on node->type in %s on line %d", __FILE__, __LINE__);
