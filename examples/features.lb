@@ -1,0 +1,19 @@
+-- Neat Language Features
+
+-- Lambdas!
+inc := fn(x) -> x + 1;
+dec := fn(x) -> x - 1;
+
+-- Cool new operators!
+five := 2 $> (inc .> dec .> inc .> inc .> inc);
+five_backwards := (inc <. inc <. inc <. inc <. dec) <$ 2;
+
+-- Shadowing!
+x := 2;
+x := "shadowing";
+
+-- cooler fib when using case and assuming the parser is ever built to match the language goal
+-- fib := rec fun(x) -> case x {
+-- 	0 | 1 -> x,
+-- 	_ -> fib(x - 1) + fib(x - 2),
+-- };

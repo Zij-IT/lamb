@@ -1,0 +1,14 @@
+-- Mul Table
+table := rec fn(x, y, n) -> {
+	print(str(x * y) + " ");
+
+	if x != n {
+		table(x + 1, y, n);
+	} elif y != n{
+		println();
+		table(0, y + 1, n);
+	};
+};
+
+println("Please enter a number: ");
+table(1, 1, user_int());

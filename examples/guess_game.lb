@@ -1,0 +1,25 @@
+-- Guessing Game
+println("Enter a number! ");
+guess := rec fn(n, guess_count) -> {
+	x := user_int();
+	if x = n {
+		println("You guessed it");
+		println("You needed " + str(guess_count) + " guesses!");
+		println("Would you like to play again (y/n)");
+		
+		if user_char() = 'y' {
+			guess(rand(), 1);
+		};
+	} else {
+		if x > n {
+			println("Your number was too high!");
+		} else {
+			println("Your number was too low!");
+		};
+
+		println("Guess again!");
+		guess(n, guess_count + 1);
+	};
+};
+guess(rand(), 1);
+
