@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "vm.h"
+#include "value.h"
 #include "debug.h"
 
 void vm_init(Vm* vm) {
@@ -59,67 +60,58 @@ Value* vm_peek_stack(Vm* vm) {
   return vm->stack_top - 1;
 }
 
-#define BINARY_REL_OP(vm, op)                                          \
-  do {                                                                 \
-    Value  rhs = vm_pop_stack(vm);                                     \
-    Value* lhs = vm_peek_stack(vm);                                    \
-                                                                       \
-    if (rhs.kind == lhs->kind) {                                       \
-      bool rel;                                                        \
-      switch(rhs.kind) {                                               \
-        case VkBool:   rel = rhs.as.boolean op lhs->as.boolean; break; \
-        case VkInt:    rel = rhs.as.intn op lhs->as.intn;       break; \
-        case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break; \
-        case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break; \
-        case VkObj:    rel = rhs.as.obj op lhs->as.obj;         break; \
-      }                                                                \
-                                                                       \
-      lhs->kind = VkBool;                                              \
-      lhs->as.boolean = rel;                                           \
-    } else {                                                           \
-      /* RUNTIME ERR: Operands must be of the same type */             \
-    }                                                                  \
+#define BINARY_REL_OP(vm, op)                                                                \
+  do {                                                                                       \
+    Value  rhs = vm_pop_stack(vm);                                                           \
+    Value* lhs = vm_peek_stack(vm);                                                          \
+                                                                                             \
+    if (rhs.kind == lhs->kind) {                                                             \
+      bool rel;                                                                              \
+      switch(rhs.kind) {                                                                     \
+        case VkBool:   rel = rhs.as.boolean op lhs->as.boolean; break;                       \
+        case VkInt:    rel = rhs.as.intn op lhs->as.intn;       break;                       \
+        case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break;                       \
+        case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break;                       \
+        case VkObj:    rel = rhs.as.obj op lhs->as.obj;         break;                       \
+      }                                                                                      \
+                                                                                             \
+      lhs->kind = VkBool;                                                                    \
+      lhs->as.boolean = rel;                                                                 \
+    } else {                                                                                 \
+      printf("RuntimeError: Operands for binary operator "#op" must be of the same type\n"); \
+      return InterpretRuntimeError;                                                          \
+    }                                                                                        \
   } while(0)
 
-#define BINARY_INT_DOUBLE_OP(vm, op)                            \
-  do {                                                          \
-    Value  rhs = vm_pop_stack(vm);                              \
-    Value* lhs = vm_peek_stack(vm);                             \
-                                                                \
-    if (rhs.kind == lhs->kind && rhs.kind == VkInt) {           \
-      lhs->as.intn = lhs->as.intn op rhs.as.intn;               \
-    } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) { \
-      lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;            \
-    } else {                                                    \
-      /* RUNTIME ERR: Operands must be of type i64 of f64 */    \
-    }                                                           \
-  } while(0)                                                    
-
-#define BINARY_INT_OP(vm, op)                         \
-  do {                                                \
-    Value  rhs = vm_pop_stack(vm);                    \
-    Value* lhs = vm_peek_stack(vm);                   \
-                                                      \
-    if (rhs.kind == lhs->kind && rhs.kind == VkInt) { \
-      lhs->as.intn = lhs->as.intn op rhs.as.intn;     \
-    } else {                                          \
-      /* RUNTIME ERR: Operands must be of type i64 */ \
-    }                                                 \
+#define BINARY_INT_DOUBLE_OP(vm, op)                                                                    \
+  do {                                                                                                  \
+    Value  rhs = vm_pop_stack(vm);                                                                      \
+    Value* lhs = vm_peek_stack(vm);                                                                     \
+                                                                                                        \
+    if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                                   \
+      lhs->as.intn = lhs->as.intn op rhs.as.intn;                                                       \
+    } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {                                         \
+      lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;                                                    \
+    } else {                                                                                            \
+      printf("RuntimeError: Operands for binary operator "#op" must be of the same type i64 or f64\n"); \
+      return InterpretRuntimeError;                                                                     \
+    }                                                                                                   \
   } while(0)
 
-#define BINARY_BOOL_SS_OP(vm, op)                          \
-  do {                                                     \
-    Value  rhs = vm_pop_stack(vm);                         \
-    Value* lhs = vm_peek_stack(vm);                        \
-                                                           \
-    if (rhs.kind == lhs->kind && rhs.kind == VkBool) {     \
-      lhs->as.boolean = lhs->as.boolean op rhs.as.boolean; \
-    } else {                                               \
-      /* RUNTIME ERR: Operands must be of type bool */     \
-    }                                                      \
+#define BINARY_INT_OP(vm, op)                                                           \
+  do {                                                                                  \
+    Value  rhs = vm_pop_stack(vm);                                                      \
+    Value* lhs = vm_peek_stack(vm);                                                     \
+                                                                                        \
+    if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                   \
+      lhs->as.intn = lhs->as.intn op rhs.as.intn;                                       \
+    } else {                                                                            \
+      printf("RuntimeError: Operands for binary operator "#op" must be of type i64\n"); \
+      return InterpretRuntimeError;                                                     \
+    }                                                                                   \
   } while(0)
 
-void vm_run(Vm* vm) {
+InterpretResult vm_run(Vm* vm) {
   for(;;) {
     switch (vm_read_byte(vm)) {
       case OpConstant: {
@@ -143,8 +135,8 @@ void vm_run(Vm* vm) {
         Value* val = vm_peek_stack(vm);
        
         if(!table_insert(&vm->globals, ident, *val)) {
-          printf("Multiple definitions found for %s\n", ident->chars);
-          // RuntimeError: Multiple definitions found for a global variable
+          printf("RuntimeError: Multiple definitions found for global %s\n", ident->chars);
+          return InterpretRuntimeError;
         }
 
         vm_pop_stack(vm);
@@ -157,9 +149,8 @@ void vm_run(Vm* vm) {
 
         Value value;
         if (!table_get(&vm->globals, ident, &value)) {
-          printf("Globals doesn't contain '%s'\n", ident->chars);
-          // Runtime Error "Undefined variabel '%s'"
-          return;
+          printf("RuntimeError: '%s' does not have an associated binding\n", ident->chars);
+          return InterpretRuntimeError;
         }
 
         vm_push_stack(vm, value);
@@ -177,7 +168,14 @@ void vm_run(Vm* vm) {
       }
       case OpJumpIfFalse: {
         u16 offset = vm_read_short(vm);
-        if (is_bool(*vm_peek_stack(vm)) && !vm_peek_stack(vm)->as.boolean) {
+        if (!is_bool(*vm_peek_stack(vm))) {
+          printf("RuntimeError: A branching expression '&&', '||', 'if' and 'case' cannot branch based on a value of type ");          
+          print_kind(*vm_peek_stack(vm));
+          printf("\n");
+          return InterpretRuntimeError;
+        }
+
+        if (!vm_peek_stack(vm)->as.boolean) {
           vm->ip += offset;
         }
         break;
@@ -194,7 +192,10 @@ void vm_run(Vm* vm) {
         } else if (val->kind == VkDouble) {
           val->as.doubn = -val->as.doubn;
         } else {
-          // Runtime Error "Unary operation '-' is only defined for values of type i64 or f64"
+          printf("RuntimeError: Unary '-' operator is not defined for values of type ");
+          print_kind(*val);
+          printf("\n");
+          return InterpretRuntimeError;
         }
         break;
       }
@@ -203,7 +204,10 @@ void vm_run(Vm* vm) {
         if (val->kind == VkInt) {
           val->as.intn = ~val->as.intn;
         } else {
-          // Runtime Error "Unary operation '~' is only defined for values of type i64"
+          printf("RuntimeError: Unary '~' operator is not defined for values of type ");
+          print_kind(*val);
+          printf("\n");
+          return InterpretRuntimeError;
         }
         break;
       }
@@ -212,7 +216,10 @@ void vm_run(Vm* vm) {
         if (val->kind == VkBool) {
           val->as.boolean = !val->as.boolean;
         } else {
-          // Runtime Error "Unary operation '!' is only defined for values of type bool"
+          printf("RuntimeError: Unary '!' operator is not defined for values of type ");
+          print_kind(*val);
+          printf("\n");
+          return InterpretRuntimeError;
         }
         break;
       }
@@ -228,14 +235,30 @@ void vm_run(Vm* vm) {
             vm_pop_stack(vm);
             vm_push_stack(vm, new_object((Object*)st));
           } else {
-            /* Runtime Error "Binary '+' is only applicable for f64, i64 and string" */
+            printf("RuntimeError: Binary '+' is not possible with the following type combination: lhs(");
+            print_kind(*lhs);
+            printf("), rhs(");
+            print_kind(rhs);
+            printf(")\n");
+            return InterpretRuntimeError;
           }
           break;
         }
       case OpSub:    BINARY_INT_DOUBLE_OP(vm, -); break;
       case OpMul:    BINARY_INT_DOUBLE_OP(vm, *); break;
       case OpDiv:    BINARY_INT_DOUBLE_OP(vm, /); break;
-      case OpMod:    BINARY_INT_OP(vm,  %); break;
+      // This operator must be expanded to escape % in the printf
+      case OpMod: {
+        Value rhs = vm_pop_stack(vm);
+        Value *lhs = vm_peek_stack(vm);
+        if (rhs.kind == lhs->kind && rhs.kind == VkInt) {
+          lhs->as.intn = lhs->as.intn % rhs.as.intn;
+        } else {
+          printf("RuntimeError: Operands for binary operator %% must be of type i64\n");
+          return InterpretRuntimeError;
+        }
+        break;
+      }
       case OpBinAnd: BINARY_INT_OP(vm,  &); break;
       case OpBinOr:  BINARY_INT_OP(vm,  |); break;
       case OpBinXor: BINARY_INT_OP(vm,  ^); break;
@@ -280,8 +303,10 @@ void vm_run(Vm* vm) {
         Value arr_val = vm_pop_stack(vm);
         
         if (!is_object(arr_val) && !is_of_type(arr_val.as.obj, OtArray)) {
-          // RuntimeError: Unable to index into a non-array item.
-          break;
+          printf("RuntimeError: Attempt to index into item of type ");
+          print_kind(arr_val);
+          printf("\n");
+          return InterpretRuntimeError;
         }
         
         LambArray* arr = (LambArray*)arr_val.as.obj;
@@ -289,11 +314,14 @@ void vm_run(Vm* vm) {
           if (idx.as.intn < arr->items.len) {
             vm_push_stack(vm, arr->items.values[idx.as.intn]);
           } else {
-            // RuntimeError: Index out of bounds
-            break;
+            printf("RuntimeError: Index out of bounds. Desired index: (%ld), Max index: (%d)\n", idx.as.intn, arr->items.len);
+            return InterpretRuntimeError;
           }
         } else {
-          // RuntimeError: Unable to index into array with non-int value
+          printf("RuntimeError: Unable to index into an array with a value of type ");
+          print_kind(arr_val);
+          printf("\n");
+          return InterpretRuntimeError;
         }
         break; 
       }
@@ -303,7 +331,7 @@ void vm_run(Vm* vm) {
         break;
       }
       case OpHalt: {
-        return;
+        return InterpretOk;
       }
       case OpLApply:
       case OpRApply:

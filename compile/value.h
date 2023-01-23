@@ -52,6 +52,8 @@ Value new_char(char c);
 
 Value new_object(Object* obj);
 
+void print_kind(Value val);
+
 void arr_init(ValueArray* arr);
 
 void arr_write(ValueArray* arr, Value val);

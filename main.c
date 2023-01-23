@@ -28,7 +28,12 @@ void debug_compile_ast(AstNode* root, str name) {
 		printf("\n");
 		chunk_debug(vm.chunk, "Compiled Ast");
 
-		vm_run(&vm);
+		if (InterpretOk == vm_run(&vm)) {
+			printf("Lamb: Your flock has done their job successfully!\n");
+		} else {
+			printf("Lamb: Your flock didn't do well... sorry.\n");
+		}
+
 		vm_free(&vm);
 }
 

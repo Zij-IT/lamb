@@ -7,6 +7,11 @@
 
 #define STACK_MAX 256
 
+typedef enum {
+  InterpretOk,
+  InterpretRuntimeError,
+} InterpretResult;
+
 // Forward declaration from 'object.h'
 typedef struct Object Object;
 
@@ -31,6 +36,6 @@ void vm_push_stack(Vm* vm, Value val);
 
 Value vm_pop_stack(Vm* vm);
 
-void vm_run(Vm* vm);
+InterpretResult vm_run(Vm* vm);
 
 #endif//VM_HEADER

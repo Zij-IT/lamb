@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "./value.h"
+#include "./object.h"
 #include "../memory.h"
 
 Value new_boolean(bool b) {
@@ -48,6 +49,22 @@ bool is_char(Value val) {
 
 bool is_object(Value val) {
   return val.kind == VkObj;
+}
+
+void print_kind(Value val) {
+  switch(val.kind) {
+    case VkBool:   printf("bool");   break;
+    case VkInt:    printf("int");    break;
+    case VkDouble: printf("double"); break;
+    case VkChar:   printf("char");   break;
+    case VkObj: {
+      switch(val.as.obj->type) {
+        case OtString: printf("string"); break;
+        case OtArray:  printf("array"); break;
+      }
+      break;
+    }
+  }
 }
 
 void arr_init(ValueArray* arr) {
