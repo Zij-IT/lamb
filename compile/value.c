@@ -77,13 +77,13 @@ void print_kind(Value val) {
   }
 }
 
-void arr_init(ValueArray* arr) {
+void value_arr_init(ValueArray* arr) {
   arr->len = 0;
   arr->capacity = 0;
   arr->values = NULL;
 }
 
-void arr_write(ValueArray* arr, Value val) {
+void value_arr_write(ValueArray* arr, Value val) {
   if(arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
@@ -94,7 +94,7 @@ void arr_write(ValueArray* arr, Value val) {
   arr->len += 1;
 }
 
-void arr_free(ValueArray* arr) {
+void value_arr_free(ValueArray* arr) {
   FREE_ARRAY(Value, arr->values, arr->capacity);
-  arr_init(arr);
+  value_arr_init(arr);
 }

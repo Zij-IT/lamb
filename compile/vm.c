@@ -288,10 +288,10 @@ InterpretResult vm_run(Vm* vm) {
       case OpMakeArray: {
         i32 len = vm_pop_stack(vm).as.intn;
         ValueArray items;
-        arr_init(&items);
+        value_arr_init(&items);
         
         for(i32 i = 0; i < len; i++) {
-          arr_write(&items, vm_pop_stack(vm));
+          value_arr_write(&items, vm_pop_stack(vm));
         }
 
         LambArray* arr = (LambArray*)alloc_obj(vm, OtArray);

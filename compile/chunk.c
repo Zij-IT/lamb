@@ -9,7 +9,7 @@ void chunk_init(Chunk* chunk) {
   chunk->len = 0;
   chunk->capacity = 0;
   chunk->bytes = NULL;
-  arr_init(&chunk->constants);
+  value_arr_init(&chunk->constants);
 }
 
 void chunk_write(Chunk* chunk, u8 byte) {
@@ -24,12 +24,12 @@ void chunk_write(Chunk* chunk, u8 byte) {
 }
 
 i32 chunk_add_constant(Chunk* chunk, Value val) {
-  arr_write(&chunk->constants, val); 
+  value_arr_write(&chunk->constants, val); 
   return chunk->constants.len - 1;
 }
 
 void chunk_write_constant(Chunk* chunk, Value val) {
-  arr_write(&chunk->constants, val); 
+  value_arr_write(&chunk->constants, val); 
   i32 idx = chunk->constants.len - 1;
   
   if (idx >= 256) {
@@ -68,6 +68,6 @@ void chunk_patch_jump(Chunk* chunk, i32 offset) {
 
 void chunk_free(Chunk* chunk) {
   FREE_ARRAY(u8, chunk->bytes, chunk->capacity);
-  arr_free(&chunk->constants);
+  value_arr_free(&chunk->constants);
   chunk_init(chunk);
 }

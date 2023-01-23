@@ -59,10 +59,10 @@ Value new_object(Object* obj);
 
 void print_kind(Value val);
 
-void arr_init(ValueArray* arr);
+void value_arr_init(ValueArray* arr);
 
-void arr_write(ValueArray* arr, Value val);
+void value_arr_write(ValueArray* arr, Value val);
 
-void arr_free(ValueArray* arr);
+void value_arr_free(ValueArray* arr);
 
 #endif//VALUE_HEADER
