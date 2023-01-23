@@ -1760,13 +1760,13 @@ yyreduce:
 
   case 71: /* FUNC_DEF: TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END  */
 #line 187 "./parsing/parser.y"
-                                                                        { (yyval.node) = new_astnode(AstntFuncDef); (yyval.node)->kids[0] = (yyvsp[-3].node); (yyval.node)->kids[1] = (yyvsp[0].node); (yyval.node)->kids[2] = new_astnode(AstntBoolLit); (yyval.node)->kids[2]->val.b = true; }
+                                                                                         { (yyval.node) = new_astnode(AstntFuncDef); (yyval.node)->kids[0] = (yyvsp[-3].node); (yyval.node)->kids[1] = (yyvsp[0].node); (yyval.node)->kids[2] = new_astnode(AstntBoolLit); (yyval.node)->kids[2]->val.b = false; }
 #line 1765 "./parsing/built/parser.tab.c"
     break;
 
   case 72: /* FUNC_DEF: TokenRec TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END  */
 #line 188 "./parsing/parser.y"
-                                                                                     { (yyval.node) = new_astnode(AstntFuncDef); (yyval.node)->kids[0] = (yyvsp[-3].node); (yyval.node)->kids[1] = (yyvsp[0].node); (yyval.node)->kids[2] = new_astnode(AstntBoolLit); (yyval.node)->kids[2]->val.b = true; }
+                                                                                     { (yyval.node) = new_astnode(AstntFuncDef); (yyval.node)->kids[0] = (yyvsp[-3].node); (yyval.node)->kids[1] = (yyvsp[0].node); (yyval.node)->kids[2] = new_astnode(AstntBoolLit); (yyval.node)->kids[2]->val.b = true;  }
 #line 1771 "./parsing/built/parser.tab.c"
     break;
 

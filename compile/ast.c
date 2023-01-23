@@ -351,6 +351,40 @@ void compile_ast(Vm* vm, AstNode* node) {
       fprintf(stderr, "Attempting to compile a lone 'CaseArm' node. You done messed up.");
       break;
     }
+    case AstntArray: {
+      // Reverse the linked list
+      AstNode* prev = NULL;
+      AstNode* curr = node->kids[0];
+      if(curr == NULL) {
+        chunk_write_constant(vm->chunk, new_int(0));
+        chunk_write(vm->chunk, OpMakeArray);
+        return;
+      }
+      
+      AstNode* next = curr->kids[1];
+      while (curr != NULL) {
+        curr->kids[1] = prev;
+        prev = curr;
+        curr = next;
+        
+        if (next != NULL) {
+          next = next->kids[1];
+        }
+      }
+      
+      node->kids[0] = prev;
+
+      // The list is guarunteed to be reversed at this time => compilation order is the same 
+      // as the order of the elements.
+      i32 len = 0;
+      for(AstNode* expr_list = node->kids[0]; expr_list != NULL; expr_list = expr_list->kids[1]) {
+        compile_ast(vm, expr_list->kids[0]);
+        len += 1;
+      }
+      chunk_write_constant(vm->chunk, new_int(len));
+      chunk_write(vm->chunk, OpMakeArray);
+      break;
+    }
     // case AstntBinaryLCompose: {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
@@ -376,10 +410,6 @@ void compile_ast(Vm* vm, AstNode* node) {
     //   break;
     // }
     // case AstntFuncCall: {
-    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-    //   break;
-    // }
-    // case AstntArray: {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
     // }

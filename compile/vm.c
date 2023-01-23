@@ -263,6 +263,20 @@ void vm_run(Vm* vm) {
         printf("\n");
         break;
       }
+      case OpMakeArray: {
+        i32 len = vm_pop_stack(vm).as.intn;
+        ValueArray items;
+        arr_init(&items);
+        
+        for(i32 i = 0; i < len; i++) {
+          Value v = vm_pop_stack(vm);
+          arr_write(&items, v);
+          print_value(v);
+          printf("\n");
+        }
+
+        break;
+      }
       case OpDup: {
         Value* ret = vm_peek_stack(vm);
         vm_push_stack(vm, *ret);

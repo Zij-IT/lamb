@@ -74,6 +74,7 @@ static i32 print_op(Chunk* chunk, i32 offset) {
     case OpRShift: return print_simple_op("OpRShift");
     case OpLShift: return print_simple_op("OpLShift");
     case OpReturn: return print_simple_op("OpReturn");
+    case OpMakeArray: return print_simple_op("OpMakeArray");
     case OpPop: return print_simple_op("OpPop");
     case OpDup: return print_simple_op("OpDup");
     case OpHalt: return print_simple_op("OpHalt");

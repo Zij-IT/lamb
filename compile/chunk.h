@@ -39,6 +39,7 @@ typedef enum {
   OpReturn,
   OpJump,
   OpJumpIfFalse,
+  OpMakeArray,
   OpPop,
   OpDup,
   OpHalt,
