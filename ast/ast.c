@@ -98,6 +98,7 @@ void free_ast(AstNode* root) {
     case AstntFuncDef:
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
+      free_ast(root->kids[2]);
       break;
     case AstntFuncCall:
       free_ast(root->kids[0]);
@@ -358,6 +359,9 @@ void print_ast(AstNode* root, u16 spaces) {
       printf(",\n");
       pre_pad(spaces + BASE_PADDING, "block: ");
       print_block(root->kids[1], spaces + BASE_PADDING + 7);
+      printf(",\n");
+      pre_pad(spaces + BASE_PADDING, "recursive: ");
+      print_block(root->kids[2], spaces + BASE_PADDING + 11);
       printf(",\n");
       pre_pad(spaces, "}");
       break;

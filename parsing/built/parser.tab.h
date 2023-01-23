@@ -45,7 +45,7 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 84 "./parsing/parser.y"
+#line 85 "./parsing/parser.y"
  
 	#include "../../ast/ast.h" 
 	#include "../../ast/optimization.h" 
@@ -104,16 +104,17 @@ extern int yydebug;
     TokenReturn = 298,             /* TokenReturn  */
     TokenStruct = 299,             /* TokenStruct  */
     TokenEnum = 300,               /* TokenEnum  */
-    TokenStr = 301,                /* TokenStr  */
-    TokenNum = 302,                /* TokenNum  */
-    TokenChar = 303,               /* TokenChar  */
-    TokenIdent = 304,              /* TokenIdent  */
-    FUNC_END_PREC = 305,           /* FUNC_END_PREC  */
-    TokenAdd = 306,                /* TokenAdd  */
-    TokenSub = 307,                /* TokenSub  */
-    TokenMul = 308,                /* TokenMul  */
-    TokenDiv = 309,                /* TokenDiv  */
-    UNARY = 310                    /* UNARY  */
+    TokenRec = 301,                /* TokenRec  */
+    TokenStr = 302,                /* TokenStr  */
+    TokenNum = 303,                /* TokenNum  */
+    TokenChar = 304,               /* TokenChar  */
+    TokenIdent = 305,              /* TokenIdent  */
+    FUNC_END_PREC = 306,           /* FUNC_END_PREC  */
+    TokenAdd = 307,                /* TokenAdd  */
+    TokenSub = 308,                /* TokenSub  */
+    TokenMul = 309,                /* TokenMul  */
+    TokenDiv = 310,                /* TokenDiv  */
+    UNARY = 311                    /* UNARY  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -130,7 +131,7 @@ union YYSTYPE
 	i64 num;
 	char ch;
 
-#line 134 "./parsing/built/parser.tab.h"
+#line 135 "./parsing/built/parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

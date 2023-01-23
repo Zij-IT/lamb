@@ -43,7 +43,7 @@
 "$>"	 { return TokenRApply;    }
 "<$"	 { return TokenLApply;    }
 "+"  	 { return TokenAdd;       }
-"-"  	 { return TokenSub;     }
+"-"  	 { return TokenSub;       }
 "*"  	 { return TokenMul;       }
 "/"  	 { return TokenDiv;       }
 "%"  	 { return TokenMod;       }
@@ -74,6 +74,7 @@
 ";"  	 { return TokenSemicolon; }
 ":"		 { return TokenColon;     }
 "fn"  	 { return TokenFn;        }
+"rec" 	 { return TokenRec; 	  }
 "enum"   { return TokenEnum;      }
 "struct" { return TokenStruct;    }
 "return" { return TokenReturn;    }

@@ -61,6 +61,7 @@
 %token TokenReturn
 %token TokenStruct
 %token TokenEnum
+%token TokenRec
 %token <str>   TokenStr
 %token <num>   TokenNum
 %token <ch>    TokenChar
@@ -183,7 +184,8 @@ PATTERN: LITERAL { $$ = $1; }
 
 CASE_VAL: BLOCK			  { $$ = $1; }
 
-FUNC_DEF: TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END { $$ = new_astnode(AstntFuncDef); $$->kids[0] = $3; $$->kids[1] = $6; }
+FUNC_DEF: 		   TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END { $$ = new_astnode(AstntFuncDef); $$->kids[0] = $3; $$->kids[1] = $6; $$->kids[2] = new_astnode(AstntBoolLit); $$->kids[2]->val.b = false; }
+	    | TokenRec TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END { $$ = new_astnode(AstntFuncDef); $$->kids[0] = $4; $$->kids[1] = $7; $$->kids[2] = new_astnode(AstntBoolLit); $$->kids[2]->val.b = true;  }
 
 FUNC_END: BLOCK %prec FUNC_END_PREC { $$ = $1; }
 		| EXPR  %prec FUNC_END_PREC { $$ = $1; }
