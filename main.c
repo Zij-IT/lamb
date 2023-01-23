@@ -19,21 +19,24 @@ void debug_compile_ast(AstNode* root, str name) {
 	
 		Vm vm;
 		vm_init(&vm);
-		compile_ast(&vm, root);
-		chunk_write(vm.chunk, OpHalt);
-		
-		// Must be done after chunk_write incase it forces a reallocation
-		vm_reset_ip(&vm);
-	
+		CompileAstResult car = compile_ast(&vm, root);
 		printf("\n");
-		chunk_debug(vm.chunk, "Compiled Ast");
+	
+		if (car == CarOk) {
+			chunk_write(vm.chunk, OpHalt);
+			chunk_debug(vm.chunk, "Compiled Ast");
 
-		if (InterpretOk == vm_run(&vm)) {
-			printf("Lamb: Your flock has done their job successfully!\n");
+			// Must be done after chunk_write incase it forces a reallocation
+			vm_reset_ip(&vm);
+		
+			if (InterpretOk == vm_run(&vm)) {
+				printf("Lamb: Your flock has done their job successfully!\n");
+			} else {
+				printf("Lamb: Your flock didn't do well... sorry.\n");
+			}
 		} else {
-			printf("Lamb: Your flock didn't do well... sorry.\n");
+			printf("Lamb: Your source code contains code that is not able to be compiled.\n");
 		}
-
 		vm_free(&vm);
 }
 
