@@ -23,8 +23,6 @@ typedef enum {
   OpRApply,
   OpLCompose,
   OpRCompose,
-  OpLogAnd,
-  OpLogOr,
   OpBinAnd,
   OpBinOr,
   OpBinXor,

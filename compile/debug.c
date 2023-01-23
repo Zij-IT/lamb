@@ -60,8 +60,6 @@ static i32 print_op(Chunk* chunk, i32 offset) {
     case OpRApply: return print_simple_op("OpRApply");
     case OpLCompose: return print_simple_op("OpLCompose");
     case OpRCompose: return print_simple_op("OpRCompose");
-    case OpLogAnd: return print_simple_op("OpLogAnd");
-    case OpLogOr: return print_simple_op("OpLogOr");
     case OpBinAnd: return print_simple_op("OpBinAnd");
     case OpBinOr: return print_simple_op("OpBinOr");
     case OpBinXor: return print_simple_op("OpBinXor");

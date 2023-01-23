@@ -247,8 +247,6 @@ void vm_run(Vm* vm) {
       case OpGe:     BINARY_REL_OP(vm, >=); break;
       case OpLt:     BINARY_REL_OP(vm, <);  break;
       case OpLe:     BINARY_REL_OP(vm, <=); break;
-      case OpLogAnd: BINARY_BOOL_SS_OP(vm, &&); break;
-      case OpLogOr:  BINARY_BOOL_SS_OP(vm, ||); break;
       case OpReturn: {
         Value ret = vm_pop_stack(vm);
         printf("Returning: ");
