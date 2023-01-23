@@ -407,6 +407,9 @@ void optimize_ast(AstNode* root) {
       optimize_ast(root->kids[0]);
       optimize_ast(root->kids[1]);
       break;
+    case AstntReturn:
+      optimize_ast(root->kids[0]);
+      break;
     case AstntNodeList:
       optimize_ast(root->kids[0]);
       optimize_ast(root->kids[1]);

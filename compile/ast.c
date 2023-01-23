@@ -387,6 +387,10 @@ void compile_ast(Vm* vm, AstNode* node) {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
     // }
+    // case AstntReturn {
+    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+    //   break;
+    // }
     default:
       fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
       fprintf(stderr, "Default branch reached while matching on node->type in %s on line %d", __FILE__, __LINE__);

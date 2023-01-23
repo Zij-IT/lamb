@@ -88,7 +88,7 @@
 
 %parse-param { AstNode** parse_node }
 
-%type <node> LITERAL ATOM EXPR STMT STMTS ID GROUPED BLOCK IF_EXPR ELIFS ELSE CASE_EXPR CASE_ARMS PATTERN CASE_VAL ARRAY EXPR_LIST FUNC_DEF FUNC_ARGS FUNC_ARGS_LIST FUNC_CALL UNARY_EXPR INDEX FUNC_END BINARY_EXPR FILE
+%type <node> LITERAL ATOM EXPR STMT STMTS ID GROUPED BLOCK IF_EXPR ELIFS ELSE CASE_EXPR CASE_ARMS PATTERN CASE_VAL ARRAY EXPR_LIST FUNC_DEF FUNC_ARGS FUNC_ARGS_LIST FUNC_CALL UNARY_EXPR INDEX FUNC_END BINARY_EXPR FILE 
 %%
 
 FILE: FILE STRUCT 
@@ -118,6 +118,8 @@ STMTS : STMT STMTS { $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1]
 STMT : ID TokenDefine EXPR TokenSemicolon { $$ = new_astnode(AstntAssignStmt); $$->kids[0] = $1; $$->kids[1] = $3; }
 	 | EXPR TokenSemicolon				  { $$ = new_astnode(AstntExprStmt);   $$->kids[0] = $1;  				   }
 	 | BLOCK TokenSemicolon				  { $$ = new_astnode(AstntBlockStmt);  $$->kids[0] = $1; 				   }
+	 | TokenReturn TokenSemicolon		  { $$ = new_astnode(AstntReturn); $$->kids[0] = NULL; 					   }
+	 | TokenReturn EXPR TokenSemicolon	  { $$ = new_astnode(AstntReturn); $$->kids[0] = $2; 					   }
 
 ID: TokenIdent { $$ = new_astnode(AstntIdent); $$->val.i = $1; }
 

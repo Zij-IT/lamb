@@ -52,6 +52,7 @@ typedef enum {
   AstntFuncDef,
   AstntFuncCall,
   AstntArrayIndex,
+  AstntReturn,
     
   // Statement Kinds
   AstntExprStmt,

@@ -107,6 +107,9 @@ void free_ast(AstNode* root) {
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
       break;
+    case AstntReturn:
+      free_ast(root->kids[0]);
+      break;
     case AstntExprStmt:
       free_ast(root->kids[0]);
       break;
@@ -358,6 +361,18 @@ void print_ast(AstNode* root, u16 spaces) {
       printf(",\n");
       pre_pad(spaces, "}");
       break;
+    case AstntReturn: {
+      printf("Return: {\n");
+      pre_pad(spaces + BASE_PADDING, "value: ");
+      if (root->kids[0] != NULL) {
+        print_ast(root->kids[0], spaces + BASE_PADDING + 7);
+      } else {
+        printf("None");
+      }
+      printf(",\n");
+      pre_pad(spaces, "}");
+      break;
+    }
     case AstntFuncCall:
       printf("FuncCall: {\n");
       pre_pad(spaces + BASE_PADDING, "callee: ");
