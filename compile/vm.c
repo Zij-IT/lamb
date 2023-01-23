@@ -277,6 +277,28 @@ void vm_run(Vm* vm) {
         vm_push_stack(vm, new_object((Object*)arr));
         break;
       }
+      case OpIndexArray: {
+        Value idx = vm_pop_stack(vm);
+        Value arr_val = vm_pop_stack(vm);
+        
+        if (!is_object(arr_val) && !is_of_type(arr_val.as.obj, OtArray)) {
+          // RuntimeError: Unable to index into a non-array item.
+          break;
+        }
+        
+        LambArray* arr = (LambArray*)arr_val.as.obj;
+        if (is_integer(idx)) {
+          if (idx.as.intn < arr->items.len) {
+            vm_push_stack(vm, arr->items.values[idx.as.intn]);
+          } else {
+            // RuntimeError: Index out of bounds
+            break;
+          }
+        } else {
+          // RuntimeError: Unable to index into array with non-int value
+        }
+        break; 
+      }
       case OpDup: {
         Value* ret = vm_peek_stack(vm);
         vm_push_stack(vm, *ret);

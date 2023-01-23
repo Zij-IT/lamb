@@ -385,6 +385,12 @@ void compile_ast(Vm* vm, AstNode* node) {
       chunk_write(vm->chunk, OpMakeArray);
       break;
     }
+    case AstntArrayIndex: {
+      compile_ast(vm, node->kids[0]);      
+      compile_ast(vm, node->kids[1]);      
+      chunk_write(vm->chunk, OpIndexArray);
+      break;
+    }
     // case AstntBinaryLCompose: {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
@@ -410,10 +416,6 @@ void compile_ast(Vm* vm, AstNode* node) {
     //   break;
     // }
     // case AstntFuncCall: {
-    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-    //   break;
-    // }
-    // case AstntArrayIndex: {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
     // }
