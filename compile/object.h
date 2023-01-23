@@ -2,12 +2,14 @@
 #define OBJECT_HEADER
 
 #include "../types.h"
+#include "value.h"
 
 // Forward declare vm in vm.h
 typedef struct Vm Vm;
 
 typedef enum {
   OtString,
+  OtArray,
 } ObjectType;
 
 typedef struct Object {
@@ -21,6 +23,11 @@ typedef struct LambString {
   string chars;
   u32 hash;
 } LambString;
+
+typedef struct LambArray {
+  Object obj;
+  ValueArray items;  
+} LambArray;
 
 Object* alloc_obj(Vm* vm, ObjectType type);
 

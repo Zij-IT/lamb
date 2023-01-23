@@ -116,7 +116,19 @@ void print_value(Value v)  {
 void print_object(Object* obj) {
   switch(obj->type) {
     case OtString: {
-      printf("%s", ((LambString*)obj)->chars);
+      printf("\"%s\"", ((LambString*)obj)->chars);
+      break;
+    }
+    case OtArray: {
+      LambArray* arr = (LambArray*)obj;
+      printf("[");
+      for(i32 i = 0; i < arr->items.len; i++) {
+        print_value(arr->items.values[i]);
+        if (i != arr->items.len - 1) {
+          printf(", ");
+        }
+      }
+      printf("]");
       break;
     }
   }

@@ -19,6 +19,16 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       vm->poor_mans_gc = (Object*)st;
       return vm->poor_mans_gc;
     }
+    case OtArray: {
+      LambArray* arr = malloc(sizeof(LambArray));
+      Object obj = { .type = type, .next = vm->poor_mans_gc, };
+      arr->obj = obj;
+      ValueArray v_arr;
+      arr_init(&v_arr);
+      arr->items = v_arr;
+      vm->poor_mans_gc = (Object*)arr;
+      return vm->poor_mans_gc;
+    }
   }
   
   return NULL;
@@ -30,6 +40,12 @@ void object_free(Object* obj) {
       LambString* st = (LambString*)obj;
       FREE_ARRAY(char, st->chars, st->len + 1);
       FREE(LambString, st);
+      break;
+    }
+    case OtArray: {
+      LambArray* arr = (LambArray*)obj;
+      arr_free(&arr->items);
+      FREE(LambArray, arr);
       break;
     }
   }

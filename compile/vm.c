@@ -269,12 +269,12 @@ void vm_run(Vm* vm) {
         arr_init(&items);
         
         for(i32 i = 0; i < len; i++) {
-          Value v = vm_pop_stack(vm);
-          arr_write(&items, v);
-          print_value(v);
-          printf("\n");
+          arr_write(&items, vm_pop_stack(vm));
         }
 
+        LambArray* arr = (LambArray*)alloc_obj(vm, OtArray);
+        arr->items = items;
+        vm_push_stack(vm, new_object((Object*)arr));
         break;
       }
       case OpDup: {
