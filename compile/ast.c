@@ -130,7 +130,6 @@ void compile_ast(Vm* vm, AstNode* node) {
       i32 if_false = chunk_write_jump(vm->chunk, OpJumpIfFalse);
       chunk_write(vm->chunk, OpPop);
       compile_ast(vm, node->kids[1]);
-      chunk_write(vm->chunk, OpLogAnd);
       chunk_patch_jump(vm->chunk, if_false);
       break;
     }
@@ -141,7 +140,6 @@ void compile_ast(Vm* vm, AstNode* node) {
       chunk_patch_jump(vm->chunk, if_false);
       chunk_write(vm->chunk, OpPop);
       compile_ast(vm, node->kids[1]);
-      chunk_write(vm->chunk, OpLogOr);
       chunk_patch_jump(vm->chunk, skip_right);
       break;
     }    case AstntBinaryEq: {
