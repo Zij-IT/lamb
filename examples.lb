@@ -56,7 +56,7 @@ x := 2;
 x := "shadowing";
 
 -- cooler fib when using case
-fib := rec fun(x) -> case x {
-	0 | 1 -> x,
-	_ -> fib(x - 1) + fib(x - 2),
-};
+-- fib := rec fun(x) -> case x {
+-- 	0 | 1 -> x,
+-- 	_ -> fib(x - 1) + fib(x - 2),
+-- };
