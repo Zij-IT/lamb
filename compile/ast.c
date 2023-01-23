@@ -281,6 +281,11 @@ void compile_ast(Vm* vm, AstNode* node) {
       }
       free(out_of_case);
       
+      // TODO: Fix the grammar so this can be done with... This is a sad state of affairs.
+      // Pop the test value off of the stack and because the case expression can't have a final expression,
+      // write a dummy value similar to 'if'
+      chunk_write(vm->chunk, OpPop);
+      chunk_write_constant(vm->chunk, new_boolean(false));
       break;
     }
     case AstntExprStmt: {
