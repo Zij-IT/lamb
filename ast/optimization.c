@@ -166,6 +166,9 @@ static void constant_fold(AstNode* root) {
     }
 }
 
+// This function would be wonderful to have, but the current implementation
+// has invalid memory access which result in a NPE and potential free-ing
+// issues.
 static void dead_code_if_elim(AstNode* root) {
   if(root->type != AstntIf) {
     return;
@@ -374,7 +377,13 @@ void optimize_ast(AstNode* root) {
       break;
     // -- }
     case AstntIf:
-      dead_code_if_elim(root);
+      optimize_ast(root->kids[0]);
+      optimize_ast(root->kids[1]);
+      optimize_ast(root->kids[2]);
+      optimize_ast(root->kids[3]);
+    	// TODO: Valgrind revealed an error in dead_code_if_elim which causes a seg-fault as elements
+    	//			 of the if-elif-else chain aren't properly handled.
+      // dead_code_if_elim(root);
       break;
     case AstntElif:
       optimize_ast(root->kids[0]);

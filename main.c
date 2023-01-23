@@ -59,8 +59,7 @@ int main(int argc, char** argv) {
 	debug_compile_ast(*root, "Unoptimized AST");;
 	
 	optimize_ast(*root);
-
-	// debug_compile_ast(*root, "Optimized AST");
+	debug_compile_ast(*root, "Optimized AST");
 	
 	if (file != stdin && file != NULL) {
 		fclose(file);
