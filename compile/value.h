@@ -13,6 +13,7 @@ typedef enum {
   VkDouble,
   VkChar,
   VkObj,
+  VkNil,
 } ValueKind;
 
 typedef struct {
@@ -41,6 +42,10 @@ bool is_integer(Value val);
 bool is_char(Value val);
 
 bool is_object(Value val);
+
+bool is_nil(Value val);
+
+Value new_nil();
 
 Value new_boolean(bool b);
 

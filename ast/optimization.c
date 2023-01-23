@@ -419,6 +419,7 @@ void optimize_ast(AstNode* root) {
     case AstntNumLit:
     case AstntCharLit:
     case AstntBoolLit:
+    case AstntNilLit:
     case AstntIdent:
       break;
     //  -- }

@@ -132,6 +132,7 @@ void free_ast(AstNode* root) {
     case AstntNumLit:
     case AstntCharLit:
     case AstntBoolLit:
+    case AstntNilLit:
       break;
     }
 
@@ -191,6 +192,9 @@ void print_ast(AstNode* root, u16 spaces) {
   }
   
   switch(root->type) {
+    case AstntNilLit:
+      printf("nil");
+      break;
     case AstntStrLit:
       printf("\"%s\"", root->val.s);
       break;

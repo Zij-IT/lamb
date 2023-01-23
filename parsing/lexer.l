@@ -84,6 +84,7 @@
 "elif"   { return TokenElif;      }
 "else"   { return TokenElse;      }
 "case"   { return TokenCase;      }
+"nil"    { return TokenNil;       }
 
 [_a-zA-Z][_a-zA-Z0-9]* { yylval.ident = strdup(yytext); return TokenIdent; }
 

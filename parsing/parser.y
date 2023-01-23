@@ -62,6 +62,7 @@
 %token TokenStruct
 %token TokenEnum
 %token TokenRec
+%token TokenNil
 %token <str>   TokenStr
 %token <num>   TokenNum
 %token <ch>    TokenChar
@@ -207,6 +208,7 @@ LITERAL: TokenNum   { $$ = new_astnode(AstntNumLit);  $$->val.n = $1;    }
 	   | TokenChar  { $$ = new_astnode(AstntCharLit); $$->val.c = $1;    }
 	   | TokenTrue  { $$ = new_astnode(AstntBoolLit); $$->val.b = true;  }
 	   | TokenFalse { $$ = new_astnode(AstntBoolLit); $$->val.b = false; }
+	   | TokenNil   { $$ = new_astnode(AstntNilLit); 					 }
 
 GROUPED: TokenLParen EXPR TokenRParen { $$ = $2; }
 

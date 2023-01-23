@@ -68,6 +68,10 @@ void compile_ast(Vm* vm, AstNode* node) {
       
       break;
     }
+    case AstntNilLit: {
+      chunk_write_constant(vm->chunk, new_nil());
+      break;
+    }
     case AstntNumLit: {
       chunk_write_constant(vm->chunk, new_int(node->val.n));
       break;

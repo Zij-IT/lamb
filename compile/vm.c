@@ -73,6 +73,7 @@ Value* vm_peek_stack(Vm* vm) {
         case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break;                       \
         case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break;                       \
         case VkObj:    rel = rhs.as.obj op lhs->as.obj;         break;                       \
+        case VkNil:    rel = true;                              break;                       \
       }                                                                                      \
                                                                                              \
       lhs->kind = VkBool;                                                                    \

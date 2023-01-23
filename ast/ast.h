@@ -11,6 +11,7 @@ typedef enum {
   AstntNumLit,
   AstntCharLit,
   AstntBoolLit,
+  AstntNilLit,
   AstntIdent,
   
   // Unary Ops

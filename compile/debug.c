@@ -106,6 +106,9 @@ void print_value(Value v)  {
     case VkChar:
       printf("%c", v.as.ch);
       return;
+    case VkNil:
+      printf("nil");
+      return;
     case VkObj:
       print_object(v.as.obj);
       break;

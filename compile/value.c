@@ -6,6 +6,11 @@
 #include "./object.h"
 #include "../memory.h"
 
+Value new_nil() {
+  Value val = { .kind = VkNil, .as.boolean = false, };
+  return val;
+}
+
 Value new_boolean(bool b) {
   Value val = { .kind = VkBool, .as.boolean = b };
   return val;
@@ -31,6 +36,10 @@ Value new_object(Object* obj) {
   return val;
 }
 
+bool is_nil(Value val) {
+  return val.kind == VkNil;
+}
+
 bool is_bool(Value val) {
   return val.kind == VkBool;
 }
@@ -53,6 +62,7 @@ bool is_object(Value val) {
 
 void print_kind(Value val) {
   switch(val.kind) {
+    case VkNil:    printf("nil");    break;
     case VkBool:   printf("bool");   break;
     case VkInt:    printf("int");    break;
     case VkDouble: printf("double"); break;
