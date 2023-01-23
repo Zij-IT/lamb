@@ -47,6 +47,9 @@ int main(int argc, char** argv) {
 		}
 	}
   
+	if (file == stdin) {
+		printf("~Lamb> Enter your code. Press Ctrl-D when finished.\n");
+	}
   set_lexer_file(file);
 
 	AstNode** root = malloc(sizeof(AstNode*));
