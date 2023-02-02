@@ -71,6 +71,7 @@ void print_kind(Value val) {
       switch(val.as.obj->type) {
         case OtString: printf("string"); break;
         case OtArray:  printf("array"); break;
+        case OtFunc:   printf("fn"); break;
       }
       break;
     }

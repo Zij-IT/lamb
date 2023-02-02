@@ -3,6 +3,7 @@
 
 #include "../types.h"
 #include "value.h"
+#include "chunk.h"
 
 // Forward declare vm in vm.h
 typedef struct Vm Vm;
@@ -10,6 +11,7 @@ typedef struct Vm Vm;
 typedef enum {
   OtString,
   OtArray,
+  OtFunc,
 } ObjectType;
 
 typedef struct Object {
@@ -28,6 +30,13 @@ typedef struct LambArray {
   Object obj;
   ValueArray items;  
 } LambArray;
+
+typedef struct LambFunc {
+  Object obj;
+  Chunk chunk;
+  str name;
+  u8 arity;
+} LambFunc;
 
 Object* alloc_obj(Vm* vm, ObjectType type);
 

@@ -133,5 +133,13 @@ void print_object(Object* obj) {
       printf("]");
       break;
     }
+    case OtFunc: {
+      LambFunc* func = (LambFunc*)obj;
+      if (func->name == NULL) {
+        printf("<script>");
+      } else {
+        printf("<fn %s>", func->name);
+      }
+    }
   }
 }

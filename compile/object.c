@@ -29,6 +29,16 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       vm->poor_mans_gc = (Object*)arr;
       return vm->poor_mans_gc;
     }
+    case OtFunc: {
+      LambFunc* func = malloc(sizeof(LambFunc));
+      Object obj = { .type = type, .next = vm->poor_mans_gc, };
+      func->obj = obj;
+      func->name = NULL;
+      func->arity = 0;
+      chunk_init(&func->chunk);
+      vm->poor_mans_gc = (Object*)func;
+      return vm->poor_mans_gc;
+    }
   }
   
   return NULL;
@@ -46,6 +56,12 @@ void object_free(Object* obj) {
       LambArray* arr = (LambArray*)obj;
       value_arr_free(&arr->items);
       FREE(LambArray, arr);
+      break;
+    }
+    case OtFunc: {
+      LambFunc* func = (LambFunc*)obj;
+      chunk_free(&func->chunk);
+      FREE(LambFunc, func);
       break;
     }
   }
