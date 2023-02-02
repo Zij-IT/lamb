@@ -19,7 +19,7 @@ void debug_compile_ast(AstNode* root, str name) {
 	
 		Vm vm;
 		vm_init(&vm);
-		CompileAstResult car = compile_ast(&vm, root);
+		CompileAstResult car = compile_to_chunk(&vm, vm.chunk, root);
 		printf("\n");
 	
 		if (car == CarOk) {
