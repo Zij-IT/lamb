@@ -7,7 +7,7 @@ typedef struct LambString LambString;
 typedef struct Chunk Chunk;
 
 typedef struct {
-  LambString* name;
+  str name;
   i32 depth;
 } Local;
 

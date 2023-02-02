@@ -11,7 +11,7 @@
 static i32 resolve_local(Compiler* compiler, LambString* name) {
   for (i32 i = compiler->locals.len - 1; i >= 0; i--) {
     Local* local = &compiler->locals.values[i];
-    if (local->name == name) {
+    if (local->name == name->chars) {
       return i;
     }
   }
@@ -325,7 +325,7 @@ CompileAstResult compile_to_chunk(Vm* vm, Chunk* chunk, AstNode* node) {
         chunk_write_constant(chunk, new_object((Object*)interned));
         chunk_write(chunk, OpDefineGlobal);
       } else {
-        Local loc = { .depth = vm->curr_compiler->scope_depth, .name = interned };
+        Local loc = { .depth = vm->curr_compiler->scope_depth, .name = interned->chars };
         local_arr_write(&vm->curr_compiler->locals, loc);
         
         chunk_write_constant(chunk, new_int(vm->curr_compiler->locals.len- 1));
