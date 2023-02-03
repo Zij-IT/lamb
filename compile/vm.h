@@ -16,13 +16,16 @@ typedef enum {
 typedef struct Object Object;
 
 typedef struct Vm {
-  u8* ip;
-  Value* stack_top;
-  Value stack[STACK_MAX];
-  Object* poor_mans_gc;
   Table strings;
   Table globals;
+
+  Value* stack_top;
+  Value stack[STACK_MAX];
+
+  u8* ip;
+
   Compiler* curr_compiler;
+  Object* poor_mans_gc;
 } Vm;
 
 void vm_init(Vm* vm);
