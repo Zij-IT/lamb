@@ -19,16 +19,28 @@ void debug_compile_ast(AstNode* root, str name) {
 	
 		Vm vm;
 		vm_init(&vm);
-		CompileAstResult car = compile_to_chunk(&vm, vm.curr_compiler, root);
+	
+		Compiler compiler;
+		compiler_init(&compiler, FtScript);
+		compiler.function = (LambFunc*)alloc_obj(&vm, OtFunc);
+	
+		CompileAstResult car = compile_to_chunk(&vm, &compiler, root);
 		printf("\n");
 	
 		if (car == CarOk) {
-			chunk_write(vm_chunk(&vm), OpHalt);
-			chunk_debug(vm_chunk(&vm), "Compiled Ast");
+			// Pull the function out from the compiler
+			Callframe* frame = &vm.frames[vm.frame_count++];
+			frame->function = compiler.function;
+			frame->ip = compiler.function->chunk.bytes;
+			frame->slots = vm.stack;
+		
+			chunk_write(&compiler.function->chunk, OpHalt);
+			chunk_debug(&compiler.function->chunk, "Compiled Ast");
 
 			// Must be done after chunk_write incase it forces a reallocation
 			vm_reset_ip(&vm);
 		
+			return;
 			if (InterpretOk == vm_run(&vm)) {
 				printf("Lamb: Your flock has done their job successfully!\n");
 			} else {
@@ -38,6 +50,9 @@ void debug_compile_ast(AstNode* root, str name) {
 			printf("Lamb: Your source code contains code that is not able to be compiled.\n");
 		}
 
+	  // This does not result in a double free of the function. The internal function of a 'Compiler'
+	  // object is not freed in compiler_free because it is allocated via the vm
+		compiler_free(&compiler);
 		vm_free(&vm);
 }
 

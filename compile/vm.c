@@ -12,20 +12,13 @@ void vm_init(Vm* vm) {
   vm->frame_count = 0;
   vm->stack_top = vm->stack + 1;
   vm->poor_mans_gc = NULL;
-  vm->ip = NULL;
 
   table_init(&vm->strings);
   table_init(&vm->globals);
-
-  vm->curr_compiler = malloc(sizeof(Compiler));
-  compiler_init(vm->curr_compiler, FtScript);
-  vm->curr_compiler->function = (LambFunc*)alloc_obj(vm, OtFunc);
-
-  vm_reset_ip(vm);
 }
 
 void vm_reset_ip(Vm* vm) {
-  vm->ip = vm_chunk(vm)->bytes;
+  vm_frame(vm)->ip = vm_chunk(vm)->bytes;
 }
 
 void vm_reset_stack(Vm* vm) {
@@ -43,7 +36,7 @@ Value vm_pop_stack(Vm* vm) {
 }
 
 u8 vm_read_byte(Vm* vm) {
-  return *vm->ip++;
+  return *vm_frame(vm)->ip++;
 }
 
 u16 vm_read_short(Vm* vm) {
@@ -62,7 +55,11 @@ Value* vm_peek_stack(Vm* vm) {
 }
 
 Chunk* vm_chunk(Vm* vm) {
-  return &vm->curr_compiler->function->chunk;
+  return &vm_frame(vm)->function->chunk;
+}
+
+Callframe* vm_frame(Vm* vm) {
+  return &vm->frames[vm->frame_count - 1];
 }
 
 #define BINARY_REL_OP(vm, op)                                                                \
@@ -164,12 +161,12 @@ InterpretResult vm_run(Vm* vm) {
       }
       case OpDefineLocal: {
         i32 slot = vm_pop_stack(vm).as.intn;
-        vm->stack[slot] = *vm_peek_stack(vm);
+        vm_frame(vm)->slots[slot] = *vm_peek_stack(vm);
         break; 
       }
       case OpGetLocal: {
         i32 slot = vm_pop_stack(vm).as.intn;
-        vm_push_stack(vm, vm->stack[slot]);
+        vm_push_stack(vm, vm_frame(vm)->slots[slot]);
         break; 
       }
       case OpJumpIfFalse: {
@@ -182,13 +179,13 @@ InterpretResult vm_run(Vm* vm) {
         }
 
         if (!vm_peek_stack(vm)->as.boolean) {
-          vm->ip += offset;
+          vm_frame(vm)->ip += offset;
         }
         break;
       }
       case OpJump: {
         u16 offset = vm_read_short(vm);
-        vm->ip += offset;
+        vm_frame(vm)->ip += offset;
         break;
       }
       case OpNumNeg: {
@@ -358,9 +355,6 @@ void vm_free(Vm* vm) {
   
   table_free(&vm->strings);
   table_free(&vm->globals);
-
-  compiler_free(vm->curr_compiler);
-  free(vm->curr_compiler);
 }
 
 #undef RELATIVE_BIN_OP
