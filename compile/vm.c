@@ -77,11 +77,11 @@ Callframe* vm_frame(Vm* vm) {
     if (rhs.kind == lhs->kind) {                                                             \
       bool rel;                                                                              \
       switch(rhs.kind) {                                                                     \
-        case VkBool:   rel = rhs.as.boolean op lhs->as.boolean; break;                       \
-        case VkInt:    rel = rhs.as.intn op lhs->as.intn;       break;                       \
-        case VkDouble: rel = rhs.as.doubn op lhs->as.doubn;     break;                       \
-        case VkChar:   rel = rhs.as.ch op lhs->as.ch;           break;                       \
-        case VkObj:    rel = rhs.as.obj op lhs->as.obj;         break;                       \
+        case VkBool:   rel = lhs->as.boolean op rhs.as.boolean; break;                       \
+        case VkInt:    rel = lhs->as.intn op rhs.as.intn;       break;                       \
+        case VkDouble: rel = lhs->as.doubn op rhs.as.doubn;     break;                       \
+        case VkChar:   rel = lhs->as.ch op rhs.as.ch;           break;                       \
+        case VkObj:    rel = lhs->as.obj op rhs.as.obj;         break;                       \
         case VkNil:    rel = true;                              break;                       \
       }                                                                                      \
                                                                                              \
