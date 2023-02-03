@@ -5,7 +5,7 @@
 #include "compiler.h"
 #include "table.h"
 
-#define MAX_FRAMES 64
+#define MAX_FRAMES 1024
 #define MAX_VALUES (MAX_FRAMES * UINT8_MAX)
 
 typedef enum {
