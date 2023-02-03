@@ -10,7 +10,7 @@ void vm_init(Vm* vm) {
   // TODO: This + 1 is due to the first local of the compiler being used for
   //       an empty space. Test later in the implementation if it's needed
   vm->frame_count = 0;
-  vm->stack_top = vm->stack + 1;
+  vm->stack_top = vm->stack;
   vm->poor_mans_gc = NULL;
 
   table_init(&vm->strings);
@@ -279,13 +279,13 @@ InterpretResult vm_run(Vm* vm) {
       case OpLe:     BINARY_REL_OP(vm, <=); break;
       case OpReturn: {
         Value ret = vm_pop_stack(vm);
+        vm->stack_top = vm_frame(vm)->slots;
         vm->frame_count--;
         if (vm->frame_count == 0) {
           vm_pop_stack(vm);
           return InterpretOk;
         }
-        
-        vm->stack_top = vm_frame(vm)->slots;
+
         vm_push_stack(vm, ret);
         break;
       }
@@ -335,7 +335,7 @@ InterpretResult vm_run(Vm* vm) {
         break; 
       }
       case OpCall: {
-        i32 arg_count = vm_read_constant(vm).as.intn;
+        i32 arg_count = vm_pop_stack(vm).as.intn;
         Value* callee = vm_peekn_stack(vm, arg_count);
         
         if (!(is_object(*callee) && is_of_type(callee->as.obj, OtFunc))) {
