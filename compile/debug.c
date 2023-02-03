@@ -119,7 +119,7 @@ void print_value(Value v)  {
 void print_object(Object* obj) {
   switch(obj->type) {
     case OtString: {
-      printf("\"%s\"", ((LambString*)obj)->chars);
+      printf("%s", ((LambString*)obj)->chars);
       break;
     }
     case OtArray: {

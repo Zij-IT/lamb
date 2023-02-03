@@ -36,10 +36,14 @@ void debug_compile_ast(AstNode* root, str name) {
 			frame->function = compiler.function;
 			frame->ip = compiler.function->chunk.bytes;
 			frame->slots = vm.stack;
+		
+			printf("--- PROGRAM OUTPUT ---\n");
 
 			if (InterpretOk == vm_run(&vm)) {
+				printf("\n");
 				printf("Lamb: Your flock has done their job successfully!\n");
 			} else {
+				printf("\n");
 				printf("Lamb: Your flock didn't do well... sorry.\n");
 			}
 		} else {
