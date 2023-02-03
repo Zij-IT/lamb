@@ -9,6 +9,7 @@
 void vm_init(Vm* vm) {
   // TODO: This + 1 is due to the first local of the compiler being used for
   //       an empty space. Test later in the implementation if it's needed
+  vm->frame_count = 0;
   vm->stack_top = vm->stack + 1;
   vm->poor_mans_gc = NULL;
   vm->ip = NULL;

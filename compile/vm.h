@@ -5,7 +5,8 @@
 #include "compiler.h"
 #include "table.h"
 
-#define STACK_MAX 256
+#define MAX_FRAMES 64
+#define MAX_VALUES (MAX_FRAMES * UINT8_MAX)
 
 typedef enum {
   InterpretOk,
@@ -15,12 +16,21 @@ typedef enum {
 // Forward declaration from 'object.h'
 typedef struct Object Object;
 
+typedef struct Callframe {
+  LambFunc* function;
+  Value* slots;
+  u8* ip;
+} Callframe;
+
 typedef struct Vm {
   Table strings;
   Table globals;
 
   Value* stack_top;
-  Value stack[STACK_MAX];
+  Value stack[MAX_VALUES];
+  
+  Callframe frames[MAX_FRAMES];
+  u16 frame_count;
 
   u8* ip;
 
