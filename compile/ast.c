@@ -442,10 +442,16 @@ CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node) {
       chunk_write(vm_chunk(vm), OpCall);
       break;
     }
-    // case AstntReturn {
-    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-    //   break;
-    // }
+    case AstntReturn: {
+      AstNode* val = node->kids[0];
+      if (val == NULL) {
+        chunk_write_constant(vm_chunk(vm), new_nil());
+      } else {
+        compile_to_chunk(vm, compiler, node->kids[0]);
+      }
+      chunk_write(vm_chunk(vm), OpReturn);
+      break;
+    }
     default:
       // fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
       // fprintf(stderr, "Default branch reached while matching on node->type in %s on line %d", __FILE__, __LINE__);
