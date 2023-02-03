@@ -28,19 +28,15 @@ void debug_compile_ast(AstNode* root, str name) {
 		printf("\n");
 	
 		if (car == CarOk) {
-			// Pull the function out from the compiler
+			chunk_write(&compiler.function->chunk, OpReturn);
+			chunk_debug(&compiler.function->chunk, "Compiled Ast");
+			vm_push_stack(&vm, new_object((Object*)compiler.function));
+		
 			Callframe* frame = &vm.frames[vm.frame_count++];
 			frame->function = compiler.function;
 			frame->ip = compiler.function->chunk.bytes;
 			frame->slots = vm.stack;
-		
-			chunk_write(&compiler.function->chunk, OpHalt);
-			chunk_debug(&compiler.function->chunk, "Compiled Ast");
 
-			// Must be done after chunk_write incase it forces a reallocation
-			vm_reset_ip(&vm);
-		
-			return;
 			if (InterpretOk == vm_run(&vm)) {
 				printf("Lamb: Your flock has done their job successfully!\n");
 			} else {
