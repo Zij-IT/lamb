@@ -9,6 +9,9 @@ void compiler_init(Compiler* compiler, FuncType type) {
   compiler->function = NULL;
   compiler->type = type;
   local_arr_init(&compiler->locals);
+  
+  Local loc = { .name = "", .depth = 0 };
+  local_arr_write(&compiler->locals, loc);
 }
 
 void compiler_free(Compiler* compiler) {
