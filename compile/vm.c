@@ -290,10 +290,7 @@ InterpretResult vm_run(Vm* vm) {
         break;
       }
       case OpPop: {
-        Value ret = vm_pop_stack(vm);
-        printf("Popping: ");
-        print_value(ret);
-        printf("\n");
+        vm_pop_stack(vm);
         break;
       }
       case OpMakeArray: {
