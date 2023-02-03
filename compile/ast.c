@@ -254,7 +254,7 @@ CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node) {
 
       // ELSE
       if (node->kids[3] != NULL) {
-        BUBBLE(compile_to_chunk(vm, compiler, node->kids[3]));
+        BUBBLE(compile_to_chunk(vm, compiler, node->kids[3]->kids[0]));
       }
 
       for (i32 i = 0; i < jump_lengths; i++) {
