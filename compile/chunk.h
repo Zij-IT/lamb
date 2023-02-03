@@ -41,6 +41,7 @@ typedef enum {
   OpIndexArray,
   OpPop,
   OpDup,
+  OpCall,
   OpHalt,
 } OpCode;
 

@@ -428,10 +428,20 @@ CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node) {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
     // }
-    // case AstntFuncCall: {
-    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-    //   break;
-    // }
+    case AstntFuncCall: {
+      AstNode* callee = node->kids[0];
+      compile_to_chunk(vm, compiler, callee);
+
+      u32 arg_count = 0;
+      for(AstNode* arg_list = node->kids[1]; arg_list != NULL; arg_list = arg_list->kids[1]) {
+        BUBBLE(compile_to_chunk(vm, compiler, arg_list->kids[0]));
+        arg_count += 1;
+      }
+            
+      chunk_write_constant(vm_chunk(vm), new_int((i64)arg_count));
+      chunk_write(vm_chunk(vm), OpCall);
+      break;
+    }
     // case AstntReturn {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
