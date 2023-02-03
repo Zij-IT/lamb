@@ -38,6 +38,11 @@ typedef struct LambFunc {
   u8 arity;
 } LambFunc;
 
+typedef enum FuncType {
+  FtScript,
+  FtNormal,
+} FuncType;
+
 Object* alloc_obj(Vm* vm, ObjectType type);
 
 bool is_of_type(Object* obj, ObjectType type);

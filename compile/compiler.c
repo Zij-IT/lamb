@@ -4,8 +4,10 @@
 #include "chunk.h"
 #include "table.h"
 
-void compiler_init(Compiler* compiler) {
+void compiler_init(Compiler* compiler, FuncType type) {
   compiler->scope_depth = 0;
+  compiler->function = NULL;
+  compiler->type = type;
   local_arr_init(&compiler->locals);
 }
 

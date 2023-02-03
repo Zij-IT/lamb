@@ -7,20 +7,21 @@
 #include "debug.h"
 
 void vm_init(Vm* vm) {
-  vm->ip = NULL;
   vm->stack_top = vm->stack;
+  vm->poor_mans_gc = NULL;
+  vm->ip = NULL;
 
   vm->chunk = malloc(sizeof(Chunk));
   chunk_init(vm->chunk);
 
   table_init(&vm->strings);
-
   table_init(&vm->globals);
 
   vm->curr_compiler = malloc(sizeof(Compiler));
-  compiler_init(vm->curr_compiler);
+  compiler_init(vm->curr_compiler, FtScript);
+  vm->curr_compiler->function = (LambFunc*)alloc_obj(vm, OtFunc);
 
-  vm->poor_mans_gc = NULL;
+  vm_reset_ip(vm);
 }
 
 void vm_reset_ip(Vm* vm) {

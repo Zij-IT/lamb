@@ -2,9 +2,7 @@
 #define BLOCK_HEADER
 
 #include "../types.h"
-
-typedef struct LambString LambString; 
-typedef struct Chunk Chunk;
+#include "object.h"
 
 typedef struct {
   str name;
@@ -19,10 +17,12 @@ typedef struct {
 
 typedef struct {
   LocalArray locals;
+  LambFunc* function;
+  FuncType type;
   i32 scope_depth;
 } Compiler;
 
-void compiler_init(Compiler* compiler);
+void compiler_init(Compiler* compiler, FuncType type);
 
 void compiler_free(Compiler* compiler);
 
