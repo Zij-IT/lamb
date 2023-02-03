@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "ast.h"
+#include "debug.h"
 #include "misc.h"
 #include "object.h"
 
@@ -420,10 +421,69 @@ CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node) {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
     // }
-    // case AstntFuncDef: {
-    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-    //   break;
-    // }
+    case AstntFuncDef: {
+      // FuncDef:
+      // 0: AstNodeList<AstntIdent>
+      // 1: AstntBlock OR AstntExpr
+      // 2: AstntBool: true => recursive, false => non-recursive
+
+      Compiler func_comp;
+      compiler_init(&func_comp, FtNormal);
+      compiler_new_scope(&func_comp);
+      func_comp.function = (LambFunc*)alloc_obj(vm, OtFunc);
+      func_comp.function->name = "anonymous";
+      
+      // Add parameters to locals
+      for (AstNode* child = node->kids[0]; child != NULL; child = child->kids[1]) {
+        AstNode* ident_node = child->kids[0];
+
+        u64 len = strlen(ident_node->val.i);
+        u32 hash = hash_string(ident_node->val.i);
+        LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
+        if (interned == NULL) {
+          LambString* st = (LambString*)alloc_obj(vm, OtString);
+          st->chars = strdup(ident_node->val.i);
+          st->hash = hash;
+          st->len = len;
+
+          table_insert(&vm->strings, st, new_boolean(false));
+          interned = st;
+        }
+
+        if (resolve_local(&func_comp, interned) != LOCAL_NOT_FOUND) {
+          // Parameters have the same name. Likely a mistake on the programmers part.
+          // Somehow output a compiler error to let them know.
+        }
+
+        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars };
+        local_arr_write(&func_comp.locals, loc);
+
+        func_comp.function->arity++;
+      }
+      
+      // Compile the body
+      if (node->kids[1]->type == AstntBlockStmt) {
+        compile_to_chunk(vm, &func_comp, node->kids[1]);
+        chunk_write_constant(compiler_chunk(&func_comp), new_nil());        
+        chunk_write(compiler_chunk(&func_comp), OpReturn);
+      } else {
+        compile_to_chunk(vm, &func_comp, node->kids[1]);
+        chunk_write(compiler_chunk(&func_comp), OpReturn);
+      }
+      
+      chunk_debug(&func_comp.function->chunk, "Function Chunk");
+      
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+      compiler_free(compiler);
+      
+      // Although it logically makes sense to call this, it isn't really necessary.
+      // The compiler is dropped at the end of the scope anyhow. Calling it is wasted
+      // CPU effort :D 
+      // compiler_end_scope(&func_comp);
+
+      break;
+      // return CarUnsupportedAst;
+    }
     // case AstntNodeList: {
     //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
     //   break;
