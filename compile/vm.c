@@ -338,28 +338,40 @@ InterpretResult vm_run(Vm* vm) {
         i32 arg_count = vm_pop_stack(vm).as.intn;
         Value* callee = vm_peekn_stack(vm, arg_count);
         
-        if (!(is_object(*callee) && is_of_type(callee->as.obj, OtFunc))) {
+        if (!is_object(*callee)) {
           printf("RuntimeError: Unable to call a value of type ");
           print_kind(*callee);
           printf("\n");
           return InterpretRuntimeError;
         }
         
-        LambFunc* func = (LambFunc*)callee->as.obj;
-        if (arg_count != func->arity) {
-          printf("RuntimeError: Expected %d arguments, but received %d instead\n", func->arity, arg_count);
-          return InterpretRuntimeError;
-        }
+        switch(callee->as.obj->type) {
+          case OtFunc: {
+            LambFunc* func = (LambFunc*)callee->as.obj;
+            if (arg_count != func->arity) {
+              printf("RuntimeError: Expected %d arguments, but received %d instead\n", func->arity, arg_count);
+              return InterpretRuntimeError;
+            }
         
-        if (vm->frame_count == MAX_FRAMES) {
-          printf("RuntimeError: Stack overflow\n");
-          return InterpretRuntimeError;
-        }
+            if (vm->frame_count == MAX_FRAMES) {
+              printf("RuntimeError: Stack overflow\n");
+              return InterpretRuntimeError;
+            }
         
-        Callframe* frame = &vm->frames[vm->frame_count++];
-        frame->function = func;
-        frame->ip = func->chunk.bytes;
-        frame->slots = vm->stack_top - arg_count - 1;
+            Callframe* frame = &vm->frames[vm->frame_count++];
+            frame->function = func;
+            frame->ip = func->chunk.bytes;
+            frame->slots = vm->stack_top - arg_count - 1;
+        
+            break;
+          }
+          default: {
+            printf("RuntimeError: Unable to call a value of type ");
+            print_kind(*callee);
+            printf("\n");
+            return InterpretRuntimeError;
+          }
+        }
         
         break; 
       }
