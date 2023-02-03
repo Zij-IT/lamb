@@ -141,6 +141,11 @@ void print_object(Object* obj) {
       } else {
         printf("<fn %s>", func->name);
       }
+      break;
+    }
+    case OtNative: {
+      printf("<native fn>");
+      break;
     }
   }
 }

@@ -8,10 +8,13 @@
 // Forward declare vm in vm.h
 typedef struct Vm Vm;
 
+typedef Value (*CFunc)(i32 args_passed, Value* args);
+
 typedef enum {
   OtString,
   OtArray,
   OtFunc,
+  OtNative,
 } ObjectType;
 
 typedef struct Object {
@@ -37,6 +40,11 @@ typedef struct LambFunc {
   str name;
   u8 arity;
 } LambFunc;
+
+typedef struct NativeFunc {
+  Object obj;
+  CFunc func;
+} NativeFunc;
 
 typedef enum FuncType {
   FtScript,

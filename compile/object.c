@@ -39,6 +39,14 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       vm->poor_mans_gc = (Object*)func;
       return vm->poor_mans_gc;
     }
+    case OtNative: {
+      NativeFunc* func = malloc(sizeof(NativeFunc));
+      Object obj = { .type = type, .next = vm->poor_mans_gc, };
+      func->obj = obj;
+      func->func = NULL;
+      vm->poor_mans_gc = (Object*)func;
+      return vm->poor_mans_gc;
+    }
   }
   
   return NULL;
@@ -62,6 +70,10 @@ void object_free(Object* obj) {
       LambFunc* func = (LambFunc*)obj;
       chunk_free(&func->chunk);
       FREE(LambFunc, func);
+      break;
+    }
+    case OtNative: {
+      FREE(NativeFunc, obj);
       break;
     }
   }

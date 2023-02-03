@@ -5,6 +5,7 @@
 #include "vm.h"
 #include "value.h"
 #include "debug.h"
+#include "native.h"
 
 void vm_init(Vm* vm) {
   // TODO: This + 1 is due to the first local of the compiler being used for
@@ -15,6 +16,8 @@ void vm_init(Vm* vm) {
 
   table_init(&vm->strings);
   table_init(&vm->globals);
+  
+  set_natives(vm);
 }
 
 void vm_reset_ip(Vm* vm) {
@@ -363,6 +366,13 @@ InterpretResult vm_run(Vm* vm) {
             frame->ip = func->chunk.bytes;
             frame->slots = vm->stack_top - arg_count - 1;
         
+            break;
+          }
+          case OtNative: {
+            NativeFunc* native = (NativeFunc*)callee->as.obj;
+            Value result = native->func(arg_count, vm->stack_top - arg_count);
+            vm->stack_top -= arg_count + 1;
+            vm_push_stack(vm, result);
             break;
           }
           default: {

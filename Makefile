@@ -15,6 +15,7 @@ ALL_SRC:= ./main.c \
 		  ./compile/table.c \
 		  ./compile/compiler.c \
 		  ./compile/misc.c \
+		  ./compile/native.c \
 
 lamb: $(ALL_SRC)
 	$(CC) $(ALL_SRC) -g -Wall -Wextra -lfl -o lamb
