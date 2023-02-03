@@ -23,11 +23,11 @@ void compiler_new_scope(Compiler* compiler) {
   compiler->scope_depth++;
 }
 
-void compiler_end_scope(Chunk* chunk, Compiler* compiler) {
+void compiler_end_scope(Compiler* compiler) {
   compiler->scope_depth--;
   
   while(compiler->locals.len > 0 && compiler->locals.values[compiler->locals.len - 1].depth > compiler->scope_depth) {
-    chunk_write(chunk, OpPop);
+    chunk_write(&compiler->function->chunk, OpPop);
     compiler->locals.len--;
   }
 }

@@ -28,7 +28,7 @@ void compiler_free(Compiler* compiler);
 
 void compiler_new_scope(Compiler* compiler);
 
-void compiler_end_scope(Chunk* chunk, Compiler* compiler);
+void compiler_end_scope(Compiler* compiler);
 
 void compiler_declare_var(Compiler* compiler, str name);
 

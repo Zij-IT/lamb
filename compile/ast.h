@@ -9,6 +9,6 @@ typedef enum {
   CarUnsupportedAst,  
 } CompileAstResult;
 
-CompileAstResult compile_to_chunk(Vm* vm, Chunk* chunk, AstNode* node);
+CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node);
 
 #endif//COMPILING_AST_HEADER
