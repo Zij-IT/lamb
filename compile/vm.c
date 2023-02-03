@@ -279,9 +279,14 @@ InterpretResult vm_run(Vm* vm) {
       case OpLe:     BINARY_REL_OP(vm, <=); break;
       case OpReturn: {
         Value ret = vm_pop_stack(vm);
-        printf("Returning: ");
-        print_value(ret);
-        printf("\n");
+        vm->frame_count--;
+        if (vm->frame_count == 0) {
+          vm_pop_stack(vm);
+          return InterpretOk;
+        }
+        
+        vm->stack_top = vm_frame(vm)->slots;
+        vm_push_stack(vm, ret);
         break;
       }
       case OpPop: {
