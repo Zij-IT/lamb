@@ -54,6 +54,10 @@ Value* vm_peek_stack(Vm* vm) {
   return vm->stack_top - 1;
 }
 
+Value* vm_peekn_stack(Vm* vm, i32 n) {
+  return vm->stack_top - n - 1;
+}
+
 Chunk* vm_chunk(Vm* vm) {
   return &vm_frame(vm)->function->chunk;
 }
@@ -326,6 +330,35 @@ InterpretResult vm_run(Vm* vm) {
           printf("\n");
           return InterpretRuntimeError;
         }
+        break; 
+      }
+      case OpCall: {
+        i32 arg_count = vm_read_constant(vm).as.intn;
+        Value* callee = vm_peekn_stack(vm, arg_count);
+        
+        if (!(is_object(*callee) && is_of_type(callee->as.obj, OtFunc))) {
+          printf("RuntimeError: Unable to call a value of type ");
+          print_kind(*callee);
+          printf("\n");
+          return InterpretRuntimeError;
+        }
+        
+        LambFunc* func = (LambFunc*)callee->as.obj;
+        if (arg_count != func->arity) {
+          printf("RuntimeError: Expected %d arguments, but received %d instead\n", func->arity, arg_count);
+          return InterpretRuntimeError;
+        }
+        
+        if (vm->frame_count == MAX_FRAMES) {
+          printf("RuntimeError: Stack overflow\n");
+          return InterpretRuntimeError;
+        }
+        
+        Callframe* frame = &vm->frames[vm->frame_count++];
+        frame->function = func;
+        frame->ip = func->chunk.bytes;
+        frame->slots = vm->stack_top - arg_count - 1;
+        
         break; 
       }
       case OpDup: {
