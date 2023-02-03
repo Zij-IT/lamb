@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "debug.h"
 #include "native.h"
@@ -32,11 +33,42 @@ static void define_native(Vm* vm, str fn_name, CFunc function) {
   vm_pop_stack(vm);
 }
 
-static Value print(i32 arg_count, Value* args) {
+static Value lamb_print(i32 arg_count, Value* args) {
   print_value(*args);
   return new_nil();
 }
 
+static Value lamb_println(i32 arg_count, Value* args) {
+  print_value(*args);
+  printf("\n");
+  return new_nil();
+}
+
+static Value lamb_user_int(i32 arg_count, Value* args) {
+  char x_buffer[80];
+  if (fgets(x_buffer, 80, stdin) == NULL) {
+    return new_nil();
+  } else {
+    return new_int(atoi(x_buffer));
+  }
+}
+
+static Value lamb_user_char(i32 arg_count, Value* args) {
+  return new_char(fgetc(stdin));
+}
+
+static Value lamb_rand(i32 arg_count, Value* args) {
+  if (arg_count == 1 && is_integer(*args)) {
+    return new_int(rand() % args->as.intn);
+  }
+  
+  return new_int(rand());
+}
+
 void set_natives(Vm* vm) {
-  define_native(vm, "print", print);
+  define_native(vm, "print", lamb_print);
+  define_native(vm, "println", lamb_println);
+  define_native(vm, "user_int", lamb_user_int);
+  define_native(vm, "user_char", lamb_user_char);
+  define_native(vm, "rand", lamb_rand);
 }
