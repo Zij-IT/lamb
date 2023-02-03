@@ -19,12 +19,12 @@ void debug_compile_ast(AstNode* root, str name) {
 	
 		Vm vm;
 		vm_init(&vm);
-		CompileAstResult car = compile_to_chunk(&vm, vm.chunk, root);
+		CompileAstResult car = compile_to_chunk(&vm, vm_chunk(&vm), root);
 		printf("\n");
 	
 		if (car == CarOk) {
-			chunk_write(vm.chunk, OpHalt);
-			chunk_debug(vm.chunk, "Compiled Ast");
+			chunk_write(vm_chunk(&vm), OpHalt);
+			chunk_debug(vm_chunk(&vm), "Compiled Ast");
 
 			// Must be done after chunk_write incase it forces a reallocation
 			vm_reset_ip(&vm);
@@ -37,6 +37,7 @@ void debug_compile_ast(AstNode* root, str name) {
 		} else {
 			printf("Lamb: Your source code contains code that is not able to be compiled.\n");
 		}
+
 		vm_free(&vm);
 }
 

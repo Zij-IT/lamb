@@ -11,9 +11,6 @@ void vm_init(Vm* vm) {
   vm->poor_mans_gc = NULL;
   vm->ip = NULL;
 
-  vm->chunk = malloc(sizeof(Chunk));
-  chunk_init(vm->chunk);
-
   table_init(&vm->strings);
   table_init(&vm->globals);
 
@@ -25,7 +22,7 @@ void vm_init(Vm* vm) {
 }
 
 void vm_reset_ip(Vm* vm) {
-  vm->ip = vm->chunk->bytes;
+  vm->ip = vm_chunk(vm)->bytes;
 }
 
 void vm_reset_stack(Vm* vm) {
@@ -54,11 +51,15 @@ u16 vm_read_short(Vm* vm) {
 }
 
 Value vm_read_constant(Vm* vm) {
-  return vm->chunk->constants.values[vm_read_byte(vm)];
+  return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
 }
 
 Value* vm_peek_stack(Vm* vm) {
   return vm->stack_top - 1;
+}
+
+Chunk* vm_chunk(Vm* vm) {
+  return &vm->curr_compiler->function->chunk;
 }
 
 #define BINARY_REL_OP(vm, op)                                                                \
@@ -127,7 +128,7 @@ InterpretResult vm_run(Vm* vm) {
         u8 lo = vm_read_byte(vm);
         
         i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
-        Value val = vm->chunk->constants.values[idx];
+        Value val = vm_chunk(vm)->constants.values[idx];
 
         vm_push_stack(vm, val);
         break;
@@ -357,9 +358,6 @@ void vm_free(Vm* vm) {
 
   compiler_free(vm->curr_compiler);
   free(vm->curr_compiler);
-
-  chunk_free(vm->chunk);
-  free(vm->chunk);
 }
 
 #undef RELATIVE_BIN_OP

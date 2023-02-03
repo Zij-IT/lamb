@@ -16,7 +16,6 @@ typedef enum {
 typedef struct Object Object;
 
 typedef struct Vm {
-  Chunk* chunk;
   u8* ip;
   Value* stack_top;
   Value stack[STACK_MAX];
@@ -37,5 +36,7 @@ void vm_push_stack(Vm* vm, Value val);
 Value vm_pop_stack(Vm* vm);
 
 InterpretResult vm_run(Vm* vm);
+
+Chunk* vm_chunk(Vm* vm);
 
 #endif//VM_HEADER
