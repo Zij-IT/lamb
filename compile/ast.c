@@ -438,18 +438,18 @@ CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node) {
         arg_count += 1;
       }
             
-      chunk_write_constant(vm_chunk(vm), new_int((i64)arg_count));
-      chunk_write(vm_chunk(vm), OpCall);
+      chunk_write_constant(compiler_chunk(compiler), new_int((i64)arg_count));
+      chunk_write(compiler_chunk(compiler), OpCall);
       break;
     }
     case AstntReturn: {
       AstNode* val = node->kids[0];
       if (val == NULL) {
-        chunk_write_constant(vm_chunk(vm), new_nil());
+        chunk_write_constant(compiler_chunk(compiler), new_nil());
       } else {
         compile_to_chunk(vm, compiler, node->kids[0]);
       }
-      chunk_write(vm_chunk(vm), OpReturn);
+      chunk_write(compiler_chunk(compiler), OpReturn);
       break;
     }
     default:
