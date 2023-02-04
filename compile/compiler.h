@@ -14,11 +14,15 @@ typedef struct {
   Local* values;
 } LocalArray;
 
-typedef struct {
+typedef struct Compiler {
   LocalArray locals;
+
   LambFunc* function;
-  FuncType type;
+  
+  struct Compiler* enclosing;
+  
   i32 scope_depth;
+  FuncType type;
 } Compiler;
 
 void compiler_init(Compiler* compiler, FuncType type);

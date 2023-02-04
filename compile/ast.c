@@ -40,6 +40,7 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
   {
       Compiler func_comp;
       compiler_init(&func_comp, FtNormal);
+      func_comp.enclosing = compiler;
    
       // Normally this slot is left blank so that the user cannot refer to it
       // However this spot points back to the identifier of the function, and
@@ -467,6 +468,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       compiler_new_scope(&func_comp);
       func_comp.function = (LambFunc*)alloc_obj(vm, OtFunc);
       func_comp.function->name = "anonymous";
+      func_comp.enclosing = compiler;
       
       // Add parameters to locals
       for (AstNode* child = node->kids[0]; child != NULL; child = child->kids[1]) {

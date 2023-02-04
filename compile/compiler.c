@@ -5,8 +5,9 @@
 #include "table.h"
 
 void compiler_init(Compiler* compiler, FuncType type) {
-  compiler->scope_depth = 0;
+  compiler->enclosing = NULL;
   compiler->function = NULL;
+  compiler->scope_depth = 0;
   compiler->type = type;
   local_arr_init(&compiler->locals);
   
