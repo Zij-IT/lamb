@@ -52,6 +52,8 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       Object obj = { .type = type, .next = vm->poor_mans_gc, };
       closure->obj = obj;
       closure->function = NULL;
+      vm->poor_mans_gc = (Object*)closure;
+      return vm->poor_mans_gc;
     }
   }
   

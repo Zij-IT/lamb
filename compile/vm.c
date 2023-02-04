@@ -52,7 +52,7 @@ Value* vm_peekn_stack(Vm* vm, i32 n) {
 }
 
 Chunk* vm_chunk(Vm* vm) {
-  return &vm_frame(vm)->function->chunk;
+  return &vm_frame(vm)->closure->function->chunk;
 }
 
 Callframe* vm_frame(Vm* vm) {
@@ -339,10 +339,10 @@ InterpretResult vm_run(Vm* vm) {
         }
         
         switch(callee->as.obj->type) {
-          case OtFunc: {
-            LambFunc* func = (LambFunc*)callee->as.obj;
-            if (arg_count != func->arity) {
-              printf("RuntimeError: Expected %d arguments, but received %d instead\n", func->arity, arg_count);
+          case OtClosure: {
+            LambClosure* closure = (LambClosure*)callee->as.obj;
+            if (arg_count != closure->function->arity) {
+              printf("RuntimeError: Expected %d arguments, but received %d instead\n", closure->function->arity, arg_count);
               return InterpretRuntimeError;
             }
         
@@ -352,12 +352,30 @@ InterpretResult vm_run(Vm* vm) {
             }
         
             Callframe* frame = &vm->frames[vm->frame_count++];
-            frame->function = func;
-            frame->ip = func->chunk.bytes;
+            frame->closure= closure;
+            frame->ip = closure->function->chunk.bytes;
             frame->slots = vm->stack_top - arg_count - 1;
-            
-            break;
+            break; 
           }
+          // case OtFunc: {
+          //   LambFunc* func = (LambFunc*)callee->as.obj;
+          //   if (arg_count != func->arity) {
+          //     printf("RuntimeError: Expected %d arguments, but received %d instead\n", func->arity, arg_count);
+          //     return InterpretRuntimeError;
+          //   }
+        
+          //   if (vm->frame_count == MAX_FRAMES) {
+          //     printf("RuntimeError: Stack overflow\n");
+          //     return InterpretRuntimeError;
+          //   }
+        
+          //   Callframe* frame = &vm->frames[vm->frame_count++];
+          //   frame->function = func;
+          //   frame->ip = func->chunk.bytes;
+          //   frame->slots = vm->stack_top - arg_count - 1;
+            
+          //   break;
+          // }
           case OtNative: {
             NativeFunc* native = (NativeFunc*)callee->as.obj;
             Value result = native->func(arg_count, vm->stack_top - arg_count);
@@ -373,6 +391,12 @@ InterpretResult vm_run(Vm* vm) {
           }
         }
         
+        break; 
+      }
+      case OpClosure: {
+        LambFunc* function = (LambFunc*)vm_pop_stack(vm).as.obj;
+        LambClosure* closure = to_closure(vm, function);
+        vm_push_stack(vm, new_object((Object*)closure));
         break; 
       }
       case OpDup: {

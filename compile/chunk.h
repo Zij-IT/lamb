@@ -41,6 +41,7 @@ typedef enum {
   OpPop,
   OpDup,
   OpCall,
+  OpClosure,
 } OpCode;
 
 typedef struct Chunk {

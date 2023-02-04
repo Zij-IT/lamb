@@ -14,7 +14,7 @@ typedef enum {
 } InterpretResult;
 
 typedef struct Callframe {
-  LambFunc* function;
+  LambClosure* closure;
   Value* slots;
   u8* ip;
 } Callframe;

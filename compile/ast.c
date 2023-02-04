@@ -78,7 +78,9 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       
       chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
       
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+      // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
+      LambClosure* closure = to_closure(vm, func_comp.function);
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)closure));
       compiler_free(&func_comp);       
   }
   
@@ -494,8 +496,10 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       }
       
       chunk_debug(&func_comp.function->chunk, "Function Chunk");
-      
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+
+      // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
+      LambClosure* closure = to_closure(vm, func_comp.function);
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)closure));
       compiler_free(&func_comp);
       
       // Although it logically makes sense to call this, it isn't really necessary.

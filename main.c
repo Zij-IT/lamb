@@ -33,7 +33,7 @@ void debug_compile_ast(AstNode* root, str name) {
 			vm_push_stack(&vm, new_object((Object*)compiler.function));
 		
 			Callframe* frame = &vm.frames[vm.frame_count++];
-			frame->function = compiler.function;
+			frame->closure= to_closure(&vm, compiler.function);
 			frame->ip = compiler.function->chunk.bytes;
 			frame->slots = vm.stack;
 		
