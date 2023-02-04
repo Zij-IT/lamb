@@ -101,7 +101,7 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
       
       chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
-      compiler_free(compiler);       
+      compiler_free(&func_comp);       
   }
   
   if(compiler->scope_depth == 0) {
@@ -568,7 +568,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       chunk_debug(&func_comp.function->chunk, "Function Chunk");
       
       chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
-      compiler_free(compiler);
+      compiler_free(&func_comp);
       
       // Although it logically makes sense to call this, it isn't really necessary.
       // The compiler is dropped at the end of the scope anyhow. Calling it is wasted
