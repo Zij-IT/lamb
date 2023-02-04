@@ -108,7 +108,8 @@ bool table_get(Table* table, LambString* key, Value* out) {
 }
 
 Entry* table_find(Table* table, LambString* key) {
-  // This works because capacity is guarunteed to be a multiple of 2
+  // Correctness: Table capacity is guarunteed to be a multiple of 2
+  //              in which case x % n is the same as X & (n - 1)
   u32 index = key->hash & (table->capacity - 1);
   Entry* tombstone = NULL; 
 
