@@ -24,7 +24,7 @@ void debug_compile_ast(AstNode* root, str name) {
 		compiler_init(&compiler, FtScript);
 		compiler.function = (LambFunc*)alloc_obj(&vm, OtFunc);
 	
-		CompileAstResult car = compile_to_chunk(&vm, &compiler, root);
+		CompileAstResult car = compile(&vm, &compiler, root);
 		printf("\n");
 	
 		if (car == CarOk) {

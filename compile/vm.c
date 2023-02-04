@@ -365,7 +365,7 @@ InterpretResult vm_run(Vm* vm) {
             frame->function = func;
             frame->ip = func->chunk.bytes;
             frame->slots = vm->stack_top - arg_count - 1;
-        
+            
             break;
           }
           case OtNative: {
