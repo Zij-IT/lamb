@@ -78,9 +78,10 @@ int main(int argc, char** argv) {
       case ParseResultReject: printf("\nWord rejected\n"); return 1;
   }
 	
-	debug_compile_ast(*root, "Unoptimized AST");;
+	// debug_compile_ast(*root, "Unoptimized AST");;
 	
 	optimize_ast(*root);
+
 	debug_compile_ast(*root, "Optimized AST");
 	
 	if (file != stdin && file != NULL) {
