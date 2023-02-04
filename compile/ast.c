@@ -333,7 +333,7 @@ CompileAstResult compile_to_chunk(Vm* vm, Compiler* compiler, AstNode* node) {
         Local loc = { .depth = compiler->scope_depth, .name = interned->chars };
         local_arr_write(&compiler->locals, loc);
         
-        chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len- 1));
+        chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
         chunk_write(compiler_chunk(compiler), OpDefineLocal);
       }
 
