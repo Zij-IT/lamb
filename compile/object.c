@@ -83,6 +83,22 @@ bool is_of_type(Object* obj, ObjectType type) {
   return obj->type == type;
 }
 
+LambString* cstr_to_lambstring(Vm* vm, str cstr) {
+  u64 len = strlen(cstr);
+  u32 hash = hash_string(cstr);
+  LambString* interned = table_find_string(&vm->strings, cstr, len, hash);
+  if (interned == NULL) {
+    interned = (LambString*)alloc_obj(vm, OtString);
+    interned->chars = strdup(cstr);
+    interned->hash = hash;
+    interned->len = len;
+
+    table_insert(&vm->strings, interned, new_boolean(false));
+  }
+  
+  return interned;
+}
+
 LambString* concat(Vm* vm, LambString* lhs, LambString* rhs) {
   i32 len = lhs->len + rhs->len;
 

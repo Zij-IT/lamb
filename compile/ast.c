@@ -35,17 +35,7 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
   AstNode* params = func_def->kids[0];
   AstNode* body = func_def->kids[1];
   
-  u64 len = strlen(ident->val.i);
-  u32 hash = hash_string(ident->val.i);
-  LambString* interned = table_find_string(&vm->strings, ident->val.i, len, hash);
-  if (interned == NULL) {
-    interned = (LambString*)alloc_obj(vm, OtString);
-    interned->chars = strdup(ident->val.i);
-    interned->hash = hash;
-    interned->len = len;
-
-    table_insert(&vm->strings, interned, new_boolean(false));
-  }
+  LambString* interned = cstr_to_lambstring(vm, ident->val.i);
   
   {
       Compiler func_comp;
@@ -64,19 +54,7 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       for (AstNode* child = params; child != NULL; child = child->kids[1]) {
         AstNode* ident_node = child->kids[0];
 
-        u64 len = strlen(ident_node->val.i);
-        u32 hash = hash_string(ident_node->val.i);
-        LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
-        if (interned == NULL) {
-          LambString* st = (LambString*)alloc_obj(vm, OtString);
-          st->chars = strdup(ident_node->val.i);
-          st->hash = hash;
-          st->len = len;
-
-          table_insert(&vm->strings, st, new_boolean(false));
-          interned = st;
-        }
-      
+        LambString* interned = cstr_to_lambstring(vm, ident_node->val.i);
         if (resolve_local(&func_comp, interned) != LOCAL_NOT_FOUND) {
           // Parameters have the same name. Likely a mistake on the programmers part.
           // Somehow output a compiler error to let them know.
@@ -121,40 +99,12 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
 CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
    switch (node->type) {
     case AstntStrLit: {
-      // Check if already interned and if not intern it
-      u64 len = strlen(node->val.s);
-      u32 hash = hash_string(node->val.s);
-      LambString* interned = table_find_string(&vm->strings, node->val.s, len, hash);
-      if (interned != NULL) {
-        // If the string is interned, write it as a constant and return. No need to make own string
-        chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
-        return CarOk;
-      }
-      
-      LambString* st = (LambString*)alloc_obj(vm, OtString);
-      st->chars = strdup(node->val.s);
-      st->hash = hash;
-      st->len = len;
-
-      table_insert(&vm->strings, st, new_boolean(false));
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)st));
+      LambString* lit = cstr_to_lambstring(vm, node->val.s);
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)lit));
       break;
     }
     case AstntIdent: {
-      // AstntIdent's are treatead as strings for the purposes of compilation. This does mean that
-      // they show up in the 'strings' table of the VM, but that's not of consequence.
-      u64 len = strlen(node->val.i);
-      u32 hash = hash_string(node->val.i);
-      LambString* interned = table_find_string(&vm->strings, node->val.i, len, hash);
-      if (interned == NULL) {
-        LambString* st = (LambString*)alloc_obj(vm, OtString);
-        st->chars = strdup(node->val.i);
-        st->hash = hash;
-        st->len = len;
-
-        table_insert(&vm->strings, st, new_boolean(false));
-        interned = st;
-      }
+      LambString* interned = cstr_to_lambstring(vm, node->val.i);
       
       i32 local_slot = resolve_local(compiler, interned); 
       if (local_slot == LOCAL_NOT_FOUND) {
@@ -407,19 +357,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       
       BUBBLE(compile(vm, compiler, value_node));
 
-      u64 len = strlen(ident_node->val.i);
-      u32 hash = hash_string(ident_node->val.i);
-      LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
-      if (interned == NULL) {
-        LambString* st = (LambString*)alloc_obj(vm, OtString);
-        st->chars = strdup(ident_node->val.i);
-        st->hash = hash;
-        st->len = len;
+      LambString* interned = cstr_to_lambstring(vm, ident_node->val.i);
 
-        table_insert(&vm->strings, st, new_boolean(false));
-        interned = st;
-      }
-      
       if(compiler->scope_depth == 0) {
         chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
         chunk_write(compiler_chunk(compiler), OpDefineGlobal);
@@ -531,18 +470,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       for (AstNode* child = node->kids[0]; child != NULL; child = child->kids[1]) {
         AstNode* ident_node = child->kids[0];
 
-        u64 len = strlen(ident_node->val.i);
-        u32 hash = hash_string(ident_node->val.i);
-        LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
-        if (interned == NULL) {
-          LambString* st = (LambString*)alloc_obj(vm, OtString);
-          st->chars = strdup(ident_node->val.i);
-          st->hash = hash;
-          st->len = len;
-
-          table_insert(&vm->strings, st, new_boolean(false));
-          interned = st;
-        }
+        LambString* interned = cstr_to_lambstring(vm, ident_node->val.i);
 
         if (resolve_local(&func_comp, interned) != LOCAL_NOT_FOUND) {
           // Parameters have the same name. Likely a mistake on the programmers part.
