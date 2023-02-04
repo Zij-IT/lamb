@@ -1,0 +1,39 @@
+x := "global";
+
+outer := fn() -> {
+	x := "outer";
+	(fn() -> print(x))(); 
+};
+
+print("This should output 'outer': ");
+outer();
+println();
+
+println("=====");
+
+make_closure := fn() -> {
+	local := "local";
+	return fn() -> print(local);
+};
+
+closure := make_closure();
+
+print("This should output 'local': ");
+closure();
+
+println("=====");
+
+make_name := fn(name) -> {
+	return fn() -> print(name);
+};
+
+doughnut := make_name("doughnut");
+bagel := make_name("bagel");
+
+print("This should output 'doughnut'");
+doughnut();
+
+print("This should output 'bagel'");
+bagel();
+
+println("=====");
