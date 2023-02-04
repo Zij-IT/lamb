@@ -29,6 +29,95 @@ static Chunk* compiler_chunk(Compiler* compiler) {
   return &compiler->function->chunk;
 }
 
+static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode* node) {
+  AstNode* ident = node->kids[0];
+  AstNode* func_def = node->kids[1];
+  AstNode* params = func_def->kids[0];
+  AstNode* body = func_def->kids[1];
+  
+  u64 len = strlen(ident->val.i);
+  u32 hash = hash_string(ident->val.i);
+  LambString* interned = table_find_string(&vm->strings, ident->val.i, len, hash);
+  if (interned == NULL) {
+    interned = (LambString*)alloc_obj(vm, OtString);
+    interned->chars = strdup(ident->val.i);
+    interned->hash = hash;
+    interned->len = len;
+
+    table_insert(&vm->strings, interned, new_boolean(false));
+  }
+  
+  {
+      Compiler func_comp;
+      compiler_init(&func_comp, FtNormal);
+   
+      // Normally this slot is left blank so that the user cannot refer to it
+      // However this spot points back to the identifier of the function, and
+      // thus the item looking to be called in a recursive context.
+      func_comp.locals.values[0].name = interned->chars;
+
+      compiler_new_scope(&func_comp);
+      func_comp.function = (LambFunc*)alloc_obj(vm, OtFunc);
+      func_comp.function->name = interned->chars;
+      
+      // Add parameters to locals
+      for (AstNode* child = params; child != NULL; child = child->kids[1]) {
+        AstNode* ident_node = child->kids[0];
+
+        u64 len = strlen(ident_node->val.i);
+        u32 hash = hash_string(ident_node->val.i);
+        LambString* interned = table_find_string(&vm->strings, ident_node->val.i, len, hash);
+        if (interned == NULL) {
+          LambString* st = (LambString*)alloc_obj(vm, OtString);
+          st->chars = strdup(ident_node->val.i);
+          st->hash = hash;
+          st->len = len;
+
+          table_insert(&vm->strings, st, new_boolean(false));
+          interned = st;
+        }
+      
+        if (resolve_local(&func_comp, interned) != LOCAL_NOT_FOUND) {
+          // Parameters have the same name. Likely a mistake on the programmers part.
+          // Somehow output a compiler error to let them know.
+        }
+
+        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars };
+        local_arr_write(&func_comp.locals, loc);
+
+        func_comp.function->arity++;
+      }
+      
+      // Compile the body
+      if (body->type == AstntBlockStmt) {
+        compile(vm, &func_comp, body);
+        chunk_write_constant(compiler_chunk(&func_comp), new_nil());        
+        chunk_write(compiler_chunk(&func_comp), OpReturn);
+      } else {
+        compile(vm, &func_comp, body);
+        chunk_write(compiler_chunk(&func_comp), OpReturn);
+      }
+      
+      chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
+      
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+      compiler_free(compiler);       
+  }
+  
+  if(compiler->scope_depth == 0) {
+    chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
+    chunk_write(compiler_chunk(compiler), OpDefineGlobal);
+  } else {
+    Local loc = { .depth = compiler->scope_depth, .name = interned->chars };
+    local_arr_write(&compiler->locals, loc);
+    
+    chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
+    chunk_write(compiler_chunk(compiler), OpDefineLocal);
+  }
+  
+  return CarOk;
+}
+
 CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
    switch (node->type) {
     case AstntStrLit: {
@@ -310,6 +399,11 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
     case AstntAssignStmt: {
       AstNode* ident_node = node->kids[0];
       AstNode* value_node = node->kids[1];
+      
+      if (value_node->type == AstntFuncDef && value_node->kids[2]->val.b){
+        BUBBLE(compile_rec_func_def(vm, compiler, node));
+        break;
+      }
       
       BUBBLE(compile(vm, compiler, value_node));
 
