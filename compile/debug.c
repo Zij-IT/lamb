@@ -146,5 +146,9 @@ void print_object(Object* obj) {
       printf("<native fn>");
       break;
     }
+    case OtClosure: {
+      printf("<closure fn>");
+      break; 
+    }
   }
 }

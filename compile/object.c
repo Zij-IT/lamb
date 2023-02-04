@@ -47,6 +47,12 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       vm->poor_mans_gc = (Object*)func;
       return vm->poor_mans_gc;
     }
+    case OtClosure: {
+      LambClosure* closure = malloc(sizeof(LambClosure));
+      Object obj = { .type = type, .next = vm->poor_mans_gc, };
+      closure->obj = obj;
+      closure->function = NULL;
+    }
   }
   
   return NULL;
@@ -74,6 +80,10 @@ void object_free(Object* obj) {
     }
     case OtNative: {
       FREE(NativeFunc, obj);
+      break;
+    }
+    case OtClosure: {
+      FREE(LambClosure, obj);
       break;
     }
   }
@@ -122,4 +132,11 @@ LambString* concat(Vm* vm, LambString* lhs, LambString* rhs) {
   table_insert(&vm->strings, ret, new_boolean(false));
   
   return ret;
+}
+
+LambClosure* to_closure(Vm* vm, LambFunc* func) {
+  LambClosure* closure = (LambClosure*)alloc_obj(vm, OtClosure);
+  closure->function = func;
+
+  return closure;
 }

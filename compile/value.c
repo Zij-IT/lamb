@@ -73,6 +73,7 @@ void print_kind(Value val) {
         case OtArray:  printf("array"); break;
         case OtFunc:   printf("fn"); break;
         case OtNative: printf("native fn"); break;
+        case OtClosure: printf("closure fn"); break;
       }
       break;
     }

@@ -14,6 +14,7 @@ typedef enum {
   OtArray,
   OtFunc,
   OtNative,
+  OtClosure,
 } ObjectType;
 
 typedef struct Object {
@@ -45,6 +46,12 @@ typedef struct NativeFunc {
   CFunc func;
 } NativeFunc;
 
+
+typedef struct LambClosure {
+  Object obj;
+  LambFunc* function;
+} LambClosure;
+
 typedef enum FuncType {
   FtScript,
   FtNormal,
@@ -59,5 +66,7 @@ void object_free(Object* obj);
 LambString* cstr_to_lambstring(Vm* vm, str cstr);
 
 LambString* concat(Vm* vm, LambString* lhs, LambString* rhs);
+
+LambClosure* to_closure(Vm* vm, LambFunc* func);
 
 #endif//OBJECT_HEADER
