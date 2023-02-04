@@ -401,4 +401,6 @@ void vm_free(Vm* vm) {
   table_free(&vm->globals);
 }
 
-#undef RELATIVE_BIN_OP
+#undef BINARY_INT_DOUBLE_OP
+#undef BINARY_INT_OP
+#undef BINARY_REL_OP
