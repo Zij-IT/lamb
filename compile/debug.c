@@ -77,7 +77,6 @@ static i32 print_op(Chunk* chunk, i32 offset) {
     case OpPop: return print_simple_op("OpPop");
     case OpDup: return print_simple_op("OpDup");
     case OpCall: return print_simple_op("OpCall");
-    case OpHalt: return print_simple_op("OpHalt");
     default:
       fprintf(stderr, "Unknown OpCode (%d) in switch in %s at %d", chunk->bytes[offset], __FILE__, __LINE__);
       return 1;

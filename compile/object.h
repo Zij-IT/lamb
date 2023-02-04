@@ -2,7 +2,6 @@
 #define OBJECT_HEADER
 
 #include "../types.h"
-#include "value.h"
 #include "chunk.h"
 
 // Forward declare vm in vm.h

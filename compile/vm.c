@@ -8,8 +8,6 @@
 #include "native.h"
 
 void vm_init(Vm* vm) {
-  // TODO: This + 1 is due to the first local of the compiler being used for
-  //       an empty space. Test later in the implementation if it's needed
   vm->frame_count = 0;
   vm->stack_top = vm->stack;
   vm->poor_mans_gc = NULL;
@@ -18,14 +16,6 @@ void vm_init(Vm* vm) {
   table_init(&vm->globals);
   
   set_natives(vm);
-}
-
-void vm_reset_ip(Vm* vm) {
-  vm_frame(vm)->ip = vm_chunk(vm)->bytes;
-}
-
-void vm_reset_stack(Vm* vm) {
-  vm->stack_top = vm->stack;
 }
 
 void vm_push_stack(Vm* vm, Value val) {
@@ -389,9 +379,6 @@ InterpretResult vm_run(Vm* vm) {
         Value* ret = vm_peek_stack(vm);
         vm_push_stack(vm, *ret);
         break;
-      }
-      case OpHalt: {
-        return InterpretOk;
       }
       case OpLApply:
       case OpRApply:

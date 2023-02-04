@@ -1,7 +1,6 @@
 #ifndef COMPILING_DEBUG_HEADER
 #define COMPILING_DEBUG_HEADER
 
-#include "chunk.h"
 #include "object.h"
 
 void chunk_debug(Chunk* chunk, str name);

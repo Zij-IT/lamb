@@ -1,7 +1,6 @@
 #ifndef BLOCK_HEADER
 #define BLOCK_HEADER
 
-#include "../types.h"
 #include "object.h"
 
 typedef struct {

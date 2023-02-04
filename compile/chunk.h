@@ -1,7 +1,6 @@
 #ifndef CHUNK_HEADER
 #define CHUNK_HEADER
 
-#include "../types.h"
 #include "./value.h"
 
 typedef enum {
@@ -42,7 +41,6 @@ typedef enum {
   OpPop,
   OpDup,
   OpCall,
-  OpHalt,
 } OpCode;
 
 typedef struct Chunk {

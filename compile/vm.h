@@ -13,9 +13,6 @@ typedef enum {
   InterpretRuntimeError,
 } InterpretResult;
 
-// Forward declaration from 'object.h'
-typedef struct Object Object;
-
 typedef struct Callframe {
   LambFunc* function;
   Value* slots;
@@ -36,8 +33,6 @@ typedef struct Vm {
 } Vm;
 
 void vm_init(Vm* vm);
-
-void vm_reset_ip(Vm* vm);
 
 void vm_free(Vm* vm);
 

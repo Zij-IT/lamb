@@ -132,37 +132,19 @@ Entry* table_find(Table* table, LambString* key) {
 
 LambString* table_find_string(Table* table, str chars, i32 len, u32 hash) {
   if (table->len == 0) {
-    // printf("No match found. Not interned\n");
     return NULL;
   }
-  
-  // Test: Print all entries in table
-  // printf("Table: {\n");
-  // for(int i = 0; i < table->capacity; i++) {
-  //   if(table->entries[i].key != NULL) {
-  //     LambString* st = table->entries[i].key;
-  //     printf("  key: LambString { chars: %s, len: %u, hash: %u }\n", st->chars, st->len, st->hash);
-  //   }
-  // }
-  // printf("}\n");
   
   // Correctness: Table capacity is guarunteed to be a multiple of 2
   //              in which case x % n is the same as X & (n - 1)
   u32 index = hash & (table->capacity - 1);
-  // printf("Searching: LambString { chars: %s, len: %u, hash: %u }\n", chars, len, hash);
   while(true) {
     Entry* entry = &table->entries[index];
-    if (entry->key != NULL) {
-      // printf("Entry: { key: LambString { chars: %s, len: %u, hash: %u }, val: __ }\n", entry->key->chars, entry->key->len, entry->key->hash);    
-    }    
-
     if (entry->key == NULL) {
       if (!is_tombstone(entry)) { 
-        // printf("No match found. Not interned.\n");
         return NULL;
       }
     } else if (entry->key->len == len && entry->key->hash == hash && memcmp(entry->key->chars, chars, len) == 0) {
-        // printf("Match found. Interned.\n");
       return entry->key;
     }
     
