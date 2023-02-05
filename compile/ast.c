@@ -549,11 +549,13 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write(compiler_chunk(&func_comp), OpReturn);
       }
       
-      // chunk_debug(&func_comp.function->chunk, "Function Chunk");
+      chunk_debug(&func_comp.function->chunk, "Function Chunk");
 
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+      // NOTE: The order of this is opposite the rest of the compiler. Typically the items are put on
+      //       and popped off the VM's stack, then they are popped off within the Opcode.
       chunk_write(compiler_chunk(compiler), OpClosure);
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
       for(i32 i = 0; i < func_comp.function->upvalue_count; i++) {
         chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].is_local ? 1 : 0);
         chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);

@@ -77,9 +77,29 @@ static i32 print_op(Chunk* chunk, i32 offset) {
     case OpPop: return print_simple_op("OpPop");
     case OpDup: return print_simple_op("OpDup");
     case OpCall: return print_simple_op("OpCall");
-    case OpClosure: return print_simple_op("OpClosure"), 3;
     case OpCloseValue: return print_simple_op("OpCloseValue");
     case OpGetUpvalue: return print_simple_op("OpGetUpvalue");
+    case OpClosure: {
+      printf("OpClosure\n");
+      i32 x = 0;
+      i32 idx = 0;
+      if (chunk->bytes[offset + 1] == OpConstant) {
+        x = 2;
+        idx = chunk->bytes[offset + x];
+      } else {
+        x = 4;
+        u8 lo = chunk->bytes[offset + 4];
+        u8 mi = chunk->bytes[offset + 3];
+        u8 hi = chunk->bytes[offset + 2];
+
+        idx = ((i32)hi) << 16 | ((i32)mi) << 8 | (i32)lo;
+      }
+      
+      LambFunc* func = (LambFunc*)chunk->constants.values[idx].as.obj;
+      
+      // NOTE: x bytes for constant + 2 bytes per upvalue + 1 to jump over OpClosure 
+      return x + 2 * func->upvalue_count + 1;
+    }
     default:
       fprintf(stderr, "Unknown OpCode (%d) in switch in %s at %d", chunk->bytes[offset], __FILE__, __LINE__);
       return 1;

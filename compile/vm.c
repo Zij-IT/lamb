@@ -80,6 +80,19 @@ Value vm_read_constant(Vm* vm) {
   return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
 }
 
+Value vm_read_constant_op(Vm* vm) {
+  if (vm_read_byte(vm) == OpConstant) {
+    return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
+  } else {
+    u8 hi = vm_read_byte(vm);
+    u8 mi = vm_read_byte(vm);
+    u8 lo = vm_read_byte(vm);
+    
+    i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
+    return vm_chunk(vm)->constants.values[idx];
+  }
+}
+
 Value* vm_peek_stack(Vm* vm) {
   return vm->stack_top - 1;
 }
@@ -437,7 +450,7 @@ InterpretResult vm_run(Vm* vm) {
         break; 
       }
       case OpClosure: {
-        LambFunc* function = (LambFunc*)vm_pop_stack(vm).as.obj;
+        LambFunc* function = (LambFunc*)vm_read_constant_op(vm).as.obj;
         LambClosure* closure = to_closure(vm, function);
         vm_push_stack(vm, new_object((Object*)closure));
 
