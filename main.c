@@ -58,23 +58,14 @@ void compile_with_options(AstNode* root, VmOptions options) {
 }
 
 int main(int argc, char** argv) {
-	FILE* file = stdin;
 	bool print_fn_chunks = false;
 	bool print_main_chunk = false;
 	bool optimized = false;
 	bool print_ast = false;
 	int c = 0;
 
-	while((c = getopt(argc, argv, "f:d:o")) != -1) {
+	while((c = getopt(argc, argv, "d:oh")) != -1) {
 		switch(c) {
-			case 'f': {
-				file = fopen(optarg, "r");
-				if (!file) {
-					fprintf(stderr, "Unable to open '%s'. Exiting...\n", optarg);
-					exit(1);
-				}
-				break;
-			}
 			case 'd': {
 				i32 debug_level = atoi(optarg);
 				switch(debug_level) {
@@ -89,6 +80,19 @@ int main(int argc, char** argv) {
 				optimized = true;
 				break;
 			}
+			default: {
+				fprintf(stderr, "Usage: %s [-d debug_level] [-o] [file]\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+
+	FILE* file = stdin;
+	if (optind < argc) {
+		file = fopen(argv[optind], "r");
+		if (!file) {
+			fprintf(stderr, "Unable to open '%s'. Exiting...\n", optarg);
+			exit(EXIT_FAILURE);
 		}
 	}
 	
