@@ -118,9 +118,6 @@ void free_ast(AstNode* root) {
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
       break;
-    case AstntBlockStmt:
-      free_ast(root->kids[0]);
-      break;
     case AstntStmts:
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
@@ -128,6 +125,9 @@ void free_ast(AstNode* root) {
     case AstntNodeList:
       free_ast(root->kids[0]);
       free_ast(root->kids[1]);
+      break;
+    case AstntBlock:
+      free_ast(root->kids[0]);
       break;
     case AstntNumLit:
     case AstntCharLit:
@@ -423,7 +423,7 @@ void print_ast(AstNode* root, u16 spaces) {
       printf(",\n");
       pre_pad(spaces, "}");
       break;
-    case AstntBlockStmt:
+    case AstntBlock:
       printf("BlockStatement: {\n");
       pad(spaces + BASE_PADDING);
       print_ast(root->kids[0], spaces + BASE_PADDING);

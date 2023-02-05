@@ -351,7 +351,7 @@ void optimize_ast(AstNode* root) {
     case AstntAssignStmt:
       optimize_ast(root->kids[1]);
       break;
-    case AstntBlockStmt:
+    case AstntBlock:
       optimize_ast(root->kids[0]);
       break;
     case AstntStmts:

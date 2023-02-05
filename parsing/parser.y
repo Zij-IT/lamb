@@ -178,7 +178,7 @@ BLOCK_STMTS: STMT BLOCK_STMTS	{ $$ = new_astnode(AstntStmts); $$->kids[0] = $1; 
 		   | EXPR				{ $$ = $1;										 					}
 		   |					{ $$ = NULL; 														}
 
-BLOCK: TokenLBrace BLOCK_STMTS TokenRBrace { $$ = new_astnode(AstntBlockStmt); $$->kids[0] = $2; }
+BLOCK: TokenLBrace BLOCK_STMTS TokenRBrace { $$ = new_astnode(AstntBlock); $$->kids[0] = $2; }
 
 CASE_EXPR: TokenCase EXPR TokenLBrace CASE_ARMS TokenRBrace	{ $$ = new_astnode(AstntCase); $$->kids[0] = $2; $$->kids[1] = $4; }
 

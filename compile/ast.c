@@ -426,7 +426,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
 
       break;
     }
-    case AstntBlockStmt: {
+    case AstntBlock: {
       compiler_new_scope(compiler);
       AstNode* stmt = node->kids[0];
       for(; stmt != NULL && stmt->type == AstntStmts; stmt = stmt->kids[1]) {

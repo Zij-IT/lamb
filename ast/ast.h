@@ -58,7 +58,7 @@ typedef enum {
   // Statement Kinds
   AstntExprStmt,
   AstntAssignStmt,
-  AstntBlockStmt,
+  AstntBlock,
   AstntStmts,
   
   // Meta
