@@ -17,20 +17,20 @@ typedef enum {
 } ValueKind;
 
 typedef struct {
-  ValueKind kind;  
+  ValueKind kind;
   union {
     bool boolean;
     i64 intn;
     f64 doubn;
     char ch;
-    Object* obj;
+    Object *obj;
   } as;
 } Value;
 
 typedef struct {
   i32 capacity;
   i32 len;
-  Value* values;
+  Value *values;
 } ValueArray;
 
 bool is_bool(Value val);
@@ -55,14 +55,14 @@ Value new_double(double num);
 
 Value new_char(char c);
 
-Value new_object(Object* obj);
+Value new_object(Object *obj);
 
 void print_kind(Value val);
 
-void value_arr_init(ValueArray* arr);
+void value_arr_init(ValueArray *arr);
 
-void value_arr_write(ValueArray* arr, Value val);
+void value_arr_write(ValueArray *arr, Value val);
 
-void value_arr_free(ValueArray* arr);
+void value_arr_free(ValueArray *arr);
 
-#endif//VALUE_HEADER
+#endif // VALUE_HEADER

@@ -3,6 +3,6 @@
 
 #include "ast.h"
 
-void optimize_ast(AstNode* root);
+void optimize_ast(AstNode *root);
 
-#endif//AST_OPTIMIZATION_H
+#endif // AST_OPTIMIZATION_H

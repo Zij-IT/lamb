@@ -12,7 +12,7 @@ typedef struct {
 typedef struct {
   i32 capacity;
   i32 len;
-  Local* values;
+  Local *values;
 } LocalArray;
 
 typedef struct {
@@ -23,29 +23,29 @@ typedef struct {
 typedef struct Compiler {
   LocalArray locals;
 
-  LambFunc* function;
+  LambFunc *function;
   Upvalue upvalues[UINT8_MAX];
-  
-  struct Compiler* enclosing;
-  
+
+  struct Compiler *enclosing;
+
   i32 scope_depth;
   FuncType type;
 } Compiler;
 
-void compiler_init(Compiler* compiler, FuncType type);
+void compiler_init(Compiler *compiler, FuncType type);
 
-void compiler_free(Compiler* compiler);
+void compiler_free(Compiler *compiler);
 
-void compiler_new_scope(Compiler* compiler);
+void compiler_new_scope(Compiler *compiler);
 
-void compiler_end_scope(Compiler* compiler);
+void compiler_end_scope(Compiler *compiler);
 
-void compiler_declare_var(Compiler* compiler, str name);
+void compiler_declare_var(Compiler *compiler, str name);
 
-void local_arr_init(LocalArray* arr);
+void local_arr_init(LocalArray *arr);
 
-void local_arr_write(LocalArray* arr, Local val);
+void local_arr_write(LocalArray *arr, Local val);
 
-void local_arr_free(LocalArray* arr);
+void local_arr_free(LocalArray *arr);
 
-#endif//BLOCK_HEADER
+#endif // BLOCK_HEADER

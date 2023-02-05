@@ -6,9 +6,9 @@
 
 typedef enum {
   CarOk,
-  CarUnsupportedAst,  
+  CarUnsupportedAst,
 } CompileAstResult;
 
-CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node);
+CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node);
 
-#endif//COMPILING_AST_HEADER
+#endif // COMPILING_AST_HEADER

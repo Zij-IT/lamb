@@ -7,7 +7,7 @@
 // Forward declare vm in vm.h
 typedef struct Vm Vm;
 
-typedef Value (*CFunc)(i32 args_passed, Value* args);
+typedef Value (*CFunc)(i32 args_passed, Value *args);
 
 typedef enum {
   OtString,
@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct Object {
   ObjectType type;
-  struct Object* next;
+  struct Object *next;
 } Object;
 
 typedef struct LambString {
@@ -32,7 +32,7 @@ typedef struct LambString {
 
 typedef struct LambArray {
   Object obj;
-  ValueArray items;  
+  ValueArray items;
 } LambArray;
 
 typedef struct LambFunc {
@@ -50,15 +50,15 @@ typedef struct NativeFunc {
 
 typedef struct LambUpvalue {
   Object obj;
-  Value* location;
+  Value *location;
   Value closed;
-  struct LambUpvalue* next;
+  struct LambUpvalue *next;
 } LambUpvalue;
 
 typedef struct LambClosure {
   Object obj;
-  LambFunc* function;
-  LambUpvalue** upvalues;
+  LambFunc *function;
+  LambUpvalue **upvalues;
   i32 upvalue_count;
 } LambClosure;
 
@@ -67,18 +67,18 @@ typedef enum FuncType {
   FtNormal,
 } FuncType;
 
-Object* alloc_obj(Vm* vm, ObjectType type);
+Object *alloc_obj(Vm *vm, ObjectType type);
 
-bool is_of_type(Object* obj, ObjectType type);
+bool is_of_type(Object *obj, ObjectType type);
 
-void object_free(Object* obj);
+void object_free(Object *obj);
 
-LambString* cstr_to_lambstring(Vm* vm, str cstr);
+LambString *cstr_to_lambstring(Vm *vm, str cstr);
 
-LambString* concat(Vm* vm, LambString* lhs, LambString* rhs);
+LambString *concat(Vm *vm, LambString *lhs, LambString *rhs);
 
-LambClosure* to_closure(Vm* vm, LambFunc* func);
+LambClosure *to_closure(Vm *vm, LambFunc *func);
 
-LambUpvalue* to_upvalue(Vm* vm, Value* slot);
+LambUpvalue *to_upvalue(Vm *vm, Value *slot);
 
-#endif//OBJECT_HEADER
+#endif // OBJECT_HEADER

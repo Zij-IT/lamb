@@ -3,6 +3,6 @@
 
 #include "vm.h"
 
-void set_natives(Vm* vm);
+void set_natives(Vm *vm);
 
-#endif//NATIVE_HEADER
+#endif // NATIVE_HEADER

@@ -5,4 +5,4 @@
 
 u32 hash_string(str st);
 
-#endif//MISC_HEADER
+#endif // MISC_HEADER

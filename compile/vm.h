@@ -21,35 +21,35 @@ typedef struct VmOptions {
 } VmOptions;
 
 typedef struct Callframe {
-  LambClosure* closure;
-  Value* slots;
-  u8* ip;
+  LambClosure *closure;
+  Value *slots;
+  u8 *ip;
 } Callframe;
 
 typedef struct Vm {
   Table strings;
   Table globals;
 
-  Value* stack_top;
+  Value *stack_top;
   Value stack[MAX_VALUES];
-  
+
   Callframe frames[MAX_FRAMES];
   u16 frame_count;
 
-  LambUpvalue* open_upvalues;
-  Object* poor_mans_gc;
-  
+  LambUpvalue *open_upvalues;
+  Object *poor_mans_gc;
+
   VmOptions options;
 } Vm;
 
-void vm_init(Vm* vm, VmOptions options);
+void vm_init(Vm *vm, VmOptions options);
 
-void vm_free(Vm* vm);
+void vm_free(Vm *vm);
 
-void vm_push_stack(Vm* vm, Value val);
+void vm_push_stack(Vm *vm, Value val);
 
-Value vm_pop_stack(Vm* vm);
+Value vm_pop_stack(Vm *vm);
 
-InterpretResult vm_run(Vm* vm);
+InterpretResult vm_run(Vm *vm);
 
-#endif//VM_HEADER
+#endif // VM_HEADER
