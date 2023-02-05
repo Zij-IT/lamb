@@ -109,14 +109,8 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       }
       
       // Compile the body
-      if (body->type == AstntBlockStmt) {
-        BUBBLE(compile(vm, &func_comp, body));
-        chunk_write_constant(compiler_chunk(&func_comp), new_nil());        
-        chunk_write(compiler_chunk(&func_comp), OpReturn);
-      } else {
-        BUBBLE(compile(vm, &func_comp, body));
-        chunk_write(compiler_chunk(&func_comp), OpReturn);
-      }
+      BUBBLE(compile(vm, &func_comp, body));
+      chunk_write(compiler_chunk(&func_comp), OpReturn);
       
       if (vm->options.print_fn_chunks) {
         chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
@@ -351,6 +345,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       // ELSE
       if (node->kids[3] != NULL) {
         BUBBLE(compile(vm, compiler, node->kids[3]->kids[0]));
+      } else {
+        chunk_write_constant(compiler_chunk(compiler), new_nil());
       }
 
       for (i32 i = 0; i < jump_lengths; i++) {
@@ -360,7 +356,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       
       // TODO: An 'if' expression should keep result of the run branch on the stack, which isn't exactly possible
       //       right now, so we put a dummy value on the stack.
-      chunk_write_constant(compiler_chunk(compiler), new_nil());
+      // chunk_write_constant(compiler_chunk(compiler), new_nil());
       break;
     }
     case AstntCase: {
@@ -375,6 +371,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write(compiler_chunk(compiler), OpEq);
         i32 if_neq = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
 
+        // Pop off the result and pop of the comparison value
+        chunk_write(compiler_chunk(compiler), OpPop);
         chunk_write(compiler_chunk(compiler), OpPop);
         BUBBLE(compile(vm, compiler, arm->kids[1]));
         i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
@@ -385,17 +383,16 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_patch_jump(compiler_chunk(compiler), if_neq);
         chunk_write(compiler_chunk(compiler), OpPop);
       }
+
+      // Pop off the comparison value and put nil on the stack
+      chunk_write(compiler_chunk(compiler), OpPop);
+      chunk_write_constant(compiler_chunk(compiler), new_nil());
       
       for(i32 i = 0; i < jump_lengths; i++) {
         chunk_patch_jump(compiler_chunk(compiler), out_of_case[i]);
       }
+
       free(out_of_case);
-      
-      // TODO: Fix the grammar so this can be done with... This is a sad state of affairs.
-      // Pop the test value off of the stack and because the case expression can't have a final expression,
-      // write a dummy value similar to 'if'
-      chunk_write(compiler_chunk(compiler), OpPop);
-      chunk_write_constant(compiler_chunk(compiler), new_nil());
       break;
     }
     case AstntExprStmt: {
@@ -430,11 +427,20 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       break;
     }
     case AstntBlockStmt: {
-      if (node->kids[0] != NULL) {
-        compiler_new_scope(compiler);
-        BUBBLE(compile(vm, compiler, node->kids[0]));
-        compiler_end_scope(compiler);
+      compiler_new_scope(compiler);
+      AstNode* stmt = node->kids[0];
+      for(; stmt != NULL && stmt->type == AstntStmts; stmt = stmt->kids[1]) {
+        BUBBLE(compile(vm, compiler, stmt->kids[0]));
       }
+      
+      if (stmt != NULL) {
+        // Must be an expression node per grammar
+        BUBBLE(compile(vm, compiler, stmt));
+      } else {
+        // If there is no expression, push nil
+        chunk_write_constant(compiler_chunk(compiler), new_nil());
+      }
+      compiler_end_scope(compiler);
       break;
     }
     case AstntStmts: {
@@ -616,14 +622,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         func_comp.function->arity++;
       }
       
-      if (node->kids[1]->type == AstntBlockStmt) {
-        BUBBLE(compile(vm, &func_comp, node->kids[1]));
-        chunk_write_constant(compiler_chunk(&func_comp), new_nil());        
-        chunk_write(compiler_chunk(&func_comp), OpReturn);
-      } else {
-        BUBBLE(compile(vm, &func_comp, node->kids[1]));
-        chunk_write(compiler_chunk(&func_comp), OpReturn);
-      }
+      BUBBLE(compile(vm, &func_comp, node->kids[1]));
+      chunk_write(compiler_chunk(&func_comp), OpReturn);
       
       if (vm->options.print_fn_chunks) {
         chunk_debug(&func_comp.function->chunk, "Function Chunk");
