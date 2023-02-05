@@ -69,9 +69,9 @@ int main(int argc, char** argv) {
 			case 'd': {
 				i32 debug_level = atoi(optarg);
 				switch(debug_level) {
-					case 3: print_ast = print_main_chunk = print_fn_chunks = true; break;
+					case 3: print_main_chunk = print_fn_chunks = print_ast = true; break;
 					case 2: print_main_chunk = print_fn_chunks = true; break;
-					case 1: print_fn_chunks = true; break;
+					case 1: print_main_chunk = true; break;
 					default: break;
 				}
 				break;
