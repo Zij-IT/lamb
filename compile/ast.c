@@ -77,20 +77,20 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
   AstNode* params = func_def->kids[0];
   AstNode* body = func_def->kids[1];
   
-  LambString* interned = cstr_to_lambstring(vm, ident->val.i);
+  LambString* rec_func_ident = cstr_to_lambstring(vm, ident->val.i);
   
   {
       Compiler func_comp;
       compiler_init(&func_comp, FtNormal);
       compiler_new_scope(&func_comp);
       func_comp.function = (LambFunc*)alloc_obj(vm, OtFunc);
-      func_comp.function->name = interned->chars;
+      func_comp.function->name = rec_func_ident->chars;
       func_comp.enclosing = compiler;
    
       // Normally this slot is left blank so that the user cannot refer to it
-      // However this spot points back to the identifier of the function, and
+      // However this slot points back to the identifier of the function, and
       // thus the item looking to be called in a recursive context.
-      func_comp.locals.values[0].name = interned->chars;
+      func_comp.locals.values[0].name = rec_func_ident->chars;
 
       // Add parameters to locals
       for (AstNode* child = params; child != NULL; child = child->kids[1]) {
@@ -108,7 +108,6 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
         func_comp.function->arity++;
       }
       
-      // Compile the body
       BUBBLE(compile(vm, &func_comp, body));
       chunk_write(compiler_chunk(&func_comp), OpReturn);
       
@@ -128,9 +127,9 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
   
   if(compiler->scope_depth == 0) {
     chunk_write(compiler_chunk(compiler), OpDefineGlobal);
-    chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
+    chunk_write_constant(compiler_chunk(compiler), new_object((Object*)rec_func_ident));
   } else {
-    Local loc = { .depth = compiler->scope_depth, .name = interned->chars, .is_captured = false };
+    Local loc = { .depth = compiler->scope_depth, .name = rec_func_ident->chars, .is_captured = false };
     local_arr_write(&compiler->locals, loc);
     
     chunk_write(compiler_chunk(compiler), OpDefineLocal);
@@ -148,17 +147,17 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       break;
     }
     case AstntIdent: {
-      LambString* interned = cstr_to_lambstring(vm, node->val.i);
+      LambString* ident = cstr_to_lambstring(vm, node->val.i);
       
-      i32 local_slot = resolve_local(compiler, interned); 
+      i32 local_slot = resolve_local(compiler, ident); 
       if (local_slot != LOCAL_NOT_FOUND) {
         chunk_write(compiler_chunk(compiler), OpGetLocal);
         chunk_write_constant(compiler_chunk(compiler), new_int(local_slot));
       }  else {
-        i32 upvalue_slot = resolve_upvalue(compiler, interned);
+        i32 upvalue_slot = resolve_upvalue(compiler, ident);
         if (upvalue_slot == UPVALUE_NOT_FOUND) {
           chunk_write(compiler_chunk(compiler), OpGetGlobal);
-          chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
+          chunk_write_constant(compiler_chunk(compiler), new_object((Object*)ident));
         } else {
           chunk_write(compiler_chunk(compiler), OpGetUpvalue);
           chunk_write_constant(compiler_chunk(compiler), new_int(upvalue_slot));
@@ -245,7 +244,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       BUBBLE(compile(vm, compiler, node->kids[1]));
       chunk_patch_jump(compiler_chunk(compiler), skip_right);
       break;
-    }    case AstntBinaryEq: {
+    }
+    case AstntBinaryEq: {
       BUBBLE(compile(vm, compiler, node->kids[0]));
       BUBBLE(compile(vm, compiler, node->kids[1]));
       chunk_write(compiler_chunk(compiler), OpEq);
@@ -341,7 +341,6 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write(compiler_chunk(compiler), OpPop);
      }
 
-      // ELSE
       if (node->kids[3] != NULL) {
         BUBBLE(compile(vm, compiler, node->kids[3]->kids[0]));
       } else {
@@ -351,11 +350,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       for (i32 i = 0; i < jump_lengths; i++) {
         chunk_patch_jump(compiler_chunk(compiler), elif_jumps[i]);
       }
+
       free(elif_jumps);
-      
-      // TODO: An 'if' expression should keep result of the run branch on the stack, which isn't exactly possible
-      //       right now, so we put a dummy value on the stack.
-      // chunk_write_constant(compiler_chunk(compiler), new_nil());
       break;
     }
     case AstntCase: {
@@ -383,6 +379,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write(compiler_chunk(compiler), OpPop);
       }
 
+      // This is in the event that none of the arms are done
       // Pop off the comparison value and put nil on the stack
       chunk_write(compiler_chunk(compiler), OpPop);
       chunk_write_constant(compiler_chunk(compiler), new_nil());
@@ -410,13 +407,13 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       
       BUBBLE(compile(vm, compiler, value_node));
 
-      LambString* interned = cstr_to_lambstring(vm, ident_node->val.i);
+      LambString* ident = cstr_to_lambstring(vm, ident_node->val.i);
 
       if(compiler->scope_depth == 0) {
         chunk_write(compiler_chunk(compiler), OpDefineGlobal);
-        chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
+        chunk_write_constant(compiler_chunk(compiler), new_object((Object*)ident));
       } else {
-        Local loc = { .depth = compiler->scope_depth, .name = interned->chars, .is_captured = false };
+        Local loc = { .depth = compiler->scope_depth, .name = ident->chars, .is_captured = false };
         local_arr_write(&compiler->locals, loc);
         
         chunk_write(compiler_chunk(compiler), OpDefineLocal);
@@ -433,10 +430,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       }
       
       if (stmt != NULL) {
-        // Must be an expression node per grammar
         BUBBLE(compile(vm, compiler, stmt));
       } else {
-        // If there is no expression, push nil
         chunk_write_constant(compiler_chunk(compiler), new_nil());
       }
       compiler_end_scope(compiler);
@@ -465,7 +460,6 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       AstNode* prev = NULL;
       AstNode* curr = node->kids[0];
       if(curr == NULL) {
-        chunk_write_constant(compiler_chunk(compiler), new_int(0));
         chunk_write(compiler_chunk(compiler), OpMakeArray);
         return CarOk;
       }
@@ -483,8 +477,6 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       
       node->kids[0] = prev;
 
-      // The list is guarunteed to be reversed at this time => compilation order is the same 
-      // as the order of the elements.
       i32 len = 0;
       for(AstNode* expr_list = node->kids[0]; expr_list != NULL; expr_list = expr_list->kids[1]) {
         BUBBLE(compile(vm, compiler, expr_list->kids[0]));
@@ -614,9 +606,9 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       
       for (AstNode* child = node->kids[0]; child != NULL; child = child->kids[1]) {
         AstNode* ident_node = child->kids[0];
-        LambString* interned = cstr_to_lambstring(vm, ident_node->val.i);
+        LambString* ident = cstr_to_lambstring(vm, ident_node->val.i);
 
-        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars, .is_captured = false };
+        Local loc = { .depth = func_comp.scope_depth, .name = ident->chars, .is_captured = false };
         local_arr_write(&func_comp.locals, loc);
         func_comp.function->arity++;
       }
@@ -658,7 +650,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       if (val == NULL) {
         chunk_write_constant(compiler_chunk(compiler), new_nil());
       } else {
-        BUBBLE(compile(vm, compiler, node->kids[0]));
+        BUBBLE(compile(vm, compiler, val));
       }
       chunk_write(compiler_chunk(compiler), OpReturn);
       break;
