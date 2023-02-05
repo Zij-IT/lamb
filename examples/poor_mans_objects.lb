@@ -1,24 +1,22 @@
 new_vector := fn(x, y) 
 	-> fn(method_name) -> case method_name {
- 		"x" -> { return x; }
- 		"y" -> { return y; }
-		"norm" -> { return x + y; }
-		"dist" -> {
-			return fn(v2) -> {
-				x := x - v2("x");
-				y := y - v2("y");
+ 		"x" -> x,
+ 		"y" -> y,
+		"norm" -> x + y, 
+		"dist" -> fn(v2) -> {
+			x := x - v2("x");
+			y := y - v2("y");
 
- 				if x < 0 && y < 0 {
- 					return -x + -y;
- 				} elif x < 0 {
- 					return -x + y;
- 				} elif y < 0 {
- 					return x + -y;
- 				} else {
- 					return x + y;
- 				};
-			};
-		}
+			if x < 0 && y < 0 {
+				-x + -y
+			} elif x < 0 {
+				-x + y
+			} elif y < 0 {
+				x + -y
+			} else {
+				x + y
+			}
+		},
 	};
 
 v1 := new_vector(0, 1);
