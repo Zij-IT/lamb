@@ -178,7 +178,7 @@ InterpretResult vm_run(Vm* vm) {
         break;
       }
       case OpDefineGlobal: {
-        LambString* ident = (LambString*)vm_pop_stack(vm).as.obj;
+        LambString* ident = (LambString*)vm_read_constant(vm).as.obj;
         Value* val = vm_peek_stack(vm);
        
         if(!table_insert(&vm->globals, ident, *val)) {
@@ -190,7 +190,7 @@ InterpretResult vm_run(Vm* vm) {
         break;
       }
       case OpGetGlobal: {
-        Value val = vm_pop_stack(vm);
+        Value val = vm_read_constant(vm);
         LambString* ident = (LambString*)val.as.obj;
 
         Value value;
@@ -203,17 +203,17 @@ InterpretResult vm_run(Vm* vm) {
         break;
       }
       case OpDefineLocal: {
-        i32 slot = vm_pop_stack(vm).as.intn;
+        i32 slot = vm_read_constant(vm).as.intn;
         vm_frame(vm)->slots[slot] = *vm_peek_stack(vm);
         break; 
       }
       case OpGetLocal: {
-        i32 slot = vm_pop_stack(vm).as.intn;
+        i32 slot = vm_read_constant(vm).as.intn;
         vm_push_stack(vm, vm_frame(vm)->slots[slot]);
         break; 
       }
       case OpGetUpvalue: {
-        i32 slot = vm_pop_stack(vm).as.intn;
+        i32 slot = vm_read_constant(vm).as.intn;
         vm_push_stack(vm, *vm_frame(vm)->closure->upvalues[slot]->location);
         break;
       }
@@ -363,7 +363,7 @@ InterpretResult vm_run(Vm* vm) {
         break; 
       }
       case OpCall: {
-        i32 arg_count = vm_pop_stack(vm).as.intn;
+        i32 arg_count = vm_read_constant(vm).as.intn;
         Value* callee = vm_peekn_stack(vm, arg_count);
         
         if (!is_object(*callee)) {

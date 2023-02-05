@@ -127,14 +127,14 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
   }
   
   if(compiler->scope_depth == 0) {
-    chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
     chunk_write(compiler_chunk(compiler), OpDefineGlobal);
+    chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
   } else {
     Local loc = { .depth = compiler->scope_depth, .name = interned->chars, .is_captured = false };
     local_arr_write(&compiler->locals, loc);
     
-    chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
     chunk_write(compiler_chunk(compiler), OpDefineLocal);
+    chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
   }
   
   return CarOk;
@@ -152,17 +152,16 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       
       i32 local_slot = resolve_local(compiler, interned); 
       if (local_slot != LOCAL_NOT_FOUND) {
-        chunk_write_constant(compiler_chunk(compiler), new_int(local_slot));
         chunk_write(compiler_chunk(compiler), OpGetLocal);
+        chunk_write_constant(compiler_chunk(compiler), new_int(local_slot));
       }  else {
-        
         i32 upvalue_slot = resolve_upvalue(compiler, interned);
         if (upvalue_slot == UPVALUE_NOT_FOUND) {
-          chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
           chunk_write(compiler_chunk(compiler), OpGetGlobal);
+          chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
         } else {
-          chunk_write_constant(compiler_chunk(compiler), new_int(upvalue_slot));
           chunk_write(compiler_chunk(compiler), OpGetUpvalue);
+          chunk_write_constant(compiler_chunk(compiler), new_int(upvalue_slot));
         }
       }
       
@@ -414,14 +413,14 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       LambString* interned = cstr_to_lambstring(vm, ident_node->val.i);
 
       if(compiler->scope_depth == 0) {
-        chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
         chunk_write(compiler_chunk(compiler), OpDefineGlobal);
+        chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
       } else {
         Local loc = { .depth = compiler->scope_depth, .name = interned->chars, .is_captured = false };
         local_arr_write(&compiler->locals, loc);
         
-        chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
         chunk_write(compiler_chunk(compiler), OpDefineLocal);
+        chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
       }
 
       break;
@@ -516,14 +515,14 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       BUBBLE(compile(vm, &func_comp, lhs));
       BUBBLE(compile(vm, &func_comp, rhs));
 
-      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       chunk_write(compiler_chunk(&func_comp), OpGetLocal);
+      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
 
-      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       chunk_write(compiler_chunk(&func_comp), OpCall);
+      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       
-      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       chunk_write(compiler_chunk(&func_comp), OpCall);
+      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       
       chunk_write(compiler_chunk(&func_comp), OpReturn);
 
@@ -557,14 +556,14 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       BUBBLE(compile(vm, &func_comp, rhs));
       BUBBLE(compile(vm, &func_comp, lhs));
 
-      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       chunk_write(compiler_chunk(&func_comp), OpGetLocal);
+      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
 
-      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       chunk_write(compiler_chunk(&func_comp), OpCall);
+      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       
-      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       chunk_write(compiler_chunk(&func_comp), OpCall);
+      chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
       
       chunk_write(compiler_chunk(&func_comp), OpReturn);
 
@@ -590,8 +589,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       BUBBLE(compile(vm, compiler, lhs));
       BUBBLE(compile(vm, compiler, rhs));
 
-      chunk_write_constant(compiler_chunk(compiler), new_int(1));
       chunk_write(compiler_chunk(compiler), OpCall);
+      chunk_write_constant(compiler_chunk(compiler), new_int(1));
       break;
     }
     case AstntBinaryRApply: {
@@ -601,8 +600,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       BUBBLE(compile(vm, compiler, rhs));
       BUBBLE(compile(vm, compiler, lhs));
 
-      chunk_write_constant(compiler_chunk(compiler), new_int(1));
       chunk_write(compiler_chunk(compiler), OpCall);
+      chunk_write_constant(compiler_chunk(compiler), new_int(1));
       break;
     }
     case AstntFuncDef: {
@@ -630,9 +629,6 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       }
 
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
-      // NOTE: The order of this is opposite the rest of the compiler. Typically the items are put on
-      //       and popped off the VM's stack, then they are popped off within the Opcode.
-      //       It is really only like this for debugging purposes
       chunk_write(compiler_chunk(compiler), OpClosure);
       chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
       for(i32 i = 0; i < func_comp.function->upvalue_count; i++) {
@@ -653,8 +649,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         arg_count += 1;
       }
             
-      chunk_write_constant(compiler_chunk(compiler), new_int((i64)arg_count));
       chunk_write(compiler_chunk(compiler), OpCall);
+      chunk_write_constant(compiler_chunk(compiler), new_int((i64)arg_count));
       break;
     }
     case AstntReturn: {
