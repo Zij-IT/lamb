@@ -549,7 +549,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write(compiler_chunk(&func_comp), OpReturn);
       }
       
-      chunk_debug(&func_comp.function->chunk, "Function Chunk");
+      // chunk_debug(&func_comp.function->chunk, "Function Chunk");
 
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
       chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));

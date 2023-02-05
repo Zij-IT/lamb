@@ -29,7 +29,7 @@ void debug_compile_ast(AstNode* root, str name) {
 	
 		if (car == CarOk) {
 			chunk_write(&compiler.function->chunk, OpReturn);
-			chunk_debug(&compiler.function->chunk, "Compiled Ast");
+			// chunk_debug(&compiler.function->chunk, "Compiled Ast");
 			LambClosure* closure = to_closure(&vm, compiler.function);
 			vm_push_stack(&vm, new_object((Object*)closure));
 		
