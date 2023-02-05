@@ -679,3 +679,5 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
   
   return CarOk; 
 }
+
+#undef BUBBLE

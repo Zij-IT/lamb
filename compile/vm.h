@@ -52,8 +52,4 @@ Value vm_pop_stack(Vm* vm);
 
 InterpretResult vm_run(Vm* vm);
 
-Chunk* vm_chunk(Vm* vm);
-
-Callframe* vm_frame(Vm* vm);
-
 #endif//VM_HEADER

@@ -8,6 +8,10 @@
 #include "debug.h"
 #include "native.h"
 
+static Callframe* vm_frame(Vm* vm) {
+  return &vm->frames[vm->frame_count - 1];
+}
+
 static LambUpvalue* capture_upvalue(Vm* vm, Value* local) {
   LambUpvalue* prev_upvalue = NULL;
   LambUpvalue* curr_upvalue = vm->open_upvalues;
@@ -42,6 +46,42 @@ static void close_upvalues(Vm* vm, Value* last) {
   }
 }
 
+static Chunk* vm_chunk(Vm* vm) {
+  return &vm_frame(vm)->closure->function->chunk;
+}
+
+static u8 vm_read_byte(Vm* vm) {
+  return *vm_frame(vm)->ip++;
+}
+
+static u16 vm_read_short(Vm* vm) {
+  u8 hi = vm_read_byte(vm);
+  u8 lo = vm_read_byte(vm);
+  
+  return ((u16)hi << 8) | (u16)lo;
+}
+
+static Value vm_read_constant(Vm* vm) {
+  if (vm_read_byte(vm) == OpConstant) {
+    return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
+  } else {
+    u8 hi = vm_read_byte(vm);
+    u8 mi = vm_read_byte(vm);
+    u8 lo = vm_read_byte(vm);
+    
+    i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
+    return vm_chunk(vm)->constants.values[idx];
+  }
+}
+
+static Value* vm_peek_stack(Vm* vm) {
+  return vm->stack_top - 1;
+}
+
+static Value* vm_peekn_stack(Vm* vm, i32 n) {
+  return vm->stack_top - n - 1;
+}
+
 void vm_init(Vm* vm, VmOptions options) {
   vm->frame_count = 0;
   vm->stack_top = vm->stack;
@@ -64,50 +104,6 @@ void vm_push_stack(Vm* vm, Value val) {
 Value vm_pop_stack(Vm* vm) {
   vm->stack_top -= 1;
   return *vm->stack_top;
-}
-
-u8 vm_read_byte(Vm* vm) {
-  return *vm_frame(vm)->ip++;
-}
-
-u16 vm_read_short(Vm* vm) {
-  u8 hi = vm_read_byte(vm);
-  u8 lo = vm_read_byte(vm);
-  
-  return ((u16)hi << 8) | (u16)lo;
-}
-
-Value vm_read_constant(Vm* vm) {
-  return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
-}
-
-Value vm_read_constant_op(Vm* vm) {
-  if (vm_read_byte(vm) == OpConstant) {
-    return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
-  } else {
-    u8 hi = vm_read_byte(vm);
-    u8 mi = vm_read_byte(vm);
-    u8 lo = vm_read_byte(vm);
-    
-    i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
-    return vm_chunk(vm)->constants.values[idx];
-  }
-}
-
-Value* vm_peek_stack(Vm* vm) {
-  return vm->stack_top - 1;
-}
-
-Value* vm_peekn_stack(Vm* vm, i32 n) {
-  return vm->stack_top - n - 1;
-}
-
-Chunk* vm_chunk(Vm* vm) {
-  return &vm_frame(vm)->closure->function->chunk;
-}
-
-Callframe* vm_frame(Vm* vm) {
-  return &vm->frames[vm->frame_count - 1];
 }
 
 #define BINARY_REL_OP(vm, op)                                                                \
@@ -166,7 +162,7 @@ InterpretResult vm_run(Vm* vm) {
   for(;;) {
     switch (vm_read_byte(vm)) {
       case OpConstant: {
-        Value val = vm_read_constant(vm);
+        Value val = vm_chunk(vm)->constants.values[vm_read_byte(vm)];
         vm_push_stack(vm, val);
         break;
       }
@@ -191,7 +187,6 @@ InterpretResult vm_run(Vm* vm) {
         }
 
         vm_pop_stack(vm);
-       
         break;
       }
       case OpGetGlobal: {
@@ -326,23 +321,6 @@ InterpretResult vm_run(Vm* vm) {
       case OpGe:     BINARY_REL_OP(vm, >=); break;
       case OpLt:     BINARY_REL_OP(vm, <);  break;
       case OpLe:     BINARY_REL_OP(vm, <=); break;
-      case OpReturn: {
-        Value ret = vm_pop_stack(vm);
-        close_upvalues(vm, vm_frame(vm)->slots);
-        vm->stack_top = vm_frame(vm)->slots;
-        vm->frame_count--;
-        if (vm->frame_count == 0) {
-          vm_pop_stack(vm);
-          return InterpretOk;
-        }
-
-        vm_push_stack(vm, ret);
-        break;
-      }
-      case OpPop: {
-        vm_pop_stack(vm);
-        break;
-      }
       case OpMakeArray: {
         i32 len = vm_pop_stack(vm).as.intn;
         ValueArray items;
@@ -414,25 +392,6 @@ InterpretResult vm_run(Vm* vm) {
             frame->slots = vm->stack_top - arg_count - 1;
             break; 
           }
-          // case OtFunc: {
-          //   LambFunc* func = (LambFunc*)callee->as.obj;
-          //   if (arg_count != func->arity) {
-          //     printf("RuntimeError: Expected %d arguments, but received %d instead\n", func->arity, arg_count);
-          //     return InterpretRuntimeError;
-          //   }
-        
-          //   if (vm->frame_count == MAX_FRAMES) {
-          //     printf("RuntimeError: Stack overflow\n");
-          //     return InterpretRuntimeError;
-          //   }
-        
-          //   Callframe* frame = &vm->frames[vm->frame_count++];
-          //   frame->function = func;
-          //   frame->ip = func->chunk.bytes;
-          //   frame->slots = vm->stack_top - arg_count - 1;
-            
-          //   break;
-          // }
           case OtNative: {
             NativeFunc* native = (NativeFunc*)callee->as.obj;
             Value result = native->func(arg_count, vm->stack_top - arg_count);
@@ -451,7 +410,7 @@ InterpretResult vm_run(Vm* vm) {
         break; 
       }
       case OpClosure: {
-        LambFunc* function = (LambFunc*)vm_read_constant_op(vm).as.obj;
+        LambFunc* function = (LambFunc*)vm_read_constant(vm).as.obj;
         LambClosure* closure = to_closure(vm, function);
         vm_push_stack(vm, new_object((Object*)closure));
 
@@ -468,6 +427,23 @@ InterpretResult vm_run(Vm* vm) {
         
         break; 
       }
+      case OpReturn: {
+        Value ret = vm_pop_stack(vm);
+        close_upvalues(vm, vm_frame(vm)->slots);
+        vm->stack_top = vm_frame(vm)->slots;
+        vm->frame_count--;
+        if (vm->frame_count == 0) {
+          vm_pop_stack(vm);
+          return InterpretOk;
+        }
+
+        vm_push_stack(vm, ret);
+        break;
+      }
+      case OpPop: {
+        vm_pop_stack(vm);
+        break;
+      }
       case OpCloseValue: {
         close_upvalues(vm, vm->stack_top - 1);
         vm_pop_stack(vm);
@@ -478,12 +454,7 @@ InterpretResult vm_run(Vm* vm) {
         vm_push_stack(vm, *ret);
         break;
       }
-      case OpLApply:
-      case OpRApply:
-      case OpLCompose:
-      case OpRCompose:
-        break;
-      }
+    }
   }
 }
 

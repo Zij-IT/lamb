@@ -157,3 +157,5 @@ void table_free(Table* table) {
   FREE_ARRAY(Entry, table->entries, table->capacity);
   table_init(table);
 }
+
+#undef TOMBSTONE
