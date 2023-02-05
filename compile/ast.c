@@ -29,8 +29,6 @@ static i32 add_upvalue(Compiler* compiler, i32 index, bool is_local) {
   compiler->upvalues[count].is_local = is_local;
   compiler->upvalues[count].index = index;
   
-  printf("ADDING_UPVALUE: Index(%d), is_local(%d)\n", index, is_local);
-  
   return compiler->function->upvalue_count++;
 }
 
