@@ -118,7 +118,9 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
         chunk_write(compiler_chunk(&func_comp), OpReturn);
       }
       
-      chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
+      if (vm->options.print_fn_chunks) {
+        chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
+      }
       
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
       chunk_write(compiler_chunk(compiler), OpClosure);
@@ -549,7 +551,9 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write(compiler_chunk(&func_comp), OpReturn);
       }
       
-      chunk_debug(&func_comp.function->chunk, "Function Chunk");
+      if (vm->options.print_fn_chunks) {
+        chunk_debug(&func_comp.function->chunk, "Function Chunk");
+      }
 
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
       // NOTE: The order of this is opposite the rest of the compiler. Typically the items are put on

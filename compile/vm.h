@@ -13,6 +13,13 @@ typedef enum {
   InterpretRuntimeError,
 } InterpretResult;
 
+typedef struct VmOptions {
+  bool print_main_chunk;
+  bool print_fn_chunks;
+  bool print_ast;
+  bool optimized;
+} VmOptions;
+
 typedef struct Callframe {
   LambClosure* closure;
   Value* slots;
@@ -31,9 +38,11 @@ typedef struct Vm {
 
   LambUpvalue* open_upvalues;
   Object* poor_mans_gc;
+  
+  VmOptions options;
 } Vm;
 
-void vm_init(Vm* vm);
+void vm_init(Vm* vm, VmOptions options);
 
 void vm_free(Vm* vm);
 

@@ -107,11 +107,12 @@ static i32 print_op(Chunk* chunk, i32 offset) {
 }
 
 void chunk_debug(Chunk* chunk, str name) {
-  printf("--- %s ---\n", name);
+  printf("====== %s ======\n", name);
   i32 offset = 0;
   while (offset < chunk->len) {
     offset += print_op(chunk, offset);    
   }
+  printf("====== %s ======\n", name);
 }
 
 

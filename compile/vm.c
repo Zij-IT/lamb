@@ -42,11 +42,12 @@ static void close_upvalues(Vm* vm, Value* last) {
   }
 }
 
-void vm_init(Vm* vm) {
+void vm_init(Vm* vm, VmOptions options) {
   vm->frame_count = 0;
   vm->stack_top = vm->stack;
   vm->poor_mans_gc = NULL;
   vm->open_upvalues = NULL;
+  vm->options = options;
 
   table_init(&vm->strings);
   table_init(&vm->globals);
