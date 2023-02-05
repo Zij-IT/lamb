@@ -632,6 +632,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
       // NOTE: The order of this is opposite the rest of the compiler. Typically the items are put on
       //       and popped off the VM's stack, then they are popped off within the Opcode.
+      //       It is really only like this for debugging purposes
       chunk_write(compiler_chunk(compiler), OpClosure);
       chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
       for(i32 i = 0; i < func_comp.function->upvalue_count; i++) {
@@ -640,18 +641,8 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       }
       compiler_free(&func_comp);
       
-      // Although it logically makes sense to call this, it isn't really necessary.
-      // The compiler is dropped at the end of the scope anyhow. Calling it is wasted
-      // CPU effort :D 
-      // compiler_end_scope(&func_comp);
-
       break;
-      // return CarUnsupportedAst;
     }
-    // case AstntNodeList: {
-    //   fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-    //   break;
-    // }
     case AstntFuncCall: {
       AstNode* callee = node->kids[0];
       BUBBLE(compile(vm, compiler, callee));
@@ -676,9 +667,13 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       chunk_write(compiler_chunk(compiler), OpReturn);
       break;
     }
+    case AstntNodeList: {
+      fprintf(stderr, "Unable to compile AstNode of kind: AstntNodeList");
+      return CarUnsupportedAst;
+    }
     default:
-      // fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-      // fprintf(stderr, "Default branch reached while matching on node->type in %s on line %d", __FILE__, __LINE__);
+      fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
+      fprintf(stderr, "Default branch reached while matching on node->type in %s on line %d", __FILE__, __LINE__);
       return CarUnsupportedAst;
   }
   
