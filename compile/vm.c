@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "vm.h"
 #include "value.h"
@@ -50,6 +51,7 @@ void vm_init(Vm* vm) {
   table_init(&vm->strings);
   table_init(&vm->globals);
   
+  srand(time(NULL));
   set_natives(vm);
 }
 

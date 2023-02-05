@@ -23,12 +23,17 @@ static void define_native(Vm* vm, str fn_name, CFunc function) {
 }
 
 static Value lamb_print(i32 arg_count, Value* args) {
-  print_value(*args);
+  if (arg_count != 0) {
+    print_value(*args);
+  }
+
   return new_nil();
 }
 
 static Value lamb_println(i32 arg_count, Value* args) {
-  print_value(*args);
+  if (arg_count != 0) {
+    print_value(*args);
+  }
   printf("\n");
   return new_nil();
 }
