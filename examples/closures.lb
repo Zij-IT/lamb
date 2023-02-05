@@ -2,10 +2,12 @@ x := "global";
 
 outer := fn() -> {
 	x := "outer";
-	(fn()->print(x))();
+	y := "hi";
+	z := fn() -> print(x + y);
+	z(); 
 };
 
-print("This should output 'outer':: ");
+print("This should output 'outerhi': ");
 outer();
 println();
 
@@ -18,8 +20,9 @@ make_closure := fn() -> {
 
 closure := make_closure();
 
-print("This should output 'local': ");
+print("This should output 'local':: ");
 closure();
+println();
 
 println("=====");
 
@@ -30,10 +33,12 @@ make_name := fn(name) -> {
 doughnut := make_name("doughnut");
 bagel := make_name("bagel");
 
-print("This should output 'doughnut'");
+print("This should output 'doughnut':: ");
 doughnut();
+println();
 
-print("This should output 'bagel'");
+print("This should output 'bagel':: ");
 bagel();
+println();
 
 println("=====");
