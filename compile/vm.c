@@ -442,8 +442,8 @@ InterpretResult vm_run(Vm* vm) {
         vm_push_stack(vm, new_object((Object*)closure));
 
         for (i32 i = 0; i < closure->upvalue_count; i++) {
-          u8 index = vm_read_byte(vm);
           bool is_local = vm_read_byte(vm);
+          u8 index = vm_read_byte(vm);
           
           if (is_local) {
             closure->upvalues[i] = capture_upvalue(vm, vm_frame(vm)->slots + index);
