@@ -121,8 +121,8 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
       
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
       chunk_write(compiler_chunk(compiler), OpClosure);
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
       for(i32 i = 0; i < func_comp.function->upvalue_count; i++) {
         chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].is_local ? 1 : 0);
         chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);
