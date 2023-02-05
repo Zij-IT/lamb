@@ -1,0 +1,29 @@
+new_vector := fn(x, y) 
+	-> fn(method_name) -> case method_name {
+ 		"x" -> { return x; }
+ 		"y" -> { return y; }
+		"norm" -> { return x + y; }
+		"dist" -> {
+			return fn(v2) -> {
+				x := x - v2("x");
+				y := y - v2("y");
+
+ 				if x < 0 && y < 0 {
+ 					return -x + -y;
+ 				} elif x < 0 {
+ 					return -x + y;
+ 				} elif y < 0 {
+ 					return x + -y;
+ 				} else {
+ 					return x + y;
+ 				};
+			};
+		}
+	};
+
+v1 := new_vector(0, 0);
+v2 := new_vector(5, 3);
+
+println(v2("dist")(v1));
+println(v2("norm"));
+println(v1("norm"));
