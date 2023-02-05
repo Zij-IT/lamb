@@ -654,7 +654,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
     // }
     case AstntFuncCall: {
       AstNode* callee = node->kids[0];
-      compile(vm, compiler, callee);
+      BUBBLE(compile(vm, compiler, callee));
 
       u32 arg_count = 0;
       for(AstNode* arg_list = node->kids[1]; arg_list != NULL; arg_list = arg_list->kids[1]) {
@@ -671,7 +671,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       if (val == NULL) {
         chunk_write_constant(compiler_chunk(compiler), new_nil());
       } else {
-        compile(vm, compiler, node->kids[0]);
+        BUBBLE(compile(vm, compiler, node->kids[0]));
       }
       chunk_write(compiler_chunk(compiler), OpReturn);
       break;
