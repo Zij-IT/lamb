@@ -432,7 +432,8 @@ void print_ast(AstNode* root, u16 spaces) {
       break;
     case AstntStmts:
       printf("Statements: {\n");
-      for(AstNode* node = root; node != NULL; node = node->kids[1]) {
+      AstNode* node = root;
+      for(; node != NULL && node->type == AstntStmts; node = node->kids[1]) {
         if(node->kids[0] != NULL) {
           pad(spaces + BASE_PADDING);
           print_ast(node->kids[0], spaces + BASE_PADDING);
@@ -440,6 +441,14 @@ void print_ast(AstNode* root, u16 spaces) {
         }
       }
       pre_pad(spaces, "}");
+      if (node != NULL) {
+        printf(",\n");
+        pre_pad(spaces, "FinalExpression: {\n");
+        pre_pad(spaces + BASE_PADDING, "expr: ");
+        print_ast(node, spaces + BASE_PADDING + 6);
+        printf("\n");
+        pre_pad(spaces, "}");
+      }
       break;
     case AstntNodeList:
       break;

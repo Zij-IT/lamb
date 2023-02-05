@@ -90,7 +90,7 @@
 
 %parse-param { AstNode** parse_node }
 
-%type <node> LITERAL ATOM EXPR STMT STMTS ID GROUPED BLOCK IF_EXPR ELIFS ELSE CASE_EXPR CASE_ARMS PATTERN CASE_VAL ARRAY EXPR_LIST FUNC_DEF FUNC_ARGS FUNC_ARGS_LIST FUNC_CALL UNARY_EXPR INDEX FUNC_END BINARY_EXPR FILE 
+%type <node> LITERAL ATOM EXPR STMT STMTS ID GROUPED BLOCK IF_EXPR ELIFS ELSE CASE_EXPR CASE_ARMS PATTERN CASE_VAL ARRAY EXPR_LIST FUNC_DEF FUNC_ARGS FUNC_ARGS_LIST FUNC_CALL UNARY_EXPR INDEX FUNC_END BINARY_EXPR FILE BLOCK_STMTS
 %%
 
 FILE: FILE STRUCT 
@@ -119,7 +119,6 @@ STMTS : STMT STMTS { $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1]
 
 STMT : ID TokenDefine EXPR TokenSemicolon { $$ = new_astnode(AstntAssignStmt); $$->kids[0] = $1; $$->kids[1] = $3; }
 	 | EXPR TokenSemicolon				  { $$ = new_astnode(AstntExprStmt);   $$->kids[0] = $1;  				   }
-	 | BLOCK TokenSemicolon				  { $$ = new_astnode(AstntBlockStmt);  $$->kids[0] = $1; 				   }
 	 | TokenReturn TokenSemicolon		  { $$ = new_astnode(AstntReturn); $$->kids[0] = NULL; 					   }
 	 | TokenReturn EXPR TokenSemicolon	  { $$ = new_astnode(AstntReturn); $$->kids[0] = $2; 					   }
 
@@ -132,6 +131,7 @@ EXPR: BINARY_EXPR { $$ = $1; }
 	| IF_EXPR	  { $$ = $1; }
 	| CASE_EXPR	  { $$ = $1; }
 	| FUNC_DEF	  { $$ = $1; }
+	| BLOCK		  { $$ = $1; }
 	| ATOM		  { $$ = $1; }
 	
 BINARY_EXPR: EXPR TokenLApply EXPR   { $$ = new_binary_astnode(AstntBinaryLApply,   $1, $3); }
@@ -173,8 +173,12 @@ ELIFS: TokenElif EXPR BLOCK ELIFS { $$ = new_astnode(AstntElif); $$->kids[0] = $
 
 ELSE: TokenElse BLOCK			  { $$ = new_astnode(AstntElse); $$->kids[0] = $2; }
 	|							  { $$ = NULL; }
+	
+BLOCK_STMTS: STMT BLOCK_STMTS	{ $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1] = $2; }
+		   | EXPR				{ $$ = $1;										 					}
+		   |					{ $$ = NULL; 														}
 
-BLOCK: TokenLBrace STMTS TokenRBrace { $$ = new_astnode(AstntBlockStmt); $$->kids[0] = $2; }
+BLOCK: TokenLBrace BLOCK_STMTS TokenRBrace { $$ = new_astnode(AstntBlockStmt); $$->kids[0] = $2; }
 
 CASE_EXPR: TokenCase EXPR TokenLBrace CASE_ARMS TokenRBrace	{ $$ = new_astnode(AstntCase); $$->kids[0] = $2; $$->kids[1] = $4; }
 
@@ -188,8 +192,7 @@ CASE_VAL: BLOCK			  { $$ = $1; }
 FUNC_DEF: 		   TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END { $$ = new_astnode(AstntFuncDef); $$->kids[0] = $3; $$->kids[1] = $6; $$->kids[2] = new_astnode(AstntBoolLit); $$->kids[2]->val.b = false; }
 	    | TokenRec TokenFn TokenLParen FUNC_ARGS TokenRParen TokenArrow FUNC_END { $$ = new_astnode(AstntFuncDef); $$->kids[0] = $4; $$->kids[1] = $7; $$->kids[2] = new_astnode(AstntBoolLit); $$->kids[2]->val.b = true;  }
 
-FUNC_END: BLOCK %prec FUNC_END_PREC { $$ = $1; }
-		| EXPR  %prec FUNC_END_PREC { $$ = $1; }
+FUNC_END: EXPR %prec FUNC_END_PREC { $$ = $1; }
 
 FUNC_ARGS: FUNC_ARGS_LIST { $$ = $1;   }
 		 | 				  { $$ = NULL; }
