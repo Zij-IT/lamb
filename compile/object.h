@@ -15,6 +15,7 @@ typedef enum {
   OtFunc,
   OtNative,
   OtClosure,
+  OtUpvalue,
 } ObjectType;
 
 typedef struct Object {
@@ -38,6 +39,7 @@ typedef struct LambFunc {
   Object obj;
   Chunk chunk;
   str name;
+  i32 upvalue_count;
   u8 arity;
 } LambFunc;
 
@@ -46,10 +48,18 @@ typedef struct NativeFunc {
   CFunc func;
 } NativeFunc;
 
+typedef struct LambUpvalue {
+  Object obj;
+  Value* location;
+  Value closed;
+  struct LambUpvalue* next;
+} LambUpvalue;
 
 typedef struct LambClosure {
   Object obj;
   LambFunc* function;
+  LambUpvalue** upvalues;
+  i32 upvalue_count;
 } LambClosure;
 
 typedef enum FuncType {
@@ -68,5 +78,7 @@ LambString* cstr_to_lambstring(Vm* vm, str cstr);
 LambString* concat(Vm* vm, LambString* lhs, LambString* rhs);
 
 LambClosure* to_closure(Vm* vm, LambFunc* func);
+
+LambUpvalue* to_upvalue(Vm* vm, Value* slot);
 
 #endif//OBJECT_HEADER

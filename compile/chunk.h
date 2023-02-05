@@ -10,6 +10,7 @@ typedef enum {
   OpDefineLocal,
   OpGetGlobal,
   OpGetLocal,
+  OpGetUpvalue,
   OpNumNeg,
   OpBinNeg,
   OpLogNeg,
@@ -42,6 +43,7 @@ typedef enum {
   OpDup,
   OpCall,
   OpClosure,
+  OpCloseValue,
 } OpCode;
 
 typedef struct Chunk {

@@ -29,6 +29,7 @@ typedef struct Vm {
   Callframe frames[MAX_FRAMES];
   u16 frame_count;
 
+  LambUpvalue* open_upvalues;
   Object* poor_mans_gc;
 } Vm;
 

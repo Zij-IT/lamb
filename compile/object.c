@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "misc.h"
 #include "object.h"
 #include "vm.h"
@@ -35,6 +36,7 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       func->obj = obj;
       func->name = NULL;
       func->arity = 0;
+      func->upvalue_count = 0;
       chunk_init(&func->chunk);
       vm->poor_mans_gc = (Object*)func;
       return vm->poor_mans_gc;
@@ -53,6 +55,15 @@ Object* alloc_obj(Vm* vm, ObjectType type) {
       closure->obj = obj;
       closure->function = NULL;
       vm->poor_mans_gc = (Object*)closure;
+      return vm->poor_mans_gc;
+    }
+    case OtUpvalue: {
+      LambUpvalue* upvalue = malloc(sizeof(LambUpvalue));
+      Object obj = { .type = type, .next = vm->poor_mans_gc, };
+      upvalue->obj = obj;
+      upvalue->next = NULL;
+      upvalue->location = NULL;
+      vm->poor_mans_gc = (Object*)upvalue;
       return vm->poor_mans_gc;
     }
   }
@@ -85,7 +96,13 @@ void object_free(Object* obj) {
       break;
     }
     case OtClosure: {
-      FREE(LambClosure, obj);
+      LambClosure* closure = (LambClosure*)obj;
+      FREE_ARRAY(LambUpvalue*, closure->upvalues, closure->upvalue_count);
+      FREE(LambClosure, closure);
+      break;
+    }
+    case OtUpvalue: {
+      FREE(LambUpvalue, obj);
       break;
     }
   }
@@ -139,6 +156,18 @@ LambString* concat(Vm* vm, LambString* lhs, LambString* rhs) {
 LambClosure* to_closure(Vm* vm, LambFunc* func) {
   LambClosure* closure = (LambClosure*)alloc_obj(vm, OtClosure);
   closure->function = func;
+  closure->upvalue_count = func->upvalue_count;
+  closure->upvalues = malloc(sizeof(LambUpvalue*) * closure->upvalue_count);
+  for (int i = 0; i < closure->upvalue_count; i++) {
+    closure->upvalues[i] = NULL;
+  }
 
   return closure;
+}
+
+LambUpvalue* to_upvalue(Vm* vm, Value* slot) {
+  LambUpvalue* upvalue = (LambUpvalue*)alloc_obj(vm, OtUpvalue);
+  upvalue->location = slot;
+  upvalue->closed = new_nil();
+  return upvalue;
 }

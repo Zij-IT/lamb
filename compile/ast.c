@@ -8,6 +8,31 @@
 #include "object.h"
 
 #define LOCAL_NOT_FOUND -1
+#define UPVALUE_NOT_FOUND -1
+
+static i32 add_upvalue(Compiler* compiler, i32 index, bool is_local) {
+  int count = compiler->function->upvalue_count;
+  
+  if (index > 255) {
+    // TODO: Figure out how to get a dynamic amount of upvalues
+    printf("COMPILER_ERR: Too many upvalues. Max 255...");
+    exit(1);
+  }
+  
+  for (i32 i = 0; i < count; i++) {
+    Upvalue* upvalue = &compiler->upvalues[i];
+    if (upvalue->index == index && upvalue->is_local == is_local) {
+      return i;
+    }
+  }
+  
+  compiler->upvalues[count].is_local = is_local;
+  compiler->upvalues[count].index = index;
+  
+  printf("ADDING_UPVALUE: Index(%d), is_local(%d)\n", index, is_local);
+  
+  return compiler->function->upvalue_count++;
+}
 
 static i32 resolve_local(Compiler* compiler, LambString* name) {
   for (i32 i = compiler->locals.len - 1; i >= 0; i--) {
@@ -18,6 +43,25 @@ static i32 resolve_local(Compiler* compiler, LambString* name) {
   }
   
   return LOCAL_NOT_FOUND;
+}
+
+static i32 resolve_upvalue(Compiler* compiler, LambString* name) {
+  if (compiler->enclosing == NULL) {
+    return UPVALUE_NOT_FOUND;
+  }
+  
+  i32 local = resolve_local(compiler->enclosing, name);
+  if (local != LOCAL_NOT_FOUND) {
+    compiler->enclosing->locals.values[local].is_captured = true;
+    return add_upvalue(compiler, local, true);
+  }
+  
+  i32 upvalue = resolve_upvalue(compiler->enclosing, name);
+  if (upvalue != UPVALUE_NOT_FOUND) {
+    return add_upvalue(compiler, upvalue, false);
+  }
+  
+  return UPVALUE_NOT_FOUND;
 }
 
 #define BUBBLE(x) \
@@ -40,6 +84,9 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
   {
       Compiler func_comp;
       compiler_init(&func_comp, FtNormal);
+      compiler_new_scope(&func_comp);
+      func_comp.function = (LambFunc*)alloc_obj(vm, OtFunc);
+      func_comp.function->name = interned->chars;
       func_comp.enclosing = compiler;
    
       // Normally this slot is left blank so that the user cannot refer to it
@@ -47,10 +94,6 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       // thus the item looking to be called in a recursive context.
       func_comp.locals.values[0].name = interned->chars;
 
-      compiler_new_scope(&func_comp);
-      func_comp.function = (LambFunc*)alloc_obj(vm, OtFunc);
-      func_comp.function->name = interned->chars;
-      
       // Add parameters to locals
       for (AstNode* child = params; child != NULL; child = child->kids[1]) {
         AstNode* ident_node = child->kids[0];
@@ -61,7 +104,7 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
           // Somehow output a compiler error to let them know.
         }
 
-        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars };
+        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars, .is_captured = false };
         local_arr_write(&func_comp.locals, loc);
 
         func_comp.function->arity++;
@@ -80,8 +123,12 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
       chunk_debug(&func_comp.function->chunk, "Rec Function Chunk");
       
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
-      LambClosure* closure = to_closure(vm, func_comp.function);
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)closure));
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+      chunk_write(compiler_chunk(compiler), OpClosure);
+      for(i32 i = 0; i < func_comp.function->upvalue_count; i++) {
+        chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].is_local ? 1 : 0);
+        chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);
+      }
       compiler_free(&func_comp);       
   }
   
@@ -89,7 +136,7 @@ static CompileAstResult compile_rec_func_def(Vm* vm, Compiler* compiler, AstNode
     chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
     chunk_write(compiler_chunk(compiler), OpDefineGlobal);
   } else {
-    Local loc = { .depth = compiler->scope_depth, .name = interned->chars };
+    Local loc = { .depth = compiler->scope_depth, .name = interned->chars, .is_captured = false };
     local_arr_write(&compiler->locals, loc);
     
     chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
@@ -110,12 +157,19 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       LambString* interned = cstr_to_lambstring(vm, node->val.i);
       
       i32 local_slot = resolve_local(compiler, interned); 
-      if (local_slot == LOCAL_NOT_FOUND) {
-        chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
-        chunk_write(compiler_chunk(compiler), OpGetGlobal);
-      } else {
+      if (local_slot != LOCAL_NOT_FOUND) {
         chunk_write_constant(compiler_chunk(compiler), new_int(local_slot));
         chunk_write(compiler_chunk(compiler), OpGetLocal);
+      }  else {
+        
+        i32 upvalue_slot = resolve_upvalue(compiler, interned);
+        if (upvalue_slot == UPVALUE_NOT_FOUND) {
+          chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
+          chunk_write(compiler_chunk(compiler), OpGetGlobal);
+        } else {
+          chunk_write_constant(compiler_chunk(compiler), new_int(upvalue_slot));
+          chunk_write(compiler_chunk(compiler), OpGetUpvalue);
+        }
       }
       
       break;
@@ -366,7 +420,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
         chunk_write_constant(compiler_chunk(compiler), new_object((Object*)interned));
         chunk_write(compiler_chunk(compiler), OpDefineGlobal);
       } else {
-        Local loc = { .depth = compiler->scope_depth, .name = interned->chars };
+        Local loc = { .depth = compiler->scope_depth, .name = interned->chars, .is_captured = false };
         local_arr_write(&compiler->locals, loc);
         
         chunk_write_constant(compiler_chunk(compiler), new_int(compiler->locals.len - 1));
@@ -481,7 +535,7 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
           // Somehow output a compiler error to let them know.
         }
 
-        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars };
+        Local loc = { .depth = func_comp.scope_depth, .name = interned->chars, .is_captured = false };
         local_arr_write(&func_comp.locals, loc);
 
         func_comp.function->arity++;
@@ -500,8 +554,12 @@ CompileAstResult compile(Vm* vm, Compiler* compiler, AstNode* node) {
       chunk_debug(&func_comp.function->chunk, "Function Chunk");
 
       // TODO: Figure out how to have function and closure objects so that this wrap isn't necessary
-      LambClosure* closure = to_closure(vm, func_comp.function);
-      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)closure));
+      chunk_write_constant(compiler_chunk(compiler), new_object((Object*)func_comp.function));
+      chunk_write(compiler_chunk(compiler), OpClosure);
+      for(i32 i = 0; i < func_comp.function->upvalue_count; i++) {
+        chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].is_local ? 1 : 0);
+        chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);
+      }
       compiler_free(&func_comp);
       
       // Although it logically makes sense to call this, it isn't really necessary.

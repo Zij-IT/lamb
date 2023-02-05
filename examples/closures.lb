@@ -2,10 +2,10 @@ x := "global";
 
 outer := fn() -> {
 	x := "outer";
-	(fn() -> print(x))(); 
+	(fn()->print(x))();
 };
 
-print("This should output 'outer': ");
+print("This should output 'outer':: ");
 outer();
 println();
 

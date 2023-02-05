@@ -7,10 +7,45 @@
 #include "debug.h"
 #include "native.h"
 
+static LambUpvalue* capture_upvalue(Vm* vm, Value* local) {
+  LambUpvalue* prev_upvalue = NULL;
+  LambUpvalue* curr_upvalue = vm->open_upvalues;
+  
+  while(curr_upvalue != NULL && curr_upvalue->location > local) {
+    prev_upvalue = curr_upvalue;
+    curr_upvalue = curr_upvalue->next;
+  }
+  
+  if (curr_upvalue != NULL && curr_upvalue->location == local) {
+    return curr_upvalue;
+  }
+  
+  LambUpvalue* created_upvalue = to_upvalue(vm, local);
+  created_upvalue->next = curr_upvalue;
+  
+  if (prev_upvalue == NULL) {
+    vm->open_upvalues = created_upvalue;
+  } else {
+    prev_upvalue->next = created_upvalue;
+  }
+
+  return created_upvalue;
+}
+
+static void close_upvalues(Vm* vm, Value* last) {
+  while(vm->open_upvalues != NULL && vm->open_upvalues->location >= last) {
+    LambUpvalue* upvalue = vm->open_upvalues;
+    upvalue->closed = *upvalue->location;
+    upvalue->location = &upvalue->closed;
+    vm->open_upvalues = upvalue->next;
+  }
+}
+
 void vm_init(Vm* vm) {
   vm->frame_count = 0;
   vm->stack_top = vm->stack;
   vm->poor_mans_gc = NULL;
+  vm->open_upvalues = NULL;
 
   table_init(&vm->strings);
   table_init(&vm->globals);
@@ -166,6 +201,11 @@ InterpretResult vm_run(Vm* vm) {
         vm_push_stack(vm, vm_frame(vm)->slots[slot]);
         break; 
       }
+      case OpGetUpvalue: {
+        i32 slot = vm_pop_stack(vm).as.intn;
+        vm_push_stack(vm, *vm_frame(vm)->closure->upvalues[slot]->location);
+        break;
+      }
       case OpJumpIfFalse: {
         u16 offset = vm_read_short(vm);
         if (!is_bool(*vm_peek_stack(vm))) {
@@ -272,6 +312,7 @@ InterpretResult vm_run(Vm* vm) {
       case OpLe:     BINARY_REL_OP(vm, <=); break;
       case OpReturn: {
         Value ret = vm_pop_stack(vm);
+        close_upvalues(vm, vm_frame(vm)->slots);
         vm->stack_top = vm_frame(vm)->slots;
         vm->frame_count--;
         if (vm->frame_count == 0) {
@@ -397,7 +438,24 @@ InterpretResult vm_run(Vm* vm) {
         LambFunc* function = (LambFunc*)vm_pop_stack(vm).as.obj;
         LambClosure* closure = to_closure(vm, function);
         vm_push_stack(vm, new_object((Object*)closure));
+
+        for (i32 i = 0; i < closure->upvalue_count; i++) {
+          u8 index = vm_read_byte(vm);
+          bool is_local = vm_read_byte(vm);
+          
+          if (is_local) {
+            closure->upvalues[i] = capture_upvalue(vm, vm_frame(vm)->slots + index);
+          } else {
+            closure->upvalues[i] = vm_frame(vm)->closure->upvalues[index];
+          }
+        }
+        
         break; 
+      }
+      case OpCloseValue: {
+        close_upvalues(vm, vm->stack_top - 1);
+        vm_pop_stack(vm);
+        break;
       }
       case OpDup: {
         Value* ret = vm_peek_stack(vm);

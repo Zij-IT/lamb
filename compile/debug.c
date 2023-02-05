@@ -77,7 +77,9 @@ static i32 print_op(Chunk* chunk, i32 offset) {
     case OpPop: return print_simple_op("OpPop");
     case OpDup: return print_simple_op("OpDup");
     case OpCall: return print_simple_op("OpCall");
-    case OpClosure: return print_simple_op("OpClosure");
+    case OpClosure: return print_simple_op("OpClosure"), 4;
+    case OpCloseValue: return print_simple_op("OpCloseValue");
+    case OpGetUpvalue: return print_simple_op("OpGetUpvalue");
     default:
       fprintf(stderr, "Unknown OpCode (%d) in switch in %s at %d", chunk->bytes[offset], __FILE__, __LINE__);
       return 1;
@@ -150,6 +152,10 @@ void print_object(Object* obj) {
     case OtClosure: {
       printf("<closure fn>");
       break; 
+    }
+    case OtUpvalue: {
+      printf("<upvalue>");
+      break;
     }
   }
 }

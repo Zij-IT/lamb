@@ -74,6 +74,7 @@ void print_kind(Value val) {
         case OtFunc:   printf("fn"); break;
         case OtNative: printf("native fn"); break;
         case OtClosure: printf("closure fn"); break;
+        case OtUpvalue: printf("upvalue"); break;
       }
       break;
     }

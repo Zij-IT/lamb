@@ -11,7 +11,7 @@ void compiler_init(Compiler* compiler, FuncType type) {
   compiler->type = type;
   local_arr_init(&compiler->locals);
   
-  Local loc = { .name = "", .depth = 0 };
+  Local loc = { .name = "", .depth = 0, .is_captured = false };
   local_arr_write(&compiler->locals, loc);
 }
 
@@ -28,7 +28,11 @@ void compiler_end_scope(Compiler* compiler) {
   compiler->scope_depth--;
   
   while(compiler->locals.len > 0 && compiler->locals.values[compiler->locals.len - 1].depth > compiler->scope_depth) {
-    chunk_write(&compiler->function->chunk, OpPop);
+    if (compiler->locals.values[compiler->locals.len - 1].is_captured) {
+      chunk_write(&compiler->function->chunk, OpCloseValue);
+    } else {
+      chunk_write(&compiler->function->chunk, OpPop);
+    }
     compiler->locals.len--;
   }
 }

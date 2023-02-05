@@ -6,6 +6,7 @@
 typedef struct {
   str name;
   i32 depth;
+  bool is_captured;
 } Local;
 
 typedef struct {
@@ -14,10 +15,16 @@ typedef struct {
   Local* values;
 } LocalArray;
 
+typedef struct {
+  u8 index;
+  bool is_local;
+} Upvalue;
+
 typedef struct Compiler {
   LocalArray locals;
 
   LambFunc* function;
+  Upvalue upvalues[UINT8_MAX];
   
   struct Compiler* enclosing;
   
