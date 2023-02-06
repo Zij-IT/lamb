@@ -59,10 +59,23 @@ static Value lamb_rand(i32 arg_count, Value *args) {
   return new_int(rand());
 }
 
+static Value lamb_len(i32 arg_count, Value *args) {
+  if (arg_count == 1 && args->kind == VkObj) {
+    switch (args->as.obj->type) {
+      case OtArray:  return new_int(((LambArray*)args->as.obj)->items.len);
+      case OtString: return new_int(((LambString*)args->as.obj)->len);
+      default: return new_nil();
+    }
+  }
+
+  return new_nil();
+}
+
 void set_natives(Vm *vm) {
   define_native(vm, "print", lamb_print);
   define_native(vm, "println", lamb_println);
   define_native(vm, "user_int", lamb_user_int);
   define_native(vm, "user_char", lamb_user_char);
   define_native(vm, "rand", lamb_rand);
+  define_native(vm, "len", lamb_len);
 }
