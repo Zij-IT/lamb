@@ -11,7 +11,7 @@
 Object *alloc_obj(Vm *vm, ObjectType type) {
   switch (type) {
   case OtString: {
-    LambString *st = malloc(sizeof(LambString));
+    LambString *st = ALLOCATE(LambString, 1);
     Object obj = {
         .type = type,
         .next = vm->poor_mans_gc,
@@ -24,7 +24,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtArray: {
-    LambArray *arr = malloc(sizeof(LambArray));
+    LambArray *arr = ALLOCATE(LambArray, 1);
     Object obj = {
         .type = type,
         .next = vm->poor_mans_gc,
@@ -37,7 +37,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtFunc: {
-    LambFunc *func = malloc(sizeof(LambFunc));
+    LambFunc *func = ALLOCATE(LambFunc, 1);
     Object obj = {
         .type = type,
         .next = vm->poor_mans_gc,
@@ -51,7 +51,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtNative: {
-    NativeFunc *func = malloc(sizeof(NativeFunc));
+    NativeFunc *func = ALLOCATE(NativeFunc, 1);
     Object obj = {
         .type = type,
         .next = vm->poor_mans_gc,
@@ -62,7 +62,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtClosure: {
-    LambClosure *closure = malloc(sizeof(LambClosure));
+    LambClosure *closure = ALLOCATE(LambClosure, 1);
     Object obj = {
         .type = type,
         .next = vm->poor_mans_gc,
@@ -73,7 +73,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtUpvalue: {
-    LambUpvalue *upvalue = malloc(sizeof(LambUpvalue));
+    LambUpvalue *upvalue = ALLOCATE(LambUpvalue, 1);
     Object obj = {
         .type = type,
         .next = vm->poor_mans_gc,
@@ -147,7 +147,7 @@ LambString *cstr_to_lambstring(Vm *vm, str cstr) {
 LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
   i32 len = lhs->len + rhs->len;
 
-  string chars = malloc(sizeof(char) * len + 1);
+  string chars = ALLOCATE(char, len + 1);
   strcpy(chars, lhs->chars);
   strcpy(chars + lhs->len, rhs->chars);
   chars[len] = '\0';
@@ -173,7 +173,7 @@ LambClosure *to_closure(Vm *vm, LambFunc *func) {
   LambClosure *closure = (LambClosure *)alloc_obj(vm, OtClosure);
   closure->function = func;
   closure->upvalue_count = func->upvalue_count;
-  closure->upvalues = malloc(sizeof(LambUpvalue *) * closure->upvalue_count);
+  closure->upvalues = ALLOCATE(LambUpvalue *, closure->upvalue_count);
   for (int i = 0; i < closure->upvalue_count; i++) {
     closure->upvalues[i] = NULL;
   }
