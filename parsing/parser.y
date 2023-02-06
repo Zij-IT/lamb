@@ -186,6 +186,7 @@ CASE_ARMS: PATTERN TokenArrow CASE_VAL CASE_ARMS { $$ = new_astnode(AstntCaseArm
 		 |										 { $$ = NULL; 		  																     }
 		
 PATTERN: LITERAL { $$ = $1; }
+	   | ID		 { $$ = $1; }
 
 CASE_VAL: EXPR TokenComma { $$ = $1; }
 		| BLOCK			  { $$ = $1; }
@@ -216,7 +217,8 @@ LITERAL: TokenNum   { $$ = new_astnode(AstntNumLit);  $$->val.n = $1;    }
 
 GROUPED: TokenLParen EXPR TokenRParen { $$ = $2; }
 
-ARRAY: TokenLBrack EXPR_LIST TokenRBrack { $$ = new_astnode(AstntArray); $$->kids[0] = $2; }
+ARRAY: TokenLBrack EXPR_LIST TokenRBrack { $$ = new_astnode(AstntArray); $$->kids[0] = $2;   }
+	 | TokenLBrack TokenRBrack 			 { $$ = new_astnode(AstntArray); $$->kids[0] = NULL; }
 
 EXPR_LIST: EXPR TokenComma EXPR_LIST { $$ = new_astnode(AstntNodeList); $$->kids[0] = $1; $$->kids[1] = $3;   }
 	  	 | EXPR	TokenComma			 { $$ = new_astnode(AstntNodeList); $$->kids[0] = $1; $$->kids[1] = NULL; }

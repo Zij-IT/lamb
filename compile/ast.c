@@ -480,6 +480,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     AstNode *prev = NULL;
     AstNode *curr = node->kids[0];
     if (curr == NULL) {
+      chunk_write_constant(compiler_chunk(compiler), new_int(0));
       chunk_write(compiler_chunk(compiler), OpMakeArray);
       return CarOk;
     }
