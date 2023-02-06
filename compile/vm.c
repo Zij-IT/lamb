@@ -384,15 +384,29 @@ InterpretResult vm_run(Vm *vm) {
       Value idx = vm_pop_stack(vm);
       Value arr_val = vm_pop_stack(vm);
 
-      if (!is_object(arr_val) && !is_of_type(arr_val.as.obj, OtArray)) {
-        printf("RuntimeError: Attempt to index into item of type ");
+      if (!is_integer(idx)) {
+        printf("RuntimeError: Unable to index into an array with a value of "
+               "type ");
         print_kind(arr_val);
         printf("\n");
         return InterpretRuntimeError;
       }
 
-      LambArray *arr = (LambArray *)arr_val.as.obj;
-      if (is_integer(idx)) {
+      switch (arr_val.as.obj->type) {
+      case OtString: {
+        LambString *st = (LambString *)arr_val.as.obj;
+        if (idx.as.intn < st->len) {
+          vm_push_stack(vm, new_char(st->chars[idx.as.intn]));
+        } else {
+          printf("RuntimeError: Index out of bounds. Desired index: (%ld), Max "
+                 "index: (%d)\n",
+                 idx.as.intn, st->len);
+          return InterpretRuntimeError;
+        }
+        break;
+      }
+      case OtArray: {
+        LambArray *arr = (LambArray *)arr_val.as.obj;
         if (idx.as.intn < arr->items.len) {
           vm_push_stack(vm, arr->items.values[idx.as.intn]);
         } else {
@@ -401,9 +415,13 @@ InterpretResult vm_run(Vm *vm) {
                  idx.as.intn, arr->items.len);
           return InterpretRuntimeError;
         }
-      } else {
-        printf("RuntimeError: Unable to index into an array with a value of "
-               "type ");
+        break;
+      }
+      case OtFunc:
+      case OtNative:
+      case OtClosure:
+      case OtUpvalue:
+        printf("RuntimeError: Attempt to index into item of type ");
         print_kind(arr_val);
         printf("\n");
         return InterpretRuntimeError;
