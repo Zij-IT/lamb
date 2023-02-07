@@ -1,0 +1,66 @@
+assert := fn(is, should) -> {
+	print("Should print ");
+	print(should);
+	print(": ");
+	println(is);
+};
+
+-- Eq
+assert(true, 1 = 1);
+assert(false, 1 = 0);
+
+assert(true, "hello" = "hello");
+assert(false, "hello" = "world");
+
+assert(true, [1,2,3] = [1,2,3]);
+assert(false, [1,2,3] = [1,2]);
+
+-- Ne
+assert(true, 1 != 0);
+assert(false, 1 != 1);
+
+assert(true, "hello" != "world");
+assert(false, "hello" != "hello");
+
+assert(true, [1,2,3] != [1,2]);
+assert(false, [1,2,3] != [1,2,3]);
+
+-- < <= > >= are special cased in the VM for arrays to
+-- check all array indices
+
+-- Lt
+assert(true, 0 < 1);
+assert(false, 1 < 0);
+
+assert(true, [1,2,3] < [1,2,3,4]);
+assert(true, [0,2,3] < [1,2,3]);
+assert(false, [1,2,3] < [1,2]);
+
+-- Gt
+assert(true, 1 > 0);
+assert(false, 0 > 1);
+
+assert(true, [1,2,3,4] > [1,2,3]);
+assert(true, [1,2,4] > [1,2,3]);
+assert(false, [1,2] > [1,2,3]);
+
+-- Ge
+assert(true, 1 >= 0);
+assert(false, 0 >= 1);
+
+assert(true, [1,2,3] != [1,2]);
+assert(false, [1,2,3] != [1,2,3]);
+
+assert(true, [1,2,3,4] >= [1,2,3]);
+assert(true, [1,2,3] >= [1,2]);
+assert(true, [1,2,3] >= [1,2,3]);
+assert(false, [0,2,3] >= [1,2,3]);
+
+-- Le
+assert(true, 0 <= 1);
+assert(false, 1 <= 0);
+
+assert(true, [1,2,3] <= [1,2,3]);
+assert(true, [0,2,3] <= [1,2,3]);
+assert(true, [1,2] <= [1,2,3]);
+assert(false, [1,2,3,4] <= [1,2,3]);

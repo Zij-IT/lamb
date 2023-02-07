@@ -98,43 +98,6 @@ Value vm_pop_stack(Vm *vm) {
   return *vm->stack_top;
 }
 
-#define BINARY_REL_OP(vm, op)                                                  \
-  do {                                                                         \
-    Value rhs = vm_pop_stack(vm);                                              \
-    Value *lhs = vm_peek_stack(vm);                                            \
-                                                                               \
-    if (rhs.kind == lhs->kind) {                                               \
-      bool rel;                                                                \
-      switch (rhs.kind) {                                                      \
-      case VkBool:                                                             \
-        rel = lhs->as.boolean op rhs.as.boolean;                               \
-        break;                                                                 \
-      case VkInt:                                                              \
-        rel = lhs->as.intn op rhs.as.intn;                                     \
-        break;                                                                 \
-      case VkDouble:                                                           \
-        rel = lhs->as.doubn op rhs.as.doubn;                                   \
-        break;                                                                 \
-      case VkChar:                                                             \
-        rel = lhs->as.ch op rhs.as.ch;                                         \
-        break;                                                                 \
-      case VkObj:                                                              \
-        rel = lhs->as.obj op rhs.as.obj;                                       \
-        break;                                                                 \
-      case VkNil:                                                              \
-        rel = true;                                                            \
-        break;                                                                 \
-      }                                                                        \
-                                                                               \
-      lhs->kind = VkBool;                                                      \
-      lhs->as.boolean = rel;                                                   \
-    } else {                                                                   \
-      printf("RuntimeError: Operands for binary operator " #op                 \
-             " must be of the same type\n");                                   \
-      return InterpretRuntimeError;                                            \
-    }                                                                          \
-  } while (0)
-
 #define BINARY_INT_DOUBLE_OP(vm, op)                                           \
   do {                                                                         \
     Value rhs = vm_pop_stack(vm);                                              \
@@ -348,24 +311,86 @@ InterpretResult vm_run(Vm *vm) {
     case OpRShift:
       BINARY_INT_OP(vm, >>);
       break;
-    case OpEq:
-      BINARY_REL_OP(vm, ==);
-      break;
-    case OpNe:
-      BINARY_REL_OP(vm, !=);
-      break;
-    case OpGt:
-      BINARY_REL_OP(vm, >);
-      break;
-    case OpGe:
-      BINARY_REL_OP(vm, >=);
-      break;
-    case OpLt:
-      BINARY_REL_OP(vm, <);
-      break;
-    case OpLe:
-      BINARY_REL_OP(vm, <=);
-      break;
+    case OpEq: {
+      Value rhs = vm_pop_stack(vm);
+      Value lhs = vm_pop_stack(vm);
+      if (rhs.kind == lhs.kind) {
+        vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderEqual));
+        break;
+      } else {
+        printf("RuntimeError: Operands for binary operator "
+               "=="
+               " must be of the same type\n");
+        return InterpretRuntimeError;
+      }
+    }
+    case OpNe: {
+      Value rhs = vm_pop_stack(vm);
+      Value lhs = vm_pop_stack(vm);
+      if (rhs.kind == lhs.kind) {
+        vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderEqual));
+        break;
+      } else {
+        printf("RuntimeError: Operands for binary operator "
+               "!="
+               " must be of the same type\n");
+        return InterpretRuntimeError;
+      }
+    }
+    case OpGt: {
+      Value rhs = vm_pop_stack(vm);
+      Value lhs = vm_pop_stack(vm);
+      if (rhs.kind == lhs.kind) {
+        vm_push_stack(vm,
+                      new_boolean(value_compare(&lhs, &rhs) == OrderGreater));
+        break;
+      } else {
+        printf("RuntimeError: Operands for binary operator "
+               ">"
+               " must be of the same type\n");
+        return InterpretRuntimeError;
+      }
+    }
+    case OpGe: {
+      Value rhs = vm_pop_stack(vm);
+      Value lhs = vm_pop_stack(vm);
+      if (rhs.kind == lhs.kind) {
+        vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderLess));
+        break;
+      } else {
+        printf("RuntimeError: Operands for binary operator "
+               ">="
+               " must be of the same type\n");
+        return InterpretRuntimeError;
+      }
+    }
+    case OpLt: {
+      Value rhs = vm_pop_stack(vm);
+      Value lhs = vm_pop_stack(vm);
+      if (rhs.kind == lhs.kind) {
+        vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderLess));
+        break;
+      } else {
+        printf("RuntimeError: Operands for binary operator "
+               "<"
+               " must be of the same type\n");
+        return InterpretRuntimeError;
+      }
+    }
+    case OpLe: {
+      Value rhs = vm_pop_stack(vm);
+      Value lhs = vm_pop_stack(vm);
+      if (rhs.kind == lhs.kind) {
+        vm_push_stack(vm,
+                      new_boolean(value_compare(&lhs, &rhs) != OrderGreater));
+        break;
+      } else {
+        printf("RuntimeError: Operands for binary operator "
+               "<="
+               " must be of the same type\n");
+        return InterpretRuntimeError;
+      }
+    } break;
     case OpMakeArray: {
       i32 len = vm_pop_stack(vm).as.intn;
       ValueArray items;
@@ -543,4 +568,3 @@ void vm_free(Vm *vm) {
 
 #undef BINARY_INT_DOUBLE_OP
 #undef BINARY_INT_OP
-#undef BINARY_REL_OP
