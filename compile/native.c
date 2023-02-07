@@ -62,9 +62,12 @@ static Value lamb_rand(i32 arg_count, Value *args) {
 static Value lamb_len(i32 arg_count, Value *args) {
   if (arg_count == 1 && args->kind == VkObj) {
     switch (args->as.obj->type) {
-      case OtArray:  return new_int(((LambArray*)args->as.obj)->items.len);
-      case OtString: return new_int(((LambString*)args->as.obj)->len);
-      default: return new_nil();
+    case OtArray:
+      return new_int(((LambArray *)args->as.obj)->items.len);
+    case OtString:
+      return new_int(((LambString *)args->as.obj)->len);
+    default:
+      return new_nil();
     }
   }
 

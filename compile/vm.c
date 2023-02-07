@@ -398,9 +398,10 @@ InterpretResult vm_run(Vm *vm) {
         if (idx.as.intn < st->len) {
           vm_push_stack(vm, new_char(st->chars[idx.as.intn]));
         } else {
-          printf("RuntimeError: Index out of bounds. Desired index: (%ld), Max "
-                 "index: (%d)\n",
-                 idx.as.intn, st->len);
+          printf(
+              "RuntimeError: Index out of bounds. Desired index: (%ld), String "
+              "length: (%d)\n",
+              idx.as.intn, st->len);
           return InterpretRuntimeError;
         }
         break;
@@ -410,9 +411,10 @@ InterpretResult vm_run(Vm *vm) {
         if (idx.as.intn < arr->items.len) {
           vm_push_stack(vm, arr->items.values[idx.as.intn]);
         } else {
-          printf("RuntimeError: Index out of bounds. Desired index: (%ld), Max "
-                 "index: (%d)\n",
-                 idx.as.intn, arr->items.len);
+          printf(
+              "RuntimeError: Index out of bounds. Desired index: (%ld), Array "
+              "length: (%d)\n",
+              idx.as.intn, arr->items.len);
           return InterpretRuntimeError;
         }
         break;
