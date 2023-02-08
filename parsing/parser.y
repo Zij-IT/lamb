@@ -166,12 +166,12 @@ FUNC_CALL: EXPR TokenLParen EXPR_LIST TokenRParen { $$ = new_astnode(AstntFuncCa
 		
 INDEX: EXPR TokenLBrack EXPR TokenRBrack { $$ = new_astnode(AstntArrayIndex); $$->kids[0] = $1; $$->kids[1] = $3; }
 
-IF_EXPR: TokenIf EXPR BLOCK ELIFS ELSE { $$ = new_astnode(AstntIf); $$->kids[0] = $2; $$->kids[1] = $3; $$->kids[2] = $4; $$->kids[3] = $5; }
+IF_EXPR: TokenIf EXPR BLOCK ELIFS { $$ = new_astnode(AstntIf); $$->kids[0] = $2; $$->kids[1] = $3; $$->kids[2] = $4; }
 
-ELIFS: TokenElif EXPR BLOCK ELIFS { $$ = new_astnode(AstntElif); $$->kids[0] = $2; $$->kids[1] = $3; $$->kids[2] = $4; }
-	 |							  { $$ = NULL; }
+ELIFS: TokenElif EXPR BLOCK ELIFS { $$ = new_astnode(AstntIf); $$->kids[0] = $2; $$->kids[1] = $3; $$->kids[2] = $4; }
+	 | ELSE
 
-ELSE: TokenElse BLOCK			  { $$ = new_astnode(AstntElse); $$->kids[0] = $2; }
+ELSE: TokenElse BLOCK			  { $$ = $2; }
 	|							  { $$ = NULL; }
 	
 BLOCK_STMTS: STMT BLOCK_STMTS	{ $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1] = $2; }

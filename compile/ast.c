@@ -323,9 +323,13 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     break;
   }
   case AstntIf: {
-    i32 *elif_jumps = malloc(sizeof(i32));
-    i32 jump_lengths = 1;
-
+    // During parsing the following transformation happens:
+    //
+    // if x {} elif y {} elif z {} else {}
+    //
+    // if x {} else { if y { } else { if z { } else { }}}
+    //
+    // All nodes in this chain know where the else ends, and can thus jump past it
     BUBBLE(compile(vm, compiler, node->kids[0]));
     i32 if_false_jump =
         chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
@@ -333,38 +337,18 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     chunk_write(compiler_chunk(compiler), OpPop);
     BUBBLE(compile(vm, compiler, node->kids[1]));
     i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
-    elif_jumps[0] = past_else;
 
     chunk_patch_jump(compiler_chunk(compiler), if_false_jump);
     chunk_write(compiler_chunk(compiler), OpPop);
 
-    for (AstNode *elif = node->kids[2]; elif != NULL; elif = elif->kids[2]) {
-      BUBBLE(compile(vm, compiler, elif->kids[0]));
-      i32 if_false_jump =
-          chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
-
-      chunk_write(compiler_chunk(compiler), OpPop);
-      BUBBLE(compile(vm, compiler, elif->kids[1]));
-      i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
-
-      elif_jumps = realloc(elif_jumps, sizeof(i32) * (++jump_lengths));
-      elif_jumps[jump_lengths - 1] = past_else;
-
-      chunk_patch_jump(compiler_chunk(compiler), if_false_jump);
-      chunk_write(compiler_chunk(compiler), OpPop);
-    }
-
-    if (node->kids[3] != NULL) {
-      BUBBLE(compile(vm, compiler, node->kids[3]->kids[0]));
+    if (node->kids[2] != NULL) {
+      BUBBLE(compile(vm, compiler, node->kids[2]));
     } else {
       chunk_write_constant(compiler_chunk(compiler), new_nil());
     }
 
-    for (i32 i = 0; i < jump_lengths; i++) {
-      chunk_patch_jump(compiler_chunk(compiler), elif_jumps[i]);
-    }
+    chunk_patch_jump(compiler_chunk(compiler), past_else);
 
-    free(elif_jumps);
     break;
   }
   case AstntCase: {
