@@ -353,39 +353,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
   }
   case AstntCase: {
     BUBBLE(compile(vm, compiler, node->kids[0]));
-
-    i32 *out_of_case = malloc(0);
-    i32 jump_lengths = 0;
-
-    for (AstNode *arm = node->kids[1]; arm != NULL; arm = arm->kids[2]) {
-      chunk_write(compiler_chunk(compiler), OpDup);
-      BUBBLE(compile(vm, compiler, arm->kids[0]));
-      chunk_write(compiler_chunk(compiler), OpEq);
-      i32 if_neq = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
-
-      // Pop off the result and pop of the comparison value
-      chunk_write(compiler_chunk(compiler), OpPop);
-      chunk_write(compiler_chunk(compiler), OpPop);
-      BUBBLE(compile(vm, compiler, arm->kids[1]));
-      i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
-
-      out_of_case = realloc(out_of_case, sizeof(i32) * (++jump_lengths));
-      out_of_case[jump_lengths - 1] = past_else;
-
-      chunk_patch_jump(compiler_chunk(compiler), if_neq);
-      chunk_write(compiler_chunk(compiler), OpPop);
-    }
-
-    // This is in the event that none of the arms are done
-    // Pop off the comparison value and put nil on the stack
-    chunk_write(compiler_chunk(compiler), OpPop);
-    chunk_write_constant(compiler_chunk(compiler), new_nil());
-
-    for (i32 i = 0; i < jump_lengths; i++) {
-      chunk_patch_jump(compiler_chunk(compiler), out_of_case[i]);
-    }
-
-    free(out_of_case);
+    BUBBLE(compile(vm, compiler, node->kids[1]));
     break;
   }
   case AstntExprStmt: {
@@ -445,8 +413,32 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     break;
   }
   case AstntCaseArm: {
-    fprintf(stderr,
-            "Attempting to compile a lone 'CaseArm' node. You done messed up.");
+    AstNode* value = node->kids[0];
+    AstNode* branch = node->kids[1];
+    AstNode* next_arm = node->kids[2];
+
+    chunk_write(compiler_chunk(compiler), OpDup);
+    BUBBLE(compile(vm, compiler, value));
+    chunk_write(compiler_chunk(compiler), OpEq);
+
+    i32 if_neq = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
+
+    chunk_write(compiler_chunk(compiler), OpPop);
+    chunk_write(compiler_chunk(compiler), OpPop);
+    BUBBLE(compile(vm, compiler, branch));
+    i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
+      
+    chunk_patch_jump(compiler_chunk(compiler), if_neq);
+    chunk_write(compiler_chunk(compiler), OpPop);
+    
+    if (next_arm != NULL) {
+      BUBBLE(compile(vm, compiler, next_arm));
+    } else {
+      chunk_write(compiler_chunk(compiler), OpPop);
+      chunk_write_constant(compiler_chunk(compiler), new_nil());
+    }
+
+    chunk_patch_jump(compiler_chunk(compiler), past_else);
     break;
   }
   case AstntArray: {
