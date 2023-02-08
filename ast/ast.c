@@ -287,17 +287,32 @@ void print_ast(AstNode *root, u16 spaces) {
     pre_pad(spaces + BASE_PADDING, "block: ");
     print_block(root->kids[1], spaces + BASE_PADDING + 7);
     printf(",\n");
-
-    if (root->kids[2] != NULL) {
-      print_ast(root->kids[2], spaces + BASE_PADDING);
-    }
-
-    if (root->kids[3] != NULL) {
-      print_ast(root->kids[3], spaces + BASE_PADDING);
-      printf(",\n");
-    }
-
     pre_pad(spaces, "}");
+      
+    AstNode* next = root->kids[2];  
+    while (next != NULL && next->type == AstntIf) {
+      printf(",\n");
+      pre_pad(spaces, "Elif: {\n");
+      pre_pad(spaces + BASE_PADDING, "cond: ");
+      print_ast(next->kids[0], spaces + BASE_PADDING + 6);
+      printf(",\n");
+      pre_pad(spaces + BASE_PADDING, "block: ");
+      print_block(next->kids[1], spaces + BASE_PADDING + 7);
+      printf(",\n");
+      pre_pad(spaces, "}");
+        
+      next = next->kids[2];
+    }
+    
+    if (next != NULL) {
+      printf(",\n");
+      pre_pad(spaces, "Else: {\n");
+      pre_pad(spaces + BASE_PADDING, "block: ");
+      print_block(next, spaces + BASE_PADDING + 7);
+      printf(",\n");
+      pre_pad(spaces, "}");
+    }
+
     break;
   case AstntCase:
     printf("Case: {\n");
@@ -400,11 +415,16 @@ void print_ast(AstNode *root, u16 spaces) {
     pre_pad(spaces, "}");
     break;
   case AstntBlock:
-    printf("BlockStatement: {\n");
-    pad(spaces + BASE_PADDING);
-    print_ast(root->kids[0], spaces + BASE_PADDING);
-    printf("\n");
-    pre_pad(spaces, "}");
+    printf("Block: {");
+    if (root->kids[0] != NULL) {
+      printf("\n");
+      pad(spaces + BASE_PADDING);
+      print_ast(root->kids[0], spaces + BASE_PADDING);
+      printf("\n");
+      pre_pad(spaces, "}");
+    } else {
+      printf("}");    
+    }
     break;
   case AstntStmts:
     printf("Statements: {\n");
