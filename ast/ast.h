@@ -45,8 +45,6 @@ typedef enum {
 
   // ExpressionKinds
   AstntIf,
-  AstntElif,
-  AstntElse,
   AstntCase,
   AstntCaseArm,
   AstntArray,

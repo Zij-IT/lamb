@@ -444,16 +444,6 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     }
     break;
   }
-  case AstntElif: {
-    fprintf(stderr,
-            "Attempting to compile a lone 'Elif' node. You done messed up.");
-    break;
-  }
-  case AstntElse: {
-    fprintf(stderr,
-            "Attempting to compile a lone 'Else' node. You done messed up.");
-    break;
-  }
   case AstntCaseArm: {
     fprintf(stderr,
             "Attempting to compile a lone 'CaseArm' node. You done messed up.");

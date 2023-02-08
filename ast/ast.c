@@ -73,15 +73,6 @@ void free_ast(AstNode *root) {
     free_ast(root->kids[0]);
     free_ast(root->kids[1]);
     free_ast(root->kids[2]);
-    free_ast(root->kids[3]);
-    break;
-  case AstntElif:
-    free_ast(root->kids[0]);
-    free_ast(root->kids[1]);
-    free_ast(root->kids[2]);
-    break;
-  case AstntElse:
-    free_ast(root->kids[0]);
     break;
   case AstntCase:
     free_ast(root->kids[0]);
@@ -306,24 +297,6 @@ void print_ast(AstNode *root, u16 spaces) {
       printf(",\n");
     }
 
-    pre_pad(spaces, "}");
-    break;
-  case AstntElif:
-    pre_pad(spaces, "elif: Elif {\n");
-    pre_pad(spaces + BASE_PADDING, "cond: ");
-    print_ast(root->kids[0], spaces + BASE_PADDING + 6);
-    printf(",\n");
-    pre_pad(spaces + BASE_PADDING, "block: ");
-    print_block(root->kids[1], spaces + BASE_PADDING + 7);
-    printf(",\n");
-    pre_pad(spaces, "},\n");
-    print_ast(root->kids[2], spaces);
-    break;
-  case AstntElse:
-    pre_pad(spaces, "else: Else {\n");
-    pre_pad(spaces + BASE_PADDING, "block: ");
-    print_block(root->kids[0], spaces + BASE_PADDING + 7);
-    printf(",\n");
     pre_pad(spaces, "}");
     break;
   case AstntCase:
