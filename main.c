@@ -113,6 +113,11 @@ int main(int argc, char **argv) {
   if (res == ParseResultReject) {
     printf("\nSyntax Error. Unfortunately I can't help you.\n");
     return 1;
+  } else if (root == NULL || *root == NULL) {
+    // If the user immediately Ctrl-D without providing input that can be parsed.
+    free(root);
+    printf("Exiting...\n");
+    return EXIT_SUCCESS;
   }
 
   VmOptions options = {
