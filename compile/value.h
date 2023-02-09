@@ -65,7 +65,7 @@ Value new_object(Object *obj);
 
 Order value_compare(Value *lhs, Value *rhs);
 
-void print_kind(Value val);
+str kind_as_cstr(Value val);
 
 void value_arr_init(ValueArray *arr);
 

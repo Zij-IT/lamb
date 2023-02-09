@@ -8,7 +8,26 @@
 #include "value.h"
 #include "vm.h"
 
-#define vm_assert(msg, x) lamb_assert("[LambVm] "msg, (x))
+#define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))
+
+#define runtime_error(...)                                                     \
+  do {                                                                         \
+    fprintf(stderr, "[Lamb] RuntimeError: "__VA_ARGS__);                       \
+    fprintf(stderr, "\n");                                                     \
+    return InterpretRuntimeError;                                              \
+  } while (0)
+
+#define binary_type_error(lhs, op_str, rhs)                                    \
+  runtime_error(                                                               \
+      "Binary '" op_str                                                        \
+      "' is not defined for the following type combination: lhs(%s) " op_str   \
+      " rhs(%s)",                                                              \
+      kind_as_cstr(lhs), kind_as_cstr(rhs))
+
+#define unary_type_error(op_str, rhs)                                          \
+  runtime_error("Unary '" op_str                                               \
+                "' operator is not defined for values of type %s",             \
+                kind_as_cstr(rhs));
 
 static Callframe *vm_frame(Vm *vm) { return &vm->frames[vm->frame_count - 1]; }
 
@@ -50,9 +69,10 @@ static Chunk *vm_chunk(Vm *vm) {
   return &vm_frame(vm)->closure->function->chunk;
 }
 
-static u8 vm_read_byte(Vm *vm) { 
-  vm_assert("Reading bytes past end of chunk", vm_frame(vm)->ip - vm_chunk(vm)->bytes < vm_chunk(vm)->len);
-  
+static u8 vm_read_byte(Vm *vm) {
+  vm_assert("Reading bytes past end of chunk",
+            vm_frame(vm)->ip - vm_chunk(vm)->bytes < vm_chunk(vm)->len);
+
   return *vm_frame(vm)->ip++;
 }
 
@@ -76,15 +96,15 @@ static Value vm_read_constant(Vm *vm) {
   }
 }
 
-static Value *vm_peek_stack(Vm *vm) { 
+static Value *vm_peek_stack(Vm *vm) {
   vm_assert("Peeking non-stack bytes", vm->stack_top != vm->stack);
 
   return vm->stack_top - 1;
 }
 
-static Value *vm_peekn_stack(Vm *vm, i32 n) { 
+static Value *vm_peekn_stack(Vm *vm, i32 n) {
   vm_assert("Peeking non-stack bytes", vm->stack_top != vm->stack - n);
-  
+
   return vm->stack_top - n - 1;
 }
 
@@ -104,7 +124,7 @@ void vm_init(Vm *vm, VmOptions options) {
 
 void vm_push_stack(Vm *vm, Value val) {
   vm_assert("Stack overflow", vm->stack_top - vm->stack != MAX_VALUES);
-  
+
   *vm->stack_top = val;
   vm->stack_top += 1;
 }
@@ -126,9 +146,7 @@ Value vm_pop_stack(Vm *vm) {
     } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {                \
       lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;                           \
     } else {                                                                   \
-      printf("RuntimeError: Operands for binary operator " #op                 \
-             " must be of the same type i64 or f64\n");                        \
-      return InterpretRuntimeError;                                            \
+      binary_type_error(*lhs, #op, rhs);                                       \
     }                                                                          \
   } while (0)
 
@@ -140,9 +158,7 @@ Value vm_pop_stack(Vm *vm) {
     if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                          \
       lhs->as.intn = lhs->as.intn op rhs.as.intn;                              \
     } else {                                                                   \
-      printf("RuntimeError: Operands for binary operator " #op                 \
-             " must be of type i64\n");                                        \
-      return InterpretRuntimeError;                                            \
+      binary_type_error(*lhs, #op, rhs);                                       \
     }                                                                          \
   } while (0)
 
@@ -170,9 +186,7 @@ InterpretResult vm_run(Vm *vm) {
       Value *val = vm_peek_stack(vm);
 
       if (!table_insert(&vm->globals, ident, *val)) {
-        printf("RuntimeError: Multiple definitions found for global %s\n",
-               ident->chars);
-        return InterpretRuntimeError;
+        runtime_error("Multiple definitions found for global %s", ident->chars);
       }
 
       vm_pop_stack(vm);
@@ -184,9 +198,7 @@ InterpretResult vm_run(Vm *vm) {
 
       Value value;
       if (!table_get(&vm->globals, ident, &value)) {
-        printf("RuntimeError: '%s' does not have an associated binding\n",
-               ident->chars);
-        return InterpretRuntimeError;
+        runtime_error("'%s' does not have an associated binding", ident->chars);
       }
 
       vm_push_stack(vm, value);
@@ -210,11 +222,9 @@ InterpretResult vm_run(Vm *vm) {
     case OpJumpIfFalse: {
       u16 offset = vm_read_short(vm);
       if (!is_bool(*vm_peek_stack(vm))) {
-        printf("RuntimeError: A branching expression '&&', '||', 'if' and "
-               "'case' cannot branch based on a value of type ");
-        print_kind(*vm_peek_stack(vm));
-        printf("\n");
-        return InterpretRuntimeError;
+        runtime_error("A branching expression '&&', '||' and 'if' cannot "
+                      "branch with expressions of type %s",
+                      "__PLACEHOLDER__");
       }
 
       if (!vm_peek_stack(vm)->as.boolean) {
@@ -234,11 +244,7 @@ InterpretResult vm_run(Vm *vm) {
       } else if (val->kind == VkDouble) {
         val->as.doubn = -val->as.doubn;
       } else {
-        printf("RuntimeError: Unary '-' operator is not defined for values of "
-               "type ");
-        print_kind(*val);
-        printf("\n");
-        return InterpretRuntimeError;
+        unary_type_error("-", *val);
       }
       break;
     }
@@ -247,11 +253,7 @@ InterpretResult vm_run(Vm *vm) {
       if (val->kind == VkInt) {
         val->as.intn = ~val->as.intn;
       } else {
-        printf("RuntimeError: Unary '~' operator is not defined for values of "
-               "type ");
-        print_kind(*val);
-        printf("\n");
-        return InterpretRuntimeError;
+        unary_type_error("~", *val);
       }
       break;
     }
@@ -260,11 +262,7 @@ InterpretResult vm_run(Vm *vm) {
       if (val->kind == VkBool) {
         val->as.boolean = !val->as.boolean;
       } else {
-        printf("RuntimeError: Unary '!' operator is not defined for values of "
-               "type ");
-        print_kind(*val);
-        printf("\n");
-        return InterpretRuntimeError;
+        unary_type_error("!", *val);
       }
       break;
     }
@@ -282,13 +280,7 @@ InterpretResult vm_run(Vm *vm) {
         vm_pop_stack(vm);
         vm_push_stack(vm, new_object((Object *)st));
       } else {
-        printf("RuntimeError: Binary '+' is not possible with the following "
-               "type combination: lhs(");
-        print_kind(*lhs);
-        printf("), rhs(");
-        print_kind(rhs);
-        printf(")\n");
-        return InterpretRuntimeError;
+        binary_type_error(*lhs, "+", rhs);
       }
       break;
     }
@@ -308,9 +300,7 @@ InterpretResult vm_run(Vm *vm) {
       if (rhs.kind == lhs->kind && rhs.kind == VkInt) {
         lhs->as.intn = lhs->as.intn % rhs.as.intn;
       } else {
-        printf("RuntimeError: Operands for binary operator %% must be of type "
-               "i64\n");
-        return InterpretRuntimeError;
+        binary_type_error(*lhs, "%%", rhs);
       }
       break;
     }
@@ -336,10 +326,7 @@ InterpretResult vm_run(Vm *vm) {
         vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderEqual));
         break;
       } else {
-        printf("RuntimeError: Operands for binary operator "
-               "=="
-               " must be of the same type\n");
-        return InterpretRuntimeError;
+        binary_type_error(lhs, "=", rhs);
       }
     }
     case OpNe: {
@@ -349,10 +336,7 @@ InterpretResult vm_run(Vm *vm) {
         vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderEqual));
         break;
       } else {
-        printf("RuntimeError: Operands for binary operator "
-               "!="
-               " must be of the same type\n");
-        return InterpretRuntimeError;
+        binary_type_error(lhs, "!=", rhs);
       }
     }
     case OpGt: {
@@ -363,10 +347,7 @@ InterpretResult vm_run(Vm *vm) {
                       new_boolean(value_compare(&lhs, &rhs) == OrderGreater));
         break;
       } else {
-        printf("RuntimeError: Operands for binary operator "
-               ">"
-               " must be of the same type\n");
-        return InterpretRuntimeError;
+        binary_type_error(lhs, ">", rhs);
       }
     }
     case OpGe: {
@@ -376,10 +357,7 @@ InterpretResult vm_run(Vm *vm) {
         vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderLess));
         break;
       } else {
-        printf("RuntimeError: Operands for binary operator "
-               ">="
-               " must be of the same type\n");
-        return InterpretRuntimeError;
+        binary_type_error(lhs, ">=", rhs);
       }
     }
     case OpLt: {
@@ -389,10 +367,7 @@ InterpretResult vm_run(Vm *vm) {
         vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderLess));
         break;
       } else {
-        printf("RuntimeError: Operands for binary operator "
-               "<"
-               " must be of the same type\n");
-        return InterpretRuntimeError;
+        binary_type_error(lhs, "<", rhs);
       }
     }
     case OpLe: {
@@ -403,10 +378,7 @@ InterpretResult vm_run(Vm *vm) {
                       new_boolean(value_compare(&lhs, &rhs) != OrderGreater));
         break;
       } else {
-        printf("RuntimeError: Operands for binary operator "
-               "<="
-               " must be of the same type\n");
-        return InterpretRuntimeError;
+        binary_type_error(lhs, "<=", rhs);
       }
     } break;
     case OpMakeArray: {
@@ -428,16 +400,11 @@ InterpretResult vm_run(Vm *vm) {
       Value arr_val = vm_pop_stack(vm);
 
       if (!is_integer(idx)) {
-        printf("RuntimeError: Unable to index into an array with a value of "
-               "type ");
-        print_kind(arr_val);
-        printf("\n");
-        return InterpretRuntimeError;
+        runtime_error("Unable to index into an array with a value of type %s",
+                      kind_as_cstr(idx));
       } else if (!is_object(arr_val)) {
-        printf("RuntimeError: Attempt to index into an item of type ");
-        print_kind(arr_val);
-        printf("\n");  
-        return InterpretRuntimeError;
+        runtime_error("Unable to index into an item of type %s",
+                      kind_as_cstr(arr_val));
       }
 
       switch (arr_val.as.obj->type) {
@@ -446,11 +413,9 @@ InterpretResult vm_run(Vm *vm) {
         if (idx.as.intn < st->len) {
           vm_push_stack(vm, new_char(st->chars[idx.as.intn]));
         } else {
-          printf(
-              "RuntimeError: Index out of bounds. Desired index: (%ld), String "
-              "length: (%d)\n",
+          runtime_error(
+              "Index out of bounds. Desired index: (%ld) | Length: (%d)",
               idx.as.intn, st->len);
-          return InterpretRuntimeError;
         }
         break;
       }
@@ -459,11 +424,9 @@ InterpretResult vm_run(Vm *vm) {
         if (idx.as.intn < arr->items.len) {
           vm_push_stack(vm, arr->items.values[idx.as.intn]);
         } else {
-          printf(
-              "RuntimeError: Index out of bounds. Desired index: (%ld), Array "
-              "length: (%d)\n",
+          runtime_error(
+              "Index out of bounds. Desired index: (%ld) | Length: (%d)",
               idx.as.intn, arr->items.len);
-          return InterpretRuntimeError;
         }
         break;
       }
@@ -471,10 +434,8 @@ InterpretResult vm_run(Vm *vm) {
       case OtNative:
       case OtClosure:
       case OtUpvalue:
-        printf("RuntimeError: Attempt to index into item of type ");
-        print_kind(arr_val);
-        printf("\n");
-        return InterpretRuntimeError;
+        runtime_error("Unable to index into value of type %s",
+                      kind_as_cstr(arr_val));
       }
       break;
     }
@@ -483,25 +444,20 @@ InterpretResult vm_run(Vm *vm) {
       Value *callee = vm_peekn_stack(vm, arg_count);
 
       if (!is_object(*callee)) {
-        printf("RuntimeError: Unable to call a value of type ");
-        print_kind(*callee);
-        printf("\n");
-        return InterpretRuntimeError;
+        runtime_error("Unable to call a value of type %s",
+                      kind_as_cstr(*callee));
       }
 
       switch (callee->as.obj->type) {
       case OtClosure: {
         LambClosure *closure = (LambClosure *)callee->as.obj;
         if (arg_count != closure->function->arity) {
-          printf(
-              "RuntimeError: Expected %d arguments, but received %d instead\n",
-              closure->function->arity, arg_count);
-          return InterpretRuntimeError;
+          runtime_error("Expected %d arguments, but received %d instead",
+                        closure->function->arity, arg_count);
         }
 
         if (vm->frame_count == MAX_FRAMES) {
-          printf("RuntimeError: Stack overflow\n");
-          return InterpretRuntimeError;
+          runtime_error("Callstack overflow");
         }
 
         Callframe *frame = &vm->frames[vm->frame_count++];
@@ -518,10 +474,8 @@ InterpretResult vm_run(Vm *vm) {
         break;
       }
       default: {
-        printf("RuntimeError: Unable to call a value of type ");
-        print_kind(*callee);
-        printf("\n");
-        return InterpretRuntimeError;
+        runtime_error("Unable to call a value of type %s",
+                      kind_as_cstr(*callee));
       }
       }
 
@@ -552,7 +506,8 @@ InterpretResult vm_run(Vm *vm) {
       vm->stack_top = vm_frame(vm)->slots;
       vm->frame_count--;
       if (vm->frame_count == 0) {
-        vm_assert("Stack is empty upon ending script", vm->stack_top == vm->stack);
+        vm_assert("Stack is empty upon ending script",
+                  vm->stack_top == vm->stack);
         return InterpretOk;
       }
 
@@ -591,4 +546,7 @@ void vm_free(Vm *vm) {
 
 #undef BINARY_INT_DOUBLE_OP
 #undef BINARY_INT_OP
+#undef unary_type_error
+#undef binary_type_error
+#undef runtime_error
 #undef vm_assert
