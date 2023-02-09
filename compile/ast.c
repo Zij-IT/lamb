@@ -140,6 +140,50 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler,
   return CarOk;
 }
 
+static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
+                                        AstNode *first, AstNode *second,
+                                        str name) {
+  Compiler func_comp;
+  compiler_init(&func_comp, FtNormal);
+  compiler_new_scope(&func_comp);
+  func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
+  func_comp.function->name = "anonymous";
+  func_comp.function->arity = 1;
+  func_comp.enclosing = compiler;
+
+  BUBBLE(compile(vm, &func_comp, first));
+  BUBBLE(compile(vm, &func_comp, second));
+
+  chunk_write(compiler_chunk(&func_comp), OpGetLocal);
+  chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
+
+  chunk_write(compiler_chunk(&func_comp), OpCall);
+  chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
+
+  chunk_write(compiler_chunk(&func_comp), OpCall);
+  chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
+
+  chunk_write(compiler_chunk(&func_comp), OpReturn);
+
+  chunk_write(compiler_chunk(compiler), OpClosure);
+  chunk_write_constant(compiler_chunk(compiler),
+                       new_object((Object *)func_comp.function));
+
+  if (vm->options.print_fn_chunks) {
+    chunk_debug(compiler_chunk(&func_comp), name);
+  }
+
+  for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
+    chunk_write(compiler_chunk(compiler),
+                func_comp.upvalues[i].is_local ? 1 : 0);
+    chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);
+  }
+
+  compiler_free(&func_comp);
+
+  return CarOk;
+}
+
 CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
   switch (node->type) {
   case AstntStrLit: {
@@ -476,86 +520,13 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     AstNode *lhs = node->kids[0];
     AstNode *rhs = node->kids[1];
 
-    Compiler func_comp;
-    compiler_init(&func_comp, FtNormal);
-    compiler_new_scope(&func_comp);
-    func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
-    func_comp.function->name = "anonymous";
-    func_comp.function->arity = 1;
-    func_comp.enclosing = compiler;
-
-    BUBBLE(compile(vm, &func_comp, lhs));
-    BUBBLE(compile(vm, &func_comp, rhs));
-
-    chunk_write(compiler_chunk(&func_comp), OpGetLocal);
-    chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
-
-    chunk_write(compiler_chunk(&func_comp), OpCall);
-    chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
-
-    chunk_write(compiler_chunk(&func_comp), OpCall);
-    chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
-
-    chunk_write(compiler_chunk(&func_comp), OpReturn);
-
-    chunk_write(compiler_chunk(compiler), OpClosure);
-    chunk_write_constant(compiler_chunk(compiler),
-                         new_object((Object *)func_comp.function));
-
-    if (vm->options.print_fn_chunks) {
-      chunk_debug(compiler_chunk(&func_comp), "BinaryLCompose");
-    }
-
-    for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
-      chunk_write(compiler_chunk(compiler),
-                  func_comp.upvalues[i].is_local ? 1 : 0);
-      chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);
-    }
-
-    compiler_free(&func_comp);
+    compile_compose(vm, compiler, lhs, rhs, "BinaryLCompose");
     break;
   }
   case AstntBinaryRCompose: {
     AstNode *lhs = node->kids[0];
     AstNode *rhs = node->kids[1];
-
-    Compiler func_comp;
-    compiler_init(&func_comp, FtNormal);
-    compiler_new_scope(&func_comp);
-    func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
-    func_comp.function->name = "anonymous";
-    func_comp.function->arity = 1;
-    func_comp.enclosing = compiler;
-
-    BUBBLE(compile(vm, &func_comp, rhs));
-    BUBBLE(compile(vm, &func_comp, lhs));
-
-    chunk_write(compiler_chunk(&func_comp), OpGetLocal);
-    chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
-
-    chunk_write(compiler_chunk(&func_comp), OpCall);
-    chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
-
-    chunk_write(compiler_chunk(&func_comp), OpCall);
-    chunk_write_constant(compiler_chunk(&func_comp), new_int(1));
-
-    chunk_write(compiler_chunk(&func_comp), OpReturn);
-
-    chunk_write(compiler_chunk(compiler), OpClosure);
-    chunk_write_constant(compiler_chunk(compiler),
-                         new_object((Object *)func_comp.function));
-
-    if (vm->options.print_fn_chunks) {
-      chunk_debug(compiler_chunk(&func_comp), "BinaryRCompose");
-    }
-
-    for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
-      chunk_write(compiler_chunk(compiler),
-                  func_comp.upvalues[i].is_local ? 1 : 0);
-      chunk_write(compiler_chunk(compiler), func_comp.upvalues[i].index);
-    }
-
-    compiler_free(&func_comp);
+    compile_compose(vm, compiler, rhs, lhs, "BinaryRCompose");
     break;
   }
   case AstntBinaryLApply: {
