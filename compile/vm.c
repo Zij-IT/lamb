@@ -8,6 +8,8 @@
 #include "value.h"
 #include "vm.h"
 
+#define vm_assert(msg, x) lamb_assert("[LambVm] "msg, (x))
+
 static Callframe *vm_frame(Vm *vm) { return &vm->frames[vm->frame_count - 1]; }
 
 static LambUpvalue *capture_upvalue(Vm *vm, Value *local) {
@@ -48,7 +50,11 @@ static Chunk *vm_chunk(Vm *vm) {
   return &vm_frame(vm)->closure->function->chunk;
 }
 
-static u8 vm_read_byte(Vm *vm) { return *vm_frame(vm)->ip++; }
+static u8 vm_read_byte(Vm *vm) { 
+  vm_assert("Reading bytes past end of chunk", vm_frame(vm)->ip - vm_chunk(vm)->bytes < vm_chunk(vm)->len);
+  
+  return *vm_frame(vm)->ip++;
+}
 
 static u16 vm_read_short(Vm *vm) {
   u8 hi = vm_read_byte(vm);
@@ -70,9 +76,17 @@ static Value vm_read_constant(Vm *vm) {
   }
 }
 
-static Value *vm_peek_stack(Vm *vm) { return vm->stack_top - 1; }
+static Value *vm_peek_stack(Vm *vm) { 
+  vm_assert("Peeking non-stack bytes", vm->stack_top != vm->stack);
 
-static Value *vm_peekn_stack(Vm *vm, i32 n) { return vm->stack_top - n - 1; }
+  return vm->stack_top - 1;
+}
+
+static Value *vm_peekn_stack(Vm *vm, i32 n) { 
+  vm_assert("Peeking non-stack bytes", vm->stack_top != vm->stack - n);
+  
+  return vm->stack_top - n - 1;
+}
 
 void vm_init(Vm *vm, VmOptions options) {
   vm->frame_count = 0;
@@ -89,11 +103,15 @@ void vm_init(Vm *vm, VmOptions options) {
 }
 
 void vm_push_stack(Vm *vm, Value val) {
+  vm_assert("Stack overflow", vm->stack_top - vm->stack != MAX_VALUES);
+  
   *vm->stack_top = val;
   vm->stack_top += 1;
 }
 
 Value vm_pop_stack(Vm *vm) {
+  vm_assert("Stack underflow", vm->stack_top != vm->stack);
+
   vm->stack_top -= 1;
   return *vm->stack_top;
 }
@@ -415,6 +433,11 @@ InterpretResult vm_run(Vm *vm) {
         print_kind(arr_val);
         printf("\n");
         return InterpretRuntimeError;
+      } else if (!is_object(arr_val)) {
+        printf("RuntimeError: Attempt to index into an item of type ");
+        print_kind(arr_val);
+        printf("\n");  
+        return InterpretRuntimeError;
       }
 
       switch (arr_val.as.obj->type) {
@@ -529,7 +552,7 @@ InterpretResult vm_run(Vm *vm) {
       vm->stack_top = vm_frame(vm)->slots;
       vm->frame_count--;
       if (vm->frame_count == 0) {
-        vm_pop_stack(vm);
+        vm_assert("Stack is empty upon ending script", vm->stack_top == vm->stack);
         return InterpretOk;
       }
 
@@ -568,3 +591,4 @@ void vm_free(Vm *vm) {
 
 #undef BINARY_INT_DOUBLE_OP
 #undef BINARY_INT_OP
+#undef vm_assert
