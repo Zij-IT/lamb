@@ -329,7 +329,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     //
     // if x {} else { if y { } else { if z { } else { }}}
     //
-    // All nodes in this chain know where the else ends, and can thus jump past it
+    // All nodes in this chain know where the else ends, and can thus jump past
+    // it
     BUBBLE(compile(vm, compiler, node->kids[0]));
     i32 if_false_jump =
         chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
@@ -413,9 +414,9 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     break;
   }
   case AstntCaseArm: {
-    AstNode* value = node->kids[0];
-    AstNode* branch = node->kids[1];
-    AstNode* next_arm = node->kids[2];
+    AstNode *value = node->kids[0];
+    AstNode *branch = node->kids[1];
+    AstNode *next_arm = node->kids[2];
 
     chunk_write(compiler_chunk(compiler), OpDup);
     BUBBLE(compile(vm, compiler, value));
@@ -427,10 +428,10 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     chunk_write(compiler_chunk(compiler), OpPop);
     BUBBLE(compile(vm, compiler, branch));
     i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
-      
+
     chunk_patch_jump(compiler_chunk(compiler), if_neq);
     chunk_write(compiler_chunk(compiler), OpPop);
-    
+
     if (next_arm != NULL) {
       BUBBLE(compile(vm, compiler, next_arm));
     } else {

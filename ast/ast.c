@@ -288,8 +288,8 @@ void print_ast(AstNode *root, u16 spaces) {
     print_block(root->kids[1], spaces + BASE_PADDING + 7);
     printf(",\n");
     pre_pad(spaces, "}");
-      
-    AstNode* next = root->kids[2];  
+
+    AstNode *next = root->kids[2];
     while (next != NULL && next->type == AstntIf) {
       printf(",\n");
       pre_pad(spaces, "Elif: {\n");
@@ -300,10 +300,10 @@ void print_ast(AstNode *root, u16 spaces) {
       print_block(next->kids[1], spaces + BASE_PADDING + 7);
       printf(",\n");
       pre_pad(spaces, "}");
-        
+
       next = next->kids[2];
     }
-    
+
     if (next != NULL) {
       printf(",\n");
       pre_pad(spaces, "Else: {\n");
@@ -423,7 +423,7 @@ void print_ast(AstNode *root, u16 spaces) {
       printf("\n");
       pre_pad(spaces, "}");
     } else {
-      printf("}");    
+      printf("}");
     }
     break;
   case AstntStmts:
