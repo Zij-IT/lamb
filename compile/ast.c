@@ -273,24 +273,6 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     chunk_write(compiler_chunk(compiler), OpMod);
     break;
   }
-  case AstntBinaryLogAnd: {
-    BUBBLE(compile(vm, compiler, node->kids[0]));
-    i32 if_false = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
-    chunk_write(compiler_chunk(compiler), OpPop);
-    BUBBLE(compile(vm, compiler, node->kids[1]));
-    chunk_patch_jump(compiler_chunk(compiler), if_false);
-    break;
-  }
-  case AstntBinaryLogOr: {
-    BUBBLE(compile(vm, compiler, node->kids[0]));
-    i32 if_false = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
-    i32 skip_right = chunk_write_jump(compiler_chunk(compiler), OpJump);
-    chunk_patch_jump(compiler_chunk(compiler), if_false);
-    chunk_write(compiler_chunk(compiler), OpPop);
-    BUBBLE(compile(vm, compiler, node->kids[1]));
-    chunk_patch_jump(compiler_chunk(compiler), skip_right);
-    break;
-  }
   case AstntBinaryEq: {
     BUBBLE(compile(vm, compiler, node->kids[0]));
     BUBBLE(compile(vm, compiler, node->kids[1]));
@@ -357,163 +339,22 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     chunk_write(compiler_chunk(compiler), OpLShift);
     break;
   }
-  case AstntIf: {
-    // During parsing the following transformation happens:
-    //
-    // if x {} elif y {} elif z {} else {}
-    //
-    // if x {} else { if y { } else { if z { } else { }}}
-    //
-    // All nodes in this chain know where the else ends, and can thus jump past
-    // it
+  case AstntBinaryLogAnd: {
     BUBBLE(compile(vm, compiler, node->kids[0]));
-    i32 if_false_jump =
-        chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
-
+    i32 if_false = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
     chunk_write(compiler_chunk(compiler), OpPop);
     BUBBLE(compile(vm, compiler, node->kids[1]));
-    i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
-
-    chunk_patch_jump(compiler_chunk(compiler), if_false_jump);
-    chunk_write(compiler_chunk(compiler), OpPop);
-
-    if (node->kids[2] != NULL) {
-      BUBBLE(compile(vm, compiler, node->kids[2]));
-    } else {
-      chunk_write_constant(compiler_chunk(compiler), new_nil());
-    }
-
-    chunk_patch_jump(compiler_chunk(compiler), past_else);
-
+    chunk_patch_jump(compiler_chunk(compiler), if_false);
     break;
   }
-  case AstntCase: {
+  case AstntBinaryLogOr: {
     BUBBLE(compile(vm, compiler, node->kids[0]));
+    i32 if_false = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
+    i32 skip_right = chunk_write_jump(compiler_chunk(compiler), OpJump);
+    chunk_patch_jump(compiler_chunk(compiler), if_false);
+    chunk_write(compiler_chunk(compiler), OpPop);
     BUBBLE(compile(vm, compiler, node->kids[1]));
-    break;
-  }
-  case AstntExprStmt: {
-    BUBBLE(compile(vm, compiler, node->kids[0]));
-    chunk_write(compiler_chunk(compiler), OpPop);
-    break;
-  }
-  case AstntAssignStmt: {
-    AstNode *ident_node = node->kids[0];
-    AstNode *value_node = node->kids[1];
-
-    if (value_node->type == AstntFuncDef && value_node->kids[2]->val.b) {
-      BUBBLE(compile_rec_func_def(vm, compiler, node));
-      break;
-    }
-
-    BUBBLE(compile(vm, compiler, value_node));
-
-    LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-
-    if (compiler->scope_depth == 0) {
-      chunk_write(compiler_chunk(compiler), OpDefineGlobal);
-      chunk_write_constant(compiler_chunk(compiler),
-                           new_object((Object *)ident));
-    } else {
-      Local loc = {.depth = compiler->scope_depth,
-                   .name = ident->chars,
-                   .is_captured = false};
-      local_arr_write(&compiler->locals, loc);
-
-      chunk_write(compiler_chunk(compiler), OpDefineLocal);
-      chunk_write_constant(compiler_chunk(compiler),
-                           new_int(compiler->locals.len - 1));
-    }
-
-    break;
-  }
-  case AstntBlock: {
-    compiler_new_scope(compiler);
-    AstNode *stmt = node->kids[0];
-    for (; stmt != NULL && stmt->type == AstntStmts; stmt = stmt->kids[1]) {
-      BUBBLE(compile(vm, compiler, stmt->kids[0]));
-    }
-
-    if (stmt != NULL) {
-      BUBBLE(compile(vm, compiler, stmt));
-    } else {
-      chunk_write_constant(compiler_chunk(compiler), new_nil());
-    }
-    compiler_end_scope(compiler);
-    break;
-  }
-  case AstntStmts: {
-    for (AstNode *stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
-      BUBBLE(compile(vm, compiler, stmt->kids[0]));
-    }
-    break;
-  }
-  case AstntCaseArm: {
-    AstNode *value = node->kids[0];
-    AstNode *branch = node->kids[1];
-    AstNode *next_arm = node->kids[2];
-
-    chunk_write(compiler_chunk(compiler), OpDup);
-    BUBBLE(compile(vm, compiler, value));
-    chunk_write(compiler_chunk(compiler), OpEq);
-
-    i32 if_neq = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
-
-    chunk_write(compiler_chunk(compiler), OpPop);
-    chunk_write(compiler_chunk(compiler), OpPop);
-    BUBBLE(compile(vm, compiler, branch));
-    i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
-
-    chunk_patch_jump(compiler_chunk(compiler), if_neq);
-    chunk_write(compiler_chunk(compiler), OpPop);
-
-    if (next_arm != NULL) {
-      BUBBLE(compile(vm, compiler, next_arm));
-    } else {
-      chunk_write(compiler_chunk(compiler), OpPop);
-      chunk_write_constant(compiler_chunk(compiler), new_nil());
-    }
-
-    chunk_patch_jump(compiler_chunk(compiler), past_else);
-    break;
-  }
-  case AstntArray: {
-    // Reverse the linked list
-    AstNode *prev = NULL;
-    AstNode *curr = node->kids[0];
-    if (curr == NULL) {
-      chunk_write_constant(compiler_chunk(compiler), new_int(0));
-      chunk_write(compiler_chunk(compiler), OpMakeArray);
-      return CarOk;
-    }
-
-    AstNode *next = curr->kids[1];
-    while (curr != NULL) {
-      curr->kids[1] = prev;
-      prev = curr;
-      curr = next;
-
-      if (next != NULL) {
-        next = next->kids[1];
-      }
-    }
-
-    node->kids[0] = prev;
-
-    i32 len = 0;
-    for (AstNode *expr_list = node->kids[0]; expr_list != NULL;
-         expr_list = expr_list->kids[1]) {
-      BUBBLE(compile(vm, compiler, expr_list->kids[0]));
-      len += 1;
-    }
-    chunk_write_constant(compiler_chunk(compiler), new_int(len));
-    chunk_write(compiler_chunk(compiler), OpMakeArray);
-    break;
-  }
-  case AstntArrayIndex: {
-    BUBBLE(compile(vm, compiler, node->kids[0]));
-    BUBBLE(compile(vm, compiler, node->kids[1]));
-    chunk_write(compiler_chunk(compiler), OpIndexArray);
+    chunk_patch_jump(compiler_chunk(compiler), skip_right);
     break;
   }
   case AstntBinaryLCompose: {
@@ -578,6 +419,165 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
       BUBBLE(compile(vm, compiler, val));
     }
     chunk_write(compiler_chunk(compiler), OpReturn);
+    break;
+  }
+  case AstntArray: {
+    // Reverse the linked list
+    AstNode *prev = NULL;
+    AstNode *curr = node->kids[0];
+    if (curr == NULL) {
+      chunk_write_constant(compiler_chunk(compiler), new_int(0));
+      chunk_write(compiler_chunk(compiler), OpMakeArray);
+      return CarOk;
+    }
+
+    AstNode *next = curr->kids[1];
+    while (curr != NULL) {
+      curr->kids[1] = prev;
+      prev = curr;
+      curr = next;
+
+      if (next != NULL) {
+        next = next->kids[1];
+      }
+    }
+
+    node->kids[0] = prev;
+
+    i32 len = 0;
+    for (AstNode *expr_list = node->kids[0]; expr_list != NULL;
+         expr_list = expr_list->kids[1]) {
+      BUBBLE(compile(vm, compiler, expr_list->kids[0]));
+      len += 1;
+    }
+    chunk_write_constant(compiler_chunk(compiler), new_int(len));
+    chunk_write(compiler_chunk(compiler), OpMakeArray);
+    break;
+  }
+  case AstntArrayIndex: {
+    BUBBLE(compile(vm, compiler, node->kids[0]));
+    BUBBLE(compile(vm, compiler, node->kids[1]));
+    chunk_write(compiler_chunk(compiler), OpIndexArray);
+    break;
+  }
+  case AstntIf: {
+    // During parsing the following transformation happens:
+    //
+    // if x {} elif y {} elif z {} else {}
+    //
+    // if x {} else { if y { } else { if z { } else { }}}
+    //
+    // All nodes in this chain know where the else ends, and can thus jump past
+    // it
+    BUBBLE(compile(vm, compiler, node->kids[0]));
+    i32 if_false_jump =
+        chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
+
+    chunk_write(compiler_chunk(compiler), OpPop);
+    BUBBLE(compile(vm, compiler, node->kids[1]));
+    i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
+
+    chunk_patch_jump(compiler_chunk(compiler), if_false_jump);
+    chunk_write(compiler_chunk(compiler), OpPop);
+
+    if (node->kids[2] != NULL) {
+      BUBBLE(compile(vm, compiler, node->kids[2]));
+    } else {
+      chunk_write_constant(compiler_chunk(compiler), new_nil());
+    }
+
+    chunk_patch_jump(compiler_chunk(compiler), past_else);
+
+    break;
+  }
+  case AstntCase: {
+    BUBBLE(compile(vm, compiler, node->kids[0]));
+    BUBBLE(compile(vm, compiler, node->kids[1]));
+    break;
+  }
+  case AstntCaseArm: {
+    AstNode *value = node->kids[0];
+    AstNode *branch = node->kids[1];
+    AstNode *next_arm = node->kids[2];
+
+    chunk_write(compiler_chunk(compiler), OpDup);
+    BUBBLE(compile(vm, compiler, value));
+    chunk_write(compiler_chunk(compiler), OpEq);
+
+    i32 if_neq = chunk_write_jump(compiler_chunk(compiler), OpJumpIfFalse);
+
+    chunk_write(compiler_chunk(compiler), OpPop);
+    chunk_write(compiler_chunk(compiler), OpPop);
+    BUBBLE(compile(vm, compiler, branch));
+    i32 past_else = chunk_write_jump(compiler_chunk(compiler), OpJump);
+
+    chunk_patch_jump(compiler_chunk(compiler), if_neq);
+    chunk_write(compiler_chunk(compiler), OpPop);
+
+    if (next_arm != NULL) {
+      BUBBLE(compile(vm, compiler, next_arm));
+    } else {
+      chunk_write(compiler_chunk(compiler), OpPop);
+      chunk_write_constant(compiler_chunk(compiler), new_nil());
+    }
+
+    chunk_patch_jump(compiler_chunk(compiler), past_else);
+    break;
+  }
+  case AstntBlock: {
+    compiler_new_scope(compiler);
+    AstNode *stmt = node->kids[0];
+    for (; stmt != NULL && stmt->type == AstntStmts; stmt = stmt->kids[1]) {
+      BUBBLE(compile(vm, compiler, stmt->kids[0]));
+    }
+
+    if (stmt != NULL) {
+      BUBBLE(compile(vm, compiler, stmt));
+    } else {
+      chunk_write_constant(compiler_chunk(compiler), new_nil());
+    }
+    compiler_end_scope(compiler);
+    break;
+  }
+  case AstntExprStmt: {
+    BUBBLE(compile(vm, compiler, node->kids[0]));
+    chunk_write(compiler_chunk(compiler), OpPop);
+    break;
+  }
+  case AstntAssignStmt: {
+    AstNode *ident_node = node->kids[0];
+    AstNode *value_node = node->kids[1];
+
+    if (value_node->type == AstntFuncDef && value_node->kids[2]->val.b) {
+      BUBBLE(compile_rec_func_def(vm, compiler, node));
+      break;
+    }
+
+    BUBBLE(compile(vm, compiler, value_node));
+
+    LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
+
+    if (compiler->scope_depth == 0) {
+      chunk_write(compiler_chunk(compiler), OpDefineGlobal);
+      chunk_write_constant(compiler_chunk(compiler),
+                           new_object((Object *)ident));
+    } else {
+      Local loc = {.depth = compiler->scope_depth,
+                   .name = ident->chars,
+                   .is_captured = false};
+      local_arr_write(&compiler->locals, loc);
+
+      chunk_write(compiler_chunk(compiler), OpDefineLocal);
+      chunk_write_constant(compiler_chunk(compiler),
+                           new_int(compiler->locals.len - 1));
+    }
+
+    break;
+  }
+  case AstntStmts: {
+    for (AstNode *stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
+      BUBBLE(compile(vm, compiler, stmt->kids[0]));
+    }
     break;
   }
   case AstntNodeList: {
