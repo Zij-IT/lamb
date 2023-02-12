@@ -28,12 +28,14 @@ void compile_with_options(AstNode *root, VmOptions options) {
   Compiler compiler;
   compiler_init(&vm, &compiler, FtScript);
   compiler.function = (LambFunc *)alloc_obj(&vm, OtFunc);
+  vm_push_stack(&vm, new_object((Object*)compiler.function));
 
   CompileAstResult car = compile(&vm, &compiler, root);
 
   if (car == CarOk) {
     chunk_write(&vm, &compiler.function->chunk, OpReturn);
     LambClosure *closure = to_closure(&vm, compiler.function);
+    vm_pop_stack(&vm);
     vm_push_stack(&vm, new_object((Object *)closure));
 
     Callframe *frame = &vm.frames[vm.frame_count++];

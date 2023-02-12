@@ -86,9 +86,9 @@ static void sweep_unused(Vm* vm) {
   
   while (curr != NULL) {
     if (curr->is_marked) {
+      curr->is_marked = false;
       prev = curr;
       curr = curr->next;
-      curr->is_marked = false;
     } else {
       Object* unreached = curr;
       curr = curr->next;

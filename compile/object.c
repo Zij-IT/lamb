@@ -180,7 +180,9 @@ LambString *cstr_to_lambstring(Vm *vm, str cstr) {
     interned->hash = hash;
     interned->len = len;
 
+    vm_push_stack(vm, new_object((Object*)interned));
     table_insert(vm, &vm->strings, interned, new_boolean(false));
+    vm_pop_stack(vm);
   }
 
   return interned;
@@ -240,7 +242,7 @@ void objectptr_array_write(Vm* vm, ObjectPtrArray *arr, Object *val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
-    arr->values = GROW_ARRAY(vm, Object*, arr->values, old_cap, arr->capacity);
+    arr->values = realloc(arr->values, sizeof(Object*) * arr->capacity);
   }
 
   arr->values[arr->len] = val;
