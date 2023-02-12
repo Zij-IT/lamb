@@ -154,8 +154,8 @@ void table_remove_white(Table *table) {
   }
 }
 
-void table_free(Table *table) {
-  FREE_ARRAY(NULL, Entry, table->entries, table->capacity);
+void table_free(Vm* vm, Table *table) {
+  FREE_ARRAY(vm, Entry, table->entries, table->capacity);
   table_init(table);
 }
 

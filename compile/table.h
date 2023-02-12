@@ -19,7 +19,7 @@ typedef struct Table {
 
 void table_init(Table *table);
 
-void table_free(Table *table);
+void table_free(Vm* vm, Table *table);
 
 Entry *table_find(Table *table, LambString *key);
 

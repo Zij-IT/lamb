@@ -543,8 +543,8 @@ void vm_free(Vm *vm) {
     obj = next;
   }
 
-  table_free(&vm->strings);
-  table_free(&vm->globals);
+  table_free(vm, &vm->strings);
+  table_free(vm, &vm->globals);
   objectptr_array_free(vm, &vm->gray_stack);
 }
 
