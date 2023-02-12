@@ -33,6 +33,12 @@ typedef struct {
   Value *values;
 } ValueArray;
 
+typedef enum Order {
+  OrderLess = -1,
+  OrderEqual = 0,
+  OrderGreater = 1,
+} Order;
+
 bool is_bool(Value val);
 
 bool is_double(Value val);
@@ -57,7 +63,9 @@ Value new_char(char c);
 
 Value new_object(Object *obj);
 
-void print_kind(Value val);
+Order value_compare(Value *lhs, Value *rhs);
+
+str kind_as_cstr(Value val);
 
 void value_arr_init(ValueArray *arr);
 

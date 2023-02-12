@@ -379,18 +379,10 @@ void optimize_ast(AstNode *root) {
     optimize_ast(root->kids[0]);
     optimize_ast(root->kids[1]);
     optimize_ast(root->kids[2]);
-    optimize_ast(root->kids[3]);
     // TODO: Valgrind revealed an error in dead_code_if_elim which causes a
     // seg-fault as elements
     //			 of the if-elif-else chain aren't properly handled.
     // dead_code_if_elim(root);
-    break;
-  case AstntElif:
-    optimize_ast(root->kids[0]);
-    optimize_ast(root->kids[1]);
-    break;
-  case AstntElse:
-    optimize_ast(root->kids[0]);
     break;
   case AstntCase:
     optimize_ast(root->kids[0]);
