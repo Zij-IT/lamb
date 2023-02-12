@@ -153,7 +153,7 @@ void mark_object(Vm* vm, Object* object) {
   #endif
 
   object->is_marked = true;
-  // objectptr_array_write(&vm->gray_stack, object);
+  objectptr_array_write(vm, &vm->gray_stack, object);
 }
 
 void mark_value(Vm* vm, Value* value) {
