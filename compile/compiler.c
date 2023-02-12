@@ -47,7 +47,7 @@ void local_arr_write(LocalArray *arr, Local val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
-    arr->values = GROW_ARRAY(Local, arr->values, old_cap, arr->capacity);
+    arr->values = GROW_ARRAY(NULL, Local, arr->values, old_cap, arr->capacity);
   }
 
   arr->values[arr->len] = val;

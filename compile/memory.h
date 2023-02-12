@@ -17,8 +17,8 @@ typedef struct Table Table;
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : (capacity) * 2)
 
-#define GROW_ARRAY(type, pointer, oldCount, newCount) \
-    (type*)reallocate(NULL, pointer, sizeof(type) * (oldCount), \
+#define GROW_ARRAY(vm, type, pointer, oldCount, newCount) \
+    (type*)reallocate(vm, pointer, sizeof(type) * (oldCount), \
         sizeof(type) * (newCount))
 
 #define FREE_ARRAY(type, pointer, oldCount) \

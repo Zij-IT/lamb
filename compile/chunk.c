@@ -16,7 +16,7 @@ void chunk_write(Chunk *chunk, u8 byte) {
   if (chunk->capacity < chunk->len + 1) {
     i32 old_cap = chunk->capacity;
     chunk->capacity = GROW_CAPACITY(old_cap);
-    chunk->bytes = GROW_ARRAY(u8, chunk->bytes, old_cap, chunk->capacity);
+    chunk->bytes = GROW_ARRAY(NULL, u8, chunk->bytes, old_cap, chunk->capacity);
   }
 
   chunk->bytes[chunk->len] = byte;
