@@ -20,6 +20,7 @@ typedef enum {
 
 typedef struct Object {
   ObjectType type;
+  bool is_marked;
   struct Object *next;
 } Object;
 
@@ -67,10 +68,18 @@ typedef enum FuncType {
   FtNormal,
 } FuncType;
 
+typedef struct ObjectPtrArray {
+  Object** values;
+  i32 capacity;
+  i32 len;
+} ObjectPtrArray;
+
 Object *alloc_obj(Vm *vm, ObjectType type);
 
 bool is_of_type(Object *obj, ObjectType type);
 
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: object_free(Vm *vm, Object *obj)
 void object_free(Object *obj);
 
 LambString *cstr_to_lambstring(Vm *vm, str cstr);
@@ -80,5 +89,15 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs);
 LambClosure *to_closure(Vm *vm, LambFunc *func);
 
 LambUpvalue *to_upvalue(Vm *vm, Value *slot);
+
+void objectptr_array_init(ObjectPtrArray *arr);
+
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: objectptr_array_write(Vm *vm, ObjectPtrArray *arr, Object *val)
+void objectptr_array_write(ObjectPtrArray *arr, Object *val);
+
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: objectptr_array_free(Vm *vm, ObjectPtrArray *arr)
+void objectptr_array_free(ObjectPtrArray *arr);
 
 #endif // OBJECT_HEADER

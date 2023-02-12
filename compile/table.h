@@ -11,7 +11,7 @@ typedef struct {
   Value val;
 } Entry;
 
-typedef struct {
+typedef struct Table {
   i32 len;
   i32 capacity;
   Entry *entries;
@@ -30,6 +30,8 @@ LambString *table_find_string(Table *table, str chars, i32 len, u32 hash);
 bool table_insert(Table *table, LambString *key, Value val);
 
 bool table_remove(Table *table, LambString *key);
+
+void table_remove_white(Table *table);
 
 bool table_get(Table *table, LambString *key, Value *val);
 

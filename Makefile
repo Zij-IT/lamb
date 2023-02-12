@@ -1,7 +1,6 @@
 CC=gcc
 
 ALL_SRC:= ./main.c \
-          ./memory.c \
           ./ast/ast.c \
           ./ast/optimization.c \
           ./parsing/built/lexer.c \
@@ -14,6 +13,7 @@ ALL_SRC:= ./main.c \
 		  ./compile/object.c \
 		  ./compile/table.c \
 		  ./compile/compiler.c \
+          ./compile/memory.c \
 		  ./compile/misc.c \
 		  ./compile/native.c \
 

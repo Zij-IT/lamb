@@ -1,5 +1,5 @@
 #include "compiler.h"
-#include "../memory.h"
+#include "memory.h"
 #include "chunk.h"
 #include "table.h"
 #include <stdlib.h>

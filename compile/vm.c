@@ -110,6 +110,8 @@ static Value *vm_peekn_stack(Vm *vm, i32 n) {
 
 void vm_init(Vm *vm, VmOptions options) {
   vm->frame_count = 0;
+  vm->bytes_allocated = 0;
+  vm->next_collection = 0;
   vm->stack_top = vm->stack;
   vm->poor_mans_gc = NULL;
   vm->open_upvalues = NULL;
@@ -117,6 +119,7 @@ void vm_init(Vm *vm, VmOptions options) {
 
   table_init(&vm->strings);
   table_init(&vm->globals);
+  objectptr_array_init(&vm->gray_stack);
 
   srand(time(NULL));
   set_natives(vm);
@@ -542,6 +545,7 @@ void vm_free(Vm *vm) {
 
   table_free(&vm->strings);
   table_free(&vm->globals);
+  objectptr_array_free(&vm->gray_stack);
 }
 
 #undef BINARY_INT_DOUBLE_OP

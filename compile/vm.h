@@ -29,6 +29,10 @@ typedef struct Callframe {
 typedef struct Vm {
   Table strings;
   Table globals;
+  
+  ObjectPtrArray gray_stack;
+  u64 bytes_allocated;
+  u64 next_collection;
 
   Value *stack_top;
   Value stack[MAX_VALUES];

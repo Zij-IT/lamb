@@ -3,6 +3,11 @@
 
 #include <stdlib.h>
 
+#include "value.h"
+
+typedef struct Vm Vm;
+typedef struct Table Table;
+
 #define ALLOCATE(type, count) \
     (type*)reallocate(NULL, 0, sizeof(type) * (count))
 
@@ -19,7 +24,23 @@
 #define FREE_ARRAY(type, pointer, oldCount) \
     reallocate(pointer, sizeof(type) * (oldCount), 0)
 
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: reallocate(Vm *vm, void* ptr, size_t old_size, size_t new_size)
 void* reallocate(void* pointer, size_t oldSize, size_t newSize);
+
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: mark_object(Vm *vm, Object *object)
+void mark_object(Object* obj);
+
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: mark_value(Vm *vm, Value *value)
+void mark_value(Value* value);
+
+// NOTE: Function requires access to Vm
+// TODO: Add Vm parameter to function: mark_table(Vm *vm, Table *table)
+void mark_table(Table* table);
+
+void collect_garbage(Vm* vm);
 
 #endif//MEMORY_HEADER
 

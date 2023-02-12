@@ -1,5 +1,5 @@
 #include "table.h"
-#include "../memory.h"
+#include "memory.h"
 #include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,6 +151,15 @@ LambString *table_find_string(Table *table, str chars, i32 len, u32 hash) {
     }
 
     index = (index + 1) & (table->capacity - 1);
+  }
+}
+
+void table_remove_white(Table *table) {
+  for (i32 i = 0; i < table->capacity; i++) {
+    Entry* entry = &table->entries[i];
+    if (entry->key != NULL && !entry->key->obj.is_marked) {
+      table_remove(table, entry->key);
+    }
   }
 }
 
