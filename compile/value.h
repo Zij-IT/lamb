@@ -6,6 +6,7 @@
 // Forward declare from object.h
 typedef struct Object Object;
 typedef struct LambString LambString;
+typedef struct Vm Vm;
 
 typedef enum {
   VkBool,
@@ -69,7 +70,7 @@ str kind_as_cstr(Value val);
 
 void value_arr_init(ValueArray *arr);
 
-void value_arr_write(ValueArray *arr, Value val);
+void value_arr_write(Vm* vm, ValueArray *arr, Value val);
 
 void value_arr_free(ValueArray *arr);
 

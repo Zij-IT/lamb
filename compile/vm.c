@@ -390,7 +390,7 @@ InterpretResult vm_run(Vm *vm) {
       value_arr_init(&items);
 
       for (i32 i = 0; i < len; i++) {
-        value_arr_write(&items, vm_pop_stack(vm));
+        value_arr_write(vm, &items, vm_pop_stack(vm));
       }
 
       LambArray *arr = (LambArray *)alloc_obj(vm, OtArray);

@@ -196,11 +196,11 @@ void value_arr_init(ValueArray *arr) {
   arr->values = NULL;
 }
 
-void value_arr_write(ValueArray *arr, Value val) {
+void value_arr_write(Vm* vm, ValueArray *arr, Value val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
-    arr->values = GROW_ARRAY(NULL, Value, arr->values, old_cap, arr->capacity);
+    arr->values = GROW_ARRAY(vm, Value, arr->values, old_cap, arr->capacity);
   }
 
   arr->values[arr->len] = val;
