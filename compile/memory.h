@@ -8,8 +8,8 @@
 typedef struct Vm Vm;
 typedef struct Table Table;
 
-#define ALLOCATE(type, count) \
-    (type*)reallocate(NULL, NULL, 0, sizeof(type) * (count))
+#define ALLOCATE(vm, type, count) \
+    (type*)reallocate(vm, NULL, 0, sizeof(type) * (count))
 
 #define FREE(type, pointer) reallocate(NULL, pointer, sizeof(type), 0)
 

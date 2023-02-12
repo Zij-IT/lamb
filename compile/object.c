@@ -11,7 +11,7 @@
 Object *alloc_obj(Vm *vm, ObjectType type) {
   switch (type) {
   case OtString: {
-    LambString *st = ALLOCATE(LambString, 1);
+    LambString *st = ALLOCATE(vm, LambString, 1);
     #ifdef DEBUG_LOG_GC
     printf("%p allocating OtString\n");
     #endif
@@ -28,7 +28,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtArray: {
-    LambArray *arr = ALLOCATE(LambArray, 1);
+    LambArray *arr = ALLOCATE(vm, LambArray, 1);
     #ifdef DEBUG_LOG_GC
     printf("%p allocating OtArray\n");
     #endif
@@ -45,7 +45,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtFunc: {
-    LambFunc *func = ALLOCATE(LambFunc, 1);
+    LambFunc *func = ALLOCATE(vm, LambFunc, 1);
     #ifdef DEBUG_LOG_GC
     printf("%p allocating OtFunc\n");
     #endif
@@ -63,7 +63,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtNative: {
-    NativeFunc *func = ALLOCATE(NativeFunc, 1);
+    NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);
     #ifdef DEBUG_LOG_GC
     printf("%p allocating OtNative\n");
     #endif
@@ -78,7 +78,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtClosure: {
-    LambClosure *closure = ALLOCATE(LambClosure, 1);
+    LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
     #ifdef DEBUG_LOG_GC
     printf("%p allocating OtClosure\n");
     #endif
@@ -93,7 +93,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
     return vm->poor_mans_gc;
   }
   case OtUpvalue: {
-    LambUpvalue *upvalue = ALLOCATE(LambUpvalue, 1);
+    LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
     #ifdef DEBUG_LOG_GC
     printf("%p allocating OtUpvalue\n");
     #endif
@@ -189,7 +189,7 @@ LambString *cstr_to_lambstring(Vm *vm, str cstr) {
 LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
   i32 len = lhs->len + rhs->len;
 
-  string chars = ALLOCATE(char, len + 1);
+  string chars = ALLOCATE(vm, char, len + 1);
   strcpy(chars, lhs->chars);
   strcpy(chars + lhs->len, rhs->chars);
   chars[len] = '\0';
@@ -215,7 +215,7 @@ LambClosure *to_closure(Vm *vm, LambFunc *func) {
   LambClosure *closure = (LambClosure *)alloc_obj(vm, OtClosure);
   closure->function = func;
   closure->upvalue_count = func->upvalue_count;
-  closure->upvalues = ALLOCATE(LambUpvalue *, closure->upvalue_count);
+  closure->upvalues = ALLOCATE(vm, LambUpvalue *, closure->upvalue_count);
   for (int i = 0; i < closure->upvalue_count; i++) {
     closure->upvalues[i] = NULL;
   }

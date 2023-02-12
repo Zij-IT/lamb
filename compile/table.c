@@ -8,7 +8,8 @@
 #define TOMBSTONE new_boolean(true)
 
 static void table_adjust_capacity(Table *table, i32 capacity) {
-  Entry *entries = ALLOCATE(Entry, capacity);
+  // TODO: Exand table_adjust_capacity to include Vm*: table_adjust_capacity(Vm *vm, Table *table, i32 capacity)
+  Entry *entries = ALLOCATE(NULL, Entry, capacity);
 
   // This table is required due to table_find call below, and has no other
   // function hence the length being set to 0 despite entries being filled
