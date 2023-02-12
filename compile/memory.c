@@ -34,7 +34,7 @@ static void blacken_object(Vm* vm, Object* obj) {
     }
   case OtFunc: {
     LambFunc* func = (LambFunc*)obj;
-    mark_object(vm, (Object*)func->name);
+    mark_object(vm, (Object*)func);
     mark_array(vm, &func->chunk.constants);
     break;
     }

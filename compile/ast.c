@@ -89,7 +89,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
   for (AstNode *child = node->kids[0]; child != NULL; child = child->kids[1]) {
     AstNode *ident_node = child->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-
+    chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object*)ident));
     Local loc = {.depth = func_comp.scope_depth,
                  .name = ident->chars,
                  .is_captured = false};
@@ -126,6 +126,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler,
   AstNode *func_def = node->kids[1];
 
   LambString *rec_func_ident = cstr_to_lambstring(vm, ident->val.i);
+  chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object*)rec_func_ident));
 
   BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
 
@@ -159,8 +160,6 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
   func_comp.enclosing = compiler;
   vm->curr_compiler = &func_comp;
   
-  printf("==== START COMPILING COMPOSE OPERATOR ====\n");
-
   BUBBLE(compile(vm, &func_comp, first));
   BUBBLE(compile(vm, &func_comp, second));
 
@@ -188,8 +187,6 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
                 func_comp.upvalues[i].is_local ? 1 : 0);
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
-
-  printf("==== FINISHED COMPILING COMPOSE OPERATOR ====\n");
 
   compiler_free(vm, &func_comp);
   vm->curr_compiler = func_comp.enclosing;
@@ -569,11 +566,24 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     BUBBLE(compile(vm, compiler, value_node));
 
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
+    i32 idx = chunk_add_constant(vm, compiler_chunk(compiler),
+                         new_object((Object *)ident));
 
     if (compiler->scope_depth == 0) {
       chunk_write(vm, compiler_chunk(compiler), OpDefineGlobal);
-      chunk_write_constant(vm, compiler_chunk(compiler),
-                           new_object((Object *)ident));
+      if (idx >= 256) {
+        u8 hi = (idx >> 16) & 0xFF;
+        u8 mi = (idx >> 8) & 0xFF;
+        u8 lo = (idx >> 0) & 0xFF;
+
+        chunk_write(vm, compiler_chunk(compiler), OpLongConstant);
+        chunk_write(vm, compiler_chunk(compiler), hi);
+        chunk_write(vm, compiler_chunk(compiler), mi);
+        chunk_write(vm, compiler_chunk(compiler), lo);
+      } else {
+        chunk_write(vm, compiler_chunk(compiler), OpConstant);
+        chunk_write(vm, compiler_chunk(compiler), (u8)idx);
+      }
     } else {
       Local loc = {.depth = compiler->scope_depth,
                    .name = ident->chars,

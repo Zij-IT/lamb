@@ -117,7 +117,7 @@ void object_free(Vm* vm, Object *obj) {
   switch (obj->type) {
   case OtString: {
     #ifdef DEBUG_LOG_GC
-    printf("Freeing %p of type OtString\n", obj);
+    printf("Freeing %p of type OtString [%s]\n", obj, ((LambString *)obj)->chars);
     #endif
     LambString *st = (LambString *)obj;
     FREE_ARRAY(vm, char, st->chars, st->len + 1);

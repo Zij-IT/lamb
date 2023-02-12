@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "./chunk.h"
 #include "./value.h"
+#include "vm.h"
 
 void chunk_init(Chunk *chunk) {
   chunk->len = 0;
@@ -24,13 +25,14 @@ void chunk_write(Vm* vm, Chunk *chunk, u8 byte) {
 }
 
 i32 chunk_add_constant(Vm* vm, Chunk *chunk, Value val) {
+  vm_push_stack(vm, val);
   value_arr_write(vm, &chunk->constants, val);
+  vm_pop_stack(vm);
   return chunk->constants.len - 1;
 }
 
 void chunk_write_constant(Vm* vm, Chunk *chunk, Value val) {
-  value_arr_write(vm, &chunk->constants, val);
-  i32 idx = chunk->constants.len - 1;
+  i32 idx = chunk_add_constant(vm, chunk, val);
 
   if (idx >= 256) {
     u8 hi = (idx >> 16) & 0xFF;
