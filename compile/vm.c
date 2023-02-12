@@ -545,7 +545,7 @@ void vm_free(Vm *vm) {
 
   table_free(&vm->strings);
   table_free(&vm->globals);
-  objectptr_array_free(&vm->gray_stack);
+  objectptr_array_free(vm, &vm->gray_stack);
 }
 
 #undef BINARY_INT_DOUBLE_OP

@@ -90,12 +90,8 @@ LambUpvalue *to_upvalue(Vm *vm, Value *slot);
 
 void objectptr_array_init(ObjectPtrArray *arr);
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: objectptr_array_write(Vm *vm, ObjectPtrArray *arr, Object *val)
-void objectptr_array_write(ObjectPtrArray *arr, Object *val);
+void objectptr_array_write(Vm *vm, ObjectPtrArray *arr, Object *val);
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: objectptr_array_free(Vm *vm, ObjectPtrArray *arr)
-void objectptr_array_free(ObjectPtrArray *arr);
+void objectptr_array_free(Vm *vm, ObjectPtrArray *arr);
 
 #endif // OBJECT_HEADER

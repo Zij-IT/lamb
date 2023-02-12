@@ -236,18 +236,18 @@ void objectptr_array_init(ObjectPtrArray *arr) {
   arr->values = NULL;
 }
 
-void objectptr_array_write(ObjectPtrArray *arr, Object *val) {
+void objectptr_array_write(Vm* vm, ObjectPtrArray *arr, Object *val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
-    arr->values = GROW_ARRAY(NULL, Object*, arr->values, old_cap, arr->capacity);
+    arr->values = GROW_ARRAY(vm, Object*, arr->values, old_cap, arr->capacity);
   }
 
   arr->values[arr->len] = val;
   arr->len += 1;
 }
 
-void objectptr_array_free(ObjectPtrArray *arr) {
+void objectptr_array_free(Vm* vm, ObjectPtrArray *arr) {
   FREE_ARRAY(Object*, arr->values, arr->capacity);
   objectptr_array_init(arr);
 }
