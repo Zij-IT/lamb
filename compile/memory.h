@@ -9,24 +9,24 @@ typedef struct Vm Vm;
 typedef struct Table Table;
 
 #define ALLOCATE(type, count) \
-    (type*)reallocate(NULL, 0, sizeof(type) * (count))
+    (type*)reallocate(NULL, NULL, 0, sizeof(type) * (count))
 
-#define FREE(type, pointer) reallocate(pointer, sizeof(type), 0)
+#define FREE(type, pointer) reallocate(NULL, pointer, sizeof(type), 0)
 
 // Must always be in multiples of two due to table :D
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : (capacity) * 2)
 
 #define GROW_ARRAY(type, pointer, oldCount, newCount) \
-    (type*)reallocate(pointer, sizeof(type) * (oldCount), \
+    (type*)reallocate(NULL, pointer, sizeof(type) * (oldCount), \
         sizeof(type) * (newCount))
 
 #define FREE_ARRAY(type, pointer, oldCount) \
-    reallocate(pointer, sizeof(type) * (oldCount), 0)
+    reallocate(NULL, pointer, sizeof(type) * (oldCount), 0)
 
 // NOTE: Function requires access to Vm
 // TODO: Add Vm parameter to function: reallocate(Vm *vm, void* ptr, size_t old_size, size_t new_size)
-void* reallocate(void* pointer, size_t oldSize, size_t newSize);
+void* reallocate(Vm* vm, void* pointer, size_t oldSize, size_t newSize);
 
 // NOTE: Function requires access to Vm
 // TODO: Add Vm parameter to function: mark_object(Vm *vm, Object *object)

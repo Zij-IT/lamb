@@ -115,7 +115,7 @@ static void sweep_unused(Vm* vm) {
 //  |--------------|------------------|-------------------|
 //  | non-zero     | larger than old  | grow exisitng     |
 //  -------------------------------------------------------
-void* reallocate(void* ptr, size_t old_size, size_t new_size) {
+void* reallocate(Vm* vm, void* ptr, size_t old_size, size_t new_size) {
   if(new_size == 0) {
     free(ptr);
     return NULL;
