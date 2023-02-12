@@ -18,7 +18,7 @@ ALL_SRC:= ./main.c \
 		  ./compile/native.c \
 
 lamb: $(ALL_SRC)
-	$(CC) $(ALL_SRC) -g -Wall -Wextra -lfl -o lamb
+	$(CC) $(ALL_SRC) -DDEBUG_LOG_GC -g -Wall -Wextra -lfl -o lamb
 
 ./parsing/built/lexer.c: ./parsing/lexer.l
 	flex ./parsing/lexer.l

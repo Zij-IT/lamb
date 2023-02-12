@@ -13,7 +13,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   case OtString: {
     LambString *st = ALLOCATE(vm, LambString, 1);
     #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtString\n");
+    printf("%p allocating OtString\n", (void*)st);
     #endif
     Object obj = {
         .type = type,
@@ -30,7 +30,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   case OtArray: {
     LambArray *arr = ALLOCATE(vm, LambArray, 1);
     #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtArray\n");
+    printf("%p allocating OtArray\n", (void*)arr);
     #endif
     Object obj = {
         .type = type,
@@ -47,7 +47,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   case OtFunc: {
     LambFunc *func = ALLOCATE(vm, LambFunc, 1);
     #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtFunc\n");
+    printf("%p allocating OtFunc\n", (void*)func);
     #endif
     Object obj = {
         .type = type,
@@ -65,7 +65,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   case OtNative: {
     NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);
     #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtNative\n");
+    printf("%p allocating OtNative\n", (void*)func);
     #endif
     Object obj = {
         .type = type,
@@ -80,7 +80,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   case OtClosure: {
     LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
     #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtClosure\n");
+    printf("%p allocating OtClosure\n", (void*)closure);
     #endif
     Object obj = {
         .type = type,
@@ -95,7 +95,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   case OtUpvalue: {
     LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
     #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtUpvalue\n");
+    printf("%p allocating OtUpvalue\n", (void*)upvalue);
     #endif
     Object obj = {
         .type = type,

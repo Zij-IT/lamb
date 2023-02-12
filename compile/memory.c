@@ -148,7 +148,7 @@ void mark_object(Vm* vm, Object* object) {
   
   #ifdef DEBUG_LOG_GC
   printf("Marking %p with value: ", (void*)object);
-  print_value(new_obj(object));
+  print_value(new_object(object));
   printf("\n");
   #endif
 
@@ -173,7 +173,7 @@ void mark_table(Vm* vm, Table* table) {
 void collect_garbage(Vm* vm) {
   #ifdef DEBUG_LOG_GC
   u64 before = vm->bytes_allocated;
-  printf("====== GC Begin ======\n")
+  printf("====== GC Begin ======\n");
   #endif
 
   mark_roots(vm);
@@ -188,8 +188,8 @@ void collect_garbage(Vm* vm) {
   sweep_unused(vm);
 
   #ifdef DEBUG_LOG_GC
-  printf("Collected %lu bytes (from %lu to %lu)\n", before - vm->byte_allocated, before, vm->bytes_allocated);
+  printf("Collected %lu bytes (from %lu to %lu)\n", before - vm->bytes_allocated, before, vm->bytes_allocated);
   printf("Next collection at %lu bytes\n", vm->next_collection);
-  printf("====== GC End ======\n")
+  printf("====== GC End ======\n");
   #endif
 }
