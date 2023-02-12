@@ -188,7 +188,7 @@ InterpretResult vm_run(Vm *vm) {
       LambString *ident = (LambString *)vm_read_constant(vm).as.obj;
       Value *val = vm_peek_stack(vm);
 
-      if (!table_insert(&vm->globals, ident, *val)) {
+      if (!table_insert(vm, &vm->globals, ident, *val)) {
         runtime_error("Multiple definitions found for global %s", ident->chars);
       }
 

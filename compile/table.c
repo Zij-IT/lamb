@@ -7,9 +7,9 @@
 
 #define TOMBSTONE new_boolean(true)
 
-static void table_adjust_capacity(Table *table, i32 capacity) {
+static void table_adjust_capacity(Vm* vm, Table *table, i32 capacity) {
   // TODO: Exand table_adjust_capacity to include Vm*: table_adjust_capacity(Vm *vm, Table *table, i32 capacity)
-  Entry *entries = ALLOCATE(NULL, Entry, capacity);
+  Entry *entries = ALLOCATE(vm, Entry, capacity);
 
   // This table is required due to table_find call below, and has no other
   // function hence the length being set to 0 despite entries being filled
@@ -54,16 +54,16 @@ void table_copy_entries(Table *from, Table *to) {
   for (i32 i = 0; i < from->capacity; i++) {
     Entry *entry = &from->entries[i];
     if (entry->key != NULL) {
-      table_insert(to, entry->key, entry->val);
+      table_insert(NULL, to, entry->key, entry->val);
     }
   }
 }
 
-bool table_insert(Table *table, LambString *key, Value val) {
+bool table_insert(Vm* vm, Table *table, LambString *key, Value val) {
   // printf("Inserting into table key: '%s'\n", key->chars);
   if (table->len + 1 > table->capacity * TABLE_MAX_LOAD) {
     i32 capacity = GROW_CAPACITY(table->capacity);
-    table_adjust_capacity(table, capacity);
+    table_adjust_capacity(vm, table, capacity);
   }
 
   Entry *entry = table_find(table, key);

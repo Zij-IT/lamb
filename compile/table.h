@@ -27,8 +27,7 @@ Entry *table_find(Table *table, LambString *key);
 
 LambString *table_find_string(Table *table, str chars, i32 len, u32 hash);
 
-// TODO: Exand table_adjust_capacity to include Vm*: table_insert(Vm *vm, Table *table, LambString *key, Value val)
-bool table_insert(Table *table, LambString *key, Value val);
+bool table_insert(Vm* vm, Table *table, LambString *key, Value val);
 
 bool table_remove(Table *table, LambString *key);
 

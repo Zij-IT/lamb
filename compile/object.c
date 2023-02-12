@@ -180,7 +180,7 @@ LambString *cstr_to_lambstring(Vm *vm, str cstr) {
     interned->hash = hash;
     interned->len = len;
 
-    table_insert(&vm->strings, interned, new_boolean(false));
+    table_insert(vm, &vm->strings, interned, new_boolean(false));
   }
 
   return interned;
@@ -206,7 +206,7 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
   ret->len = len;
   ret->hash = hash_string(chars);
 
-  table_insert(&vm->strings, ret, new_boolean(false));
+  table_insert(vm, &vm->strings, ret, new_boolean(false));
 
   return ret;
 }
