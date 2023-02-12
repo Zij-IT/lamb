@@ -12,27 +12,24 @@ void chunk_init(Chunk *chunk) {
   value_arr_init(&chunk->constants);
 }
 
-// TODO: Require this function use 'Vm'
-void chunk_write(Chunk *chunk, u8 byte) {
+void chunk_write(Vm* vm, Chunk *chunk, u8 byte) {
   if (chunk->capacity < chunk->len + 1) {
     i32 old_cap = chunk->capacity;
     chunk->capacity = GROW_CAPACITY(old_cap);
-    chunk->bytes = GROW_ARRAY(NULL, u8, chunk->bytes, old_cap, chunk->capacity);
+    chunk->bytes = GROW_ARRAY(vm, u8, chunk->bytes, old_cap, chunk->capacity);
   }
 
   chunk->bytes[chunk->len] = byte;
   chunk->len += 1;
 }
 
-// TODO: Require this function use 'Vm'
-i32 chunk_add_constant(Chunk *chunk, Value val) {
-  value_arr_write(NULL, &chunk->constants, val);
+i32 chunk_add_constant(Vm* vm, Chunk *chunk, Value val) {
+  value_arr_write(vm, &chunk->constants, val);
   return chunk->constants.len - 1;
 }
 
-// TODO: Require this function use 'Vm'
-void chunk_write_constant(Chunk *chunk, Value val) {
-  value_arr_write(NULL, &chunk->constants, val);
+void chunk_write_constant(Vm* vm, Chunk *chunk, Value val) {
+  value_arr_write(vm, &chunk->constants, val);
   i32 idx = chunk->constants.len - 1;
 
   if (idx >= 256) {
@@ -40,21 +37,20 @@ void chunk_write_constant(Chunk *chunk, Value val) {
     u8 mi = (idx >> 8) & 0xFF;
     u8 lo = (idx >> 0) & 0xFF;
 
-    chunk_write(chunk, OpLongConstant);
-    chunk_write(chunk, hi);
-    chunk_write(chunk, mi);
-    chunk_write(chunk, lo);
+    chunk_write(vm, chunk, OpLongConstant);
+    chunk_write(vm, chunk, hi);
+    chunk_write(vm, chunk, mi);
+    chunk_write(vm, chunk, lo);
   } else {
-    chunk_write(chunk, OpConstant);
-    chunk_write(chunk, (u8)idx);
+    chunk_write(vm, chunk, OpConstant);
+    chunk_write(vm, chunk, (u8)idx);
   }
 }
 
-// TODO: Require this function use 'Vm'
-i32 chunk_write_jump(Chunk *chunk, u8 op) {
-  chunk_write(chunk, op);
-  chunk_write(chunk, 0xff);
-  chunk_write(chunk, 0xff);
+i32 chunk_write_jump(Vm* vm, Chunk *chunk, u8 op) {
+  chunk_write(vm, chunk, op);
+  chunk_write(vm, chunk, 0xff);
+  chunk_write(vm, chunk, 0xff);
 
   return chunk->len - 2;
 }
@@ -71,8 +67,7 @@ void chunk_patch_jump(Chunk *chunk, i32 offset) {
   chunk->bytes[offset + 1] = jump & 0xff;
 }
 
-// TODO: Require this function use 'Vm'
-void chunk_free(Chunk *chunk) {
+void chunk_free(Vm* vm, Chunk *chunk) {
   FREE_ARRAY(u8, chunk->bytes, chunk->capacity);
   value_arr_free(&chunk->constants);
   chunk_init(chunk);

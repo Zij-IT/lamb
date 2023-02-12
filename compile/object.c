@@ -138,7 +138,7 @@ void object_free(Vm* vm, Object *obj) {
     printf("Freeing %p of type OtFunc\n", obj);
     #endif
     LambFunc *func = (LambFunc *)obj;
-    chunk_free(&func->chunk);
+    chunk_free(vm, &func->chunk);
     FREE(vm, LambFunc, func);
     break;
   }

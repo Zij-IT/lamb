@@ -32,7 +32,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
   CompileAstResult car = compile(&vm, &compiler, root);
 
   if (car == CarOk) {
-    chunk_write(&compiler.function->chunk, OpReturn);
+    chunk_write(&vm, &compiler.function->chunk, OpReturn);
     LambClosure *closure = to_closure(&vm, compiler.function);
     vm_push_stack(&vm, new_object((Object *)closure));
 
