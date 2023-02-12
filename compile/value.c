@@ -207,7 +207,7 @@ void value_arr_write(Vm* vm, ValueArray *arr, Value val) {
   arr->len += 1;
 }
 
-void value_arr_free(ValueArray *arr) {
-  FREE_ARRAY(NULL, Value, arr->values, arr->capacity);
+void value_arr_free(Vm* vm, ValueArray *arr) {
+  FREE_ARRAY(vm, Value, arr->values, arr->capacity);
   value_arr_init(arr);
 }

@@ -34,7 +34,7 @@ typedef struct Compiler {
 
 void compiler_init(Vm* vm, Compiler *compiler, FuncType type);
 
-void compiler_free(Compiler *compiler);
+void compiler_free(Vm* vm, Compiler *compiler);
 
 void compiler_new_scope(Compiler *compiler);
 
@@ -46,6 +46,6 @@ void local_arr_init(LocalArray *arr);
 
 void local_arr_write(Vm* vm, LocalArray *arr, Local val);
 
-void local_arr_free(LocalArray *arr);
+void local_arr_free(Vm* vm, LocalArray *arr);
 
 #endif // BLOCK_HEADER

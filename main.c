@@ -52,7 +52,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
            "compiled.\n");
   }
 
-  compiler_free(&compiler);
+  compiler_free(&vm, &compiler);
   vm_free(&vm);
 }
 

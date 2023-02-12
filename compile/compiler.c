@@ -15,8 +15,8 @@ void compiler_init(Vm* vm, Compiler *compiler, FuncType type) {
   local_arr_write(vm, &compiler->locals, loc);
 }
 
-void compiler_free(Compiler *compiler) {
-  local_arr_free(&compiler->locals);
+void compiler_free(Vm* vm, Compiler *compiler) {
+  local_arr_free(vm, &compiler->locals);
   local_arr_init(&compiler->locals);
 }
 
@@ -54,7 +54,7 @@ void local_arr_write(Vm* vm, LocalArray *arr, Local val) {
   arr->len += 1;
 }
 
-void local_arr_free(LocalArray *arr) {
-  FREE_ARRAY(NULL, Value, arr->values, arr->capacity);
+void local_arr_free(Vm* vm, LocalArray *arr) {
+  FREE_ARRAY(vm, Value, arr->values, arr->capacity);
   local_arr_init(arr);
 }

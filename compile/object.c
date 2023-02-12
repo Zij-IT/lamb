@@ -129,7 +129,7 @@ void object_free(Vm* vm, Object *obj) {
     printf("Freeing %p of type OtArray\n", obj);
     #endif
     LambArray *arr = (LambArray *)obj;
-    value_arr_free(&arr->items);
+    value_arr_free(vm, &arr->items);
     FREE(vm, LambArray, arr);
     break;
   }

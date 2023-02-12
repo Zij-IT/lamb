@@ -113,7 +113,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
                 func_comp.upvalues[i].is_local ? 1 : 0);
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
-  compiler_free(&func_comp);
+  compiler_free(vm, &func_comp);
 
   return CarOk;
 }
@@ -184,7 +184,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
 
-  compiler_free(&func_comp);
+  compiler_free(vm, &func_comp);
 
   return CarOk;
 }
