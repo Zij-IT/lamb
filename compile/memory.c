@@ -116,21 +116,21 @@ static void sweep_unused(Vm* vm) {
 //  | non-zero     | larger than old  | grow exisitng     |
 //  -------------------------------------------------------
 void* reallocate(Vm* vm, void* ptr, size_t old_size, size_t new_size) {
+  if (new_size > old_size) {
+    vm->bytes_allocated += new_size - old_size;
+  } else {
+    vm->bytes_allocated -= old_size - new_size;
+  }
+  
   if(new_size == 0) {
     free(ptr);
     return NULL;
   }
   
-  // if (new_size > old_size) {
-  //   vm->bytes_allocated += new_size - old_size;
-  // } else {
-  //   vm->bytes_allocated -= old_size - new_size;
-  // }
-  
-  // if (vm->bytes_allocated > vm->next_collection) {
-  //   collect_garbage(vm);
-  //   vm->next_collection = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
-  // }
+  if (vm->bytes_allocated > vm->next_collection) {
+    collect_garbage(vm);
+    vm->next_collection = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+  }
   
   void* result = realloc(ptr, new_size);
   if (result == NULL) {
