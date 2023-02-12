@@ -541,7 +541,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     } else {
       chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
     }
-    compiler_end_scope(compiler);
+    compiler_end_scope(vm, compiler);
     break;
   }
   case AstntExprStmt: {

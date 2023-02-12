@@ -22,17 +22,16 @@ void compiler_free(Compiler *compiler) {
 
 void compiler_new_scope(Compiler *compiler) { compiler->scope_depth++; }
 
-// TODO: Require this function use Vm*
-void compiler_end_scope(Compiler *compiler) {
+void compiler_end_scope(Vm* vm, Compiler *compiler) {
   compiler->scope_depth--;
 
   while (compiler->locals.len > 0 &&
          compiler->locals.values[compiler->locals.len - 1].depth >
              compiler->scope_depth) {
     if (compiler->locals.values[compiler->locals.len - 1].is_captured) {
-      chunk_write(NULL, &compiler->function->chunk, OpCloseValue);
+      chunk_write(vm, &compiler->function->chunk, OpCloseValue);
     } else {
-      chunk_write(NULL, &compiler->function->chunk, OpPop);
+      chunk_write(vm, &compiler->function->chunk, OpPop);
     }
     compiler->locals.len--;
   }
