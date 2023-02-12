@@ -21,8 +21,6 @@ void table_init(Table *table);
 
 void table_free(Table *table);
 
-void table_copy_entries(Table *from, Table *to);
-
 Entry *table_find(Table *table, LambString *key);
 
 LambString *table_find_string(Table *table, str chars, i32 len, u32 hash);

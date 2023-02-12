@@ -50,15 +50,6 @@ void table_init(Table *table) {
   table->entries = NULL;
 }
 
-void table_copy_entries(Table *from, Table *to) {
-  for (i32 i = 0; i < from->capacity; i++) {
-    Entry *entry = &from->entries[i];
-    if (entry->key != NULL) {
-      table_insert(NULL, to, entry->key, entry->val);
-    }
-  }
-}
-
 bool table_insert(Vm* vm, Table *table, LambString *key, Value val) {
   // printf("Inserting into table key: '%s'\n", key->chars);
   if (table->len + 1 > table->capacity * TABLE_MAX_LOAD) {
