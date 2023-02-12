@@ -26,17 +26,11 @@ typedef struct Table Table;
 
 void* reallocate(Vm* vm, void* pointer, size_t oldSize, size_t newSize);
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: mark_object(Vm *vm, Object *object)
-void mark_object(Object* obj);
+void mark_object(Vm* vm, Object* obj);
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: mark_value(Vm *vm, Value *value)
-void mark_value(Value* value);
+void mark_value(Vm* vm, Value* value);
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: mark_table(Vm *vm, Table *table)
-void mark_table(Table* table);
+void mark_table(Vm* vm, Table* table);
 
 void collect_garbage(Vm* vm);
 

@@ -8,15 +8,15 @@
 
 // NOTE: Function requires access to Vm
 // TODO: Add Vm parameter to function: mark_array(Vm *vm, ValueArray *arr)
-static void mark_array(ValueArray* arr) {
+static void mark_array(Vm* vm, ValueArray* arr) {
   for (i32 i = 0; i < arr->len; i++) {
-    mark_value(&arr->values[i]);
+    mark_value(vm, &arr->values[i]);
   }
 }
 
 // NOTE: Function requires access to Vm
 // TODO: Add Vm parameter to function: blacken_object(Vm *vm, Object *obj)
-static void blacken_object(Object* obj) {
+static void blacken_object(Vm* vm, Object* obj) {
   #ifdef DEBUG_LOG_GC
   printf("Blackening %p with value: ", (void *)obj);
   print_value(new_object(obj));
@@ -29,25 +29,25 @@ static void blacken_object(Object* obj) {
     break;
   case OtArray: {
     LambArray *arr = (LambArray *)obj;
-    mark_array(&arr->items);
+    mark_array(vm, &arr->items);
     break;
     }
   case OtFunc: {
     LambFunc* func = (LambFunc*)obj;
-    mark_object((Object*)func->name);
-    mark_array(&func->chunk.constants);
+    mark_object(vm, (Object*)func->name);
+    mark_array(vm, &func->chunk.constants);
     break;
     }
   case OtClosure: {
     LambClosure* closure = (LambClosure*)obj;
-    mark_object((Object*)closure->function);
+    mark_object(vm, (Object*)closure->function);
     for (i32 i = 0; i < closure->upvalue_count; i++) {
-      mark_object((Object*)closure->upvalues[i]);   
+      mark_object(vm, (Object*)closure->upvalues[i]);   
     }
     break;
     }
   case OtUpvalue: {
-    mark_value(&((LambUpvalue*)obj)->closed);
+    mark_value(vm, &((LambUpvalue*)obj)->closed);
     break;
     }
   }
@@ -55,18 +55,18 @@ static void blacken_object(Object* obj) {
 
 static void mark_roots(Vm* vm) {
   for (Value* slot = vm->stack; slot < vm->stack_top; slot++) {
-    mark_value(slot);
+    mark_value(vm, slot);
   }
   
   for (i32 i = 0; i < vm->frame_count; i++) {
-    mark_object((Object*)vm->frames[i].closure);
+    mark_object(vm, (Object*)vm->frames[i].closure);
   }
   
   for (LambUpvalue* upvalue = vm->open_upvalues; upvalue != NULL; upvalue = upvalue->next) {
-    mark_object((Object*)upvalue);
+    mark_object(vm, (Object*)upvalue);
   }
   
-  mark_table(&vm->globals);
+  mark_table(vm, &vm->globals);
   
   // mark current object in compilation as compilation can trigger GC
   // This means that the vm does have to have some link to the current compiler
@@ -76,7 +76,7 @@ static void mark_roots(Vm* vm) {
 static void trace_refs(Vm* vm) {
   while(vm->gray_stack.len > 0) {
     Object* obj = vm->gray_stack.values[--vm->gray_stack.len];
-    blacken_object(obj);
+    blacken_object(vm, obj);
   }
 }
 
@@ -141,7 +141,7 @@ void* reallocate(Vm* vm, void* ptr, size_t old_size, size_t new_size) {
   return result;
 }
 
-void mark_object(Object* object) {
+void mark_object(Vm* vm, Object* object) {
   if (object == NULL || object->is_marked) {
     return;
   }
@@ -156,17 +156,17 @@ void mark_object(Object* object) {
   // objectptr_array_write(&vm->gray_stack, object);
 }
 
-void mark_value(Value* value) {
+void mark_value(Vm* vm, Value* value) {
   if (value->kind == VkObj) {
-    mark_object((Object*)value->as.obj);
+    mark_object(vm, (Object*)value->as.obj);
   }
 }
 
-void mark_table(Table* table) {
+void mark_table(Vm* vm, Table* table) {
   for (i32 i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
-    mark_object((Object*)entry->key);
-    mark_value(&entry->val);
+    mark_object(vm, (Object*)entry->key);
+    mark_value(vm, &entry->val);
   }
 }
 
