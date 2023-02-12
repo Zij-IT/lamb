@@ -55,6 +55,6 @@ void local_arr_write(Vm* vm, LocalArray *arr, Local val) {
 }
 
 void local_arr_free(LocalArray *arr) {
-  FREE_ARRAY(Value, arr->values, arr->capacity);
+  FREE_ARRAY(NULL, Value, arr->values, arr->capacity);
   local_arr_init(arr);
 }

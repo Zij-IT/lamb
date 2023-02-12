@@ -208,6 +208,6 @@ void value_arr_write(Vm* vm, ValueArray *arr, Value val) {
 }
 
 void value_arr_free(ValueArray *arr) {
-  FREE_ARRAY(Value, arr->values, arr->capacity);
+  FREE_ARRAY(NULL, Value, arr->values, arr->capacity);
   value_arr_init(arr);
 }

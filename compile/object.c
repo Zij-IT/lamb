@@ -120,7 +120,7 @@ void object_free(Vm* vm, Object *obj) {
     printf("Freeing %p of type OtString\n", obj);
     #endif
     LambString *st = (LambString *)obj;
-    FREE_ARRAY(char, st->chars, st->len + 1);
+    FREE_ARRAY(vm, char, st->chars, st->len + 1);
     FREE(vm, LambString, st);
     break;
   }
@@ -154,7 +154,7 @@ void object_free(Vm* vm, Object *obj) {
     printf("Freeing %p of type OtClosure\n", obj);
     #endif
     LambClosure *closure = (LambClosure *)obj;
-    FREE_ARRAY(LambUpvalue *, closure->upvalues, closure->upvalue_count);
+    FREE_ARRAY(vm, LambUpvalue *, closure->upvalues, closure->upvalue_count);
     FREE(vm, LambClosure, closure);
     break;
   }
@@ -248,6 +248,6 @@ void objectptr_array_write(Vm* vm, ObjectPtrArray *arr, Object *val) {
 }
 
 void objectptr_array_free(Vm* vm, ObjectPtrArray *arr) {
-  FREE_ARRAY(Object*, arr->values, arr->capacity);
+  FREE_ARRAY(vm, Object*, arr->values, arr->capacity);
   objectptr_array_init(arr);
 }

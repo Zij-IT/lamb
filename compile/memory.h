@@ -21,8 +21,8 @@ typedef struct Table Table;
     (type*)reallocate(vm, pointer, sizeof(type) * (oldCount), \
         sizeof(type) * (newCount))
 
-#define FREE_ARRAY(type, pointer, oldCount) \
-    reallocate(NULL, pointer, sizeof(type) * (oldCount), 0)
+#define FREE_ARRAY(vm, type, pointer, oldCount) \
+    reallocate(vm, pointer, sizeof(type) * (oldCount), 0)
 
 // NOTE: Function requires access to Vm
 // TODO: Add Vm parameter to function: reallocate(Vm *vm, void* ptr, size_t old_size, size_t new_size)

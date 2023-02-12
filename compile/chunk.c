@@ -68,7 +68,7 @@ void chunk_patch_jump(Chunk *chunk, i32 offset) {
 }
 
 void chunk_free(Vm* vm, Chunk *chunk) {
-  FREE_ARRAY(u8, chunk->bytes, chunk->capacity);
+  FREE_ARRAY(vm, u8, chunk->bytes, chunk->capacity);
   value_arr_free(&chunk->constants);
   chunk_init(chunk);
 }

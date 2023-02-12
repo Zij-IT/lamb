@@ -8,7 +8,6 @@
 #define TOMBSTONE new_boolean(true)
 
 static void table_adjust_capacity(Vm* vm, Table *table, i32 capacity) {
-  // TODO: Exand table_adjust_capacity to include Vm*: table_adjust_capacity(Vm *vm, Table *table, i32 capacity)
   Entry *entries = ALLOCATE(vm, Entry, capacity);
 
   // This table is required due to table_find call below, and has no other
@@ -35,7 +34,7 @@ static void table_adjust_capacity(Vm* vm, Table *table, i32 capacity) {
     table->len++;
   }
 
-  FREE_ARRAY(Entry, table->entries, table->capacity);
+  FREE_ARRAY(vm, Entry, table->entries, table->capacity);
   table->entries = entries;
   table->capacity = capacity;
 }
@@ -156,7 +155,7 @@ void table_remove_white(Table *table) {
 }
 
 void table_free(Table *table) {
-  FREE_ARRAY(Entry, table->entries, table->capacity);
+  FREE_ARRAY(NULL, Entry, table->entries, table->capacity);
   table_init(table);
 }
 
