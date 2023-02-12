@@ -11,7 +11,7 @@ typedef struct Table Table;
 #define ALLOCATE(vm, type, count) \
     (type*)reallocate(vm, NULL, 0, sizeof(type) * (count))
 
-#define FREE(type, pointer) reallocate(NULL, pointer, sizeof(type), 0)
+#define FREE(vm, type, pointer) reallocate(vm, pointer, sizeof(type), 0)
 
 // Must always be in multiples of two due to table :D
 #define GROW_CAPACITY(capacity) \
