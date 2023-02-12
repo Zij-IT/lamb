@@ -53,6 +53,14 @@ static void blacken_object(Vm* vm, Object* obj) {
   }
 }
 
+static void mark_compiler_roots(Vm* vm) {
+  Compiler* compiler = vm->curr_compiler;
+  while (compiler != NULL) {
+    mark_object(vm, (Object*)compiler->function);
+    compiler = compiler->enclosing;
+  }
+}
+
 static void mark_roots(Vm* vm) {
   for (Value* slot = vm->stack; slot < vm->stack_top; slot++) {
     mark_value(vm, slot);
@@ -70,7 +78,7 @@ static void mark_roots(Vm* vm) {
   
   // mark current object in compilation as compilation can trigger GC
   // This means that the vm does have to have some link to the current compiler
-  // mark_compiler_roots(vm->compiler);
+  mark_compiler_roots(vm);
 }
 
 static void trace_refs(Vm* vm) {

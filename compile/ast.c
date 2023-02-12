@@ -80,6 +80,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
   func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
   func_comp.function->name = name;
   func_comp.enclosing = compiler;
+  vm->curr_compiler = &func_comp;
 
   if (node->kids[2]->val.b) {
     func_comp.locals.values[0].name = name;
@@ -114,6 +115,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
   compiler_free(vm, &func_comp);
+  vm->curr_compiler = func_comp.enclosing;
 
   return CarOk;
 }
@@ -155,6 +157,9 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
   func_comp.function->name = ANON_FUNC_NAME;
   func_comp.function->arity = 1;
   func_comp.enclosing = compiler;
+  vm->curr_compiler = &func_comp;
+  
+  printf("==== START COMPILING COMPOSE OPERATOR ====\n");
 
   BUBBLE(compile(vm, &func_comp, first));
   BUBBLE(compile(vm, &func_comp, second));
@@ -184,7 +189,10 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
 
+  printf("==== FINISHED COMPILING COMPOSE OPERATOR ====\n");
+
   compiler_free(vm, &func_comp);
+  vm->curr_compiler = func_comp.enclosing;
 
   return CarOk;
 }

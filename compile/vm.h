@@ -31,6 +31,7 @@ typedef struct Vm {
   Table globals;
   
   ObjectPtrArray gray_stack;
+  Compiler* curr_compiler;
   u64 bytes_allocated;
   u64 next_collection;
 

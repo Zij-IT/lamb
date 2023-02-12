@@ -111,10 +111,11 @@ static Value *vm_peekn_stack(Vm *vm, i32 n) {
 void vm_init(Vm *vm, VmOptions options) {
   vm->frame_count = 0;
   vm->bytes_allocated = 0;
-  vm->next_collection = 1024 * 1024;
+  vm->next_collection = 2;
   vm->stack_top = vm->stack;
   vm->poor_mans_gc = NULL;
   vm->open_upvalues = NULL;
+  vm->curr_compiler = NULL;
   vm->options = options;
 
   table_init(&vm->strings);
