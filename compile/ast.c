@@ -9,6 +9,7 @@
 
 #define LOCAL_NOT_FOUND -1
 #define UPVALUE_NOT_FOUND -1
+#define ANON_FUNC_NAME "anonymous"
 
 static i32 add_upvalue(Compiler *compiler, i32 index, bool is_local) {
   int count = compiler->function->upvalue_count;
@@ -80,6 +81,10 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
   func_comp.function->name = name;
   func_comp.enclosing = compiler;
 
+  if (node->kids[2]->val.b) {
+    func_comp.locals.values[0].name = name;
+  }
+
   for (AstNode *child = node->kids[0]; child != NULL; child = child->kids[1]) {
     AstNode *ident_node = child->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
@@ -147,7 +152,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
   compiler_init(&func_comp, FtNormal);
   compiler_new_scope(&func_comp);
   func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
-  func_comp.function->name = "anonymous";
+  func_comp.function->name = ANON_FUNC_NAME;
   func_comp.function->arity = 1;
   func_comp.enclosing = compiler;
 
@@ -393,7 +398,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     break;
   }
   case AstntFuncDef: {
-    BUBBLE(compile_function(vm, compiler, node, "anonymous"));
+    BUBBLE(compile_function(vm, compiler, node, ANON_FUNC_NAME));
     break;
   }
   case AstntFuncCall: {
