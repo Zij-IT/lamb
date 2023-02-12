@@ -539,7 +539,7 @@ void vm_free(Vm *vm) {
   Object *obj = vm->poor_mans_gc;
   while (obj != NULL) {
     Object *next = obj->next;
-    object_free(obj);
+    object_free(vm, obj);
     obj = next;
   }
 

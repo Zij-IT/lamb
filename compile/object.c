@@ -113,7 +113,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   return NULL;
 }
 
-void object_free(Object *obj) {
+void object_free(Vm* vm, Object *obj) {
   switch (obj->type) {
   case OtString: {
     #ifdef DEBUG_LOG_GC
@@ -121,7 +121,7 @@ void object_free(Object *obj) {
     #endif
     LambString *st = (LambString *)obj;
     FREE_ARRAY(char, st->chars, st->len + 1);
-    FREE(NULL, LambString, st);
+    FREE(vm, LambString, st);
     break;
   }
   case OtArray: {
@@ -130,7 +130,7 @@ void object_free(Object *obj) {
     #endif
     LambArray *arr = (LambArray *)obj;
     value_arr_free(&arr->items);
-    FREE(NULL, LambArray, arr);
+    FREE(vm, LambArray, arr);
     break;
   }
   case OtFunc: {
@@ -139,14 +139,14 @@ void object_free(Object *obj) {
     #endif
     LambFunc *func = (LambFunc *)obj;
     chunk_free(&func->chunk);
-    FREE(NULL, LambFunc, func);
+    FREE(vm, LambFunc, func);
     break;
   }
   case OtNative: {
     #ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtNative\n", obj);
     #endif
-    FREE(NULL, NativeFunc, obj);
+    FREE(vm, NativeFunc, obj);
     break;
   }
   case OtClosure: {
@@ -155,14 +155,14 @@ void object_free(Object *obj) {
     #endif
     LambClosure *closure = (LambClosure *)obj;
     FREE_ARRAY(LambUpvalue *, closure->upvalues, closure->upvalue_count);
-    FREE(NULL, LambClosure, closure);
+    FREE(vm, LambClosure, closure);
     break;
   }
   case OtUpvalue: {
     #ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtUpvalue\n", obj);
     #endif
-    FREE(NULL, LambUpvalue, obj);
+    FREE(vm, LambUpvalue, obj);
     break;
   }
   }

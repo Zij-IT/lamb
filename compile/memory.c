@@ -99,7 +99,7 @@ static void sweep_unused(Vm* vm) {
         prev->next = curr;
       }
       
-      object_free(unreached);
+      object_free(vm, unreached);
     }
   }
 }

@@ -78,9 +78,7 @@ Object *alloc_obj(Vm *vm, ObjectType type);
 
 bool is_of_type(Object *obj, ObjectType type);
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: object_free(Vm *vm, Object *obj)
-void object_free(Object *obj);
+void object_free(Vm *vm, Object *obj);
 
 LambString *cstr_to_lambstring(Vm *vm, str cstr);
 
