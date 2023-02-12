@@ -32,7 +32,7 @@ typedef struct Compiler {
   FuncType type;
 } Compiler;
 
-void compiler_init(Compiler *compiler, FuncType type);
+void compiler_init(Vm* vm, Compiler *compiler, FuncType type);
 
 void compiler_free(Compiler *compiler);
 
@@ -44,7 +44,7 @@ void compiler_declare_var(Compiler *compiler, str name);
 
 void local_arr_init(LocalArray *arr);
 
-void local_arr_write(LocalArray *arr, Local val);
+void local_arr_write(Vm* vm, LocalArray *arr, Local val);
 
 void local_arr_free(LocalArray *arr);
 

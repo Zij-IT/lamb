@@ -75,7 +75,7 @@ static Chunk *compiler_chunk(Compiler *compiler) {
 static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
                                          AstNode *node, str name) {
   Compiler func_comp;
-  compiler_init(&func_comp, FtNormal);
+  compiler_init(vm, &func_comp, FtNormal);
   compiler_new_scope(&func_comp);
   func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
   func_comp.function->name = name;
@@ -92,7 +92,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
     Local loc = {.depth = func_comp.scope_depth,
                  .name = ident->chars,
                  .is_captured = false};
-    local_arr_write(&func_comp.locals, loc);
+    local_arr_write(vm, &func_comp.locals, loc);
     func_comp.function->arity++;
   }
 
@@ -135,7 +135,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler,
     Local loc = {.depth = compiler->scope_depth,
                  .name = rec_func_ident->chars,
                  .is_captured = false};
-    local_arr_write(&compiler->locals, loc);
+    local_arr_write(vm, &compiler->locals, loc);
 
     chunk_write(compiler_chunk(compiler), OpDefineLocal);
     chunk_write_constant(compiler_chunk(compiler),
@@ -149,7 +149,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
                                         AstNode *first, AstNode *second,
                                         str name) {
   Compiler func_comp;
-  compiler_init(&func_comp, FtNormal);
+  compiler_init(vm, &func_comp, FtNormal);
   compiler_new_scope(&func_comp);
   func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
   func_comp.function->name = ANON_FUNC_NAME;
@@ -570,7 +570,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
       Local loc = {.depth = compiler->scope_depth,
                    .name = ident->chars,
                    .is_captured = false};
-      local_arr_write(&compiler->locals, loc);
+      local_arr_write(vm, &compiler->locals, loc);
 
       chunk_write(compiler_chunk(compiler), OpDefineLocal);
       chunk_write_constant(compiler_chunk(compiler),

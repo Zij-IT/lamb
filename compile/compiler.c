@@ -4,7 +4,7 @@
 #include "table.h"
 #include <stdlib.h>
 
-void compiler_init(Compiler *compiler, FuncType type) {
+void compiler_init(Vm* vm, Compiler *compiler, FuncType type) {
   compiler->enclosing = NULL;
   compiler->function = NULL;
   compiler->scope_depth = 0;
@@ -12,7 +12,7 @@ void compiler_init(Compiler *compiler, FuncType type) {
   local_arr_init(&compiler->locals);
 
   Local loc = {.name = "", .depth = 0, .is_captured = false};
-  local_arr_write(&compiler->locals, loc);
+  local_arr_write(vm, &compiler->locals, loc);
 }
 
 void compiler_free(Compiler *compiler) {
@@ -43,11 +43,11 @@ void local_arr_init(LocalArray *arr) {
   arr->values = NULL;
 }
 
-void local_arr_write(LocalArray *arr, Local val) {
+void local_arr_write(Vm* vm, LocalArray *arr, Local val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
-    arr->values = GROW_ARRAY(NULL, Local, arr->values, old_cap, arr->capacity);
+    arr->values = GROW_ARRAY(vm, Local, arr->values, old_cap, arr->capacity);
   }
 
   arr->values[arr->len] = val;

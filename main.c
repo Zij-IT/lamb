@@ -26,7 +26,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
   vm_init(&vm, options);
 
   Compiler compiler;
-  compiler_init(&compiler, FtScript);
+  compiler_init(&vm, &compiler, FtScript);
   compiler.function = (LambFunc *)alloc_obj(&vm, OtFunc);
 
   CompileAstResult car = compile(&vm, &compiler, root);
