@@ -31,3 +31,6 @@ print("Should print nil:: ");
 case 2 {
 	1 -> { 5 }
 } $> println;
+
+print("Should print 3:: ");
+print({ x := 2; 3 });

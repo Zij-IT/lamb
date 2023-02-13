@@ -594,7 +594,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
       chunk_write(vm, compiler_chunk(compiler), OpDefineLocal);
       chunk_write_constant(vm, compiler_chunk(compiler),
-                           new_int(compiler->locals.len - 1));
+                           new_int(compiler->locals.len));
     }
 
     break;
