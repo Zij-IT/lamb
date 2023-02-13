@@ -117,6 +117,7 @@ void vm_init(Vm *vm, VmOptions options) {
   vm->open_upvalues = NULL;
   vm->curr_compiler = NULL;
   vm->options = options;
+  vm->saved_value = new_nil();
 
   table_init(&vm->strings);
   table_init(&vm->globals);
@@ -530,6 +531,14 @@ InterpretResult vm_run(Vm *vm) {
     case OpDup: {
       Value *ret = vm_peek_stack(vm);
       vm_push_stack(vm, *ret);
+      break;
+    }
+    case OpSaveValue: {
+      vm->saved_value = vm_pop_stack(vm);
+      break;
+    }
+    case OpUnsaveValue: {
+      vm_push_stack(vm, vm->saved_value);
       break;
     }
     }

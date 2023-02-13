@@ -37,7 +37,8 @@ typedef struct Vm {
 
   Value *stack_top;
   Value stack[MAX_VALUES];
-
+  Value saved_value;
+  
   Callframe frames[MAX_FRAMES];
   u16 frame_count;
 

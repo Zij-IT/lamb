@@ -40,6 +40,8 @@ typedef enum {
   OpCall,
   OpClosure,
   OpCloseValue,
+  OpSaveValue,
+  OpUnsaveValue,
 } OpCode;
 
 typedef struct Chunk {

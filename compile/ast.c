@@ -114,6 +114,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
                 func_comp.upvalues[i].is_local ? 1 : 0);
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
+  compiler_end_scope(vm, &func_comp);
   compiler_free(vm, &func_comp);
   vm->curr_compiler = func_comp.enclosing;
 
@@ -188,6 +189,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
     chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
   }
 
+  compiler_end_scope(vm, &func_comp);
   compiler_free(vm, &func_comp);
   vm->curr_compiler = func_comp.enclosing;
 

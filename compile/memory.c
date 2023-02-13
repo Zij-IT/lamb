@@ -62,6 +62,8 @@ static void mark_compiler_roots(Vm* vm) {
 }
 
 static void mark_roots(Vm* vm) {
+  mark_value(vm, &vm->saved_value);
+  
   for (Value* slot = vm->stack; slot < vm->stack_top; slot++) {
     mark_value(vm, slot);
   }

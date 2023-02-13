@@ -24,6 +24,7 @@ void compiler_new_scope(Compiler *compiler) { compiler->scope_depth++; }
 
 void compiler_end_scope(Vm* vm, Compiler *compiler) {
   compiler->scope_depth--;
+  chunk_write(vm, &compiler->function->chunk, OpSaveValue);
 
   while (compiler->locals.len > 0 &&
          compiler->locals.values[compiler->locals.len - 1].depth >
@@ -35,6 +36,7 @@ void compiler_end_scope(Vm* vm, Compiler *compiler) {
     }
     compiler->locals.len--;
   }
+  chunk_write(vm, &compiler->function->chunk, OpUnsaveValue);
 }
 
 void local_arr_init(LocalArray *arr) {

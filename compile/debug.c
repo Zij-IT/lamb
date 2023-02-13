@@ -106,6 +106,8 @@ static i32 print_op(Chunk *chunk, i32 offset) {
     return print_simple_op("OpDup");
   case OpCall:
     return print_simple_op("OpCall");
+  case OpSaveValue: return print_simple_op("OpSaveValue");
+  case OpUnsaveValue: return print_simple_op("OpUnsaveValue");
   case OpCloseValue:
     return print_simple_op("OpCloseValue");
   case OpGetUpvalue:
