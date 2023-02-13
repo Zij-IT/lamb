@@ -89,7 +89,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
   for (AstNode *child = node->kids[0]; child != NULL; child = child->kids[1]) {
     AstNode *ident_node = child->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-    chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object*)ident));
+    chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object*)ident));
     Local loc = {.depth = func_comp.scope_depth,
                  .name = ident->chars,
                  .is_captured = false};
@@ -127,7 +127,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler,
   AstNode *func_def = node->kids[1];
 
   LambString *rec_func_ident = cstr_to_lambstring(vm, ident->val.i);
-  chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object*)rec_func_ident));
+  chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object*)rec_func_ident));
 
   BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
 
