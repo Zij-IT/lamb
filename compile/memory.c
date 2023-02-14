@@ -138,8 +138,8 @@ void* reallocate(Vm* vm, void* ptr, size_t old_size, size_t new_size) {
   }
   
   if (vm->bytes_allocated > vm->next_collection) {
-    collect_garbage(vm);
     vm->next_collection = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+    collect_garbage(vm);
   }
   
   void* result = realloc(ptr, new_size);
