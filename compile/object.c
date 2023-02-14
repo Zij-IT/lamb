@@ -208,7 +208,9 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
   ret->len = len;
   ret->hash = hash_string(chars);
 
+  vm_push_stack(vm, new_object((Object*)(ret)));
   table_insert(vm, &vm->strings, ret, new_boolean(false));
+  vm_pop_stack(vm);
 
   return ret;
 }

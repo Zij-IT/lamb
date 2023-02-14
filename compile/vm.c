@@ -272,20 +272,21 @@ InterpretResult vm_run(Vm *vm) {
       break;
     }
     case OpAdd: {
-      Value rhs = vm_pop_stack(vm);
+      Value *rhs = vm_peekn_stack(vm, 1);
       Value *lhs = vm_peek_stack(vm);
-      if (rhs.kind == lhs->kind && rhs.kind == VkInt) {
-        lhs->as.intn = lhs->as.intn + rhs.as.intn;
-      } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {
-        lhs->as.doubn = lhs->as.doubn + rhs.as.doubn;
+      if (rhs->kind == lhs->kind && rhs->kind == VkInt) {
+        lhs->as.intn = lhs->as.intn + rhs->as.intn;
+      } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
+        lhs->as.doubn = lhs->as.doubn + rhs->as.doubn;
       } else if (is_object(*lhs) && is_of_type(lhs->as.obj, OtString) &&
-                 is_object(rhs) && is_of_type(rhs.as.obj, OtString)) {
+                 is_object(*rhs) && is_of_type(rhs->as.obj, OtString)) {
         LambString *st =
-            concat(vm, (LambString *)lhs->as.obj, (LambString *)rhs.as.obj);
+            concat(vm, (LambString *)lhs->as.obj, (LambString *)rhs->as.obj);
+        vm_pop_stack(vm);
         vm_pop_stack(vm);
         vm_push_stack(vm, new_object((Object *)st));
       } else {
-        binary_type_error(*lhs, "+", rhs);
+        binary_type_error(*lhs, "+", *rhs);
       }
       break;
     }
