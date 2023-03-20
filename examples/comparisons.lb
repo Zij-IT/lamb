@@ -1,7 +1,7 @@
 assert := fn(is, should) -> {
 	print("Should print ");
 	print(should);
-	print(": ");
+	print(":: ");
 	println(is);
 };
 

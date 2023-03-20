@@ -22,11 +22,11 @@ new_vector := fn(x, y)
 v1 := new_vector(0, 1);
 v2 := new_vector(5, 3);
 
-print("Manhattan Distance: ");
+print("Manhattan Distance:: ");
 println(v2("dist")(v1));
 
-print("Norm of v2: ");
+print("Norm of v2:: ");
 println(v2("norm"));
 
-print("Norm of v1: ");
+print("Norm of v1:: ");
 println(v1("norm"));

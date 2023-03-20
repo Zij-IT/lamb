@@ -7,7 +7,7 @@ outer := fn() -> {
 	z(); 
 };
 
-print("This should output 'outerhi': ");
+print("This should output 'outerhi':: ");
 outer();
 println();
 
