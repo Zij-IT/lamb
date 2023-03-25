@@ -272,8 +272,8 @@ InterpretResult vm_run(Vm *vm) {
       break;
     }
     case OpAdd: {
-      Value *rhs = vm_peekn_stack(vm, 1);
-      Value *lhs = vm_peek_stack(vm);
+      Value *lhs = vm_peekn_stack(vm, 1);
+      Value *rhs = vm_peek_stack(vm);
       if (rhs->kind == lhs->kind && rhs->kind == VkInt) {
         lhs->as.intn = lhs->as.intn + rhs->as.intn;
       } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
