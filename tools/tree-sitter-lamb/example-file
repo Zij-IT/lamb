@@ -1,0 +1,41 @@
+-- hello_world := ~-~-2 + ~2;
+
+!false;
+~2;
+-3 + 4;
+hello_world(!false, ~2, -3 + 4)[0];
+
+if true {
+	2 + 2;
+	3 + 3;
+	hi()
+} elif false {
+	2 + 2;
+	3 + 3;
+	hi()
+} else {
+	2 + 2;
+	3 + 3;
+	hi()
+};
+
+case false {};
+
+case false {
+	true -> 0h0123,
+	false -> {},
+	false -> {}
+};
+
+[1,2,3,4,5][0];
+
+fn() -> fn() -> fn() -> 0();
+fn() -> fn() -> fn() -> (0());
+
+"hello world";
+
+"hello :n world";
+
+"hello :: world";
+
+"hello ::n world";
