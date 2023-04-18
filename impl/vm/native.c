@@ -38,6 +38,22 @@ static Value lamb_println(i32 arg_count, Value *args) {
     return new_nil();
 }
 
+static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
+    if (arg_count == 2) {
+        bool assertion_failed = is_bool(args[0]) &&  !args[0].as.boolean;
+        bool assertion_explanation = is_object(args[1]) && is_of_type(args[1].as.obj, OtString);
+
+        if (assertion_failed && assertion_explanation) {
+            LambString *str = (LambString *)args[1].as.obj;
+            fprintf(stderr, "Assertion failed: %s", str->chars);
+        } else if (assertion_failed) {
+            fprintf(stderr, "Assertion failed.");
+        }
+    }
+
+    return new_nil();
+}
+
 static Value lamb_user_int(i32 arg_count, Value *args) {
     char x_buffer[80];
     if (fgets(x_buffer, 80, stdin) == NULL) {
@@ -79,4 +95,5 @@ void set_natives(Vm *vm) {
     define_native(vm, "user_char", lamb_user_char);
     define_native(vm, "rand", lamb_rand);
     define_native(vm, "len", lamb_len);
+    define_native(vm, "assert", lamb_NATIVE_assert);
 }
