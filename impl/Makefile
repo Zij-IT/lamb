@@ -20,12 +20,12 @@ ALL_SRC:= ./main.c \
 		  ./compile/value.c \
 		  ./compile/chunk.c \
 		  ./compile/ast.c \
-		  ./compile/debug.c \
 		  ./compile/object.c \
 		  ./compile/table.c \
 		  ./compile/compiler.c \
           ./compile/memory.c \
 		  ./compile/misc.c \
+		  ./debug/debug.c \
 		  ./vm/vm.c \
 		  ./vm/native.c \
 

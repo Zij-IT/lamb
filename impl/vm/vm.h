@@ -29,16 +29,16 @@ typedef struct Callframe {
 typedef struct Vm {
   Table strings;
   Table globals;
-  
+
   ObjectPtrArray gray_stack;
-  Compiler* curr_compiler;
+  Compiler *curr_compiler;
   u64 bytes_allocated;
   u64 next_collection;
 
   Value *stack_top;
   Value stack[MAX_VALUES];
   Value saved_value;
-  
+
   Callframe frames[MAX_FRAMES];
   u16 frame_count;
 

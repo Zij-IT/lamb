@@ -1,7 +1,7 @@
 #include "./ast/ast.h"
 #include "./compile/ast.h"
 #include "./compile/chunk.h"
-#include "./compile/debug.h"
+#include "./debug/debug.h"
 #include "./vm/vm.h"
 #include "parsing/lexer.h"
 #include <getopt.h>
@@ -29,7 +29,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
   vm.curr_compiler = &compiler;
   compiler_init(&vm, &compiler, FtScript);
   compiler.function = (LambFunc *)alloc_obj(&vm, OtFunc);
-  vm_push_stack(&vm, new_object((Object*)compiler.function));
+  vm_push_stack(&vm, new_object((Object *)compiler.function));
 
   CompileAstResult car = compile(&vm, &compiler, root);
 
@@ -117,7 +117,8 @@ int main(int argc, char **argv) {
     printf("\nSyntax Error. Unfortunately I can't help you.\n");
     return 1;
   } else if (root == NULL || *root == NULL) {
-    // If the user immediately Ctrl-D without providing input that can be parsed.
+    // If the user immediately Ctrl-D without providing input that can be
+    // parsed.
     free(root);
     printf("Exiting...\n");
     return EXIT_SUCCESS;

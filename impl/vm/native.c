@@ -1,7 +1,7 @@
 #include "native.h"
 #include "../compile/compiler.h"
-#include "../compile/debug.h"
 #include "../compile/misc.h"
+#include "../debug/debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +16,8 @@ static void define_native(Vm *vm, str fn_name, CFunc function) {
   LambString *interned = cstr_to_lambstring(vm, fn_name);
   vm_push_stack(vm, new_object((Object *)interned));
   vm_push_stack(vm, new_object((Object *)new_native(vm, function)));
-  table_insert(vm, &vm->globals, (LambString *)(vm->stack[0].as.obj), vm->stack[1]);
+  table_insert(vm, &vm->globals, (LambString *)(vm->stack[0].as.obj),
+               vm->stack[1]);
 
   vm_pop_stack(vm);
   vm_pop_stack(vm);

@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../debug/debug.h"
 #include "ast.h"
-#include "debug.h"
 #include "misc.h"
 #include "object.h"
 
@@ -89,7 +89,8 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler,
   for (AstNode *child = node->kids[0]; child != NULL; child = child->kids[1]) {
     AstNode *ident_node = child->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-    chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object*)ident));
+    chunk_add_constant(vm, compiler_chunk(compiler),
+                       new_object((Object *)ident));
     Local loc = {.depth = func_comp.scope_depth,
                  .name = ident->chars,
                  .is_captured = false};
@@ -127,7 +128,8 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler,
   AstNode *func_def = node->kids[1];
 
   LambString *rec_func_ident = cstr_to_lambstring(vm, ident->val.i);
-  chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object*)rec_func_ident));
+  chunk_add_constant(vm, compiler_chunk(compiler),
+                     new_object((Object *)rec_func_ident));
 
   BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
 
@@ -160,7 +162,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler,
   func_comp.function->arity = 1;
   func_comp.enclosing = compiler;
   vm->curr_compiler = &func_comp;
-  
+
   BUBBLE(compile(vm, &func_comp, first));
   BUBBLE(compile(vm, &func_comp, second));
 
@@ -200,7 +202,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
   switch (node->type) {
   case AstntStrLit: {
     LambString *lit = cstr_to_lambstring(vm, node->val.s);
-    chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)lit));
+    chunk_write_constant(vm, compiler_chunk(compiler),
+                         new_object((Object *)lit));
     break;
   }
   case AstntIdent: {
@@ -218,7 +221,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                              new_object((Object *)ident));
       } else {
         chunk_write(vm, compiler_chunk(compiler), OpGetUpvalue);
-        chunk_write_constant(vm, compiler_chunk(compiler), new_int(upvalue_slot));
+        chunk_write_constant(vm, compiler_chunk(compiler),
+                             new_int(upvalue_slot));
       }
     }
 
@@ -237,7 +241,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     break;
   }
   case AstntBoolLit: {
-    chunk_write_constant(vm, compiler_chunk(compiler), new_boolean(node->val.b));
+    chunk_write_constant(vm, compiler_chunk(compiler),
+                         new_boolean(node->val.b));
     break;
   }
   case AstntUnaryNeg: {
@@ -353,7 +358,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
   }
   case AstntBinaryLogAnd: {
     BUBBLE(compile(vm, compiler, node->kids[0]));
-    i32 if_false = chunk_write_jump(vm, compiler_chunk(compiler), OpJumpIfFalse);
+    i32 if_false =
+        chunk_write_jump(vm, compiler_chunk(compiler), OpJumpIfFalse);
     chunk_write(vm, compiler_chunk(compiler), OpPop);
     BUBBLE(compile(vm, compiler, node->kids[1]));
     chunk_patch_jump(compiler_chunk(compiler), if_false);
@@ -361,7 +367,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
   }
   case AstntBinaryLogOr: {
     BUBBLE(compile(vm, compiler, node->kids[0]));
-    i32 if_false = chunk_write_jump(vm, compiler_chunk(compiler), OpJumpIfFalse);
+    i32 if_false =
+        chunk_write_jump(vm, compiler_chunk(compiler), OpJumpIfFalse);
     i32 skip_right = chunk_write_jump(vm, compiler_chunk(compiler), OpJump);
     chunk_patch_jump(compiler_chunk(compiler), if_false);
     chunk_write(vm, compiler_chunk(compiler), OpPop);
@@ -569,7 +576,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
     i32 idx = chunk_add_constant(vm, compiler_chunk(compiler),
-                         new_object((Object *)ident));
+                                 new_object((Object *)ident));
 
     if (compiler->scope_depth == 0) {
       chunk_write(vm, compiler_chunk(compiler), OpDefineGlobal);

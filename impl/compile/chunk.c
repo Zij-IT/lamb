@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "memory.h"
+#include "../vm/vm.h"
 #include "./chunk.h"
 #include "./value.h"
-#include "../vm/vm.h"
+#include "memory.h"
 
 void chunk_init(Chunk *chunk) {
   chunk->len = 0;
@@ -13,7 +13,7 @@ void chunk_init(Chunk *chunk) {
   value_arr_init(&chunk->constants);
 }
 
-void chunk_write(Vm* vm, Chunk *chunk, u8 byte) {
+void chunk_write(Vm *vm, Chunk *chunk, u8 byte) {
   if (chunk->capacity < chunk->len + 1) {
     i32 old_cap = chunk->capacity;
     chunk->capacity = GROW_CAPACITY(old_cap);
@@ -24,14 +24,14 @@ void chunk_write(Vm* vm, Chunk *chunk, u8 byte) {
   chunk->len += 1;
 }
 
-i32 chunk_add_constant(Vm* vm, Chunk *chunk, Value val) {
+i32 chunk_add_constant(Vm *vm, Chunk *chunk, Value val) {
   vm_push_stack(vm, val);
   value_arr_write(vm, &chunk->constants, val);
   vm_pop_stack(vm);
   return chunk->constants.len - 1;
 }
 
-void chunk_write_constant(Vm* vm, Chunk *chunk, Value val) {
+void chunk_write_constant(Vm *vm, Chunk *chunk, Value val) {
   i32 idx = chunk_add_constant(vm, chunk, val);
 
   if (idx >= 256) {
@@ -49,7 +49,7 @@ void chunk_write_constant(Vm* vm, Chunk *chunk, Value val) {
   }
 }
 
-i32 chunk_write_jump(Vm* vm, Chunk *chunk, u8 op) {
+i32 chunk_write_jump(Vm *vm, Chunk *chunk, u8 op) {
   chunk_write(vm, chunk, op);
   chunk_write(vm, chunk, 0xff);
   chunk_write(vm, chunk, 0xff);
@@ -69,7 +69,7 @@ void chunk_patch_jump(Chunk *chunk, i32 offset) {
   chunk->bytes[offset + 1] = jump & 0xff;
 }
 
-void chunk_free(Vm* vm, Chunk *chunk) {
+void chunk_free(Vm *vm, Chunk *chunk) {
   FREE_ARRAY(vm, u8, chunk->bytes, chunk->capacity);
   value_arr_free(vm, &chunk->constants);
   chunk_init(chunk);

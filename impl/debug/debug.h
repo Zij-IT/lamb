@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-#include "object.h"
+#include "../compile/object.h"
 
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 

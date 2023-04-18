@@ -1,10 +1,10 @@
 #include "compiler.h"
-#include "memory.h"
 #include "chunk.h"
+#include "memory.h"
 #include "table.h"
 #include <stdlib.h>
 
-void compiler_init(Vm* vm, Compiler *compiler, FuncType type) {
+void compiler_init(Vm *vm, Compiler *compiler, FuncType type) {
   compiler->enclosing = NULL;
   compiler->function = NULL;
   compiler->scope_depth = 0;
@@ -15,14 +15,14 @@ void compiler_init(Vm* vm, Compiler *compiler, FuncType type) {
   local_arr_write(vm, &compiler->locals, loc);
 }
 
-void compiler_free(Vm* vm, Compiler *compiler) {
+void compiler_free(Vm *vm, Compiler *compiler) {
   local_arr_free(vm, &compiler->locals);
   local_arr_init(&compiler->locals);
 }
 
 void compiler_new_scope(Compiler *compiler) { compiler->scope_depth++; }
 
-void compiler_end_scope(Vm* vm, Compiler *compiler) {
+void compiler_end_scope(Vm *vm, Compiler *compiler) {
   compiler->scope_depth--;
   chunk_write(vm, &compiler->function->chunk, OpSaveValue);
 
@@ -45,7 +45,7 @@ void local_arr_init(LocalArray *arr) {
   arr->values = NULL;
 }
 
-void local_arr_write(Vm* vm, LocalArray *arr, Local val) {
+void local_arr_write(Vm *vm, LocalArray *arr, Local val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
@@ -56,7 +56,7 @@ void local_arr_write(Vm* vm, LocalArray *arr, Local val) {
   arr->len += 1;
 }
 
-void local_arr_free(Vm* vm, LocalArray *arr) {
+void local_arr_free(Vm *vm, LocalArray *arr) {
   FREE_ARRAY(vm, Value, arr->values, arr->capacity);
   local_arr_init(arr);
 }

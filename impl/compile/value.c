@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "memory.h"
 #include "./object.h"
 #include "./value.h"
+#include "memory.h"
 
 Value new_nil() {
   Value val = {
@@ -196,7 +196,7 @@ void value_arr_init(ValueArray *arr) {
   arr->values = NULL;
 }
 
-void value_arr_write(Vm* vm, ValueArray *arr, Value val) {
+void value_arr_write(Vm *vm, ValueArray *arr, Value val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
@@ -207,7 +207,7 @@ void value_arr_write(Vm* vm, ValueArray *arr, Value val) {
   arr->len += 1;
 }
 
-void value_arr_free(Vm* vm, ValueArray *arr) {
+void value_arr_free(Vm *vm, ValueArray *arr) {
   FREE_ARRAY(vm, Value, arr->values, arr->capacity);
   value_arr_init(arr);
 }

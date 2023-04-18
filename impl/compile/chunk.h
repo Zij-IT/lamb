@@ -53,15 +53,15 @@ typedef struct Chunk {
 
 void chunk_init(Chunk *chunk);
 
-void chunk_write(Vm* vm, Chunk *chunk, u8 byte);
+void chunk_write(Vm *vm, Chunk *chunk, u8 byte);
 
-void chunk_free(Vm* vm, Chunk *chunk);
+void chunk_free(Vm *vm, Chunk *chunk);
 
-i32 chunk_add_constant(Vm* vm, Chunk *chunk, Value val);
+i32 chunk_add_constant(Vm *vm, Chunk *chunk, Value val);
 
-void chunk_write_constant(Vm* vm, Chunk *chunk, Value val);
+void chunk_write_constant(Vm *vm, Chunk *chunk, Value val);
 
-i32 chunk_write_jump(Vm* vm, Chunk *chunk, u8 op);
+i32 chunk_write_jump(Vm *vm, Chunk *chunk, u8 op);
 
 void chunk_patch_jump(Chunk *chunk, i32 offset);
 #endif // CHUNK_HEADER

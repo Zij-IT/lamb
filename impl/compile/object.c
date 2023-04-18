@@ -2,19 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../debug/debug.h"
+#include "../vm/vm.h"
 #include "memory.h"
-#include "debug.h"
 #include "misc.h"
 #include "object.h"
-#include "../vm/vm.h"
 
 Object *alloc_obj(Vm *vm, ObjectType type) {
   switch (type) {
   case OtString: {
     LambString *st = ALLOCATE(vm, LambString, 1);
-    #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtString\n", (void*)st);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("%p allocating OtString\n", (void *)st);
+#endif
     Object obj = {
         .type = type,
         .is_marked = false,
@@ -29,9 +29,9 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   }
   case OtArray: {
     LambArray *arr = ALLOCATE(vm, LambArray, 1);
-    #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtArray\n", (void*)arr);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("%p allocating OtArray\n", (void *)arr);
+#endif
     Object obj = {
         .type = type,
         .is_marked = false,
@@ -46,9 +46,9 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   }
   case OtFunc: {
     LambFunc *func = ALLOCATE(vm, LambFunc, 1);
-    #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtFunc\n", (void*)func);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("%p allocating OtFunc\n", (void *)func);
+#endif
     Object obj = {
         .type = type,
         .is_marked = false,
@@ -64,9 +64,9 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   }
   case OtNative: {
     NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);
-    #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtNative\n", (void*)func);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("%p allocating OtNative\n", (void *)func);
+#endif
     Object obj = {
         .type = type,
         .is_marked = false,
@@ -79,9 +79,9 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   }
   case OtClosure: {
     LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
-    #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtClosure\n", (void*)closure);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("%p allocating OtClosure\n", (void *)closure);
+#endif
     Object obj = {
         .type = type,
         .is_marked = false,
@@ -94,9 +94,9 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   }
   case OtUpvalue: {
     LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
-    #ifdef DEBUG_LOG_GC
-    printf("%p allocating OtUpvalue\n", (void*)upvalue);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("%p allocating OtUpvalue\n", (void *)upvalue);
+#endif
     Object obj = {
         .type = type,
         .is_marked = false,
@@ -113,55 +113,56 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
   return NULL;
 }
 
-void object_free(Vm* vm, Object *obj) {
+void object_free(Vm *vm, Object *obj) {
   switch (obj->type) {
   case OtString: {
-    #ifdef DEBUG_LOG_GC
-    printf("Freeing %p of type OtString [%s]\n", obj, ((LambString *)obj)->chars);
-    #endif
+#ifdef DEBUG_LOG_GC
+    printf("Freeing %p of type OtString [%s]\n", obj,
+           ((LambString *)obj)->chars);
+#endif
     LambString *st = (LambString *)obj;
     FREE_ARRAY(vm, char, st->chars, st->len + 1);
     FREE(vm, LambString, st);
     break;
   }
   case OtArray: {
-    #ifdef DEBUG_LOG_GC
+#ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtArray\n", obj);
-    #endif
+#endif
     LambArray *arr = (LambArray *)obj;
     value_arr_free(vm, &arr->items);
     FREE(vm, LambArray, arr);
     break;
   }
   case OtFunc: {
-    #ifdef DEBUG_LOG_GC
+#ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtFunc\n", obj);
-    #endif
+#endif
     LambFunc *func = (LambFunc *)obj;
     chunk_free(vm, &func->chunk);
     FREE(vm, LambFunc, func);
     break;
   }
   case OtNative: {
-    #ifdef DEBUG_LOG_GC
+#ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtNative\n", obj);
-    #endif
+#endif
     FREE(vm, NativeFunc, obj);
     break;
   }
   case OtClosure: {
-    #ifdef DEBUG_LOG_GC
+#ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtClosure\n", obj);
-    #endif
+#endif
     LambClosure *closure = (LambClosure *)obj;
     FREE_ARRAY(vm, LambUpvalue *, closure->upvalues, closure->upvalue_count);
     FREE(vm, LambClosure, closure);
     break;
   }
   case OtUpvalue: {
-    #ifdef DEBUG_LOG_GC
+#ifdef DEBUG_LOG_GC
     printf("Freeing %p of type OtUpvalue\n", obj);
-    #endif
+#endif
     FREE(vm, LambUpvalue, obj);
     break;
   }
@@ -180,7 +181,7 @@ LambString *cstr_to_lambstring(Vm *vm, str cstr) {
     interned->hash = hash;
     interned->len = len;
 
-    vm_push_stack(vm, new_object((Object*)interned));
+    vm_push_stack(vm, new_object((Object *)interned));
     table_insert(vm, &vm->strings, interned, new_boolean(false));
     vm_pop_stack(vm);
   }
@@ -208,7 +209,7 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
   ret->len = len;
   ret->hash = hash_string(chars);
 
-  vm_push_stack(vm, new_object((Object*)(ret)));
+  vm_push_stack(vm, new_object((Object *)(ret)));
   table_insert(vm, &vm->strings, ret, new_boolean(false));
   vm_pop_stack(vm);
 
@@ -240,18 +241,18 @@ void objectptr_array_init(ObjectPtrArray *arr) {
   arr->values = NULL;
 }
 
-void objectptr_array_write(Vm* vm, ObjectPtrArray *arr, Object *val) {
+void objectptr_array_write(Vm *vm, ObjectPtrArray *arr, Object *val) {
   if (arr->capacity < arr->len + 1) {
     i32 old_cap = arr->capacity;
     arr->capacity = GROW_CAPACITY(old_cap);
-    arr->values = realloc(arr->values, sizeof(Object*) * arr->capacity);
+    arr->values = realloc(arr->values, sizeof(Object *) * arr->capacity);
   }
 
   arr->values[arr->len] = val;
   arr->len += 1;
 }
 
-void objectptr_array_free(Vm* vm, ObjectPtrArray *arr) {
-  FREE_ARRAY(vm, Object*, arr->values, arr->capacity);
+void objectptr_array_free(Vm *vm, ObjectPtrArray *arr) {
+  FREE_ARRAY(vm, Object *, arr->values, arr->capacity);
   objectptr_array_init(arr);
 }

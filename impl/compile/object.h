@@ -69,7 +69,7 @@ typedef enum FuncType {
 } FuncType;
 
 typedef struct ObjectPtrArray {
-  Object** values;
+  Object **values;
   i32 capacity;
   i32 len;
 } ObjectPtrArray;

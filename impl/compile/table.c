@@ -1,13 +1,13 @@
 #include "table.h"
+#include "../debug/debug.h"
 #include "memory.h"
-#include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define TOMBSTONE new_boolean(true)
 
-static void table_adjust_capacity(Vm* vm, Table *table, i32 capacity) {
+static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
   Entry *entries = ALLOCATE(vm, Entry, capacity);
 
   // This table is required due to table_find call below, and has no other
@@ -49,7 +49,7 @@ void table_init(Table *table) {
   table->entries = NULL;
 }
 
-bool table_insert(Vm* vm, Table *table, LambString *key, Value val) {
+bool table_insert(Vm *vm, Table *table, LambString *key, Value val) {
   // printf("Inserting into table key: '%s'\n", key->chars);
   if (table->len + 1 > table->capacity * TABLE_MAX_LOAD) {
     i32 capacity = GROW_CAPACITY(table->capacity);
@@ -147,14 +147,14 @@ LambString *table_find_string(Table *table, str chars, i32 len, u32 hash) {
 
 void table_remove_white(Table *table) {
   for (i32 i = 0; i < table->capacity; i++) {
-    Entry* entry = &table->entries[i];
+    Entry *entry = &table->entries[i];
     if (entry->key != NULL && !entry->key->obj.is_marked) {
       table_remove(table, entry->key);
     }
   }
 }
 
-void table_free(Vm* vm, Table *table) {
+void table_free(Vm *vm, Table *table) {
   FREE_ARRAY(vm, Entry, table->entries, table->capacity);
   table_init(table);
 }

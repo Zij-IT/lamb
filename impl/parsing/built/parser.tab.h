@@ -36,115 +36,109 @@
    private implementation details that can be changed or removed.  */
 
 #ifndef YY_YY_PARSING_BUILT_PARSER_TAB_H_INCLUDED
-# define YY_YY_PARSING_BUILT_PARSER_TAB_H_INCLUDED
+#define YY_YY_PARSING_BUILT_PARSER_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
-# define YYDEBUG 0
+#define YYDEBUG 0
 #endif
 #if YYDEBUG
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
 #line 86 "./parsing/parser.y"
- 
-	#include "../../ast/ast.h" 
-	#include "../../ast/optimization.h" 
+
+#include "../../ast/ast.h"
+#include "../../ast/optimization.h"
 
 #line 54 "./parsing/built/parser.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
-  {
-    YYEMPTY = -2,
-    YYEOF = 0,                     /* "end of file"  */
-    YYerror = 256,                 /* error  */
-    YYUNDEF = 257,                 /* "invalid token"  */
-    TokenArrow = 258,              /* TokenArrow  */
-    TokenDefine = 259,             /* TokenDefine  */
-    TokenMod = 260,                /* TokenMod  */
-    TokenAnd = 261,                /* TokenAnd  */
-    TokenOr = 262,                 /* TokenOr  */
-    TokenXor = 263,                /* TokenXor  */
-    TokenNeg = 264,                /* TokenNeg  */
-    TokenLShift = 265,             /* TokenLShift  */
-    TokenRShift = 266,             /* TokenRShift  */
-    TokenEq = 267,                 /* TokenEq  */
-    TokenNe = 268,                 /* TokenNe  */
-    TokenGt = 269,                 /* TokenGt  */
-    TokenLt = 270,                 /* TokenLt  */
-    TokenGe = 271,                 /* TokenGe  */
-    TokenLe = 272,                 /* TokenLe  */
-    TokenLogAnd = 273,             /* TokenLogAnd  */
-    TokenLogOr = 274,              /* TokenLogOr  */
-    TokenLogNot = 275,             /* TokenLogNot  */
-    TokenLCompose = 276,           /* TokenLCompose  */
-    TokenRCompose = 277,           /* TokenRCompose  */
-    TokenLApply = 278,             /* TokenLApply  */
-    TokenRApply = 279,             /* TokenRApply  */
-    TokenRBrace = 280,             /* TokenRBrace  */
-    TokenLBrace = 281,             /* TokenLBrace  */
-    TokenRBrack = 282,             /* TokenRBrack  */
-    TokenLBrack = 283,             /* TokenLBrack  */
-    TokenRParen = 284,             /* TokenRParen  */
-    TokenLParen = 285,             /* TokenLParen  */
-    TokenDoubleQuote = 286,        /* TokenDoubleQuote  */
-    TokenSingleQuote = 287,        /* TokenSingleQuote  */
-    TokenComma = 288,              /* TokenComma  */
-    TokenSemicolon = 289,          /* TokenSemicolon  */
-    TokenColon = 290,              /* TokenColon  */
-    TokenFn = 291,                 /* TokenFn  */
-    TokenTrue = 292,               /* TokenTrue  */
-    TokenFalse = 293,              /* TokenFalse  */
-    TokenCase = 294,               /* TokenCase  */
-    TokenIf = 295,                 /* TokenIf  */
-    TokenElif = 296,               /* TokenElif  */
-    TokenElse = 297,               /* TokenElse  */
-    TokenReturn = 298,             /* TokenReturn  */
-    TokenStruct = 299,             /* TokenStruct  */
-    TokenEnum = 300,               /* TokenEnum  */
-    TokenRec = 301,                /* TokenRec  */
-    TokenNil = 302,                /* TokenNil  */
-    TokenStr = 303,                /* TokenStr  */
-    TokenNum = 304,                /* TokenNum  */
-    TokenChar = 305,               /* TokenChar  */
-    TokenIdent = 306,              /* TokenIdent  */
-    FUNC_END_PREC = 307,           /* FUNC_END_PREC  */
-    TokenAdd = 308,                /* TokenAdd  */
-    TokenSub = 309,                /* TokenSub  */
-    TokenMul = 310,                /* TokenMul  */
-    TokenDiv = 311,                /* TokenDiv  */
-    UNARY = 312                    /* UNARY  */
-  };
-  typedef enum yytokentype yytoken_kind_t;
+#define YYTOKENTYPE
+enum yytokentype {
+  YYEMPTY = -2,
+  YYEOF = 0,              /* "end of file"  */
+  YYerror = 256,          /* error  */
+  YYUNDEF = 257,          /* "invalid token"  */
+  TokenArrow = 258,       /* TokenArrow  */
+  TokenDefine = 259,      /* TokenDefine  */
+  TokenMod = 260,         /* TokenMod  */
+  TokenAnd = 261,         /* TokenAnd  */
+  TokenOr = 262,          /* TokenOr  */
+  TokenXor = 263,         /* TokenXor  */
+  TokenNeg = 264,         /* TokenNeg  */
+  TokenLShift = 265,      /* TokenLShift  */
+  TokenRShift = 266,      /* TokenRShift  */
+  TokenEq = 267,          /* TokenEq  */
+  TokenNe = 268,          /* TokenNe  */
+  TokenGt = 269,          /* TokenGt  */
+  TokenLt = 270,          /* TokenLt  */
+  TokenGe = 271,          /* TokenGe  */
+  TokenLe = 272,          /* TokenLe  */
+  TokenLogAnd = 273,      /* TokenLogAnd  */
+  TokenLogOr = 274,       /* TokenLogOr  */
+  TokenLogNot = 275,      /* TokenLogNot  */
+  TokenLCompose = 276,    /* TokenLCompose  */
+  TokenRCompose = 277,    /* TokenRCompose  */
+  TokenLApply = 278,      /* TokenLApply  */
+  TokenRApply = 279,      /* TokenRApply  */
+  TokenRBrace = 280,      /* TokenRBrace  */
+  TokenLBrace = 281,      /* TokenLBrace  */
+  TokenRBrack = 282,      /* TokenRBrack  */
+  TokenLBrack = 283,      /* TokenLBrack  */
+  TokenRParen = 284,      /* TokenRParen  */
+  TokenLParen = 285,      /* TokenLParen  */
+  TokenDoubleQuote = 286, /* TokenDoubleQuote  */
+  TokenSingleQuote = 287, /* TokenSingleQuote  */
+  TokenComma = 288,       /* TokenComma  */
+  TokenSemicolon = 289,   /* TokenSemicolon  */
+  TokenColon = 290,       /* TokenColon  */
+  TokenFn = 291,          /* TokenFn  */
+  TokenTrue = 292,        /* TokenTrue  */
+  TokenFalse = 293,       /* TokenFalse  */
+  TokenCase = 294,        /* TokenCase  */
+  TokenIf = 295,          /* TokenIf  */
+  TokenElif = 296,        /* TokenElif  */
+  TokenElse = 297,        /* TokenElse  */
+  TokenReturn = 298,      /* TokenReturn  */
+  TokenStruct = 299,      /* TokenStruct  */
+  TokenEnum = 300,        /* TokenEnum  */
+  TokenRec = 301,         /* TokenRec  */
+  TokenNil = 302,         /* TokenNil  */
+  TokenStr = 303,         /* TokenStr  */
+  TokenNum = 304,         /* TokenNum  */
+  TokenChar = 305,        /* TokenChar  */
+  TokenIdent = 306,       /* TokenIdent  */
+  FUNC_END_PREC = 307,    /* FUNC_END_PREC  */
+  TokenAdd = 308,         /* TokenAdd  */
+  TokenSub = 309,         /* TokenSub  */
+  TokenMul = 310,         /* TokenMul  */
+  TokenDiv = 311,         /* TokenDiv  */
+  UNARY = 312             /* UNARY  */
+};
+typedef enum yytokentype yytoken_kind_t;
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-union YYSTYPE
-{
+#if !defined YYSTYPE && !defined YYSTYPE_IS_DECLARED
+union YYSTYPE {
 #line 13 "./parsing/parser.y"
- 
-	AstNode* node;
-	string str;
-	string ident;
-	i64 num;
-	char ch;
+
+  AstNode *node;
+  string str;
+  string ident;
+  i64 num;
+  char ch;
 
 #line 136 "./parsing/built/parser.tab.h"
-
 };
 typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+#define YYSTYPE_IS_TRIVIAL 1
+#define YYSTYPE_IS_DECLARED 1
 #endif
-
 
 extern YYSTYPE yylval;
 
-
-int yyparse (AstNode** parse_node);
-
+int yyparse(AstNode **parse_node);
 
 #endif /* !YY_YY_PARSING_BUILT_PARSER_TAB_H_INCLUDED  */
