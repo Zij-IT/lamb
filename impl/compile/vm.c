@@ -276,8 +276,10 @@ InterpretResult vm_run(Vm *vm) {
       Value *rhs = vm_peek_stack(vm);
       if (rhs->kind == lhs->kind && rhs->kind == VkInt) {
         lhs->as.intn = lhs->as.intn + rhs->as.intn;
+        vm_pop_stack(vm);
       } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
         lhs->as.doubn = lhs->as.doubn + rhs->as.doubn;
+        vm_pop_stack(vm);
       } else if (is_object(*lhs) && is_of_type(lhs->as.obj, OtString) &&
                  is_object(*rhs) && is_of_type(rhs->as.obj, OtString)) {
         LambString *st =
