@@ -10,68 +10,68 @@ typedef struct Vm Vm;
 typedef Value (*CFunc)(i32 args_passed, Value *args);
 
 typedef enum {
-  OtString,
-  OtArray,
-  OtFunc,
-  OtNative,
-  OtClosure,
-  OtUpvalue,
+    OtString,
+    OtArray,
+    OtFunc,
+    OtNative,
+    OtClosure,
+    OtUpvalue,
 } ObjectType;
 
 typedef struct Object {
-  ObjectType type;
-  bool is_marked;
-  struct Object *next;
+    ObjectType type;
+    bool is_marked;
+    struct Object *next;
 } Object;
 
 typedef struct LambString {
-  Object obj;
-  i32 len;
-  string chars;
-  u32 hash;
+    Object obj;
+    i32 len;
+    string chars;
+    u32 hash;
 } LambString;
 
 typedef struct LambArray {
-  Object obj;
-  ValueArray items;
+    Object obj;
+    ValueArray items;
 } LambArray;
 
 typedef struct LambFunc {
-  Object obj;
-  Chunk chunk;
-  str name;
-  i32 upvalue_count;
-  u8 arity;
+    Object obj;
+    Chunk chunk;
+    str name;
+    i32 upvalue_count;
+    u8 arity;
 } LambFunc;
 
 typedef struct NativeFunc {
-  Object obj;
-  CFunc func;
+    Object obj;
+    CFunc func;
 } NativeFunc;
 
 typedef struct LambUpvalue {
-  Object obj;
-  Value *location;
-  Value closed;
-  struct LambUpvalue *next;
+    Object obj;
+    Value *location;
+    Value closed;
+    struct LambUpvalue *next;
 } LambUpvalue;
 
 typedef struct LambClosure {
-  Object obj;
-  LambFunc *function;
-  LambUpvalue **upvalues;
-  i32 upvalue_count;
+    Object obj;
+    LambFunc *function;
+    LambUpvalue **upvalues;
+    i32 upvalue_count;
 } LambClosure;
 
 typedef enum FuncType {
-  FtScript,
-  FtNormal,
+    FtScript,
+    FtNormal,
 } FuncType;
 
 typedef struct ObjectPtrArray {
-  Object **values;
-  i32 capacity;
-  i32 len;
+    Object **values;
+    i32 capacity;
+    i32 len;
 } ObjectPtrArray;
 
 Object *alloc_obj(Vm *vm, ObjectType type);

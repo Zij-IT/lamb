@@ -9,43 +9,43 @@
 #define MAX_VALUES (MAX_FRAMES * UINT8_MAX)
 
 typedef enum {
-  InterpretOk,
-  InterpretRuntimeError,
+    InterpretOk,
+    InterpretRuntimeError,
 } InterpretResult;
 
 typedef struct VmOptions {
-  bool print_main_chunk;
-  bool print_fn_chunks;
-  bool print_ast;
-  bool optimized;
+    bool print_main_chunk;
+    bool print_fn_chunks;
+    bool print_ast;
+    bool optimized;
 } VmOptions;
 
 typedef struct Callframe {
-  LambClosure *closure;
-  Value *slots;
-  u8 *ip;
+    LambClosure *closure;
+    Value *slots;
+    u8 *ip;
 } Callframe;
 
 typedef struct Vm {
-  Table strings;
-  Table globals;
+    Table strings;
+    Table globals;
 
-  ObjectPtrArray gray_stack;
-  Compiler *curr_compiler;
-  u64 bytes_allocated;
-  u64 next_collection;
+    ObjectPtrArray gray_stack;
+    Compiler *curr_compiler;
+    u64 bytes_allocated;
+    u64 next_collection;
 
-  Value *stack_top;
-  Value stack[MAX_VALUES];
-  Value saved_value;
+    Value *stack_top;
+    Value stack[MAX_VALUES];
+    Value saved_value;
 
-  Callframe frames[MAX_FRAMES];
-  u16 frame_count;
+    Callframe frames[MAX_FRAMES];
+    u16 frame_count;
 
-  LambUpvalue *open_upvalues;
-  Object *poor_mans_gc;
+    LambUpvalue *open_upvalues;
+    Object *poor_mans_gc;
 
-  VmOptions options;
+    VmOptions options;
 } Vm;
 
 void vm_init(Vm *vm, VmOptions options);

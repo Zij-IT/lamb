@@ -4,32 +4,32 @@
 #include "object.h"
 
 typedef struct {
-  str name;
-  i32 depth;
-  bool is_captured;
+    str name;
+    i32 depth;
+    bool is_captured;
 } Local;
 
 typedef struct {
-  i32 capacity;
-  i32 len;
-  Local *values;
+    i32 capacity;
+    i32 len;
+    Local *values;
 } LocalArray;
 
 typedef struct {
-  u8 index;
-  bool is_local;
+    u8 index;
+    bool is_local;
 } Upvalue;
 
 typedef struct Compiler {
-  LocalArray locals;
+    LocalArray locals;
 
-  LambFunc *function;
-  Upvalue upvalues[UINT8_MAX];
+    LambFunc *function;
+    Upvalue upvalues[UINT8_MAX];
 
-  struct Compiler *enclosing;
+    struct Compiler *enclosing;
 
-  i32 scope_depth;
-  FuncType type;
+    i32 scope_depth;
+    FuncType type;
 } Compiler;
 
 void compiler_init(Vm *vm, Compiler *compiler, FuncType type);

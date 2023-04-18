@@ -5,8 +5,8 @@
 #include "../vm/vm.h"
 
 typedef enum {
-  CarOk,
-  CarUnsupportedAst,
+    CarOk,
+    CarUnsupportedAst,
 } CompileAstResult;
 
 CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node);

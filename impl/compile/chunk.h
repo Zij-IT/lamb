@@ -4,51 +4,51 @@
 #include "./value.h"
 
 typedef enum {
-  OpConstant,
-  OpLongConstant,
-  OpDefineGlobal,
-  OpDefineLocal,
-  OpGetGlobal,
-  OpGetLocal,
-  OpGetUpvalue,
-  OpNumNeg,
-  OpBinNeg,
-  OpLogNeg,
-  OpAdd,
-  OpSub,
-  OpMul,
-  OpMod,
-  OpDiv,
-  OpBinAnd,
-  OpBinOr,
-  OpBinXor,
-  OpEq,
-  OpNe,
-  OpGt,
-  OpGe,
-  OpLt,
-  OpLe,
-  OpRShift,
-  OpLShift,
-  OpReturn,
-  OpJump,
-  OpJumpIfFalse,
-  OpMakeArray,
-  OpIndexArray,
-  OpPop,
-  OpDup,
-  OpCall,
-  OpClosure,
-  OpCloseValue,
-  OpSaveValue,
-  OpUnsaveValue,
+    OpConstant,
+    OpLongConstant,
+    OpDefineGlobal,
+    OpDefineLocal,
+    OpGetGlobal,
+    OpGetLocal,
+    OpGetUpvalue,
+    OpNumNeg,
+    OpBinNeg,
+    OpLogNeg,
+    OpAdd,
+    OpSub,
+    OpMul,
+    OpMod,
+    OpDiv,
+    OpBinAnd,
+    OpBinOr,
+    OpBinXor,
+    OpEq,
+    OpNe,
+    OpGt,
+    OpGe,
+    OpLt,
+    OpLe,
+    OpRShift,
+    OpLShift,
+    OpReturn,
+    OpJump,
+    OpJumpIfFalse,
+    OpMakeArray,
+    OpIndexArray,
+    OpPop,
+    OpDup,
+    OpCall,
+    OpClosure,
+    OpCloseValue,
+    OpSaveValue,
+    OpUnsaveValue,
 } OpCode;
 
 typedef struct Chunk {
-  i32 capacity;
-  i32 len;
-  u8 *bytes;
-  ValueArray constants;
+    i32 capacity;
+    i32 len;
+    u8 *bytes;
+    ValueArray constants;
 } Chunk;
 
 void chunk_init(Chunk *chunk);

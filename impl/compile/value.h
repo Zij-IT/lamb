@@ -9,35 +9,35 @@ typedef struct LambString LambString;
 typedef struct Vm Vm;
 
 typedef enum {
-  VkBool,
-  VkInt,
-  VkDouble,
-  VkChar,
-  VkObj,
-  VkNil,
+    VkBool,
+    VkInt,
+    VkDouble,
+    VkChar,
+    VkObj,
+    VkNil,
 } ValueKind;
 
 typedef struct {
-  ValueKind kind;
-  union {
-    bool boolean;
-    i64 intn;
-    f64 doubn;
-    char ch;
-    Object *obj;
-  } as;
+    ValueKind kind;
+    union {
+        bool boolean;
+        i64 intn;
+        f64 doubn;
+        char ch;
+        Object *obj;
+    } as;
 } Value;
 
 typedef struct {
-  i32 capacity;
-  i32 len;
-  Value *values;
+    i32 capacity;
+    i32 len;
+    Value *values;
 } ValueArray;
 
 typedef enum Order {
-  OrderLess = -1,
-  OrderEqual = 0,
-  OrderGreater = 1,
+    OrderLess = -1,
+    OrderEqual = 0,
+    OrderGreater = 1,
 } Order;
 
 bool is_bool(Value val);

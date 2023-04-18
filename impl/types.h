@@ -21,8 +21,8 @@ typedef char *string;
 typedef char *str;
 
 typedef enum ParseResult_E {
-  ParseResultAccept,
-  ParseResultReject,
+    ParseResultAccept,
+    ParseResultReject,
 } ParseResult;
 
 #endif // TYPES_H

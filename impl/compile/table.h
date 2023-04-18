@@ -7,14 +7,14 @@
 #define TABLE_MAX_LOAD 0.75
 
 typedef struct {
-  LambString *key;
-  Value val;
+    LambString *key;
+    Value val;
 } Entry;
 
 typedef struct Table {
-  i32 len;
-  i32 capacity;
-  Entry *entries;
+    i32 len;
+    i32 capacity;
+    Entry *entries;
 } Table;
 
 void table_init(Table *table);
