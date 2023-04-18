@@ -1,7 +1,7 @@
 #include "native.h"
-#include "compiler.h"
-#include "debug.h"
-#include "misc.h"
+#include "../compile/compiler.h"
+#include "../compile/debug.h"
+#include "../compile/misc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

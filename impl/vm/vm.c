@@ -3,9 +3,9 @@
 #include <string.h>
 #include <time.h>
 
-#include "debug.h"
+#include "../compile/debug.h"
 #include "native.h"
-#include "value.h"
+#include "../compile/value.h"
 #include "vm.h"
 
 #define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))

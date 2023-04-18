@@ -2,7 +2,7 @@
 #define COMPILING_AST_HEADER
 
 #include "../ast/ast.h"
-#include "vm.h"
+#include "../vm/vm.h"
 
 typedef enum {
   CarOk,

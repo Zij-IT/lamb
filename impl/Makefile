@@ -17,7 +17,6 @@ ALL_SRC:= ./main.c \
           ./ast/optimization.c \
           ./parsing/built/lexer.c \
           ./parsing/built/parser.tab.c \
-		  ./compile/vm.c \
 		  ./compile/value.c \
 		  ./compile/chunk.c \
 		  ./compile/ast.c \
@@ -27,7 +26,8 @@ ALL_SRC:= ./main.c \
 		  ./compile/compiler.c \
           ./compile/memory.c \
 		  ./compile/misc.c \
-		  ./compile/native.c \
+		  ./vm/vm.c \
+		  ./vm/native.c \
 
 lamb: $(ALL_SRC)
 	$(CC) $(ALL_SRC) $(CFLAGS) -o lamb

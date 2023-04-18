@@ -2,7 +2,7 @@
 #include "./compile/ast.h"
 #include "./compile/chunk.h"
 #include "./compile/debug.h"
-#include "./compile/vm.h"
+#include "./vm/vm.h"
 #include "parsing/lexer.h"
 #include <getopt.h>
 #include <stdio.h>

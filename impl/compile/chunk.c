@@ -4,7 +4,7 @@
 #include "memory.h"
 #include "./chunk.h"
 #include "./value.h"
-#include "vm.h"
+#include "../vm/vm.h"
 
 void chunk_init(Chunk *chunk) {
   chunk->len = 0;

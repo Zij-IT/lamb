@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "misc.h"
 #include "object.h"
-#include "vm.h"
+#include "../vm/vm.h"
 
 Object *alloc_obj(Vm *vm, ObjectType type) {
   switch (type) {
