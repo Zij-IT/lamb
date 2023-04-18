@@ -11,7 +11,7 @@
 #define UPVALUE_NOT_FOUND -1
 #define ANON_FUNC_NAME "anonymous"
 
-static i32 add_upvalue(Compiler *compiler, i32 index, bool is_local) {
+static i32 add_upvalue(Compiler *const compiler, i32 index, bool is_local) {
     int count = compiler->function->upvalue_count;
 
     if (index > 255) {
@@ -33,7 +33,7 @@ static i32 add_upvalue(Compiler *compiler, i32 index, bool is_local) {
     return compiler->function->upvalue_count++;
 }
 
-static i32 resolve_local(Compiler *compiler, LambString *name) {
+static i32 resolve_local(Compiler *const compiler, LambString *const name) {
     for (i32 i = compiler->locals.len - 1; i >= 0; i--) {
         Local *local = &compiler->locals.values[i];
         if (local->name == name->chars) {
@@ -44,7 +44,7 @@ static i32 resolve_local(Compiler *compiler, LambString *name) {
     return LOCAL_NOT_FOUND;
 }
 
-static i32 resolve_upvalue(Compiler *compiler, LambString *name) {
+static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
     if (compiler->enclosing == NULL) {
         return UPVALUE_NOT_FOUND;
     }
@@ -70,7 +70,7 @@ static i32 resolve_upvalue(Compiler *compiler, LambString *name) {
 
 static Chunk *compiler_chunk(Compiler *compiler) { return &compiler->function->chunk; }
 
-static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *node, str name) {
+static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, str name) {
     Compiler func_comp;
     compiler_init(vm, &func_comp, FtNormal);
     compiler_new_scope(&func_comp);
@@ -79,34 +79,51 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     func_comp.enclosing = compiler;
     vm->curr_compiler = &func_comp;
 
-    if (node->kids[2]->val.b) {
+    return func_comp;
+}
+
+static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode const* arg) {
+    AstNode *ident_node = arg->kids[0];
+    LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
+    chunk_add_constant(vm, compiler_chunk(func_comp), new_object((Object *)ident));
+    Local loc = {.depth = func_comp->scope_depth, .name = ident->chars, .is_captured = false };
+    local_arr_write(vm, &func_comp->locals, loc);
+    func_comp->function->arity++;
+}
+
+static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
+    Compiler* compiler = func_comp->enclosing;
+    chunk_write(vm, compiler_chunk(compiler), OpClosure);
+    chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)func_comp->function));
+    for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
+        chunk_write(vm, compiler_chunk(compiler), func_comp->upvalues[i].is_local);
+        chunk_write(vm, compiler_chunk(compiler), func_comp->upvalues[i].index);
+    }
+}
+
+static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *node, str name) {
+    AstNode* func_args = node->kids[0];
+    AstNode* func_body = node->kids[1];
+    AstNode* is_recursive = node->kids[2];
+    
+    Compiler func_comp = new_function_compiler(vm, compiler, name);
+    if (is_recursive->val.b) {
         func_comp.locals.values[0].name = name;
     }
 
-    for (AstNode *child = node->kids[0]; child != NULL; child = child->kids[1]) {
-        AstNode *ident_node = child->kids[0];
-        LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-        chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
-        Local loc = {.depth = func_comp.scope_depth, .name = ident->chars, .is_captured = false};
-        local_arr_write(vm, &func_comp.locals, loc);
-        func_comp.function->arity++;
+    for (AstNode *arg = func_args; arg != NULL; arg = arg->kids[1]) {
+        add_arg_to_compiler(vm, &func_comp, arg);
     }
 
-    BUBBLE(compile(vm, &func_comp, node->kids[1]));
+    BUBBLE(compile(vm, &func_comp, func_body));
     chunk_write(vm, compiler_chunk(&func_comp), OpReturn);
 
     if (vm->options.print_fn_chunks) {
         chunk_debug(&func_comp.function->chunk, "Function Chunk");
     }
 
-    // TODO: Figure out how to have function and closure objects so that this
-    // wrap isn't necessary
-    chunk_write(vm, compiler_chunk(compiler), OpClosure);
-    chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)func_comp.function));
-    for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
-        chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].is_local ? 1 : 0);
-        chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
-    }
+    write_as_closure(vm, &func_comp);
+
     compiler_end_scope(vm, &func_comp);
     compiler_free(vm, &func_comp);
     vm->curr_compiler = func_comp.enclosing;
