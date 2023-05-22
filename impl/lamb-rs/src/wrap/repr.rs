@@ -152,12 +152,12 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 
 unsafe fn new_stmt_list(mut node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     std::iter::from_fn(|| {
-        if !node.is_null() {
+        if node.is_null() {
+            None
+        } else {
             let stmt = into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt);
             node = (*node).kids[1];
             Some(stmt)
-        } else {
-            None
         }
     })
     .collect::<Result<_, _>>()
@@ -174,10 +174,10 @@ unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
         block_stmts = (*block_stmts).kids[1];
     }
 
-    let value = if !block_stmts.is_null() {
-        Some(Box::new(into_rust_repr(block_stmts)?.expect_expr()?))
-    } else {
+    let value = if block_stmts.is_null() {
         None
+    } else {
+        Some(Box::new(into_rust_repr(block_stmts)?.expect_expr()?))
     };
 
     Ok(AstRepr::Expr(Expr::Block(Block { stats, value })))
@@ -338,12 +338,12 @@ unsafe fn new_array(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 
 unsafe fn expr_list(mut node: *mut AstNode_T) -> Result<Vec<Expr>, NodeError> {
     std::iter::from_fn(|| {
-        if !node.is_null() {
+        if node.is_null() {
+            None
+        } else {
             let expr = into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_expr);
             node = (*node).kids[1];
             Some(expr)
-        } else {
-            None
         }
     })
     .collect()
@@ -351,7 +351,9 @@ unsafe fn expr_list(mut node: *mut AstNode_T) -> Result<Vec<Expr>, NodeError> {
 
 unsafe fn ident_list(mut node: *mut AstNode_T) -> Result<Vec<ast::Ident>, NodeError> {
     std::iter::from_fn(|| {
-        if !node.is_null() {
+        if node.is_null() {
+            None
+        } else {
             let ident = match into_rust_repr((*node).kids[0]) {
                 Ok(AstRepr::Expr(Expr::Atom(ast::Atom::Ident(i)))) => Ok(i),
                 _ => return Some(Err(NodeError::malformed())),
@@ -359,8 +361,6 @@ unsafe fn ident_list(mut node: *mut AstNode_T) -> Result<Vec<ast::Ident>, NodeEr
 
             node = (*node).kids[1];
             Some(ident)
-        } else {
-            None
         }
     })
     .collect()
