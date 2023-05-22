@@ -4,11 +4,19 @@
 #include "./debug/debug.h"
 #include "./vm/vm.h"
 #include "parsing/lexer.h"
-#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef struct CliOptions {
+    i32 debug_level;
+    i32 gc_debug_level;
+    i32 optimization_level;
+    str path;
+} CliOptions;
+
 extern void pretty_print(AstNode* root);
+extern CliOptions parse_options(void);
+extern void drop_options(CliOptions);
 
 void compile_with_options(AstNode *root, VmOptions options) {
     if (options.optimized) {
@@ -57,47 +65,13 @@ void compile_with_options(AstNode *root, VmOptions options) {
 }
 
 int main(int argc, char **argv) {
-    bool print_fn_chunks = false;
-    bool print_main_chunk = false;
-    bool optimized = false;
-    bool print_ast = false;
-    int c = 0;
-
-    while ((c = getopt(argc, argv, "d:oh")) != -1) {
-        switch (c) {
-            case 'd': {
-                i32 debug_level = atoi(optarg);
-                switch (debug_level) {
-                    case 3:
-                        print_main_chunk = print_fn_chunks = print_ast = true;
-                        break;
-                    case 2:
-                        print_main_chunk = print_fn_chunks = true;
-                        break;
-                    case 1:
-                        print_main_chunk = true;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            }
-            case 'o': {
-                optimized = true;
-                break;
-            }
-            default: {
-                fprintf(stderr, "Usage: %s [-d debug_level] [-o] [file]\n", argv[0]);
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
+    CliOptions cli_options = parse_options();
 
     FILE *file = stdin;
-    if (optind < argc) {
-        file = fopen(argv[optind], "r");
+    if (cli_options.path != NULL) {
+        file = fopen(cli_options.path, "r");
         if (!file) {
-            fprintf(stderr, "Unable to open '%s'. Exiting...\n", optarg);
+            fprintf(stderr, "Unable to open '%s'. Exiting...\n", cli_options.path);
             exit(EXIT_FAILURE);
         }
     }
@@ -112,7 +86,7 @@ int main(int argc, char **argv) {
     ParseResult res = yyparse(root);
     if (res == ParseResultReject) {
         printf("\nSyntax Error. Unfortunately I can't help you.\n");
-        return 1;
+        return EXIT_FAILURE;
     } else if (root == NULL || *root == NULL) {
         // If the user immediately Ctrl-D without providing input that can be
         // parsed.
@@ -120,22 +94,22 @@ int main(int argc, char **argv) {
         printf("Exiting...\n");
         return EXIT_SUCCESS;
     } else {
-        pretty_print(*root);
+        VmOptions options = {
+            .print_fn_chunks = cli_options.debug_level == 1,
+            .print_main_chunk = cli_options.debug_level == 1,
+            .print_ast = cli_options.debug_level == 2,
+            .optimized = cli_options.optimization_level > 0,
+        };
+
+        compile_with_options(*root, options);
+
         free_ast(*root);
         free(root);
     }
 
-    // VmOptions options = {
-    //     .print_fn_chunks = print_fn_chunks,
-    //     .print_main_chunk = print_main_chunk,
-    //     .print_ast = print_ast,
-    //     .optimized = optimized,
-    // };
-
-    // compile_with_options(*root, options);
-
     if (file != stdin && file != NULL) {
         fclose(file);
+        drop_options(cli_options);
     }
 
     return 0;

@@ -1,3 +1,9 @@
+use std::ffi::CString;
+
+use clap::Parser;
+use cli::{CSafeCli, Cli};
+
+mod cli;
 mod wrap;
 
 /// Safety:
@@ -7,4 +13,16 @@ mod wrap;
 pub unsafe extern "C" fn pretty_print(x: *mut wrap::AstNode_T) {
     let repr = wrap::AstRepr::from_c(x);
     println!("{repr:#?}");
+}
+
+#[no_mangle]
+pub extern "C" fn parse_options() -> CSafeCli {
+    Cli::parse().into()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drop_options(opts: CSafeCli) {
+    if !opts.path.is_null() {
+        let _cstring = CString::from_raw(opts.path.cast_mut());
+    }
 }
