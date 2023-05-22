@@ -3,7 +3,7 @@
 
 #include "../types.h"
 
-#define MAX_AST_KID_COUNT 4
+#define MAX_AST_KID_COUNT 3
 
 typedef enum {
     // Literals

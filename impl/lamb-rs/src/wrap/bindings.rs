@@ -98,7 +98,7 @@ pub const SIG_ATOMIC_MAX: u32 = 2147483647;
 pub const SIZE_MAX: i32 = -1;
 pub const WINT_MIN: u32 = 0;
 pub const WINT_MAX: u32 = 4294967295;
-pub const MAX_AST_KID_COUNT: u32 = 4;
+pub const MAX_AST_KID_COUNT: u32 = 3;
 pub type __u_char = ::std::os::raw::c_uchar;
 pub type __u_short = ::std::os::raw::c_ushort;
 pub type __u_int = ::std::os::raw::c_uint;
@@ -273,7 +273,7 @@ pub type AstNodeType = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct AstNode_T {
-    pub kids: [*mut AstNode_T; 4usize],
+    pub kids: [*mut AstNode_T; 3usize],
     pub val: AstNode_T__bindgen_ty_1,
     pub type_: AstNodeType,
 }
@@ -358,7 +358,7 @@ fn bindgen_test_layout_AstNode_T() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<AstNode_T>(),
-        48usize,
+        40usize,
         concat!("Size of: ", stringify!(AstNode_T))
     );
     assert_eq!(
@@ -378,7 +378,7 @@ fn bindgen_test_layout_AstNode_T() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).val) as usize - ptr as usize },
-        32usize,
+        24usize,
         concat!(
             "Offset of field: ",
             stringify!(AstNode_T),
@@ -388,7 +388,7 @@ fn bindgen_test_layout_AstNode_T() {
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).type_) as usize - ptr as usize },
-        40usize,
+        32usize,
         concat!(
             "Offset of field: ",
             stringify!(AstNode_T),
