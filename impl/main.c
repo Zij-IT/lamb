@@ -16,10 +16,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
     }
 
     if (options.print_ast) {
-        printf("====== AST ======\n");
-        print_ast(root, 0);
-        printf("\n");
-        printf("====== --- ======\n");
+        pretty_print(root);
     }
 
     Vm vm;

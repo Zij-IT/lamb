@@ -82,8 +82,6 @@ AstNode *new_unary_astnode(AstNodeType type, AstNode *rhs);
 
 AstNode *new_binary_astnode(AstNodeType type, AstNode *lhs, AstNode *rhs);
 
-void print_ast(AstNode *root, u16 depth);
-
 void free_ast(AstNode *root);
 
 i64 eval_ast(AstNode *root);

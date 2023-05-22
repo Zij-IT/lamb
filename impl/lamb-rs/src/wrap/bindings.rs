@@ -412,9 +412,6 @@ extern "C" {
     ) -> *mut AstNode;
 }
 extern "C" {
-    pub fn print_ast(root: *mut AstNode, depth: u16_);
-}
-extern "C" {
     pub fn free_ast(root: *mut AstNode);
 }
 extern "C" {
