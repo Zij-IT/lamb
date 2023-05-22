@@ -95,8 +95,8 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     } else {
         VmOptions options = {
-            .print_fn_chunks = cli_options.debug_level == 1,
-            .print_main_chunk = cli_options.debug_level == 1,
+            .print_fn_chunks = cli_options.debug_level >= 1,
+            .print_main_chunk = cli_options.debug_level >= 1,
             .print_ast = cli_options.debug_level == 2,
             .optimized = cli_options.optimization_level > 0,
         };
