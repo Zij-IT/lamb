@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-AstNode *get_node() { return new_astnode(AstntStmts); }
+extern void pretty_print(AstNode* root);
 
 void compile_with_options(AstNode *root, VmOptions options) {
     if (options.optimized) {
@@ -122,23 +122,24 @@ int main(int argc, char **argv) {
         free(root);
         printf("Exiting...\n");
         return EXIT_SUCCESS;
+    } else {
+        pretty_print(*root);
+        free_ast(*root);
+        free(root);
     }
 
-    VmOptions options = {
-        .print_fn_chunks = print_fn_chunks,
-        .print_main_chunk = print_main_chunk,
-        .print_ast = print_ast,
-        .optimized = optimized,
-    };
+    // VmOptions options = {
+    //     .print_fn_chunks = print_fn_chunks,
+    //     .print_main_chunk = print_main_chunk,
+    //     .print_ast = print_ast,
+    //     .optimized = optimized,
+    // };
 
-    compile_with_options(*root, options);
+    // compile_with_options(*root, options);
 
     if (file != stdin && file != NULL) {
         fclose(file);
     }
-
-    free_ast(*root);
-    free(root);
 
     return 0;
 }
