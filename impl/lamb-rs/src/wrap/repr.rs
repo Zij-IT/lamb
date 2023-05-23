@@ -24,7 +24,7 @@ impl std::fmt::Debug for AstRepr {
 }
 
 impl AstRepr {
-    /// Safety:
+    /// # Safety
     /// `node` must point to a validly constructed AstNode_T with the following
     /// structure, which is dependent on its `type_`:
     ///
@@ -116,7 +116,7 @@ impl NodeError {
     }
 }
 
-/// Safety:
+/// # Safety
 ///
 /// See 'Safety' section for `AstRepr::from_ptr`
 unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
@@ -187,7 +187,7 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     }
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntNodeList` and have the following structure:
 /// + kids[0] contains an statements
 /// + kids[1] contains an `AstntNodeList` of statements
@@ -202,7 +202,7 @@ unsafe fn new_stmt_list(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     .map(AstRepr::StatementList)
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + kids[0] contains an AstntStmts, which ends in NULL *OR* an expression
 unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
@@ -226,7 +226,7 @@ unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     Ok(AstRepr::Expr(Expr::Block(Block { stats, value })))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntAssignStmt` and have the following structure:
 /// + kids[0] contains an AstntAssignStmt
 /// + kids[1] contains an expression
@@ -244,7 +244,7 @@ unsafe fn new_binding(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     })))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntExprStmt` and have the following structure:
 /// + kids[0] contains an expression
 unsafe fn new_expr_stmt(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
@@ -252,7 +252,7 @@ unsafe fn new_expr_stmt(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     Ok(AstRepr::Statement(Statement::Expr(expr)))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntReturn` and have the following structure:
 /// + kids[0] may contain an expression
 unsafe fn new_return(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
@@ -265,7 +265,7 @@ unsafe fn new_return(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     Ok(AstRepr::Statement(Statement::Return(value)))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntArrayIndex` and have the following structure:
 /// + kids[0] may contain an expression
 /// + kids[1] may contain an expression
@@ -279,7 +279,7 @@ unsafe fn new_index(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     })))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntFuncCall` and have the following structure:
 /// + kids[0] contains an expression
 /// + kids[1] may contain an AstntNodeList of expressions
@@ -293,7 +293,7 @@ unsafe fn new_func_call(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     })))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntFuncDef` and have the following structure:
 /// + kids[0] may contain an AstntNodeList of AstntIdent
 /// + kids[1] contains an expression
@@ -314,7 +314,7 @@ unsafe fn new_func_def(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     })))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntUnaryXX` and have the following structure:
 /// + kids[0] contains an expression
 unsafe fn new_unary(node: *mut AstNode_T, op: UnaryOp) -> Result<AstRepr, NodeError> {
@@ -324,7 +324,7 @@ unsafe fn new_unary(node: *mut AstNode_T, op: UnaryOp) -> Result<AstRepr, NodeEr
     ))))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntBinaryXX` and have the following structure:
 /// + kids[0] contains an expression
 /// + kids[1] contains an expression
@@ -335,7 +335,7 @@ unsafe fn new_binary(node: *mut AstNode_T, op: BinaryOp) -> Result<AstRepr, Node
     Ok(AstRepr::Expr(Expr::Binary(ast::Binary::new(lhs, rhs, op))))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntIf` and have the following structure:
 /// + kids[0] contains an expression
 /// + kids[1] contains a block
@@ -365,7 +365,7 @@ unsafe fn new_if(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     ))))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntIf` and have the following structure:
 /// + kids[0] contains an expression
 /// + kids[1] contains a block
@@ -379,7 +379,7 @@ unsafe fn new_elif(node: *mut AstNode_T) -> Result<ast::Elif, NodeError> {
     Ok(ast::Elif::new(cond, block))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + kids[0] contains an AstntStmts, which ends in NULL *OR* an expression
 unsafe fn new_else(node: *mut AstNode_T) -> Result<ast::Else, NodeError> {
@@ -387,7 +387,7 @@ unsafe fn new_else(node: *mut AstNode_T) -> Result<ast::Else, NodeError> {
     Ok(ast::Else::new(block))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntCase` and have the following structure:
 /// + kids[0] contains an expression
 /// + kids[1] *may* contain a valid `AstntCaseArm`
@@ -404,7 +404,7 @@ unsafe fn new_case(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     Ok(AstRepr::Expr(Expr::Case(ast::Case { value, arms })))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntCase` and have the following structure:
 /// + kids[0] contains an Astnt__Lit *OR* AstntId
 /// + kids[1] contains a valid expression or AstntBlock
@@ -425,7 +425,7 @@ unsafe fn new_case_arm(node: *mut AstNode_T) -> Result<ast::CaseArm, NodeError> 
     Ok(ast::CaseArm { pattern, on_match })
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntArray` and have the following structure:
 /// + kids[0] contains an AstntNodeList of expressions
 unsafe fn new_array(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
@@ -434,7 +434,7 @@ unsafe fn new_array(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     )?))))
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntNodeList` and have the following structure:
 /// + kids[0] contains an expressions
 /// + kids[1] contains an `AstntNodeList` of expressions
@@ -448,7 +448,7 @@ unsafe fn expr_list(node: *mut AstNode_T) -> Result<Vec<Expr>, NodeError> {
     .collect()
 }
 
-/// Safety:
+/// # Safety
 /// The `node` must be of the type `AstntNodeList` and have the following structure:
 /// + kids[0] contains an `AstntIdent`
 /// + kids[1] contains an `AstntNodeList` of `AstntIdent`
