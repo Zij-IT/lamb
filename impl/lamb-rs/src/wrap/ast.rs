@@ -161,20 +161,6 @@ pub struct Case {
     pub arms: Vec<CaseArm>,
 }
 
-impl Case {
-    pub fn new(value: Expr) -> Self {
-        Self {
-            value: Box::new(value),
-            arms: Vec::new(),
-        }
-    }
-
-    pub fn add_arm(&mut self, arm: CaseArm) -> &mut Self {
-        self.arms.push(arm);
-        self
-    }
-}
-
 #[derive(Debug)]
 pub struct CaseArm {
     pub pattern: Either<Literal, Ident>,
