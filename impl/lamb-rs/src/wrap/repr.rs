@@ -456,7 +456,7 @@ unsafe fn ident_list(node: *mut AstNode_T) -> Result<Vec<ast::Ident>, NodeError>
     CListIter::new(
         |node| match into_rust_repr(node) {
             Ok(AstRepr::Expr(Expr::Atom(ast::Atom::Ident(i)))) => Some(Ok(i)),
-            _ => return Some(Err(NodeError::malformed())),
+            _ => Some(Err(NodeError::malformed())),
         },
         |node| (*node).kids[0],
         |node| (*node).kids[1],
