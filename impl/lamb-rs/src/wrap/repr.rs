@@ -43,8 +43,7 @@ impl Script {
     /// AstntReturn     | kids[0] may contain an expression
     /// AstntExprStmt   | kids[0] contains an expression
     /// AstntAssignStmt | kids[0] contains an AstntIdent, kids[1] contains an expression
-    /// AstntBlock      | kids[0] contains an AstntStmts, which ends NULL *OR* an expression
-    /// AstntStmts      | kids[0] contains a statement, kids[1] contains an AstntStmts
+    /// AstntBlock      | kids[0] contains an AstntNodeList, which ends NULL *OR* an expression
     /// AstntNodeList   | kids[0] contains a node of type T, kids[1] contains an AstntNodeList of type
     /// AstntArray      | kids[0] contains an AstntNodeList
     pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
@@ -214,7 +213,7 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 
 /// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
-/// + kids[0] contains an AstntStmts, which ends in NULL *OR* an expression
+/// + kids[0] contains an AstntNodeList, which ends in NULL *OR* an expression
 unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     let (stats, node) = CListIter::new(
         |node| {
@@ -391,7 +390,7 @@ unsafe fn new_elif(node: *mut AstNode_T) -> Result<ast::Elif, NodeError> {
 
 /// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
-/// + kids[0] contains an AstntStmts, which ends in NULL *OR* an expression
+/// + kids[0] contains an AstntNodeList, which ends in NULL *OR* an expression
 unsafe fn new_else(node: *mut AstNode_T) -> Result<ast::Else, NodeError> {
     let block = into_rust_repr(node)?.expect_expr()?.expect_block()?;
     Ok(ast::Else::new(block))
