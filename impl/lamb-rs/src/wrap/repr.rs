@@ -188,15 +188,16 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + kids[0] contains an AstntStmts, which ends in NULL *OR* an expression
 unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
-    let stats = CListIter::new(
+    let (stats, node) = CListIter::new(
         |node| {
             ((*node).type_ == ffi::AstNodeType_AstntNodeList)
+                .then(|| into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
         },
-        |node| (*node).kids[0],
+        |node| node,
         |node| (*node).kids[1],
         (*node).kids[0],
     )
-    .collect::<Result<_, _>>()?;
+    .collect_with_node()?;
 
     let value = if node.is_null() {
         None
@@ -327,13 +328,13 @@ unsafe fn new_if(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
         .expect_expr()?
         .expect_block()?;
 
-    let elifs = CListIter::new(
+    let (elifs, node) = CListIter::new(
         |node| ((*node).type_ == ffi::AstNodeType_AstntIf).then(|| new_elif(node)),
         |node| node,
         |node| (*node).kids[2],
-        node,
+        (*node).kids[2],
     )
-    .collect::<Result<_, _>>()?;
+    .collect_with_node()?;
 
     let els = if node.is_null() {
         None
@@ -461,6 +462,14 @@ where
 {
     fn new(f: F, kid: K, next: N, node: *mut AstNode_T) -> Self {
         Self { f, kid, next, node }
+    }
+
+    // Behaves like `Iter::collect` for `Result<Vec<T>>` but returns the last node held by `self`, as
+    // well as the `Vec<T>` that is expected
+    fn collect_with_node(mut self) -> Result<(Vec<T>, *mut AstNode_T), NodeError> {
+        (&mut self)
+            .collect::<Result<_, _>>()
+            .map(|x| (x, self.node))
     }
 }
 
