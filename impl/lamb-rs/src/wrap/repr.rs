@@ -7,21 +7,12 @@ use super::{
     AstNode_T,
 };
 
-pub enum AstRepr {
-    Expr(Expr),
-    Statement(Statement),
+#[derive(Debug)]
+pub struct Script {
+    pub block: Block,
 }
 
-impl std::fmt::Debug for AstRepr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AstRepr::Expr(e) => write!(f, "{e:#?}"),
-            AstRepr::Statement(s) => write!(f, "{s:#?}"),
-        }
-    }
-}
-
-impl AstRepr {
+impl Script {
     /// # Safety
     /// `node` must point to a validly constructed AstNode_T with the following
     /// structure, which is dependent on its `type_`:
@@ -57,13 +48,50 @@ impl AstRepr {
     /// AstntNodeList   | kids[0] contains a node of type T, kids[1] contains an AstntNodeList of type
     /// AstntArray      | kids[0] contains an AstntNodeList
     pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
-        if node.is_null() {
+        if node.is_null() || (*node).type_ != ffi::AstNodeType_AstntNodeList {
             return Err(NodeError::MalformedNode);
         }
 
-        into_rust_repr(node)
-    }
+        // This is the same as `new_block` except that `node` must already be of
+        // type `AstntNodeList`
+        let (stats, node) = CListIter::new(
+            |node| {
+                ((*node).type_ == ffi::AstNodeType_AstntNodeList)
+                    .then(|| into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
+            },
+            |node| node,
+            |node| (*node).kids[1],
+            node,
+        )
+        .collect_with_node()?;
 
+        let value = if node.is_null() {
+            None
+        } else {
+            Some(Box::new(into_rust_repr(node)?.expect_expr()?))
+        };
+
+        Ok(Self {
+            block: Block { stats, value },
+        })
+    }
+}
+
+pub enum AstRepr {
+    Expr(Expr),
+    Statement(Statement),
+}
+
+impl std::fmt::Debug for AstRepr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AstRepr::Expr(e) => write!(f, "{e:#?}"),
+            AstRepr::Statement(s) => write!(f, "{s:#?}"),
+        }
+    }
+}
+
+impl AstRepr {
     fn expect_expr(self) -> Result<Expr, NodeError> {
         match self {
             Self::Expr(e) => Ok(e),
@@ -116,7 +144,7 @@ impl NodeError {
 
 /// # Safety
 ///
-/// See 'Safety' section for `AstRepr::from_ptr`
+/// See 'Safety' section for `Script::from_ptr`
 unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     if node.is_null() {
         return Err(NodeError::MalformedNode);
