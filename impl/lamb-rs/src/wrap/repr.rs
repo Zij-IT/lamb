@@ -51,27 +51,8 @@ impl Script {
             return Err(NodeError::MalformedNode);
         }
 
-        // This is the same as `new_block` except that `node` must already be of
-        // type `AstntNodeList`
-        let (stats, node) = CListIter::new(
-            |node| {
-                ((*node).type_ == ffi::AstNodeType_AstntNodeList)
-                    .then(|| into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
-            },
-            |node| node,
-            |node| (*node).kids[1],
-            node,
-        )
-        .collect_with_node()?;
-
-        let value = if node.is_null() {
-            None
-        } else {
-            Some(Box::new(into_rust_repr(node)?.expect_expr()?))
-        };
-
         Ok(Self {
-            block: Block { stats, value },
+            block: block_inner(node)?.expect_expr()?.expect_block()?,
         })
     }
 }
@@ -215,6 +196,13 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + kids[0] contains an AstntNodeList, which ends in NULL *OR* an expression
 unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+    block_inner((*node).kids[0])
+}
+
+/// # Safety
+/// The `node` must be an `AstntNodeList` of statements which ends in either NULL
+/// or an expression.
+unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     let (stats, node) = CListIter::new(
         |node| {
             ((*node).type_ == ffi::AstNodeType_AstntNodeList)
@@ -222,7 +210,7 @@ unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
         },
         |node| node,
         |node| (*node).kids[1],
-        (*node).kids[0],
+        node,
     )
     .collect_with_node()?;
 
