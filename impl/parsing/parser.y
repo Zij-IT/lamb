@@ -114,7 +114,7 @@ ENUM_VARS: ENUM_VAR TokenComma ENUM_VARS
 ENUM_VAR: TokenIdent ENUM_VAR
 		| TokenIdent
 
-STMTS : STMT STMTS { $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1] = $2; }
+STMTS : STMT STMTS { $$ = new_astnode(AstntNodeList); $$->kids[0] = $1; $$->kids[1] = $2; }
 	  | 	   	   { $$ = NULL; }
 
 STMT : ID TokenDefine EXPR TokenSemicolon { $$ = new_astnode(AstntAssignStmt); $$->kids[0] = $1; $$->kids[1] = $3; }
@@ -174,7 +174,7 @@ ELIFS: TokenElif EXPR BLOCK ELIFS { $$ = new_astnode(AstntIf); $$->kids[0] = $2;
 ELSE: TokenElse BLOCK			  { $$ = $2; }
 	|							  { $$ = NULL; }
 	
-BLOCK_STMTS: STMT BLOCK_STMTS	{ $$ = new_astnode(AstntStmts); $$->kids[0] = $1; $$->kids[1] = $2; }
+BLOCK_STMTS: STMT BLOCK_STMTS	{ $$ = new_astnode(AstntNodeList); $$->kids[0] = $1; $$->kids[1] = $2; }
 		   | EXPR				{ $$ = $1;										 					}
 		   |					{ $$ = NULL; 														}
 

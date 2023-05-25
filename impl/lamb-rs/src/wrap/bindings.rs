@@ -267,8 +267,7 @@ pub const AstNodeType_AstntReturn: AstNodeType = 38;
 pub const AstNodeType_AstntExprStmt: AstNodeType = 39;
 pub const AstNodeType_AstntAssignStmt: AstNodeType = 40;
 pub const AstNodeType_AstntBlock: AstNodeType = 41;
-pub const AstNodeType_AstntStmts: AstNodeType = 42;
-pub const AstNodeType_AstntNodeList: AstNodeType = 43;
+pub const AstNodeType_AstntNodeList: AstNodeType = 42;
 pub type AstNodeType = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Copy, Clone)]

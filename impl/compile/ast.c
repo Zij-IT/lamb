@@ -11,6 +11,15 @@
 #define UPVALUE_NOT_FOUND -1
 #define ANON_FUNC_NAME "anonymous"
 
+static bool is_stmt(AstNodeType type) {
+    switch (type) {
+        case AstntReturn: return true;
+        case AstntExprStmt: return true;
+        case AstntAssignStmt: return true;
+        default: return false;
+    }
+}
+
 static i32 add_upvalue(Compiler *const compiler, i32 index, bool is_local) {
     int count = compiler->function->upvalue_count;
 
@@ -540,7 +549,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
         case AstntBlock: {
             compiler_new_scope(compiler);
             AstNode *stmt = node->kids[0];
-            for (; stmt != NULL && stmt->type == AstntStmts; stmt = stmt->kids[1]) {
+            for (; stmt != NULL && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type); stmt = stmt->kids[1]) {
                 BUBBLE(compile(vm, compiler, stmt->kids[0]));
             }
 
@@ -597,15 +606,16 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             break;
         }
-        case AstntStmts: {
-            for (AstNode *stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
+        case AstntNodeList: {
+            for (AstNode* stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
+                if (stmt->type != AstntNodeList) {
+                    fprintf(stderr, "[Lamb] ICE: AstntNodeList->kids[1] is not of type AstntNodeList");
+                    exit(EXIT_FAILURE);
+                }
+
                 BUBBLE(compile(vm, compiler, stmt->kids[0]));
             }
             break;
-        }
-        case AstntNodeList: {
-            fprintf(stderr, "Unable to compile AstNode of kind: AstntNodeList");
-            return CarUnsupportedAst;
         }
         default:
             fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);

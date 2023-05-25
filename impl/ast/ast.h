@@ -57,7 +57,6 @@ typedef enum {
     AstntExprStmt,
     AstntAssignStmt,
     AstntBlock,
-    AstntStmts,
 
     // Meta
     AstntNodeList,

@@ -108,10 +108,6 @@ void free_ast(AstNode *root) {
             free_ast(root->kids[0]);
             free_ast(root->kids[1]);
             break;
-        case AstntStmts:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            break;
         case AstntNodeList:
             free_ast(root->kids[0]);
             free_ast(root->kids[1]);

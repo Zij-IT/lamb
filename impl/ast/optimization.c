@@ -166,114 +166,6 @@ static void constant_fold(AstNode *root) {
     }
 }
 
-// This function would be wonderful to have, but the current implementation
-// has invalid memory access which result in a NPE and potential free-ing
-// issues.
-static void dead_code_if_elim(AstNode *root) {
-    if (root->type != AstntIf) {
-        return;
-    }
-
-    AstNode *cond = root->kids[0];
-    AstNode *bloc = root->kids[1];
-    AstNode *elif = root->kids[2];
-    AstNode *els_ = root->kids[3];
-    optimize_ast(cond);
-    optimize_ast(bloc);
-    optimize_ast(elif);
-    optimize_ast(els_);
-
-    if (cond->type != AstntBoolLit) {
-        return;
-    }
-
-    if (cond->val.b) {
-        // Free unneeded pieces
-        free_ast(cond);
-        free_ast(elif);
-        free_ast(els_);
-
-        // Replace if with the true block
-        memcpy(root, bloc, sizeof(*root));
-
-        // Free the memory taken by the bloc itself
-        free(bloc);
-        return;
-    }
-
-    for (AstNode *inner = elif; inner != NULL; inner = inner->kids[2]) {
-        if (inner->kids[0]->type != AstntBoolLit) {
-            // If we reach a single elif that cannot be simplified to a bool than
-            // We can't keep testing, because we don't know the result of this
-            // elif, and it could therefor be 'true'
-            return;
-        }
-
-        if (inner->kids[0]->val.b) {
-            // Free non-elif of the if node
-            free_ast(cond);
-            free_ast(bloc);
-            free_ast(els_);
-
-            // Free all elifs after
-            free_ast(inner->kids[2]);
-            inner->kids[2] = NULL;
-
-            // Free all before
-            while (elif != inner) {
-                AstNode *next = elif->kids[2];
-                elif->kids[2] = NULL;
-                free_ast(elif);
-                elif = next;
-            }
-
-            // Free the condition node
-            free_ast(inner->kids[0]);
-            inner->kids[0] = NULL;
-
-            // Free the elif-node which holds the block
-            AstNode *inner_block = inner->kids[1];
-            free(inner);
-
-            if (inner_block == NULL) {
-                root->type = AstntStmts;
-                for (u8 kid = 0; kid < MAX_AST_KID_COUNT; kid++) {
-                    root->kids[kid] = NULL;
-                }
-                return;
-            } else {
-                memcpy(root, inner_block, sizeof(*root));
-                // Free the block node
-                free(inner_block);
-                return;
-            }
-
-            return;
-        }
-    }
-
-    // Free all non-else items
-    free_ast(cond);
-    free_ast(elif);
-    free_ast(bloc);
-
-    // Free the elif-node which holds the block
-    AstNode *inner_block = els_->kids[0];
-    free(els_);
-
-    // Assign root node based on if the statements in the block
-    if (inner_block == NULL) {
-        root->type = AstntStmts;
-        for (u8 kid = 0; kid < MAX_AST_KID_COUNT; kid++) {
-            root->kids[kid] = NULL;
-        }
-    } else {
-        memcpy(root, inner_block, sizeof(*root));
-        // Free the block node
-        free(inner_block);
-    }
-}
-
 // TODO: Add dead code elimination
 void optimize_ast(AstNode *root) {
     if (root == NULL) {
@@ -352,10 +244,6 @@ void optimize_ast(AstNode *root) {
             break;
         case AstntBlock:
             optimize_ast(root->kids[0]);
-            break;
-        case AstntStmts:
-            optimize_ast(root->kids[0]);
-            optimize_ast(root->kids[1]);
             break;
         // TODO: Figure out what to do with closure binary operators -- {
         case AstntBinaryLCompose:

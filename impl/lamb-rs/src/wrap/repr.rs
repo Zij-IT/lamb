@@ -10,7 +10,6 @@ use super::{
 pub enum AstRepr {
     Expr(Expr),
     Statement(Statement),
-    StatementList(Vec<Statement>),
 }
 
 impl std::fmt::Debug for AstRepr {
@@ -18,7 +17,6 @@ impl std::fmt::Debug for AstRepr {
         match self {
             AstRepr::Expr(e) => write!(f, "{e:#?}"),
             AstRepr::Statement(s) => write!(f, "{s:#?}"),
-            AstRepr::StatementList(l) => write!(f, "{l:#?}"),
         }
     }
 }
@@ -69,14 +67,14 @@ impl AstRepr {
     fn expect_expr(self) -> Result<Expr, NodeError> {
         match self {
             Self::Expr(e) => Ok(e),
-            Self::Statement(_) | Self::StatementList(_) => Err(NodeError::MalformedNode),
+            Self::Statement(_) => Err(NodeError::MalformedNode),
         }
     }
 
     fn expect_stmt(self) -> Result<Statement, NodeError> {
         match self {
             Self::Statement(s) => Ok(s),
-            Self::Expr(_) | Self::StatementList(_) => Err(NodeError::MalformedNode),
+            Self::Expr(_) => Err(NodeError::MalformedNode),
         }
     }
 }
@@ -174,7 +172,6 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
         ffi::AstNodeType_AstntExprStmt => new_expr_stmt(node),
         ffi::AstNodeType_AstntAssignStmt => new_binding(node),
         ffi::AstNodeType_AstntBlock => new_block(node),
-        ffi::AstNodeType_AstntStmts => new_stmt_list(node),
         ffi::AstNodeType_AstntNodeList => {
             unimplemented!(
                 "NodeList shouldn't be parseable outside of a EXPR_LIST or FUNC_ARGS_LIST"
@@ -188,28 +185,12 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 }
 
 /// # Safety
-/// The `node` must be of the type `AstntNodeList` and have the following structure:
-/// + kids[0] contains an statements
-/// + kids[1] contains an `AstntNodeList` of statements
-unsafe fn new_stmt_list(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
-    CListIter::new(
-        |node| Some(into_rust_repr(node).and_then(AstRepr::expect_stmt)),
-        |node| (*node).kids[0],
-        |node| (*node).kids[1],
-        node,
-    )
-    .collect::<Result<_, _>>()
-    .map(AstRepr::StatementList)
-}
-
-/// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + kids[0] contains an AstntStmts, which ends in NULL *OR* an expression
 unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     let stats = CListIter::new(
         |node| {
-            ((*node).type_ == ffi::AstNodeType_AstntStmts)
-                .then(|| into_rust_repr(node).and_then(AstRepr::expect_stmt))
+            ((*node).type_ == ffi::AstNodeType_AstntNodeList)
         },
         |node| (*node).kids[0],
         |node| (*node).kids[1],
