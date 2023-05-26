@@ -17,10 +17,11 @@ typedef struct CliOptions {
 extern void pretty_print(AstNode* root);
 extern CliOptions parse_options(void);
 extern void drop_options(CliOptions);
+extern AstNode* optimize(AstNode*);
 
 void compile_with_options(AstNode *root, VmOptions options) {
     if (options.optimized) {
-        optimize_ast(root);
+        optimize(root);
     }
 
     if (options.print_ast) {

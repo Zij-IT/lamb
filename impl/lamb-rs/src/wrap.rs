@@ -1,7 +1,9 @@
 mod ast;
 #[allow(warnings, clippy::all)]
-mod bindings;
+pub mod bindings;
 mod repr;
 
-pub use bindings::AstNode_T;
+pub use ast::*;
+pub use bindings as ffi;
+pub use bindings::{free_ast, AstNode_T};
 pub use repr::{AstRepr as Ast, Script};
