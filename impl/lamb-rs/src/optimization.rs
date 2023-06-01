@@ -1,4 +1,4 @@
-use crate::wrap::{
+use crate::ffi::{
     Assign, Ast, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef,
     Ident, If, Index, Literal, Statement, Unary,
 };
@@ -190,7 +190,7 @@ impl Optimize for Atom {
 }
 
 mod extra_impls {
-    use crate::wrap::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
+    use crate::ffi::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
 
     impl Expr {
         pub fn as_literal_mut(&mut self) -> Option<&mut Literal> {

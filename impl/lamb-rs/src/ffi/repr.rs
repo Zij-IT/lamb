@@ -1,6 +1,6 @@
 use std::{ffi::CStr, str::Utf8Error};
 
-use crate::wrap::bindings as ffi;
+use crate::ffi::bindings as ffi;
 
 use super::{
     ast::{self, BinaryOp, Block, Expr, Literal, Statement, UnaryOp},
