@@ -5,6 +5,7 @@ use cli::{CSafeCli, Cli};
 use optimization::Optimize;
 
 mod cli;
+mod convert;
 mod optimization;
 mod wrap;
 
@@ -18,6 +19,11 @@ mod wrap;
 pub unsafe extern "C" fn pretty_print(x: *mut wrap::AstNode_T) {
     let script = wrap::Script::from_ptr(x);
     println!("{script:#?}");
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn assert_ast_parse(x: *mut wrap::AstNode_T) {
+    println!("{:#?}", wrap::Ast::from_ptr(x));
 }
 
 /// Parses the arguments of the command line using `clap` and converts the
@@ -58,14 +64,23 @@ pub unsafe extern "C" fn optimize(node: *mut wrap::AstNode_T) -> *mut wrap::AstN
     }
 
     match wrap::Script::from_ptr(node) {
-        Ok(ref mut script) => {
-            while script.block.optimize() {
+        Ok(mut script) => {
+            while (&mut script.block).optimize() {
                 println!("Applied optimizations!");
                 println!("New tree: {script:#?}")
             }
 
-            node
+            // Safety:
+            // Given by caller of `optimize`
+            crate::wrap::free_ast(node);
+
+            script.to_ptr()
         }
         Err(_e) => node,
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn test_all() {
+    convert::test_all();
 }

@@ -18,14 +18,15 @@ extern void pretty_print(AstNode* root);
 extern CliOptions parse_options(void);
 extern void drop_options(CliOptions);
 extern AstNode* optimize(AstNode*);
+extern void test_all(void);
 
-void compile_with_options(AstNode *root, VmOptions options) {
+void compile_with_options(AstNode **root, VmOptions options) {
     if (options.optimized) {
-        optimize(root);
+        *root = optimize(*root);
     }
 
     if (options.print_ast) {
-        pretty_print(root);
+        pretty_print(*root);
     }
 
     Vm vm;
@@ -37,7 +38,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
     compiler.function = (LambFunc *)alloc_obj(&vm, OtFunc);
     vm_push_stack(&vm, new_object((Object *)compiler.function));
 
-    CompileAstResult car = compile(&vm, &compiler, root);
+    CompileAstResult car = compile(&vm, &compiler, *root);
 
     if (car == CarOk) {
         chunk_write(&vm, &compiler.function->chunk, OpReturn);
@@ -65,7 +66,7 @@ void compile_with_options(AstNode *root, VmOptions options) {
     vm_free(&vm);
 }
 
-int main(int argc, char **argv) {
+int run(int argc, char** argv) {
     CliOptions cli_options = parse_options();
 
     FILE *file = stdin;
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
             .optimized = cli_options.optimization_level > 0,
         };
 
-        compile_with_options(*root, options);
+        compile_with_options(root, options);
 
         free_ast(*root);
         free(root);
@@ -114,4 +115,9 @@ int main(int argc, char **argv) {
     }
 
     return 0;
+}
+
+int main(int argc, char **argv) {
+    // test_all();
+    return run(argc, argv);
 }

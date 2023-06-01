@@ -7,7 +7,7 @@ use super::{
     AstNode_T,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Script {
     pub block: Block,
 }
@@ -47,16 +47,17 @@ impl Script {
     /// AstntNodeList   | kids[0] contains a node of type T, kids[1] contains an AstntNodeList of type
     /// AstntArray      | kids[0] contains an AstntNodeList
     pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
-        if node.is_null() || (*node).type_ != ffi::AstNodeType_AstntNodeList {
-            return Err(NodeError::MalformedNode);
-        }
-
         Ok(Self {
             block: block_inner(node)?.expect_expr()?.expect_block()?,
         })
     }
+
+    pub fn to_ptr(self) -> *mut AstNode_T {
+        crate::convert::Convert::convert(self)
+    }
 }
 
+#[derive(PartialEq, Eq)]
 pub enum AstRepr {
     Expr(Expr),
     Statement(Statement),
@@ -72,17 +73,21 @@ impl std::fmt::Debug for AstRepr {
 }
 
 impl AstRepr {
+    pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
+        into_rust_repr(node)
+    }
+
     fn expect_expr(self) -> Result<Expr, NodeError> {
         match self {
             Self::Expr(e) => Ok(e),
-            Self::Statement(_) => Err(NodeError::MalformedNode),
+            Self::Statement(_) => Err(NodeError::malformed()),
         }
     }
 
     fn expect_stmt(self) -> Result<Statement, NodeError> {
         match self {
             Self::Statement(s) => Ok(s),
-            Self::Expr(_) => Err(NodeError::MalformedNode),
+            Self::Expr(_) => Err(NodeError::malformed()),
         }
     }
 }
@@ -127,7 +132,7 @@ impl NodeError {
 /// See 'Safety' section for `Script::from_ptr`
 unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     if node.is_null() {
-        return Err(NodeError::MalformedNode);
+        return Err(NodeError::malformed());
     }
 
     match (*node).type_ {
@@ -203,10 +208,19 @@ unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be an `AstntNodeList` of statements which ends in either NULL
 /// or an expression.
 unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+    // Can't work with CListIter because the final expression node
+    // is hung directly on the final node
     let (stats, node) = CListIter::new(
         |node| {
-            ((*node).type_ == ffi::AstNodeType_AstntNodeList)
-                .then(|| into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
+            if (*node).type_ == ffi::AstNodeType_AstntNodeList {
+                if (*node).kids[0].is_null() {
+                    None
+                } else {
+                    Some(into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
+                }
+            } else {
+                None
+            }
         },
         |node| node,
         |node| (*node).kids[1],

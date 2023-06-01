@@ -99,6 +99,10 @@ pub const SIZE_MAX: i32 = -1;
 pub const WINT_MIN: u32 = 0;
 pub const WINT_MAX: u32 = 4294967295;
 pub const MAX_AST_KID_COUNT: u32 = 3;
+pub const _STRING_H: u32 = 1;
+pub const _BITS_TYPES_LOCALE_T_H: u32 = 1;
+pub const _BITS_TYPES___LOCALE_T_H: u32 = 1;
+pub const _STRINGS_H: u32 = 1;
 pub type __u_char = ::std::os::raw::c_uchar;
 pub type __u_short = ::std::os::raw::c_ushort;
 pub type __u_int = ::std::os::raw::c_uint;
@@ -415,4 +419,394 @@ extern "C" {
 }
 extern "C" {
     pub fn eval_ast(root: *mut AstNode) -> i64_;
+}
+extern "C" {
+    pub fn memcpy(
+        __dest: *mut ::std::os::raw::c_void,
+        __src: *const ::std::os::raw::c_void,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_void;
+}
+extern "C" {
+    pub fn memmove(
+        __dest: *mut ::std::os::raw::c_void,
+        __src: *const ::std::os::raw::c_void,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_void;
+}
+extern "C" {
+    pub fn memccpy(
+        __dest: *mut ::std::os::raw::c_void,
+        __src: *const ::std::os::raw::c_void,
+        __c: ::std::os::raw::c_int,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_void;
+}
+extern "C" {
+    pub fn memset(
+        __s: *mut ::std::os::raw::c_void,
+        __c: ::std::os::raw::c_int,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_void;
+}
+extern "C" {
+    pub fn memcmp(
+        __s1: *const ::std::os::raw::c_void,
+        __s2: *const ::std::os::raw::c_void,
+        __n: ::std::os::raw::c_ulong,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn __memcmpeq(
+        __s1: *const ::std::os::raw::c_void,
+        __s2: *const ::std::os::raw::c_void,
+        __n: usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn memchr(
+        __s: *const ::std::os::raw::c_void,
+        __c: ::std::os::raw::c_int,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_void;
+}
+extern "C" {
+    pub fn strcpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strncpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strcat(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strncat(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strcmp(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strncmp(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strcoll(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strxfrm(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> ::std::os::raw::c_ulong;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __locale_struct {
+    pub __locales: [*mut __locale_data; 13usize],
+    pub __ctype_b: *const ::std::os::raw::c_ushort,
+    pub __ctype_tolower: *const ::std::os::raw::c_int,
+    pub __ctype_toupper: *const ::std::os::raw::c_int,
+    pub __names: [*const ::std::os::raw::c_char; 13usize],
+}
+#[test]
+fn bindgen_test_layout___locale_struct() {
+    const UNINIT: ::std::mem::MaybeUninit<__locale_struct> = ::std::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::std::mem::size_of::<__locale_struct>(),
+        232usize,
+        concat!("Size of: ", stringify!(__locale_struct))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<__locale_struct>(),
+        8usize,
+        concat!("Alignment of ", stringify!(__locale_struct))
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).__locales) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__locale_struct),
+            "::",
+            stringify!(__locales)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).__ctype_b) as usize - ptr as usize },
+        104usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__locale_struct),
+            "::",
+            stringify!(__ctype_b)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).__ctype_tolower) as usize - ptr as usize },
+        112usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__locale_struct),
+            "::",
+            stringify!(__ctype_tolower)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).__ctype_toupper) as usize - ptr as usize },
+        120usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__locale_struct),
+            "::",
+            stringify!(__ctype_toupper)
+        )
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).__names) as usize - ptr as usize },
+        128usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(__locale_struct),
+            "::",
+            stringify!(__names)
+        )
+    );
+}
+pub type __locale_t = *mut __locale_struct;
+pub type locale_t = __locale_t;
+extern "C" {
+    pub fn strcoll_l(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+        __l: locale_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strxfrm_l(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: usize,
+        __l: locale_t,
+    ) -> usize;
+}
+extern "C" {
+    pub fn strdup(__s: *const ::std::os::raw::c_char) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strndup(
+        __string: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strchr(
+        __s: *const ::std::os::raw::c_char,
+        __c: ::std::os::raw::c_int,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strrchr(
+        __s: *const ::std::os::raw::c_char,
+        __c: ::std::os::raw::c_int,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strcspn(
+        __s: *const ::std::os::raw::c_char,
+        __reject: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_ulong;
+}
+extern "C" {
+    pub fn strspn(
+        __s: *const ::std::os::raw::c_char,
+        __accept: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_ulong;
+}
+extern "C" {
+    pub fn strpbrk(
+        __s: *const ::std::os::raw::c_char,
+        __accept: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strstr(
+        __haystack: *const ::std::os::raw::c_char,
+        __needle: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strtok(
+        __s: *mut ::std::os::raw::c_char,
+        __delim: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn __strtok_r(
+        __s: *mut ::std::os::raw::c_char,
+        __delim: *const ::std::os::raw::c_char,
+        __save_ptr: *mut *mut ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strtok_r(
+        __s: *mut ::std::os::raw::c_char,
+        __delim: *const ::std::os::raw::c_char,
+        __save_ptr: *mut *mut ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strlen(__s: *const ::std::os::raw::c_char) -> ::std::os::raw::c_ulong;
+}
+extern "C" {
+    pub fn strnlen(__string: *const ::std::os::raw::c_char, __maxlen: usize) -> usize;
+}
+extern "C" {
+    pub fn strerror(__errnum: ::std::os::raw::c_int) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    #[link_name = "\u{1}__xpg_strerror_r"]
+    pub fn strerror_r(
+        __errnum: ::std::os::raw::c_int,
+        __buf: *mut ::std::os::raw::c_char,
+        __buflen: usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strerror_l(
+        __errnum: ::std::os::raw::c_int,
+        __l: locale_t,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn bcmp(
+        __s1: *const ::std::os::raw::c_void,
+        __s2: *const ::std::os::raw::c_void,
+        __n: ::std::os::raw::c_ulong,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn bcopy(
+        __src: *const ::std::os::raw::c_void,
+        __dest: *mut ::std::os::raw::c_void,
+        __n: usize,
+    );
+}
+extern "C" {
+    pub fn bzero(__s: *mut ::std::os::raw::c_void, __n: ::std::os::raw::c_ulong);
+}
+extern "C" {
+    pub fn index(
+        __s: *const ::std::os::raw::c_char,
+        __c: ::std::os::raw::c_int,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn rindex(
+        __s: *const ::std::os::raw::c_char,
+        __c: ::std::os::raw::c_int,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn ffs(__i: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn ffsl(__l: ::std::os::raw::c_long) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn ffsll(__ll: ::std::os::raw::c_longlong) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strcasecmp(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strncasecmp(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strcasecmp_l(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+        __loc: locale_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn strncasecmp_l(
+        __s1: *const ::std::os::raw::c_char,
+        __s2: *const ::std::os::raw::c_char,
+        __n: usize,
+        __loc: locale_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn explicit_bzero(__s: *mut ::std::os::raw::c_void, __n: usize);
+}
+extern "C" {
+    pub fn strsep(
+        __stringp: *mut *mut ::std::os::raw::c_char,
+        __delim: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn strsignal(__sig: ::std::os::raw::c_int) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn __stpcpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn stpcpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn __stpncpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: usize,
+    ) -> *mut ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn stpncpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: ::std::os::raw::c_ulong,
+    ) -> *mut ::std::os::raw::c_char;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __locale_data {
+    pub _address: u8,
 }

@@ -1,27 +1,28 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Either<L, R> {
     Left(L),
     Right(R),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File {
     pub stats: Vec<Statement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Assign(Assign),
     Expr(Expr),
     Return(Option<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assign {
     pub assignee: Ident,
     pub value: Expr,
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub enum Expr {
     Binary(Binary),
     Unary(Unary),
@@ -59,7 +60,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Binary {
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
@@ -76,7 +77,7 @@ impl Binary {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -102,7 +103,7 @@ pub enum BinaryOp {
     LShift,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unary {
     pub rhs: Box<Expr>,
     pub op: UnaryOp,
@@ -117,26 +118,26 @@ impl Unary {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOp {
     NumNeg,
     LogNot,
     BinNot,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FuncCall {
     pub callee: Box<Expr>,
     pub args: Vec<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Index {
     pub indexee: Box<Expr>,
     pub index: Box<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct If {
     pub cond: Box<Expr>,
     pub block: Box<Block>,
@@ -155,19 +156,19 @@ impl If {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Case {
     pub value: Box<Expr>,
     pub arms: Vec<CaseArm>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CaseArm {
     pub pattern: Either<Literal, Ident>,
     pub on_match: Either<Block, Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Literal {
     Num(i64),
     Str(String),
@@ -200,20 +201,20 @@ impl From<bool> for Literal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FuncDef {
     pub args: Vec<Ident>,
     pub body: Box<Expr>,
     pub is_recursive: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block {
     pub stats: Vec<Statement>,
     pub value: Option<Box<Expr>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Elif {
     pub cond: Expr,
     pub block: Block,
@@ -225,7 +226,7 @@ impl Elif {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Else {
     pub block: Block,
 }
@@ -236,7 +237,7 @@ impl Else {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ident(pub String);
 
 impl<T> From<T> for Ident
@@ -248,6 +249,7 @@ where
     }
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub enum Atom {
     Literal(Literal),
     Ident(Ident),
