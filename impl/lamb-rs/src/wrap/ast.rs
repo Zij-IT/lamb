@@ -4,11 +4,6 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-#[derive(Debug, Clone)]
-pub struct File {
-    pub stats: Vec<Statement>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     Assign(Assign),
