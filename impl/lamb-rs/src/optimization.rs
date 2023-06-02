@@ -113,10 +113,7 @@ impl Optimize for If {
         self.cond.optimize()
             | self.block.optimize()
             | self.elifs.optimize()
-            | match self.els {
-                Some(ref mut e) => e.optimize(),
-                None => false,
-            }
+            | self.els.as_deref_mut().is_some_and(|e| e.optimize())
     }
 }
 
@@ -134,11 +131,7 @@ impl Optimize for Else {
 
 impl Optimize for Block {
     fn optimize(&mut self) -> bool {
-        self.stats.optimize()
-            | match self.value {
-                Some(ref mut e) => e.optimize(),
-                None => false,
-            }
+        self.stats.optimize() | self.value.as_deref_mut().is_some_and(|v| v.optimize())
     }
 }
 
