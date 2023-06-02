@@ -1,5 +1,3 @@
-use std::ffi::CString;
-
 use ast::Script;
 use clap::Parser;
 use cli::Cli;

@@ -27,7 +27,7 @@ use super::{
 };
 
 pub(super) trait Convert {
-    fn convert(self) -> *mut AstNode_T;
+    fn convert(&self) -> *mut AstNode_T;
 }
 
 impl<L, R> Convert for Either<L, R>
@@ -35,7 +35,7 @@ where
     L: Convert,
     R: Convert,
 {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         match self {
             Self::Left(l) => l.convert(),
             Self::Right(r) => r.convert(),
@@ -44,7 +44,7 @@ where
 }
 
 impl Convert for Script {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let block = self.block.convert();
         unsafe {
             let kid = (*block).kids[0];
@@ -56,7 +56,7 @@ impl Convert for Script {
 }
 
 impl Convert for Statement {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         match self {
             Statement::Assign(Assign { assignee, value }) => unsafe {
                 let this = new_node(NodeKind::AssignStmt);
@@ -71,7 +71,7 @@ impl Convert for Statement {
             },
             Statement::Return(r) => unsafe {
                 let this = new_node(NodeKind::Return);
-                (*this).kids[0] = r.map_or(std::ptr::null_mut(), Expr::convert);
+                (*this).kids[0] = r.as_ref().map_or(std::ptr::null_mut(), Expr::convert);
                 this
             },
         }
@@ -79,7 +79,7 @@ impl Convert for Statement {
 }
 
 impl Convert for Expr {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         match self {
             Expr::Binary(b) => b.convert(),
             Expr::Unary(u) => u.convert(),
@@ -95,7 +95,7 @@ impl Convert for Expr {
 }
 
 impl Convert for Binary {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let Binary { lhs, rhs, op } = self;
         let node_type = match op {
             BinaryOp::Add => NodeKind::BinaryAdd,
@@ -132,7 +132,7 @@ impl Convert for Binary {
 }
 
 impl Convert for Unary {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let Unary { rhs, op } = self;
         let node_type = match op {
             UnaryOp::NumNeg => NodeKind::UnaryNeg,
@@ -149,20 +149,20 @@ impl Convert for Unary {
 }
 
 impl Convert for FuncCall {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let FuncCall { callee, args } = self;
 
         unsafe {
             let node = new_node(NodeKind::FuncCall);
             (*node).kids[0] = callee.convert();
-            (*node).kids[1] = args.into_iter().map(Convert::convert).convert();
+            (*node).kids[1] = args.iter().map(Convert::convert).convert();
             node
         }
     }
 }
 
 impl Convert for Index {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let Index { indexee, index } = self;
         unsafe {
             let node = new_node(NodeKind::ArrayIndex);
@@ -174,7 +174,7 @@ impl Convert for Index {
 }
 
 impl Convert for If {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let If {
             cond,
             block,
@@ -186,8 +186,8 @@ impl Convert for If {
             let node = new_node(NodeKind::If);
             (*node).kids[0] = cond.convert();
             (*node).kids[1] = block.convert();
-            let els_node = els.map_or(std::ptr::null_mut(), |x| x.convert());
-            (*node).kids[2] = elifs.into_iter().rev().fold(els_node, |acc, i| {
+            let els_node = els.as_ref().map_or(std::ptr::null_mut(), |x| x.convert());
+            (*node).kids[2] = elifs.iter().rev().fold(els_node, |acc, i| {
                 let node = new_node(NodeKind::If);
                 (*node).kids[2] = acc;
                 (*node).kids[1] = i.block.convert();
@@ -201,16 +201,16 @@ impl Convert for If {
 }
 
 impl Convert for Else {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         self.block.convert()
     }
 }
 
 impl Convert for Case {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let arms = self
             .arms
-            .into_iter()
+            .iter()
             .rev()
             .fold(std::ptr::null_mut(), |acc, arm| unsafe {
                 let node = new_node(NodeKind::CaseArm);
@@ -232,27 +232,27 @@ impl Convert for Case {
 }
 
 impl Convert for Literal {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         match self {
             Self::Num(n) => unsafe {
                 let node = new_node(NodeKind::NumLit);
-                (*node).val.n = n;
+                (*node).val.n = *n;
                 node
             },
             Self::Str(s) => unsafe {
                 let node = new_node(NodeKind::StrLit);
-                let cstr = CString::new(s).expect("String should not contain internal 0 byte");
+                let cstr = CString::new(s.clone()).expect("String can not contain internal 0 byte");
                 (*node).val.s = c_duplicate(&cstr).as_ptr().cast_mut();
                 node
             },
             Self::Bool(b) => unsafe {
                 let node = new_node(NodeKind::BoolLit);
-                (*node).val.b = b;
+                (*node).val.b = *b;
                 node
             },
             Self::Char(c) => unsafe {
                 let node = new_node(NodeKind::CharLit);
-                (*node).val.c = c as u8 as _;
+                (*node).val.c = *c as u8 as _;
                 node
             },
             Self::Nil => new_node(NodeKind::NilLit),
@@ -261,8 +261,8 @@ impl Convert for Literal {
 }
 
 impl Convert for FuncDef {
-    fn convert(self) -> *mut AstNode_T {
-        let args = self.args.into_iter().map(Convert::convert).convert();
+    fn convert(&self) -> *mut AstNode_T {
+        let args = self.args.iter().map(Convert::convert).convert();
         let body = self.body.convert();
         let is_rec = Literal::Bool(self.is_recursive).convert();
 
@@ -277,13 +277,13 @@ impl Convert for FuncDef {
 }
 
 impl Convert for Atom {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         match self {
             Atom::Ident(i) => i.convert(),
             Atom::Literal(l) => l.convert(),
             Atom::Array(a) => unsafe {
                 let node = new_node(NodeKind::Array);
-                (*node).kids[0] = a.into_iter().map(Convert::convert).convert();
+                (*node).kids[0] = a.iter().map(Convert::convert).convert();
                 node
             },
         }
@@ -291,17 +291,21 @@ impl Convert for Atom {
 }
 
 impl Convert for Block {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let this = new_node(NodeKind::Block);
 
         // DO *NOT* try to inline this with `Convert::convert` on the iterator.
         // The iterator version wraps every element in `NodeList`, but because
         // `BLOCK_STMTS` is a special snowflake that doesn't wrap the final
         // expression, that breaks the parsing. So fix `BLOCK_STMTS` please dear god.
-        let expr_node = self.value.map_or(std::ptr::null_mut(), |x| x.convert());
+        let expr_node = self
+            .value
+            .as_ref()
+            .map_or(std::ptr::null_mut(), |x| x.convert());
+
         let block =
             self.stats
-                .into_iter()
+                .iter()
                 .map(Convert::convert)
                 .rev()
                 .fold(expr_node, |acc, i| unsafe {
@@ -320,9 +324,9 @@ impl Convert for Block {
 }
 
 impl Convert for Ident {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         let node = new_node(NodeKind::Ident);
-        let cstr = CString::new(self.0).expect("Ident should not contain internal 0 byte");
+        let cstr = CString::new(self.0.clone()).expect("Ident can not contain internal 0 byte");
         unsafe {
             (*node).val.i = c_duplicate(&cstr).as_ptr().cast_mut();
         }
@@ -332,9 +336,9 @@ impl Convert for Ident {
 
 impl<T> Convert for T
 where
-    T: Iterator<Item = *mut AstNode_T> + DoubleEndedIterator,
+    T: Iterator<Item = *mut AstNode_T> + Clone + DoubleEndedIterator,
 {
-    fn convert(self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode_T {
         // Build the list backwards:
         //
         // Given the list:
@@ -369,12 +373,14 @@ where
         //   node
         //
 
-        self.rev().fold(std::ptr::null_mut(), |acc, i| unsafe {
-            let node = new_node(NodeKind::NodeList);
-            (*node).kids[1] = acc;
-            (*node).kids[0] = i;
-            node
-        })
+        self.clone()
+            .rev()
+            .fold(std::ptr::null_mut(), |acc, i| unsafe {
+                let node = new_node(NodeKind::NodeList);
+                (*node).kids[1] = acc;
+                (*node).kids[0] = i;
+                node
+            })
     }
 }
 
@@ -397,7 +403,7 @@ fn new_node(kind: NodeKind) -> *mut AstNode_T {
     ptr
 }
 
-fn c_duplicate<'a, 'b>(c: &'a CStr) -> &'b CStr {
+fn c_duplicate<'a>(c: &CStr) -> &'a CStr {
     // Safety
     // + A (properly created) CStr is guarunteed to point to a valid *const c_char
     let dup = unsafe { bindings::strdup(c.as_ptr()) };

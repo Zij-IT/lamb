@@ -52,7 +52,7 @@ pub fn parse_script(path: Option<PathBuf>) -> Result<Script, NodeError> {
 }
 
 impl Script {
-    pub fn to_ptr(self) -> *mut AstNode_T {
+    pub fn to_ptr(&self) -> *mut AstNode_T {
         convert::Convert::convert(self)
     }
 }
