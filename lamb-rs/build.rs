@@ -1,5 +1,5 @@
 const C_FILES: &[&str] = &[
-    "./src/ffi/c/main.c",
+    "./src/ffi/c/lib.c",
     "./src/ffi/c/ast/ast.c",
     "./src/ffi/c/ast/optimization.c",
     "./src/ffi/c/parsing/built/lexer.c",
