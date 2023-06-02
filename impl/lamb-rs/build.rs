@@ -1,48 +1,43 @@
-use std::path::Path;
+const C_FILES: &[&str] = &[
+    "../main.c",
+    "../ast/ast.c",
+    "../ast/optimization.c",
+    "../parsing/built/lexer.c",
+    "../parsing/built/parser.tab.c",
+    "../compile/value.c",
+    "../compile/chunk.c",
+    "../compile/ast.c",
+    "../compile/object.c",
+    "../compile/table.c",
+    "../compile/compiler.c",
+    "../compile/memory.c",
+    "../compile/misc.c",
+    "../debug/debug.c",
+    "../vm/vm.c",
+    "../vm/native.c",
+];
 
 fn main() {
-    // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed=wrapper.h");
+    // This here generates the C shared libary that gets hooked onto the
+    // Rust build.
 
     cc::Build::new()
-        .file("../main.c")
-        .file("../ast/ast.c")
-        .file("../ast/optimization.c")
-        .file("../parsing/built/lexer.c")
-        .file("../parsing/built/parser.tab.c")
-        .file("../compile/value.c")
-        .file("../compile/chunk.c")
-        .file("../compile/ast.c")
-        .file("../compile/object.c")
-        .file("../compile/table.c")
-        .file("../compile/compiler.c")
-        .file("../compile/memory.c")
-        .file("../compile/misc.c")
-        .file("../debug/debug.c")
-        .file("../vm/vm.c")
-        .file("../vm/native.c")
+        .files(
+            C_FILES
+                .iter()
+                .inspect(|f| println!("cargo:rerun-if-changed={f}")),
+        )
         .flag("-lfl")
         .warnings(true)
         .compile("lamb_c");
 
-    // The bindgen::Builder is the main entry point
-    // to bindgen, and lets you build up options for
-    // the resulting bindings.
-    let bindings = bindgen::Builder::default()
-        // The input header we would like to generate
-        // bindings for.
+    // This build-iful piece here generates the necessary headers required
+    // for the bindings.
+    bindgen::Builder::default()
         .header("wrapper.h")
-        // Tell cargo to invalidate the built crate whenever any of the
-        // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        // Finish the builder and generate the bindings.
         .generate()
-        // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
-
-    // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = Path::new("src/ffi");
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Unable to generate bindings")
+        .write_to_file("src/ffi/bindings.rs")
         .expect("Couldn't write bindings!");
 }
