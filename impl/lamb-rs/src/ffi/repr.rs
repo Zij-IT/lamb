@@ -48,8 +48,9 @@ impl ast::Script {
     }
 }
 
+#[doc(hidden)]
 #[derive(PartialEq, Eq)]
-enum AstRepr {
+pub enum AstRepr {
     Expr(Expr),
     Statement(Statement),
 }
@@ -64,7 +65,7 @@ impl std::fmt::Debug for AstRepr {
 }
 
 impl AstRepr {
-    #[allow(unused)]
+    #[cfg(test)]
     pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
         into_rust_repr(node)
     }
