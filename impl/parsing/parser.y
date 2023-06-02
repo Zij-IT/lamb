@@ -3,7 +3,7 @@
 	#include "../../types.h"
 	#include "../../ast/ast.h"
 
-	void yyerror(AstNode** node, char* msg) {
+	void yyerror(__attribute__((unused)) AstNode** node, char* msg) {
 		fprintf(stderr, "Parse Error: %s\n", msg);
 	}
 	

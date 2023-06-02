@@ -240,12 +240,14 @@ void objectptr_array_init(ObjectPtrArray *arr) {
     arr->values = NULL;
 }
 
-void objectptr_array_write(Vm *vm, ObjectPtrArray *arr, Object *val) {
+void objectptr_array_write(__attribute__((unused))Vm *vm, ObjectPtrArray *arr, Object *val) {
     if (arr->capacity < arr->len + 1) {
         i32 old_cap = arr->capacity;
         arr->capacity = GROW_CAPACITY(old_cap);
         arr->values = realloc(arr->values, sizeof(Object *) * arr->capacity);
     }
+
+    vm->bytes_allocated = 0;
 
     arr->values[arr->len] = val;
     arr->len += 1;

@@ -61,6 +61,7 @@ impl std::fmt::Debug for AstRepr {
 }
 
 impl AstRepr {
+    #[allow(unused)]
     pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
         into_rust_repr(node)
     }

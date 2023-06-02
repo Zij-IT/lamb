@@ -54,7 +54,7 @@ static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
     return new_nil();
 }
 
-static Value lamb_user_int(i32 arg_count, Value *args) {
+static Value lamb_user_int(__attribute__((unused)) i32 arg_count, __attribute__((unused))Value *args) {
     char x_buffer[80];
     if (fgets(x_buffer, 80, stdin) == NULL) {
         return new_nil();
@@ -63,7 +63,7 @@ static Value lamb_user_int(i32 arg_count, Value *args) {
     }
 }
 
-static Value lamb_user_char(i32 arg_count, Value *args) { return new_char(fgetc(stdin)); }
+static Value lamb_user_char(__attribute__((unused))i32 arg_count, __attribute__((unused))Value *args) { return new_char(fgetc(stdin)); }
 
 static Value lamb_rand(i32 arg_count, Value *args) {
     if (arg_count == 1 && is_integer(*args)) {
