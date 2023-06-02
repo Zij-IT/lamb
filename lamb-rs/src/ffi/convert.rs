@@ -521,7 +521,7 @@ mod tests {
     };
 
     #[test]
-    fn test_atoms() {
+    fn convert_atoms() {
         let atoms = [
             Atom::Literal(Literal::Num(2)),
             Atom::Literal(Literal::Char('c')),
@@ -532,8 +532,10 @@ mod tests {
             Atom::Array(vec![
                 Expr::Atom(Atom::Literal(Literal::Num(1))),
                 Expr::Atom(Atom::Literal(Literal::Num(2))),
-                Expr::Atom(Atom::Literal(Literal::Num(3))),
+                Expr::Atom(Atom::Literal(Literal::Bool(true))),
                 Expr::Atom(Atom::Literal(Literal::Num(4))),
+                Expr::Atom(Atom::Literal(Literal::Nil)),
+                Expr::Atom(Atom::Ident(Ident("hi".into()))),
             ]),
         ];
 
@@ -548,7 +550,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unaries() {
+    fn convert_unaries() {
         let unaries = [
             Expr::Unary(Unary {
                 rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
@@ -575,42 +577,78 @@ mod tests {
     }
 
     #[test]
-    fn test_binaries() {
+    fn convert_binaries() {
         let binaries = [
-            Expr::Binary(Binary {
-                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                op: BinaryOp::Add,
-            }),
-            Expr::Binary(Binary {
-                lhs: Box::new(Expr::Atom(Atom::Array(vec![
-                    Expr::Atom(Atom::Literal(Literal::Num(1))),
-                    Expr::Atom(Atom::Literal(Literal::Num(2))),
-                    Expr::Atom(Atom::Literal(Literal::Num(3))),
-                    Expr::Atom(Atom::Literal(Literal::Num(4))),
-                ]))),
-                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
-                op: BinaryOp::Mul,
-            }),
-            Expr::Binary(Binary {
-                lhs: Box::new(Expr::Binary(Binary {
+            [
+                BinaryOp::Add,
+                BinaryOp::Sub,
+                BinaryOp::Div,
+                BinaryOp::Mul,
+                BinaryOp::Mod,
+                BinaryOp::LApply,
+                BinaryOp::RApply,
+                BinaryOp::LCompose,
+                BinaryOp::RCompose,
+                BinaryOp::Gt,
+                BinaryOp::Ge,
+                BinaryOp::Lt,
+                BinaryOp::Le,
+                BinaryOp::Eq,
+                BinaryOp::Ne,
+                BinaryOp::LogOr,
+                BinaryOp::LogAnd,
+                BinaryOp::BinOr,
+                BinaryOp::BinAnd,
+                BinaryOp::BinXor,
+                BinaryOp::RShift,
+                BinaryOp::LShift,
+            ]
+            .map(|op| {
+                Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    op,
+                })
+            })
+            .as_slice(),
+            [
+                Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    op: BinaryOp::Add,
+                }),
+                Expr::Binary(Binary {
                     lhs: Box::new(Expr::Atom(Atom::Array(vec![
                         Expr::Atom(Atom::Literal(Literal::Num(1))),
                         Expr::Atom(Atom::Literal(Literal::Num(2))),
                         Expr::Atom(Atom::Literal(Literal::Num(3))),
                         Expr::Atom(Atom::Literal(Literal::Num(4))),
                     ]))),
-                    rhs: Box::new(Expr::Binary(Binary {
-                        lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                        rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                        op: BinaryOp::Add,
-                    })),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
                     op: BinaryOp::Mul,
-                })),
-                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
-                op: BinaryOp::Sub,
-            }),
-        ];
+                }),
+                Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Binary(Binary {
+                        lhs: Box::new(Expr::Atom(Atom::Array(vec![
+                            Expr::Atom(Atom::Literal(Literal::Num(1))),
+                            Expr::Atom(Atom::Literal(Literal::Num(2))),
+                            Expr::Atom(Atom::Literal(Literal::Num(3))),
+                            Expr::Atom(Atom::Literal(Literal::Num(4))),
+                        ]))),
+                        rhs: Box::new(Expr::Binary(Binary {
+                            lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                            op: BinaryOp::Add,
+                        })),
+                        op: BinaryOp::Mul,
+                    })),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
+                    op: BinaryOp::Sub,
+                }),
+            ]
+            .as_slice(),
+        ]
+        .concat();
 
         for binary in binaries {
             let clone = binary.clone();
@@ -623,7 +661,7 @@ mod tests {
     }
 
     #[test]
-    fn test_statements() {
+    fn convert_statements() {
         let statements = [
             Statement::Assign(Assign {
                 assignee: Ident("hi".into()),
@@ -658,7 +696,7 @@ mod tests {
     }
 
     #[test]
-    fn test_blocks() {
+    fn convert_blocks() {
         let blocks = [
             Expr::Block(Block {
                 stats: vec![],
@@ -716,7 +754,7 @@ mod tests {
     }
 
     #[test]
-    fn test_scripts() {
+    fn convert_scripts() {
         let scripts = [
             Block {
                 stats: vec![],
