@@ -1,18 +1,10 @@
 use std::{ffi::CStr, str::Utf8Error};
 
+use super::AstNode_T;
+use crate::ast::{self, BinaryOp, Block, Expr, Literal, Statement, UnaryOp};
 use crate::ffi::bindings as ffi;
 
-use super::{
-    ast::{self, BinaryOp, Block, Expr, Literal, Statement, UnaryOp},
-    AstNode_T,
-};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Script {
-    pub block: Block,
-}
-
-impl Script {
+impl ast::Script {
     /// # Safety
     /// `node` must point to a validly constructed AstNode_T with the following
     /// structure, which is dependent on its `type_`:
@@ -50,10 +42,6 @@ impl Script {
         Ok(Self {
             block: block_inner(node)?.expect_expr()?.expect_block()?,
         })
-    }
-
-    pub fn to_ptr(self) -> *mut AstNode_T {
-        crate::convert::Convert::convert(self)
     }
 }
 
@@ -212,12 +200,8 @@ unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     // is hung directly on the final node
     let (stats, node) = CListIter::new(
         |node| {
-            if (*node).type_ == ffi::AstNodeType_AstntNodeList {
-                if (*node).kids[0].is_null() {
-                    None
-                } else {
-                    Some(into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
-                }
+            if (*node).type_ == ffi::AstNodeType_AstntNodeList && !(*node).kids[0].is_null() {
+                Some(into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
             } else {
                 None
             }

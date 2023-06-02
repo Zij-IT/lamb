@@ -1,9 +1,10 @@
 use std::ffi::CString;
 
-use crate::ffi::{
-    bindings, Assign, Ast, AstNode_T, Atom, Binary, BinaryOp, Block, Case, Either, Else, Expr,
-    FuncCall, FuncDef, Ident, If, Index, Literal, Script, Statement, Unary, UnaryOp,
+use crate::ast::{
+    Assign, Atom, Binary, BinaryOp, Block, Case, Either, Else, Expr, FuncCall, FuncDef, Ident, If,
+    Index, Literal, Script, Statement, Unary, UnaryOp,
 };
+use crate::ffi::{self, bindings, new_node, Ast, AstNode_T, NodeKind};
 
 pub fn test_all() {
     test_atoms();
@@ -270,18 +271,6 @@ fn test_scripts() {
     println!("test_scripts: PASS");
 }
 
-unsafe fn nullify_kids(node: &*mut AstNode_T) {
-    if node.is_null() {
-        return;
-    }
-
-    for kid in 0..bindings::MAX_AST_KID_COUNT as usize {
-        unsafe {
-            (**node).kids[kid] = std::ptr::null_mut();
-        }
-    }
-}
-
 pub trait Convert {
     fn convert(self) -> *mut AstNode_T;
 }
@@ -304,7 +293,7 @@ impl Convert for Script {
         let block = self.block.convert();
         unsafe {
             let kid = (*block).kids[0];
-            nullify_kids(&block);
+            (*block).kids[0] = std::ptr::null_mut();
             bindings::free_ast(block);
             kid
         }
@@ -315,23 +304,18 @@ impl Convert for Statement {
     fn convert(self) -> *mut AstNode_T {
         match self {
             Statement::Assign(Assign { assignee, value }) => unsafe {
-                let this = bindings::new_astnode(bindings::AstNodeType_AstntAssignStmt);
-                nullify_kids(&this);
+                let this = ffi::new_node(NodeKind::AssignStmt);
                 (*this).kids[0] = assignee.convert();
                 (*this).kids[1] = value.convert();
                 this
             },
             Statement::Expr(e) => unsafe {
-                let this = bindings::new_astnode(bindings::AstNodeType_AstntExprStmt);
-                nullify_kids(&this);
+                let this = ffi::new_node(NodeKind::ExprStmt);
                 (*this).kids[0] = e.convert();
-
                 this
             },
             Statement::Return(r) => unsafe {
-                let this = bindings::new_astnode(bindings::AstNodeType_AstntReturn);
-                nullify_kids(&this);
-
+                let this = ffi::new_node(NodeKind::Return);
                 (*this).kids[0] = r.map_or(std::ptr::null_mut(), Expr::convert);
                 this
             },
@@ -359,40 +343,36 @@ impl Convert for Binary {
     fn convert(self) -> *mut AstNode_T {
         let Binary { lhs, rhs, op } = self;
         let node_type = match op {
-            BinaryOp::Add => bindings::AstNodeType_AstntBinaryAdd,
-            BinaryOp::Sub => bindings::AstNodeType_AstntBinarySub,
-            BinaryOp::Div => bindings::AstNodeType_AstntBinaryDiv,
-            BinaryOp::Mul => bindings::AstNodeType_AstntBinaryMul,
-            BinaryOp::Mod => bindings::AstNodeType_AstntBinaryMod,
-            BinaryOp::LApply => bindings::AstNodeType_AstntBinaryLApply,
-            BinaryOp::RApply => bindings::AstNodeType_AstntBinaryRApply,
-            BinaryOp::LCompose => bindings::AstNodeType_AstntBinaryLCompose,
-            BinaryOp::RCompose => bindings::AstNodeType_AstntBinaryRCompose,
-            BinaryOp::Gt => bindings::AstNodeType_AstntBinaryGt,
-            BinaryOp::Ge => bindings::AstNodeType_AstntBinaryGe,
-            BinaryOp::Lt => bindings::AstNodeType_AstntBinaryLt,
-            BinaryOp::Le => bindings::AstNodeType_AstntBinaryLe,
-            BinaryOp::Eq => bindings::AstNodeType_AstntBinaryEq,
-            BinaryOp::Ne => bindings::AstNodeType_AstntBinaryNe,
-            BinaryOp::LogOr => bindings::AstNodeType_AstntBinaryLogOr,
-            BinaryOp::LogAnd => bindings::AstNodeType_AstntBinaryLogAnd,
-            BinaryOp::BinOr => bindings::AstNodeType_AstntBinaryOr,
-            BinaryOp::BinAnd => bindings::AstNodeType_AstntBinaryAnd,
-            BinaryOp::BinXor => bindings::AstNodeType_AstntBinaryXor,
-            BinaryOp::RShift => bindings::AstNodeType_AstntBinaryRShift,
-            BinaryOp::LShift => bindings::AstNodeType_AstntBinaryLShift,
+            BinaryOp::Add => ffi::NodeKind::BinaryAdd,
+            BinaryOp::Sub => ffi::NodeKind::BinarySub,
+            BinaryOp::Div => ffi::NodeKind::BinaryDiv,
+            BinaryOp::Mul => ffi::NodeKind::BinaryMul,
+            BinaryOp::Mod => ffi::NodeKind::BinaryMod,
+            BinaryOp::LApply => ffi::NodeKind::BinaryLApply,
+            BinaryOp::RApply => ffi::NodeKind::BinaryRApply,
+            BinaryOp::LCompose => ffi::NodeKind::BinaryLCompose,
+            BinaryOp::RCompose => ffi::NodeKind::BinaryRCompose,
+            BinaryOp::Gt => ffi::NodeKind::BinaryGt,
+            BinaryOp::Ge => ffi::NodeKind::BinaryGe,
+            BinaryOp::Lt => ffi::NodeKind::BinaryLt,
+            BinaryOp::Le => ffi::NodeKind::BinaryLe,
+            BinaryOp::Eq => ffi::NodeKind::BinaryEq,
+            BinaryOp::Ne => ffi::NodeKind::BinaryNe,
+            BinaryOp::LogOr => ffi::NodeKind::BinaryLogOr,
+            BinaryOp::LogAnd => ffi::NodeKind::BinaryLogAnd,
+            BinaryOp::BinOr => ffi::NodeKind::BinaryOr,
+            BinaryOp::BinAnd => ffi::NodeKind::BinaryAnd,
+            BinaryOp::BinXor => ffi::NodeKind::BinaryXor,
+            BinaryOp::RShift => ffi::NodeKind::BinaryRShift,
+            BinaryOp::LShift => ffi::NodeKind::BinaryLShift,
         };
 
-        let node = unsafe { bindings::new_astnode(node_type) };
-        unsafe { nullify_kids(&node) };
         unsafe {
+            let node = ffi::new_node(node_type);
             (*node).kids[0] = lhs.convert();
-        }
-        unsafe {
             (*node).kids[1] = rhs.convert();
+            node
         }
-
-        node
     }
 }
 
@@ -400,18 +380,16 @@ impl Convert for Unary {
     fn convert(self) -> *mut AstNode_T {
         let Unary { rhs, op } = self;
         let node_type = match op {
-            UnaryOp::NumNeg => bindings::AstNodeType_AstntUnaryNeg,
-            UnaryOp::LogNot => bindings::AstNodeType_AstntUnaryLogNot,
-            UnaryOp::BinNot => bindings::AstNodeType_AstntUnaryBitNot,
+            UnaryOp::NumNeg => NodeKind::UnaryNeg,
+            UnaryOp::LogNot => NodeKind::UnaryLogNot,
+            UnaryOp::BinNot => NodeKind::UnaryBitNot,
         };
 
-        let node = unsafe { bindings::new_astnode(node_type) };
-        unsafe { nullify_kids(&node) };
         unsafe {
+            let node = ffi::new_node(node_type);
             (*node).kids[0] = rhs.convert();
+            node
         }
-
-        node
     }
 }
 
@@ -419,33 +397,24 @@ impl Convert for FuncCall {
     fn convert(self) -> *mut AstNode_T {
         let FuncCall { callee, args } = self;
 
-        let node = unsafe { bindings::new_astnode(bindings::AstNodeType_AstntFuncCall) };
-        unsafe { nullify_kids(&node) };
         unsafe {
+            let node = ffi::new_node(NodeKind::FuncCall);
             (*node).kids[0] = callee.convert();
-        }
-        unsafe {
             (*node).kids[1] = args.into_iter().map(Convert::convert).convert();
+            node
         }
-
-        node
     }
 }
 
 impl Convert for Index {
     fn convert(self) -> *mut AstNode_T {
         let Index { indexee, index } = self;
-
-        let node = unsafe { bindings::new_astnode(bindings::AstNodeType_AstntArrayIndex) };
-        unsafe { nullify_kids(&node) };
         unsafe {
+            let node = ffi::new_node(NodeKind::ArrayIndex);
             (*node).kids[0] = indexee.convert();
-        }
-        unsafe {
             (*node).kids[1] = index.convert();
+            node
         }
-
-        node
     }
 }
 
@@ -458,26 +427,21 @@ impl Convert for If {
             els,
         } = self;
 
-        let node = unsafe { bindings::new_astnode(bindings::AstNodeType_AstntIf) };
-        unsafe { nullify_kids(&node) };
         unsafe {
+            let node = ffi::new_node(NodeKind::If);
             (*node).kids[0] = cond.convert();
-        }
-        unsafe {
             (*node).kids[1] = block.convert();
-        }
-        unsafe {
             let els_node = els.map_or(std::ptr::null_mut(), |x| x.convert());
             (*node).kids[2] = elifs.into_iter().rev().fold(els_node, |acc, i| {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntIf);
+                let node = ffi::new_node(NodeKind::If);
                 (*node).kids[2] = acc;
                 (*node).kids[1] = i.block.convert();
                 (*node).kids[0] = i.cond.convert();
                 node
             });
-        }
 
-        node
+            node
+        }
     }
 }
 
@@ -494,7 +458,7 @@ impl Convert for Case {
             .into_iter()
             .rev()
             .fold(std::ptr::null_mut(), |acc, arm| unsafe {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntCaseArm);
+                let node = ffi::new_node(NodeKind::CaseArm);
                 (*node).kids[2] = acc;
                 (*node).kids[1] = arm.on_match.convert();
                 (*node).kids[0] = arm.pattern.convert();
@@ -504,8 +468,7 @@ impl Convert for Case {
         let value = self.value.convert();
 
         unsafe {
-            let node = bindings::new_astnode(bindings::AstNodeType_AstntCase);
-            nullify_kids(&node);
+            let node = ffi::new_node(NodeKind::Case);
             (*node).kids[0] = value;
             (*node).kids[1] = arms;
             node
@@ -517,27 +480,27 @@ impl Convert for Literal {
     fn convert(self) -> *mut AstNode_T {
         match self {
             Self::Num(n) => unsafe {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntNumLit);
+                let node = ffi::new_node(NodeKind::NumLit);
                 (*node).val.n = n;
                 node
             },
             Self::Str(s) => unsafe {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntStrLit);
+                let node = ffi::new_node(NodeKind::StrLit);
                 let cstr = CString::new(s).expect("String should not contain internal 0 byte");
                 (*node).val.s = bindings::strdup(cstr.as_ptr());
                 node
             },
             Self::Bool(b) => unsafe {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntBoolLit);
+                let node = ffi::new_node(NodeKind::BoolLit);
                 (*node).val.b = b;
                 node
             },
             Self::Char(c) => unsafe {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntCharLit);
+                let node = ffi::new_node(NodeKind::CharLit);
                 (*node).val.c = c as u8 as _;
                 node
             },
-            Self::Nil => unsafe { bindings::new_astnode(bindings::AstNodeType_AstntNilLit) },
+            Self::Nil => ffi::new_node(NodeKind::NilLit),
         }
     }
 }
@@ -549,7 +512,7 @@ impl Convert for FuncDef {
         let is_rec = Literal::Bool(self.is_recursive).convert();
 
         unsafe {
-            let node = bindings::new_astnode(bindings::AstNodeType_AstntFuncDef);
+            let node = ffi::new_node(NodeKind::FuncDef);
             (*node).kids[0] = args;
             (*node).kids[1] = body;
             (*node).kids[2] = is_rec;
@@ -564,8 +527,7 @@ impl Convert for Atom {
             Atom::Ident(i) => i.convert(),
             Atom::Literal(l) => l.convert(),
             Atom::Array(a) => unsafe {
-                let node = bindings::new_astnode(bindings::AstNodeType_AstntArray);
-                nullify_kids(&node);
+                let node = ffi::new_node(NodeKind::Array);
                 (*node).kids[0] = a.into_iter().map(Convert::convert).convert();
                 node
             },
@@ -575,11 +537,7 @@ impl Convert for Atom {
 
 impl Convert for Block {
     fn convert(self) -> *mut AstNode_T {
-        let this = unsafe {
-            let this = bindings::new_astnode(bindings::AstNodeType_AstntBlock);
-            nullify_kids(&this);
-            this
-        };
+        let this = ffi::new_node(NodeKind::Block);
 
         // DO *NOT* try to inline this with `Convert::convert` on the iterator.
         // The iterator version wraps every element in `NodeList`, but because
@@ -592,7 +550,7 @@ impl Convert for Block {
                 .map(Convert::convert)
                 .rev()
                 .fold(expr_node, |acc, i| unsafe {
-                    let node = bindings::new_astnode(bindings::AstNodeType_AstntNodeList);
+                    let node = ffi::new_node(NodeKind::NodeList);
                     (*node).kids[1] = acc;
                     (*node).kids[0] = i;
                     node
@@ -608,7 +566,7 @@ impl Convert for Block {
 
 impl Convert for Ident {
     fn convert(self) -> *mut AstNode_T {
-        let node = unsafe { bindings::new_astnode(bindings::AstNodeType_AstntIdent) };
+        let node = ffi::new_node(NodeKind::Ident);
         let cstr = CString::new(self.0).expect("Ident should not contain internal 0 byte");
         unsafe { (*node).val.i = bindings::strdup(cstr.as_ptr()) };
         node
@@ -620,7 +578,7 @@ where
     T: Iterator<Item = *mut AstNode_T> + DoubleEndedIterator,
 {
     fn convert(self) -> *mut AstNode_T {
-        let new_node = || unsafe { bindings::new_astnode(bindings::AstNodeType_AstntNodeList) };
+        let new_node = || ffi::new_node(NodeKind::NodeList);
         // Build the list backwards:
         //
         // Given the list:

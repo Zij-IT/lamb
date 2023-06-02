@@ -1,7 +1,8 @@
-use crate::ffi::{
-    Assign, Ast, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef,
-    Ident, If, Index, Literal, Statement, Unary,
+use crate::ast::{
+    Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
+    If, Index, Literal, Statement, Unary,
 };
+use crate::ffi::Ast;
 
 pub trait Optimize {
     fn optimize(&mut self) -> bool;
@@ -190,7 +191,7 @@ impl Optimize for Atom {
 }
 
 mod extra_impls {
-    use crate::ffi::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
+    use crate::ast::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
 
     impl Expr {
         pub fn as_literal_mut(&mut self) -> Option<&mut Literal> {
