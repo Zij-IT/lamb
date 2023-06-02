@@ -4,6 +4,27 @@ fn main() {
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=wrapper.h");
 
+    cc::Build::new()
+        .file("../main.c")
+        .file("../ast/ast.c")
+        .file("../ast/optimization.c")
+        .file("../parsing/built/lexer.c")
+        .file("../parsing/built/parser.tab.c")
+        .file("../compile/value.c")
+        .file("../compile/chunk.c")
+        .file("../compile/ast.c")
+        .file("../compile/object.c")
+        .file("../compile/table.c")
+        .file("../compile/compiler.c")
+        .file("../compile/memory.c")
+        .file("../compile/misc.c")
+        .file("../debug/debug.c")
+        .file("../vm/vm.c")
+        .file("../vm/native.c")
+        .flag("-lfl")
+        .warnings(true)
+        .compile("lamb_c");
+
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.

@@ -7,28 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct CliOptions {
-    i32 debug_level;
-    i32 gc_debug_level;
-    i32 optimization_level;
-    str path;
-} CliOptions;
-
-extern void pretty_print(AstNode* root);
-extern CliOptions parse_options(void);
-extern void drop_options(CliOptions);
-extern AstNode* optimize(AstNode*);
-extern void test_all(void);
-
-void compile_with_options(AstNode **root, VmOptions options) {
-    if (options.optimized) {
-        *root = optimize(*root);
-    }
-
-    if (options.print_ast) {
-        pretty_print(*root);
-    }
-
+void run_ast(AstNode *root, bool print_fns, bool print_main) {
+    VmOptions options = { 
+        .print_main_chunk = print_main,
+        .print_fn_chunks = print_fns,
+        .print_ast = false,
+        .optimized = false,
+    };
+    
     Vm vm;
     vm_init(&vm, options);
 
@@ -38,7 +24,7 @@ void compile_with_options(AstNode **root, VmOptions options) {
     compiler.function = (LambFunc *)alloc_obj(&vm, OtFunc);
     vm_push_stack(&vm, new_object((Object *)compiler.function));
 
-    CompileAstResult car = compile(&vm, &compiler, *root);
+    CompileAstResult car = compile(&vm, &compiler, root);
 
     if (car == CarOk) {
         chunk_write(&vm, &compiler.function->chunk, OpReturn);
@@ -66,58 +52,36 @@ void compile_with_options(AstNode **root, VmOptions options) {
     vm_free(&vm);
 }
 
-int run(int argc, char** argv) {
-    CliOptions cli_options = parse_options();
-
-    FILE *file = stdin;
-    if (cli_options.path != NULL) {
-        file = fopen(cli_options.path, "r");
-        if (!file) {
-            fprintf(stderr, "Unable to open '%s'. Exiting...\n", cli_options.path);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    if (file == stdin) {
-        printf("~Lamb> Enter your code. Press Ctrl-D when finished.\n");
-    }
-
-    set_lexer_file(file);
-
-    AstNode **root = malloc(sizeof(AstNode *));
-    ParseResult res = yyparse(root);
+AstNode* parse_or_die(void) {
+    AstNode* root = NULL;
+    ParseResult res = yyparse(&root);
     if (res == ParseResultReject) {
-        printf("\nSyntax Error. Unfortunately I can't help you.\n");
-        return EXIT_FAILURE;
-    } else if (root == NULL || *root == NULL) {
-        // If the user immediately Ctrl-D without providing input that can be
-        // parsed.
-        free(root);
-        printf("Exiting...\n");
-        return EXIT_SUCCESS;
-    } else {
-        VmOptions options = {
-            .print_fn_chunks = cli_options.debug_level >= 1,
-            .print_main_chunk = cli_options.debug_level >= 1,
-            .print_ast = cli_options.debug_level == 2,
-            .optimized = cli_options.optimization_level > 0,
-        };
-
-        compile_with_options(root, options);
-
-        free_ast(*root);
-        free(root);
+        fprintf(stderr, "\nSyntax Error. Sorry.");
+        exit(EXIT_FAILURE);
     }
 
-    if (file != stdin && file != NULL) {
-        fclose(file);
-        drop_options(cli_options);
-    }
-
-    return 0;
+    return root;
 }
 
-int main(int argc, char **argv) {
-    // test_all();
-    return run(argc, argv);
+AstNode* parse_stdin(void) {
+    set_lexer_file(stdin);
+    printf("~Lamb> Enter your code. Press Ctrl-D when finished.\n");
+    return parse_or_die();
+}
+
+AstNode* parse_path(str path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
+    FILE *file = fopen(path, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Unable to open '%s'. Exiting...\n", path);
+        exit(EXIT_FAILURE);
+    }
+    set_lexer_file(file);
+
+    AstNode* root = parse_or_die();
+    fclose(file);
+    return root;
 }
