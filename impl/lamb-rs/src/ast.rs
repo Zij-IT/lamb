@@ -1,5 +1,3 @@
-use crate::ffi::AstNode_T;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Either<L, R> {
     Left(L),
@@ -8,12 +6,6 @@ pub enum Either<L, R> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Script {
     pub block: Block,
-}
-
-impl Script {
-    pub fn to_ptr(self) -> *mut AstNode_T {
-        crate::convert::Convert::convert(self)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -6,7 +6,6 @@ use optimization::Optimize;
 
 mod ast;
 mod cli;
-mod convert;
 mod ffi;
 mod optimization;
 
@@ -20,11 +19,6 @@ mod optimization;
 pub unsafe extern "C" fn pretty_print(x: *mut ffi::AstNode_T) {
     let script = ast::Script::from_ptr(x);
     println!("{script:#?}");
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn assert_ast_parse(x: *mut ffi::AstNode_T) {
-    println!("{:#?}", ffi::Ast::from_ptr(x));
 }
 
 /// Parses the arguments of the command line using `clap` and converts the
@@ -83,5 +77,5 @@ pub unsafe extern "C" fn optimize(node: *mut ffi::AstNode_T) -> *mut ffi::AstNod
 
 #[no_mangle]
 pub unsafe extern "C" fn test_all() {
-    convert::test_all();
+    ffi::test_all();
 }

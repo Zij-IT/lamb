@@ -2,7 +2,7 @@ use std::{ffi::CStr, str::Utf8Error};
 
 use super::AstNode_T;
 use crate::ast::{self, BinaryOp, Block, Expr, Literal, Statement, UnaryOp};
-use crate::ffi::bindings as ffi;
+use crate::ffi::bindings;
 
 impl ast::Script {
     /// # Safety
@@ -124,61 +124,61 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     }
 
     match (*node).type_ {
-        ffi::AstNodeType_AstntNilLit => Ok(AstRepr::from(Literal::Nil)),
-        ffi::AstNodeType_AstntNumLit => Ok(AstRepr::from(Literal::Num((*node).val.n))),
-        ffi::AstNodeType_AstntCharLit => Ok(AstRepr::from(Literal::Char(char::from(
+        bindings::AstNodeType_AstntNilLit => Ok(AstRepr::from(Literal::Nil)),
+        bindings::AstNodeType_AstntNumLit => Ok(AstRepr::from(Literal::Num((*node).val.n))),
+        bindings::AstNodeType_AstntCharLit => Ok(AstRepr::from(Literal::Char(char::from(
             (*node).val.c as u8,
         )))),
-        ffi::AstNodeType_AstntBoolLit => Ok(AstRepr::from(Literal::Bool((*node).val.b))),
-        ffi::AstNodeType_AstntIdent => CStr::from_ptr((*node).val.i)
+        bindings::AstNodeType_AstntBoolLit => Ok(AstRepr::from(Literal::Bool((*node).val.b))),
+        bindings::AstNodeType_AstntIdent => CStr::from_ptr((*node).val.i)
             .to_str()
             .map(|s| AstRepr::from(ast::Ident::from(s)))
             .map_err(NodeError::InvalidUtf8),
-        ffi::AstNodeType_AstntStrLit => CStr::from_ptr((*node).val.s)
+        bindings::AstNodeType_AstntStrLit => CStr::from_ptr((*node).val.s)
             .to_str()
             .map(|s| AstRepr::from(Literal::Str(s.into())))
             .map_err(NodeError::InvalidUtf8),
-        ffi::AstNodeType_AstntUnaryNeg => new_unary(node, UnaryOp::NumNeg),
-        ffi::AstNodeType_AstntUnaryLogNot => new_unary(node, UnaryOp::LogNot),
-        ffi::AstNodeType_AstntUnaryBitNot => new_unary(node, UnaryOp::BinNot),
-        ffi::AstNodeType_AstntBinaryAdd => new_binary(node, BinaryOp::Add),
-        ffi::AstNodeType_AstntBinarySub => new_binary(node, BinaryOp::Sub),
-        ffi::AstNodeType_AstntBinaryMul => new_binary(node, BinaryOp::Mul),
-        ffi::AstNodeType_AstntBinaryDiv => new_binary(node, BinaryOp::Div),
-        ffi::AstNodeType_AstntBinaryMod => new_binary(node, BinaryOp::Mod),
-        ffi::AstNodeType_AstntBinaryLCompose => new_binary(node, BinaryOp::LCompose),
-        ffi::AstNodeType_AstntBinaryRCompose => new_binary(node, BinaryOp::RCompose),
-        ffi::AstNodeType_AstntBinaryLApply => new_binary(node, BinaryOp::LApply),
-        ffi::AstNodeType_AstntBinaryRApply => new_binary(node, BinaryOp::RApply),
-        ffi::AstNodeType_AstntBinaryLogAnd => new_binary(node, BinaryOp::LogAnd),
-        ffi::AstNodeType_AstntBinaryLogOr => new_binary(node, BinaryOp::LogOr),
-        ffi::AstNodeType_AstntBinaryEq => new_binary(node, BinaryOp::Eq),
-        ffi::AstNodeType_AstntBinaryNe => new_binary(node, BinaryOp::Ne),
-        ffi::AstNodeType_AstntBinaryGt => new_binary(node, BinaryOp::Gt),
-        ffi::AstNodeType_AstntBinaryGe => new_binary(node, BinaryOp::Ge),
-        ffi::AstNodeType_AstntBinaryLt => new_binary(node, BinaryOp::Lt),
-        ffi::AstNodeType_AstntBinaryLe => new_binary(node, BinaryOp::Le),
-        ffi::AstNodeType_AstntBinaryOr => new_binary(node, BinaryOp::BinOr),
-        ffi::AstNodeType_AstntBinaryXor => new_binary(node, BinaryOp::BinXor),
-        ffi::AstNodeType_AstntBinaryAnd => new_binary(node, BinaryOp::BinAnd),
-        ffi::AstNodeType_AstntBinaryRShift => new_binary(node, BinaryOp::RShift),
-        ffi::AstNodeType_AstntBinaryLShift => new_binary(node, BinaryOp::LShift),
-        ffi::AstNodeType_AstntIf => new_if(node),
-        ffi::AstNodeType_AstntCase => new_case(node),
-        ffi::AstNodeType_AstntArray => new_array(node),
-        ffi::AstNodeType_AstntFuncDef => new_func_def(node),
-        ffi::AstNodeType_AstntFuncCall => new_func_call(node),
-        ffi::AstNodeType_AstntArrayIndex => new_index(node),
-        ffi::AstNodeType_AstntReturn => new_return(node),
-        ffi::AstNodeType_AstntExprStmt => new_expr_stmt(node),
-        ffi::AstNodeType_AstntAssignStmt => new_binding(node),
-        ffi::AstNodeType_AstntBlock => new_block(node),
-        ffi::AstNodeType_AstntNodeList => {
+        bindings::AstNodeType_AstntUnaryNeg => new_unary(node, UnaryOp::NumNeg),
+        bindings::AstNodeType_AstntUnaryLogNot => new_unary(node, UnaryOp::LogNot),
+        bindings::AstNodeType_AstntUnaryBitNot => new_unary(node, UnaryOp::BinNot),
+        bindings::AstNodeType_AstntBinaryAdd => new_binary(node, BinaryOp::Add),
+        bindings::AstNodeType_AstntBinarySub => new_binary(node, BinaryOp::Sub),
+        bindings::AstNodeType_AstntBinaryMul => new_binary(node, BinaryOp::Mul),
+        bindings::AstNodeType_AstntBinaryDiv => new_binary(node, BinaryOp::Div),
+        bindings::AstNodeType_AstntBinaryMod => new_binary(node, BinaryOp::Mod),
+        bindings::AstNodeType_AstntBinaryLCompose => new_binary(node, BinaryOp::LCompose),
+        bindings::AstNodeType_AstntBinaryRCompose => new_binary(node, BinaryOp::RCompose),
+        bindings::AstNodeType_AstntBinaryLApply => new_binary(node, BinaryOp::LApply),
+        bindings::AstNodeType_AstntBinaryRApply => new_binary(node, BinaryOp::RApply),
+        bindings::AstNodeType_AstntBinaryLogAnd => new_binary(node, BinaryOp::LogAnd),
+        bindings::AstNodeType_AstntBinaryLogOr => new_binary(node, BinaryOp::LogOr),
+        bindings::AstNodeType_AstntBinaryEq => new_binary(node, BinaryOp::Eq),
+        bindings::AstNodeType_AstntBinaryNe => new_binary(node, BinaryOp::Ne),
+        bindings::AstNodeType_AstntBinaryGt => new_binary(node, BinaryOp::Gt),
+        bindings::AstNodeType_AstntBinaryGe => new_binary(node, BinaryOp::Ge),
+        bindings::AstNodeType_AstntBinaryLt => new_binary(node, BinaryOp::Lt),
+        bindings::AstNodeType_AstntBinaryLe => new_binary(node, BinaryOp::Le),
+        bindings::AstNodeType_AstntBinaryOr => new_binary(node, BinaryOp::BinOr),
+        bindings::AstNodeType_AstntBinaryXor => new_binary(node, BinaryOp::BinXor),
+        bindings::AstNodeType_AstntBinaryAnd => new_binary(node, BinaryOp::BinAnd),
+        bindings::AstNodeType_AstntBinaryRShift => new_binary(node, BinaryOp::RShift),
+        bindings::AstNodeType_AstntBinaryLShift => new_binary(node, BinaryOp::LShift),
+        bindings::AstNodeType_AstntIf => new_if(node),
+        bindings::AstNodeType_AstntCase => new_case(node),
+        bindings::AstNodeType_AstntArray => new_array(node),
+        bindings::AstNodeType_AstntFuncDef => new_func_def(node),
+        bindings::AstNodeType_AstntFuncCall => new_func_call(node),
+        bindings::AstNodeType_AstntArrayIndex => new_index(node),
+        bindings::AstNodeType_AstntReturn => new_return(node),
+        bindings::AstNodeType_AstntExprStmt => new_expr_stmt(node),
+        bindings::AstNodeType_AstntAssignStmt => new_binding(node),
+        bindings::AstNodeType_AstntBlock => new_block(node),
+        bindings::AstNodeType_AstntNodeList => {
             unimplemented!(
                 "NodeList shouldn't be parseable outside of a EXPR_LIST or FUNC_ARGS_LIST"
             )
         }
-        ffi::AstNodeType_AstntCaseArm => {
+        bindings::AstNodeType_AstntCaseArm => {
             unimplemented!("CaseArms shouldn't be parseable outside of a Case")
         }
         t => Err(NodeError::UnknownNodeType(t)),
@@ -200,7 +200,7 @@ unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
     // is hung directly on the final node
     let (stats, node) = CListIter::new(
         |node| {
-            if (*node).type_ == ffi::AstNodeType_AstntNodeList && !(*node).kids[0].is_null() {
+            if (*node).type_ == bindings::AstNodeType_AstntNodeList && !(*node).kids[0].is_null() {
                 Some(into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
             } else {
                 None
@@ -342,7 +342,7 @@ unsafe fn new_if(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
         .expect_block()?;
 
     let (elifs, node) = CListIter::new(
-        |node| ((*node).type_ == ffi::AstNodeType_AstntIf).then(|| new_elif(node)),
+        |node| ((*node).type_ == bindings::AstNodeType_AstntIf).then(|| new_elif(node)),
         |node| node,
         |node| (*node).kids[2],
         (*node).kids[2],
