@@ -8,13 +8,13 @@
 #include <stdlib.h>
 
 void run_ast(AstNode *root, bool print_fns, bool print_main) {
-    VmOptions options = { 
+    VmOptions options = {
         .print_main_chunk = print_main,
         .print_fn_chunks = print_fns,
         .print_ast = false,
         .optimized = false,
     };
-    
+
     Vm vm;
     vm_init(&vm, options);
 
@@ -52,8 +52,8 @@ void run_ast(AstNode *root, bool print_fns, bool print_main) {
     vm_free(&vm);
 }
 
-AstNode* parse_or_die(void) {
-    AstNode* root = NULL;
+AstNode *parse_or_die(void) {
+    AstNode *root = NULL;
     ParseResult res = yyparse(&root);
     if (res == ParseResultReject) {
         fprintf(stderr, "\nSyntax Error. Sorry.");
@@ -63,13 +63,13 @@ AstNode* parse_or_die(void) {
     return root;
 }
 
-AstNode* parse_stdin(void) {
+AstNode *parse_stdin(void) {
     set_lexer_file(stdin);
     printf("~Lamb> Enter your code. Press Ctrl-D when finished.\n");
     return parse_or_die();
 }
 
-AstNode* parse_path(str path) {
+AstNode *parse_path(str path) {
     if (path == NULL) {
         return NULL;
     }
@@ -81,7 +81,7 @@ AstNode* parse_path(str path) {
     }
     set_lexer_file(file);
 
-    AstNode* root = parse_or_die();
+    AstNode *root = parse_or_die();
     fclose(file);
     return root;
 }

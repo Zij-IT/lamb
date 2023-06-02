@@ -13,10 +13,14 @@
 
 static bool is_stmt(AstNodeType type) {
     switch (type) {
-        case AstntReturn: return true;
-        case AstntExprStmt: return true;
-        case AstntAssignStmt: return true;
-        default: return false;
+        case AstntReturn:
+            return true;
+        case AstntExprStmt:
+            return true;
+        case AstntAssignStmt:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -91,17 +95,17 @@ static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, st
     return func_comp;
 }
 
-static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode const* arg) {
+static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode const *arg) {
     AstNode *ident_node = arg->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
     chunk_add_constant(vm, compiler_chunk(func_comp), new_object((Object *)ident));
-    Local loc = {.depth = func_comp->scope_depth, .name = ident->chars, .is_captured = false };
+    Local loc = {.depth = func_comp->scope_depth, .name = ident->chars, .is_captured = false};
     local_arr_write(vm, &func_comp->locals, loc);
     func_comp->function->arity++;
 }
 
 static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
-    Compiler* compiler = func_comp->enclosing;
+    Compiler *compiler = func_comp->enclosing;
     chunk_write(vm, compiler_chunk(compiler), OpClosure);
     chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)func_comp->function));
     for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
@@ -111,10 +115,10 @@ static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
 }
 
 static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *node, str name) {
-    AstNode* func_args = node->kids[0];
-    AstNode* func_body = node->kids[1];
-    AstNode* is_recursive = node->kids[2];
-    
+    AstNode *func_args = node->kids[0];
+    AstNode *func_body = node->kids[1];
+    AstNode *is_recursive = node->kids[2];
+
     Compiler func_comp = new_function_compiler(vm, compiler, name);
     if (is_recursive->val.b) {
         func_comp.locals.values[0].name = name;
@@ -549,7 +553,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
         case AstntBlock: {
             compiler_new_scope(compiler);
             AstNode *stmt = node->kids[0];
-            for (; stmt != NULL && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type); stmt = stmt->kids[1]) {
+            for (; stmt != NULL && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type);
+                 stmt = stmt->kids[1]) {
                 BUBBLE(compile(vm, compiler, stmt->kids[0]));
             }
 
@@ -607,9 +612,10 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntNodeList: {
-            for (AstNode* stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
+            for (AstNode *stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
                 if (stmt->type != AstntNodeList) {
-                    fprintf(stderr, "[Lamb] ICE: AstntNodeList->kids[1] is not of type AstntNodeList");
+                    fprintf(stderr,
+                            "[Lamb] ICE: AstntNodeList->kids[1] is not of type AstntNodeList");
                     exit(EXIT_FAILURE);
                 }
 
