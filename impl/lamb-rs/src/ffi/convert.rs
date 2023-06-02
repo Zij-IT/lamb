@@ -386,9 +386,7 @@ where
 
 fn new_node(kind: NodeKind) -> *mut AstNode_T {
     let ptr = unsafe { bindings::new_astnode(kind.as_u32()) };
-    if ptr.is_null() {
-        panic!("Memory allocation failed. Rough day buddy.");
-    }
+    assert!(!ptr.is_null(), "Memory allocation failed. Rough day buddy.");
 
     for x in 0..bindings::MAX_AST_KID_COUNT {
         // Safety
@@ -407,9 +405,7 @@ fn c_duplicate<'a>(c: &CStr) -> &'a CStr {
     // Safety
     // + A (properly created) CStr is guarunteed to point to a valid *const c_char
     let dup = unsafe { bindings::strdup(c.as_ptr()) };
-    if dup.is_null() {
-        panic!("Memory allocation failed. Rough day buddy.");
-    }
+    assert!(!dup.is_null(), "Memory allocation failed. Rough day buddy.");
 
     // Safety
     // + Guarunteed by `strdup` when it doesn't return NULL
@@ -464,7 +460,7 @@ enum NodeKind {
 }
 
 impl NodeKind {
-    pub fn as_u32(&self) -> u32 {
+    pub fn as_u32(self) -> u32 {
         match self {
             NodeKind::StrLit => AstNodeType_AstntStrLit,
             NodeKind::NumLit => AstNodeType_AstntNumLit,

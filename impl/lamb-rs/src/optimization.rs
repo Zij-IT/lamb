@@ -2,7 +2,6 @@ use crate::ast::{
     Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
     If, Index, Literal, Statement, Unary,
 };
-use crate::ffi::Ast;
 
 pub trait Optimize {
     fn optimize(&mut self) -> bool;
@@ -25,15 +24,6 @@ impl<L: Optimize, R: Optimize> Optimize for Either<L, R> {
         match self {
             Either::Left(l) => l.optimize(),
             Either::Right(r) => r.optimize(),
-        }
-    }
-}
-
-impl Optimize for Ast {
-    fn optimize(&mut self) -> bool {
-        match self {
-            Ast::Expr(e) => e.optimize(),
-            Ast::Statement(s) => s.optimize(),
         }
     }
 }
@@ -74,11 +64,12 @@ impl Optimize for Expr {
                 let change = i.optimize();
                 match (&mut *i.indexee, &mut *i.index) {
                     (Expr::Atom(Atom::Array(arr)), Expr::Atom(Atom::Literal(Literal::Num(n)))) => {
-                        if *n >= 0 && (*n as usize) < arr.len() {
-                            *self = arr.swap_remove(*n as usize);
-                            true
-                        } else {
-                            change
+                        match usize::try_from(*n) {
+                            Ok(idx) => {
+                                *self = arr.swap_remove(idx);
+                                true
+                            }
+                            Err(_) => change,
                         }
                     }
                     _ => change,
@@ -204,124 +195,92 @@ mod extra_impls {
 
     impl Binary {
         pub fn constant_fold(&mut self) -> Option<Expr> {
-            let (l, op, r) = self.as_literal_tuple_mut()?;
-            match op {
-                BinaryOp::LApply | BinaryOp::RApply | BinaryOp::LCompose | BinaryOp::RCompose => {
-                    None
-                }
-                BinaryOp::Add => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l + *r))),
-                    (Literal::Str(l), Literal::Str(r)) => {
-                        Some(Expr::from(Literal::Str(format!("{l}{r}"))))
-                    }
-                    _ => None,
-                },
-                BinaryOp::Sub => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l - *r))),
-                    _ => None,
-                },
-                BinaryOp::Div => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l / *r))),
-                    _ => None,
-                },
-                BinaryOp::Mul => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l * *r))),
-                    _ => None,
-                },
-                BinaryOp::Mod => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l % *r))),
-                    _ => None,
-                },
-                BinaryOp::Gt => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Bool(l > r))),
-                    (Literal::Str(l), Literal::Str(r)) => Some(Expr::from(Literal::Bool(l > r))),
-                    (Literal::Char(l), Literal::Char(r)) => Some(Expr::from(Literal::Bool(l > r))),
-                    (Literal::Bool(l), Literal::Bool(r)) => Some(Expr::from(Literal::Bool(l > r))),
-                    (Literal::Nil, Literal::Nil) => Some(Expr::from(Literal::Bool(false))),
-                    _ => None,
-                },
-                BinaryOp::Ge => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Bool(l >= r))),
-                    (Literal::Str(l), Literal::Str(r)) => Some(Expr::from(Literal::Bool(l >= r))),
-                    (Literal::Char(l), Literal::Char(r)) => Some(Expr::from(Literal::Bool(l >= r))),
-                    (Literal::Bool(l), Literal::Bool(r)) => Some(Expr::from(Literal::Bool(l > r))),
-                    (Literal::Nil, Literal::Nil) => Some(Expr::from(Literal::Bool(false))),
-                    _ => None,
-                },
-                BinaryOp::Lt => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Bool(l < r))),
-                    (Literal::Str(l), Literal::Str(r)) => Some(Expr::from(Literal::Bool(l < r))),
-                    (Literal::Char(l), Literal::Char(r)) => Some(Expr::from(Literal::Bool(l < r))),
-                    (Literal::Bool(l), Literal::Bool(r)) => Some(Expr::from(Literal::Bool(l < r))),
-                    (Literal::Nil, Literal::Nil) => Some(Expr::from(Literal::Bool(false))),
-                    _ => None,
-                },
-                BinaryOp::Le => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Bool(l <= r))),
-                    (Literal::Str(l), Literal::Str(r)) => Some(Expr::from(Literal::Bool(l <= r))),
-                    (Literal::Char(l), Literal::Char(r)) => Some(Expr::from(Literal::Bool(l <= r))),
-                    (Literal::Bool(l), Literal::Bool(r)) => Some(Expr::from(Literal::Bool(l <= r))),
-                    (Literal::Nil, Literal::Nil) => Some(Expr::from(Literal::Bool(false))),
-                    _ => None,
-                },
-                BinaryOp::Eq => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Bool(l == r))),
-                    (Literal::Str(l), Literal::Str(r)) => Some(Expr::from(Literal::Bool(l == r))),
-                    (Literal::Char(l), Literal::Char(r)) => Some(Expr::from(Literal::Bool(l == r))),
-                    (Literal::Bool(l), Literal::Bool(r)) => Some(Expr::from(Literal::Bool(l == r))),
-                    (Literal::Nil, Literal::Nil) => Some(Expr::from(Literal::Bool(true))),
-                    _ => None,
-                },
-                BinaryOp::Ne => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Bool(l != r))),
-                    (Literal::Str(l), Literal::Str(r)) => Some(Expr::from(Literal::Bool(l != r))),
-                    (Literal::Char(l), Literal::Char(r)) => Some(Expr::from(Literal::Bool(l != r))),
-                    (Literal::Bool(l), Literal::Bool(r)) => Some(Expr::from(Literal::Bool(l != r))),
-                    (Literal::Nil, Literal::Nil) => Some(Expr::from(Literal::Bool(false))),
-                    _ => None,
-                },
-                BinaryOp::LogOr => match (l, r) {
-                    (Literal::Bool(l), Literal::Bool(r)) => {
-                        Some(Expr::from(Literal::Bool(*l || *r)))
-                    }
-                    _ => None,
-                },
-                BinaryOp::LogAnd => match (l, r) {
-                    (Literal::Bool(l), Literal::Bool(r)) => {
-                        Some(Expr::from(Literal::Bool(*l && *r)))
-                    }
-                    _ => None,
-                },
-                BinaryOp::BinOr => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l | *r))),
-                    _ => None,
-                },
-                BinaryOp::BinAnd => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l & *r))),
-                    _ => None,
-                },
-                BinaryOp::BinXor => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l ^ *r))),
-                    _ => None,
-                },
-                BinaryOp::RShift => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l >> *r))),
-                    _ => None,
-                },
-                BinaryOp::LShift => match (l, r) {
-                    (Literal::Num(l), Literal::Num(r)) => Some(Expr::from(Literal::Num(*l << *r))),
-                    _ => None,
-                },
+            match self.as_literal_tuple_mut()? {
+                (Literal::Nil, op, Literal::Nil) => op.apply_to_nils(),
+                (Literal::Str(l), op, Literal::Str(r)) => op.apply_to_strs(l, r),
+                (Literal::Num(l), op, Literal::Num(r)) => op.apply_to_nums(*l, *r),
+                (Literal::Bool(l), op, Literal::Bool(r)) => op.apply_to_bools(*l, *r),
+                (Literal::Char(l), op, Literal::Char(r)) => op.apply_to_chars(*l, *r),
+                _ => None,
             }
         }
 
-        pub fn as_literal_tuple_mut(
-            &mut self,
-        ) -> Option<(&mut Literal, &mut BinaryOp, &mut Literal)> {
+        fn as_literal_tuple_mut(&mut self) -> Option<(&mut Literal, &mut BinaryOp, &mut Literal)> {
             let lhs = self.lhs.as_literal_mut()?;
             let rhs = self.rhs.as_literal_mut()?;
 
             Some((lhs, &mut self.op, rhs))
+        }
+    }
+
+    impl BinaryOp {
+        fn apply_to_nums(self, l: i64, r: i64) -> Option<Expr> {
+            Some(Expr::Atom(Atom::Literal(match self {
+                BinaryOp::Add => Literal::Num(l + r),
+                BinaryOp::Sub => Literal::Num(l - r),
+                BinaryOp::Div => Literal::Num(l / r),
+                BinaryOp::Mul => Literal::Num(l * r),
+                BinaryOp::Mod => Literal::Num(l % r),
+                BinaryOp::BinOr => Literal::Num(l | r),
+                BinaryOp::BinAnd => Literal::Num(l & r),
+                BinaryOp::BinXor => Literal::Num(l ^ r),
+                BinaryOp::RShift => Literal::Num(l >> r),
+                BinaryOp::LShift => Literal::Num(l << r),
+                BinaryOp::Gt => Literal::Bool(l > r),
+                BinaryOp::Ge => Literal::Bool(l >= r),
+                BinaryOp::Lt => Literal::Bool(l < r),
+                BinaryOp::Le => Literal::Bool(l <= r),
+                BinaryOp::Eq => Literal::Bool(l == r),
+                BinaryOp::Ne => Literal::Bool(l != r),
+                _ => return None,
+            })))
+        }
+
+        fn apply_to_strs(self, l: &String, r: &String) -> Option<Expr> {
+            Some(Expr::Atom(Atom::Literal(match self {
+                BinaryOp::Add => Literal::Str(format!("{l}{r}")),
+                BinaryOp::Gt => Literal::Bool(l > r),
+                BinaryOp::Ge => Literal::Bool(l >= r),
+                BinaryOp::Lt => Literal::Bool(l < r),
+                BinaryOp::Le => Literal::Bool(l <= r),
+                BinaryOp::Eq => Literal::Bool(l == r),
+                BinaryOp::Ne => Literal::Bool(l != r),
+                _ => return None,
+            })))
+        }
+
+        fn apply_to_chars(self, l: char, r: char) -> Option<Expr> {
+            Some(Expr::Atom(Atom::Literal(match self {
+                BinaryOp::Gt => Literal::Bool(l > r),
+                BinaryOp::Ge => Literal::Bool(l >= r),
+                BinaryOp::Lt => Literal::Bool(l < r),
+                BinaryOp::Le => Literal::Bool(l <= r),
+                BinaryOp::Eq => Literal::Bool(l == r),
+                BinaryOp::Ne => Literal::Bool(l != r),
+                _ => return None,
+            })))
+        }
+
+        fn apply_to_bools(self, l: bool, r: bool) -> Option<Expr> {
+            Some(Expr::Atom(Atom::Literal(match self {
+                BinaryOp::LogOr => Literal::Bool(l | r),
+                BinaryOp::LogAnd => Literal::Bool(l & r),
+                BinaryOp::Gt => Literal::Bool(l & !r),
+                BinaryOp::Ge => Literal::Bool(l >= r),
+                BinaryOp::Lt => Literal::Bool(!l & r),
+                BinaryOp::Le => Literal::Bool(l <= r),
+                BinaryOp::Eq => Literal::Bool(l == r),
+                BinaryOp::Ne => Literal::Bool(l != r),
+                _ => return None,
+            })))
+        }
+
+        fn apply_to_nils(self) -> Option<Expr> {
+            Some(Expr::Atom(Atom::Literal(match self {
+                BinaryOp::Ge | BinaryOp::Le | BinaryOp::Eq => Literal::Bool(true),
+                BinaryOp::Gt | BinaryOp::Lt | BinaryOp::Ne => Literal::Bool(false),
+                _ => return None,
+            })))
         }
     }
 

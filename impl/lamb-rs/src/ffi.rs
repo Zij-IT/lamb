@@ -3,10 +3,10 @@ mod bindings;
 mod convert;
 mod repr;
 
-use std::{ffi::CString, path::PathBuf};
+use std::ffi::CString;
 
 pub use bindings::{free_ast, AstNode_T};
-pub use repr::{AstRepr as Ast, NodeError};
+pub use repr::NodeError;
 
 use crate::ast::Script;
 
@@ -16,7 +16,7 @@ extern "C" {
     fn parse_path(path: *const i8) -> *mut AstNode_T;
 }
 
-pub fn run_script(script: Script, print_fns: bool, print_main: bool) {
+pub fn run_script(script: &Script, print_fns: bool, print_main: bool) {
     let ptr = script.to_ptr();
     unsafe {
         // Safety:
@@ -31,10 +31,10 @@ pub fn run_script(script: Script, print_fns: bool, print_main: bool) {
     };
 }
 
-pub fn parse_script(path: Option<PathBuf>) -> Result<Script, NodeError> {
+pub fn parse_script<P: AsRef<std::path::Path>>(path: &Option<P>) -> Result<Script, NodeError> {
     let path = path
         .as_ref()
-        .and_then(|x| x.to_str())
+        .and_then(|x| x.as_ref().to_str())
         .map(|path| CString::new(path).expect("There should be no null bytes in the path."));
 
     // Safety:
