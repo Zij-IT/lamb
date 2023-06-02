@@ -1,4 +1,0 @@
-node_modules
-impl/lamb-rs/src/ffi/c/parsing/built/lexer.c
-impl/lamb-rs/src/ffi/c/parsing/built/parser.tab.h
-impl/lamb-rs/src/ffi/c/parsing/built/parser.tab.c
