@@ -23,273 +23,8 @@ use super::{
         AstNodeType_AstntNumLit, AstNodeType_AstntReturn, AstNodeType_AstntStrLit,
         AstNodeType_AstntUnaryBitNot, AstNodeType_AstntUnaryLogNot, AstNodeType_AstntUnaryNeg,
     },
-    Ast, AstNode_T,
+    AstNode_T,
 };
-
-pub fn test_all() {
-    test_atoms();
-    test_unaries();
-    test_binaries();
-    test_statements();
-    test_blocks();
-    test_scripts();
-}
-
-fn test_atoms() {
-    let atoms = [
-        Atom::Literal(Literal::Num(2)),
-        Atom::Literal(Literal::Char('c')),
-        Atom::Literal(Literal::Bool(true)),
-        Atom::Literal(Literal::Nil),
-        Atom::Literal(Literal::Str("hi".into())),
-        Atom::Ident(Ident("hi".into())),
-        Atom::Array(vec![
-            Expr::Atom(Atom::Literal(Literal::Num(1))),
-            Expr::Atom(Atom::Literal(Literal::Num(2))),
-            Expr::Atom(Atom::Literal(Literal::Num(3))),
-            Expr::Atom(Atom::Literal(Literal::Num(4))),
-        ]),
-    ];
-
-    for atom in atoms {
-        let clone: Expr = atom.clone().into();
-        let at = match unsafe { Ast::from_ptr(clone.convert()) } {
-            Ok(Ast::Expr(Expr::Atom(at))) => at,
-            t => panic!("Expected Atom, got: {t:#?}"),
-        };
-        assert_eq!(atom, at);
-    }
-
-    println!("test_atoms: PASS");
-}
-
-fn test_unaries() {
-    let unaries = [
-        Expr::Unary(Unary {
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            op: UnaryOp::NumNeg,
-        }),
-        Expr::Unary(Unary {
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(1)))),
-            op: UnaryOp::BinNot,
-        }),
-        Expr::Unary(Unary {
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Bool(false)))),
-            op: UnaryOp::LogNot,
-        }),
-    ];
-
-    for unary in unaries {
-        let clone = unary.clone();
-        let un = match unsafe { Ast::from_ptr(clone.convert()) } {
-            Ok(Ast::Expr(un @ Expr::Unary(..))) => un,
-            t => panic!("Expected Unary, got: {t:#?}"),
-        };
-        assert_eq!(unary, un);
-    }
-
-    println!("test_unary: PASS");
-}
-
-fn test_binaries() {
-    let binaries = [
-        Expr::Binary(Binary {
-            lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            op: BinaryOp::Add,
-        }),
-        Expr::Binary(Binary {
-            lhs: Box::new(Expr::Atom(Atom::Array(vec![
-                Expr::Atom(Atom::Literal(Literal::Num(1))),
-                Expr::Atom(Atom::Literal(Literal::Num(2))),
-                Expr::Atom(Atom::Literal(Literal::Num(3))),
-                Expr::Atom(Atom::Literal(Literal::Num(4))),
-            ]))),
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
-            op: BinaryOp::Mul,
-        }),
-        Expr::Binary(Binary {
-            lhs: Box::new(Expr::Binary(Binary {
-                lhs: Box::new(Expr::Atom(Atom::Array(vec![
-                    Expr::Atom(Atom::Literal(Literal::Num(1))),
-                    Expr::Atom(Atom::Literal(Literal::Num(2))),
-                    Expr::Atom(Atom::Literal(Literal::Num(3))),
-                    Expr::Atom(Atom::Literal(Literal::Num(4))),
-                ]))),
-                rhs: Box::new(Expr::Binary(Binary {
-                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    op: BinaryOp::Add,
-                })),
-                op: BinaryOp::Mul,
-            })),
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
-            op: BinaryOp::Sub,
-        }),
-    ];
-
-    for binary in binaries {
-        let clone = binary.clone();
-        let bin = match unsafe { Ast::from_ptr(clone.convert()) } {
-            Ok(Ast::Expr(bin @ Expr::Binary(..))) => bin,
-            t => panic!("Expected Binary, got: {t:#?}"),
-        };
-        assert_eq!(binary, bin);
-    }
-
-    println!("test_binary: PASS");
-}
-
-fn test_statements() {
-    let statements = [
-        Statement::Assign(Assign {
-            assignee: Ident("hi".into()),
-            value: Expr::Binary(Binary {
-                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                op: BinaryOp::Add,
-            }),
-        }),
-        Statement::Expr(Expr::Binary(Binary {
-            lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            op: BinaryOp::Add,
-        })),
-        Statement::Return(None),
-        Statement::Return(Some(Expr::Binary(Binary {
-            lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-            op: BinaryOp::Add,
-        }))),
-    ];
-
-    for statement in statements {
-        let clone = statement.clone();
-        let stat = match unsafe { Ast::from_ptr(clone.convert()) } {
-            Ok(Ast::Statement(stat)) => stat,
-            t => panic!("Expected Statement, got: {t:#?}"),
-        };
-
-        assert_eq!(statement, stat);
-    }
-
-    println!("test_statements: PASS");
-}
-
-fn test_blocks() {
-    let blocks = [
-        Expr::Block(Block {
-            stats: vec![],
-            value: None,
-        }),
-        Expr::Block(Block {
-            stats: vec![],
-            value: Some(Box::new(Expr::Atom(Atom::Literal(Literal::Num(0))))),
-        }),
-        Expr::Block(Block {
-            stats: vec![
-                Statement::Expr(Expr::Block(Block {
-                    stats: vec![],
-                    value: None,
-                })),
-                Statement::Return(None),
-                Statement::Return(Some(Expr::Binary(Binary {
-                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    op: BinaryOp::Add,
-                }))),
-            ],
-            value: None,
-        }),
-        Expr::Block(Block {
-            stats: vec![
-                Statement::Expr(Expr::Block(Block {
-                    stats: vec![],
-                    value: None,
-                })),
-                Statement::Return(None),
-                Statement::Return(Some(Expr::Binary(Binary {
-                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    op: BinaryOp::Add,
-                }))),
-            ],
-            value: Some(Box::new(Expr::Binary(Binary {
-                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                op: BinaryOp::Add,
-            }))),
-        }),
-    ];
-
-    for block in blocks {
-        let clone = block.clone();
-        let blk = match unsafe { Ast::from_ptr(clone.convert()) } {
-            Ok(Ast::Expr(blk @ Expr::Block(..))) => blk,
-            t => panic!("Expected Block, got: {t:#?}"),
-        };
-
-        assert_eq!(block, blk);
-    }
-
-    println!("test_blocks: PASS");
-}
-
-fn test_scripts() {
-    let scripts = [
-        Block {
-            stats: vec![],
-            value: None,
-        },
-        Block {
-            stats: vec![],
-            value: Some(Box::new(Expr::Atom(Atom::Literal(Literal::Num(0))))),
-        },
-        Block {
-            stats: vec![
-                Statement::Expr(Expr::Block(Block {
-                    stats: vec![],
-                    value: None,
-                })),
-                Statement::Return(None),
-                Statement::Return(Some(Expr::Binary(Binary {
-                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    op: BinaryOp::Add,
-                }))),
-            ],
-            value: None,
-        },
-        Block {
-            stats: vec![
-                Statement::Expr(Expr::Block(Block {
-                    stats: vec![],
-                    value: None,
-                })),
-                Statement::Return(None),
-                Statement::Return(Some(Expr::Binary(Binary {
-                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                    op: BinaryOp::Add,
-                }))),
-            ],
-            value: Some(Box::new(Expr::Binary(Binary {
-                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
-                op: BinaryOp::Add,
-            }))),
-        },
-    ]
-    .map(|block| Script { block });
-
-    for script in scripts {
-        let clone = script.clone();
-        let scr = unsafe { Script::from_ptr(clone.convert()).unwrap() };
-        assert_eq!(script, scr);
-    }
-
-    println!("test_scripts: PASS");
-}
 
 pub(super) trait Convert {
     fn convert(self) -> *mut AstNode_T;
@@ -768,6 +503,268 @@ impl NodeKind {
             NodeKind::AssignStmt => AstNodeType_AstntAssignStmt,
             NodeKind::Block => AstNodeType_AstntBlock,
             NodeKind::NodeList => AstNodeType_AstntNodeList,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        ast::{
+            Assign, Atom, Binary, BinaryOp, Block, Expr, Ident, Literal, Script, Statement, Unary,
+            UnaryOp,
+        },
+        ffi::convert::Convert,
+        ffi::Ast,
+    };
+
+    #[test]
+    fn test_atoms() {
+        let atoms = [
+            Atom::Literal(Literal::Num(2)),
+            Atom::Literal(Literal::Char('c')),
+            Atom::Literal(Literal::Bool(true)),
+            Atom::Literal(Literal::Nil),
+            Atom::Literal(Literal::Str("hi".into())),
+            Atom::Ident(Ident("hi".into())),
+            Atom::Array(vec![
+                Expr::Atom(Atom::Literal(Literal::Num(1))),
+                Expr::Atom(Atom::Literal(Literal::Num(2))),
+                Expr::Atom(Atom::Literal(Literal::Num(3))),
+                Expr::Atom(Atom::Literal(Literal::Num(4))),
+            ]),
+        ];
+
+        for atom in atoms {
+            let clone: Expr = atom.clone().into();
+            let at = match unsafe { Ast::from_ptr(clone.convert()) } {
+                Ok(Ast::Expr(Expr::Atom(at))) => at,
+                t => panic!("Expected Atom, got: {t:#?}"),
+            };
+            assert_eq!(atom, at);
+        }
+    }
+
+    #[test]
+    fn test_unaries() {
+        let unaries = [
+            Expr::Unary(Unary {
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                op: UnaryOp::NumNeg,
+            }),
+            Expr::Unary(Unary {
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(1)))),
+                op: UnaryOp::BinNot,
+            }),
+            Expr::Unary(Unary {
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Bool(false)))),
+                op: UnaryOp::LogNot,
+            }),
+        ];
+
+        for unary in unaries {
+            let clone = unary.clone();
+            let un = match unsafe { Ast::from_ptr(clone.convert()) } {
+                Ok(Ast::Expr(un @ Expr::Unary(..))) => un,
+                t => panic!("Expected Unary, got: {t:#?}"),
+            };
+            assert_eq!(unary, un);
+        }
+    }
+
+    #[test]
+    fn test_binaries() {
+        let binaries = [
+            Expr::Binary(Binary {
+                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                op: BinaryOp::Add,
+            }),
+            Expr::Binary(Binary {
+                lhs: Box::new(Expr::Atom(Atom::Array(vec![
+                    Expr::Atom(Atom::Literal(Literal::Num(1))),
+                    Expr::Atom(Atom::Literal(Literal::Num(2))),
+                    Expr::Atom(Atom::Literal(Literal::Num(3))),
+                    Expr::Atom(Atom::Literal(Literal::Num(4))),
+                ]))),
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
+                op: BinaryOp::Mul,
+            }),
+            Expr::Binary(Binary {
+                lhs: Box::new(Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Atom(Atom::Array(vec![
+                        Expr::Atom(Atom::Literal(Literal::Num(1))),
+                        Expr::Atom(Atom::Literal(Literal::Num(2))),
+                        Expr::Atom(Atom::Literal(Literal::Num(3))),
+                        Expr::Atom(Atom::Literal(Literal::Num(4))),
+                    ]))),
+                    rhs: Box::new(Expr::Binary(Binary {
+                        lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        op: BinaryOp::Add,
+                    })),
+                    op: BinaryOp::Mul,
+                })),
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Char('C')))),
+                op: BinaryOp::Sub,
+            }),
+        ];
+
+        for binary in binaries {
+            let clone = binary.clone();
+            let bin = match unsafe { Ast::from_ptr(clone.convert()) } {
+                Ok(Ast::Expr(bin @ Expr::Binary(..))) => bin,
+                t => panic!("Expected Binary, got: {t:#?}"),
+            };
+            assert_eq!(binary, bin);
+        }
+    }
+
+    #[test]
+    fn test_statements() {
+        let statements = [
+            Statement::Assign(Assign {
+                assignee: Ident("hi".into()),
+                value: Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    op: BinaryOp::Add,
+                }),
+            }),
+            Statement::Expr(Expr::Binary(Binary {
+                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                op: BinaryOp::Add,
+            })),
+            Statement::Return(None),
+            Statement::Return(Some(Expr::Binary(Binary {
+                lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                op: BinaryOp::Add,
+            }))),
+        ];
+
+        for statement in statements {
+            let clone = statement.clone();
+            let stat = match unsafe { Ast::from_ptr(clone.convert()) } {
+                Ok(Ast::Statement(stat)) => stat,
+                t => panic!("Expected Statement, got: {t:#?}"),
+            };
+
+            assert_eq!(statement, stat);
+        }
+    }
+
+    #[test]
+    fn test_blocks() {
+        let blocks = [
+            Expr::Block(Block {
+                stats: vec![],
+                value: None,
+            }),
+            Expr::Block(Block {
+                stats: vec![],
+                value: Some(Box::new(Expr::Atom(Atom::Literal(Literal::Num(0))))),
+            }),
+            Expr::Block(Block {
+                stats: vec![
+                    Statement::Expr(Expr::Block(Block {
+                        stats: vec![],
+                        value: None,
+                    })),
+                    Statement::Return(None),
+                    Statement::Return(Some(Expr::Binary(Binary {
+                        lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        op: BinaryOp::Add,
+                    }))),
+                ],
+                value: None,
+            }),
+            Expr::Block(Block {
+                stats: vec![
+                    Statement::Expr(Expr::Block(Block {
+                        stats: vec![],
+                        value: None,
+                    })),
+                    Statement::Return(None),
+                    Statement::Return(Some(Expr::Binary(Binary {
+                        lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        op: BinaryOp::Add,
+                    }))),
+                ],
+                value: Some(Box::new(Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    op: BinaryOp::Add,
+                }))),
+            }),
+        ];
+
+        for block in blocks {
+            let clone = block.clone();
+            let blk = match unsafe { Ast::from_ptr(clone.convert()) } {
+                Ok(Ast::Expr(blk @ Expr::Block(..))) => blk,
+                t => panic!("Expected Block, got: {t:#?}"),
+            };
+
+            assert_eq!(block, blk);
+        }
+    }
+
+    #[test]
+    fn test_scripts() {
+        let scripts = [
+            Block {
+                stats: vec![],
+                value: None,
+            },
+            Block {
+                stats: vec![],
+                value: Some(Box::new(Expr::Atom(Atom::Literal(Literal::Num(0))))),
+            },
+            Block {
+                stats: vec![
+                    Statement::Expr(Expr::Block(Block {
+                        stats: vec![],
+                        value: None,
+                    })),
+                    Statement::Return(None),
+                    Statement::Return(Some(Expr::Binary(Binary {
+                        lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        op: BinaryOp::Add,
+                    }))),
+                ],
+                value: None,
+            },
+            Block {
+                stats: vec![
+                    Statement::Expr(Expr::Block(Block {
+                        stats: vec![],
+                        value: None,
+                    })),
+                    Statement::Return(None),
+                    Statement::Return(Some(Expr::Binary(Binary {
+                        lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                        op: BinaryOp::Add,
+                    }))),
+                ],
+                value: Some(Box::new(Expr::Binary(Binary {
+                    lhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    rhs: Box::new(Expr::Atom(Atom::Literal(Literal::Num(2)))),
+                    op: BinaryOp::Add,
+                }))),
+            },
+        ]
+        .map(|block| Script { block });
+
+        for script in scripts {
+            let clone = script.clone();
+            let scr = unsafe { Script::from_ptr(clone.convert()).unwrap() };
+            assert_eq!(script, scr);
         }
     }
 }

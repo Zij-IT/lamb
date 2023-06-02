@@ -6,7 +6,6 @@ mod repr;
 use std::{ffi::CString, path::PathBuf};
 
 pub use bindings::{free_ast, AstNode_T};
-pub use convert::test_all;
 pub use repr::{AstRepr as Ast, NodeError};
 
 use crate::ast::Script;
