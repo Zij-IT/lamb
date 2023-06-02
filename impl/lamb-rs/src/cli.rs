@@ -35,15 +35,15 @@ pub enum GcDebugLevel {
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[arg(short, long, value_enum, default_value_t = DebugLevel::None)]
-    debug_level: DebugLevel,
+    pub debug_level: DebugLevel,
 
     #[arg(short, long, value_enum, default_value_t = GcDebugLevel::None)]
-    gc_debug_level: GcDebugLevel,
+    pub gc_debug_level: GcDebugLevel,
 
     #[arg(short, long, value_enum, default_value_t = OptLevel::None)]
-    optimization_level: OptLevel,
+    pub optimization_level: OptLevel,
 
-    path: Option<PathBuf>,
+    pub path: Option<PathBuf>,
 }
 
 #[repr(C)]

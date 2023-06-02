@@ -115,6 +115,18 @@ impl NodeError {
     }
 }
 
+impl std::fmt::Display for NodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NodeError::UnknownNodeType(ty) => write!(f, "[NodeError] Unknown Node Type: {ty:#?}"),
+            NodeError::InvalidUtf8(err) => write!(f, "[NodeError] InvalidUtf8: {err}"),
+            NodeError::MalformedNode => write!(f, "[NodeError] Malformed Node"),
+        }
+    }
+}
+
+impl std::error::Error for NodeError {}
+
 /// # Safety
 ///
 /// See 'Safety' section for `Script::from_ptr`
