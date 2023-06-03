@@ -5,10 +5,10 @@ mod repr;
 
 use std::ffi::CString;
 
-pub use bindings::{free_ast, AstNode_T};
+use bindings::AstNode_T;
 #[cfg(test)]
-pub use repr::AstRepr as Ast;
-pub use repr::NodeError;
+use repr::AstRepr as Ast;
+use repr::NodeError;
 
 use crate::ast::Script;
 

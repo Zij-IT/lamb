@@ -17,6 +17,7 @@ mod optimization;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = LambOptions::parse();
+
     let mut script = ffi::parse_script(&options.path)?;
     match options.optimization_level {
         cli::OptLevel::Basic | cli::OptLevel::Some | cli::OptLevel::All => {
