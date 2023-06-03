@@ -5,7 +5,6 @@
     clippy::cast_possible_wrap
 )]
 
-use ast::Script;
 use clap::Parser;
 use cli::LambOptions;
 use ffi::run_script;
@@ -16,17 +15,15 @@ mod cli;
 mod ffi;
 mod optimization;
 
-fn optimize(script: &mut Script) {
-    while script.block.optimize() {
-        println!("Script optimized:\n{script:#?}");
-    }
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = LambOptions::parse();
     let mut script = ffi::parse_script(&options.path)?;
     match options.optimization_level {
-        cli::OptLevel::Basic | cli::OptLevel::Some | cli::OptLevel::All => optimize(&mut script),
+        cli::OptLevel::Basic | cli::OptLevel::Some | cli::OptLevel::All => {
+            while script.optimize() {
+                println!("Script optimized:\n{script:#?}");
+            }
+        }
         cli::OptLevel::None => (),
     }
 

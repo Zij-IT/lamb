@@ -1,6 +1,6 @@
 use crate::ast::{
     Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
-    If, Index, Literal, Statement, Unary,
+    If, Index, Literal, Script, Statement, Unary,
 };
 
 pub trait Optimize {
@@ -25,6 +25,12 @@ impl<L: Optimize, R: Optimize> Optimize for Either<L, R> {
             Either::Left(l) => l.optimize(),
             Either::Right(r) => r.optimize(),
         }
+    }
+}
+
+impl Optimize for Script {
+    fn optimize(&mut self) -> bool {
+        self.block.optimize()
     }
 }
 
