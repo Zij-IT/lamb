@@ -8,6 +8,11 @@
 #include <stdlib.h>
 
 void run_ast(AstNode *root, bool print_fns, bool print_main) {
+    // Occurs when with an empty script
+    if (root == NULL) {
+        return;
+    }
+    
     VmOptions options = {
         .print_main_chunk = print_main,
         .print_fn_chunks = print_fns,
