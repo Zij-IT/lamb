@@ -12,19 +12,13 @@ use repr::NodeError;
 
 use crate::ast::Script;
 
-extern "C" {
-    fn run_ast(root: *mut AstNode_T, print_fns: bool, print_main: bool);
-    fn parse_stdin() -> *mut AstNode_T;
-    fn parse_path(path: *const i8) -> *mut AstNode_T;
-}
-
 pub fn run_script(script: &Script, print_fns: bool, print_main: bool) {
     let ptr = script.to_ptr();
     unsafe {
         // Safety:
         // `Script::to_ptr` creates a valid `*mut AstNode_T` which is the only
         // requirement for `run_ast`
-        run_ast(ptr, print_fns, print_main);
+        bindings::run_ast(ptr, print_fns, print_main);
 
         // Safety:
         // `Script::to_ptr` creates a valid `*mut AstNode_T` that is allocated via C,
@@ -43,8 +37,8 @@ pub fn parse_script<P: AsRef<std::path::Path>>(path: &Option<P>) -> Result<Scrip
     // + Here we trust that `path` is never modified, which I know it isn't because
     //   I implemented it :D
     let node = match path {
-        Some(p) => unsafe { parse_path(p.as_ptr()) },
-        None => unsafe { parse_stdin() },
+        Some(p) => unsafe { bindings::parse_path(p.as_ptr().cast_mut()) },
+        None => unsafe { bindings::parse_stdin() },
     };
 
     // Safety:
