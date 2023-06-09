@@ -36,16 +36,22 @@ pub enum Expr {
 
 impl std::fmt::Debug for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expr::Binary(i) => write!(f, "{i:#?}"),
-            Expr::Unary(i) => write!(f, "{i:#?}"),
-            Expr::FuncCall(i) => write!(f, "{i:#?}"),
-            Expr::Index(i) => write!(f, "{i:#?}"),
-            Expr::If(i) => write!(f, "{i:#?}"),
-            Expr::Case(i) => write!(f, "{i:#?}"),
-            Expr::FuncDef(i) => write!(f, "{i:#?}"),
-            Expr::Block(i) => write!(f, "{i:#?}"),
-            Expr::Atom(i) => write!(f, "{i:#?}"),
+        let inner: &dyn std::fmt::Debug = match self {
+            Expr::Binary(i) => i,
+            Expr::Unary(i) => i,
+            Expr::FuncCall(i) => i,
+            Expr::Index(i) => i,
+            Expr::If(i) => i,
+            Expr::Case(i) => i,
+            Expr::FuncDef(i) => i,
+            Expr::Block(i) => i,
+            Expr::Atom(i) => i,
+        };
+
+        if f.alternate() {
+            write!(f, "{inner:#?}")
+        } else {
+            write!(f, "{inner:?}")
         }
     }
 }
@@ -257,10 +263,16 @@ pub enum Atom {
 
 impl std::fmt::Debug for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Atom::Literal(l) => write!(f, "{l:#?}"),
-            Atom::Ident(i) => write!(f, "{i:#?}"),
-            Atom::Array(v) => write!(f, "{v:#?}"),
+        let inner: &dyn std::fmt::Debug = match self {
+            Atom::Literal(i) => i,
+            Atom::Ident(i) => i,
+            Atom::Array(i) => i,
+        };
+
+        if f.alternate() {
+            write!(f, "{inner:#?}")
+        } else {
+            write!(f, "{inner:?}")
         }
     }
 }
