@@ -1,0 +1,494 @@
+Script {
+    block: Block {
+        stats: [
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 1: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        Block {
+                            stats: [],
+                            value: Some(
+                                Num(
+                                    1,
+                                ),
+                            ),
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 1: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        Block {
+                            stats: [],
+                            value: Some(
+                                Block {
+                                    stats: [],
+                                    value: Some(
+                                        Block {
+                                            stats: [],
+                                            value: Some(
+                                                Block {
+                                                    stats: [],
+                                                    value: Some(
+                                                        Block {
+                                                            stats: [],
+                                                            value: Some(
+                                                                Num(
+                                                                    1,
+                                                                ),
+                                                            ),
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 1nil: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        Block {
+                            stats: [
+                                Expr(
+                                    FuncCall {
+                                        callee: Ident(
+                                            "print",
+                                        ),
+                                        args: [
+                                            Num(
+                                                1,
+                                            ),
+                                        ],
+                                    },
+                                ),
+                            ],
+                            value: Some(
+                                Nil,
+                            ),
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 1: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        If {
+                            cond: Bool(
+                                true,
+                            ),
+                            block: Block {
+                                stats: [],
+                                value: Some(
+                                    Num(
+                                        1,
+                                    ),
+                                ),
+                            },
+                            elifs: [],
+                            els: Some(
+                                Else {
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                0,
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 2: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        If {
+                            cond: Bool(
+                                false,
+                            ),
+                            block: Block {
+                                stats: [],
+                                value: Some(
+                                    Num(
+                                        1,
+                                    ),
+                                ),
+                            },
+                            elifs: [
+                                Elif {
+                                    cond: Bool(
+                                        true,
+                                    ),
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                2,
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ],
+                            els: Some(
+                                Else {
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                3,
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 3: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        If {
+                            cond: Bool(
+                                false,
+                            ),
+                            block: Block {
+                                stats: [],
+                                value: Some(
+                                    Num(
+                                        1,
+                                    ),
+                                ),
+                            },
+                            elifs: [
+                                Elif {
+                                    cond: Bool(
+                                        false,
+                                    ),
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                2,
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ],
+                            els: Some(
+                                Else {
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                3,
+                                            ),
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print nil: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        If {
+                            cond: Bool(
+                                false,
+                            ),
+                            block: Block {
+                                stats: [],
+                                value: Some(
+                                    Num(
+                                        0,
+                                    ),
+                                ),
+                            },
+                            elifs: [],
+                            els: None,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 1: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        FuncCall {
+                            callee: FuncDef {
+                                args: [],
+                                body: Block {
+                                    stats: [],
+                                    value: Some(
+                                        Num(
+                                            1,
+                                        ),
+                                    ),
+                                },
+                                is_recursive: false,
+                            },
+                            args: [],
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 5: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: Case {
+                        value: Num(
+                            1,
+                        ),
+                        arms: [
+                            CaseArm {
+                                pattern: Left(
+                                    Num(
+                                        1,
+                                    ),
+                                ),
+                                on_match: Left(
+                                    Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                5,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            },
+                        ],
+                    },
+                    rhs: Ident(
+                        "println",
+                    ),
+                    op: RApply,
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print nil: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: Case {
+                        value: Num(
+                            2,
+                        ),
+                        arms: [
+                            CaseArm {
+                                pattern: Left(
+                                    Num(
+                                        1,
+                                    ),
+                                ),
+                                on_match: Left(
+                                    Block {
+                                        stats: [],
+                                        value: Some(
+                                            Num(
+                                                5,
+                                            ),
+                                        ),
+                                    },
+                                ),
+                            },
+                        ],
+                    },
+                    rhs: Ident(
+                        "println",
+                    ),
+                    op: RApply,
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 3: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Block {
+                            stats: [
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "x",
+                                        ),
+                                        value: Num(
+                                            2,
+                                        ),
+                                    },
+                                ),
+                            ],
+                            value: Some(
+                                Num(
+                                    3,
+                                ),
+                            ),
+                        },
+                    ],
+                },
+            ),
+        ],
+        value: None,
+    },
+}

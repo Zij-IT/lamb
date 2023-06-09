@@ -1,0 +1,240 @@
+Script {
+    block: Block {
+        stats: [
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "inc",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "x",
+                            ),
+                        ],
+                        body: Binary {
+                            lhs: Ident(
+                                "x",
+                            ),
+                            rhs: Num(
+                                1,
+                            ),
+                            op: Add,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "dec",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "x",
+                            ),
+                        ],
+                        body: Binary {
+                            lhs: Ident(
+                                "x",
+                            ),
+                            rhs: Num(
+                                1,
+                            ),
+                            op: Sub,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "dub",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "x",
+                            ),
+                        ],
+                        body: Binary {
+                            lhs: Ident(
+                                "x",
+                            ),
+                            rhs: Num(
+                                2,
+                            ),
+                            op: Mul,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "fib",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "x",
+                            ),
+                        ],
+                        body: If {
+                            cond: Binary {
+                                lhs: Ident(
+                                    "x",
+                                ),
+                                rhs: Num(
+                                    1,
+                                ),
+                                op: Le,
+                            },
+                            block: Block {
+                                stats: [],
+                                value: Some(
+                                    Ident(
+                                        "x",
+                                    ),
+                                ),
+                            },
+                            elifs: [],
+                            els: Some(
+                                Else {
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Binary {
+                                                lhs: FuncCall {
+                                                    callee: Ident(
+                                                        "fib",
+                                                    ),
+                                                    args: [
+                                                        Binary {
+                                                            lhs: Ident(
+                                                                "x",
+                                                            ),
+                                                            rhs: Num(
+                                                                1,
+                                                            ),
+                                                            op: Sub,
+                                                        },
+                                                    ],
+                                                },
+                                                rhs: FuncCall {
+                                                    callee: Ident(
+                                                        "fib",
+                                                    ),
+                                                    args: [
+                                                        Binary {
+                                                            lhs: Ident(
+                                                                "x",
+                                                            ),
+                                                            rhs: Num(
+                                                                2,
+                                                            ),
+                                                            op: Sub,
+                                                        },
+                                                    ],
+                                                },
+                                                op: Add,
+                                            },
+                                        ),
+                                    },
+                                },
+                            ),
+                        },
+                        is_recursive: true,
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 17: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: Binary {
+                        lhs: Binary {
+                            lhs: Binary {
+                                lhs: Ident(
+                                    "println",
+                                ),
+                                rhs: Ident(
+                                    "dec",
+                                ),
+                                op: LCompose,
+                            },
+                            rhs: Ident(
+                                "dub",
+                            ),
+                            op: LCompose,
+                        },
+                        rhs: Ident(
+                            "inc",
+                        ),
+                        op: LCompose,
+                    },
+                    rhs: Num(
+                        8,
+                    ),
+                    op: LApply,
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 5: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: Num(
+                        2,
+                    ),
+                    rhs: Binary {
+                        lhs: Binary {
+                            lhs: Binary {
+                                lhs: Ident(
+                                    "inc",
+                                ),
+                                rhs: Ident(
+                                    "dub",
+                                ),
+                                op: RCompose,
+                            },
+                            rhs: Ident(
+                                "dec",
+                            ),
+                            op: RCompose,
+                        },
+                        rhs: Ident(
+                            "println",
+                        ),
+                        op: RCompose,
+                    },
+                    op: RApply,
+                },
+            ),
+        ],
+        value: None,
+    },
+}

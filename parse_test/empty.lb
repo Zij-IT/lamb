@@ -1,0 +1,13 @@
+Script {
+    block: Block {
+        stats: [
+            Expr(
+                Block {
+                    stats: [],
+                    value: None,
+                },
+            ),
+        ],
+        value: None,
+    },
+}

@@ -1,0 +1,42 @@
+Script {
+    block: Block {
+        stats: [
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "id",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "x",
+                            ),
+                        ],
+                        body: Ident(
+                            "x",
+                        ),
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: Binary {
+                        lhs: Ident(
+                            "id",
+                        ),
+                        rhs: Ident(
+                            "id",
+                        ),
+                        op: RCompose,
+                    },
+                    rhs: Ident(
+                        "id",
+                    ),
+                    op: RCompose,
+                },
+            ),
+        ],
+        value: None,
+    },
+}

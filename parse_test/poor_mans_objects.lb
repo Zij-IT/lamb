@@ -1,0 +1,410 @@
+Script {
+    block: Block {
+        stats: [
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "new_vector",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "x",
+                            ),
+                            Ident(
+                                "y",
+                            ),
+                        ],
+                        body: FuncDef {
+                            args: [
+                                Ident(
+                                    "method_name",
+                                ),
+                            ],
+                            body: Case {
+                                value: Ident(
+                                    "method_name",
+                                ),
+                                arms: [
+                                    CaseArm {
+                                        pattern: Left(
+                                            Str(
+                                                "x",
+                                            ),
+                                        ),
+                                        on_match: Right(
+                                            Ident(
+                                                "x",
+                                            ),
+                                        ),
+                                    },
+                                    CaseArm {
+                                        pattern: Left(
+                                            Str(
+                                                "y",
+                                            ),
+                                        ),
+                                        on_match: Right(
+                                            Ident(
+                                                "y",
+                                            ),
+                                        ),
+                                    },
+                                    CaseArm {
+                                        pattern: Left(
+                                            Str(
+                                                "norm",
+                                            ),
+                                        ),
+                                        on_match: Right(
+                                            Binary {
+                                                lhs: Ident(
+                                                    "x",
+                                                ),
+                                                rhs: Ident(
+                                                    "y",
+                                                ),
+                                                op: Add,
+                                            },
+                                        ),
+                                    },
+                                    CaseArm {
+                                        pattern: Left(
+                                            Str(
+                                                "dist",
+                                            ),
+                                        ),
+                                        on_match: Right(
+                                            FuncDef {
+                                                args: [
+                                                    Ident(
+                                                        "v2",
+                                                    ),
+                                                ],
+                                                body: Block {
+                                                    stats: [
+                                                        Assign(
+                                                            Assign {
+                                                                assignee: Ident(
+                                                                    "x",
+                                                                ),
+                                                                value: Binary {
+                                                                    lhs: Ident(
+                                                                        "x",
+                                                                    ),
+                                                                    rhs: FuncCall {
+                                                                        callee: Ident(
+                                                                            "v2",
+                                                                        ),
+                                                                        args: [
+                                                                            Str(
+                                                                                "x",
+                                                                            ),
+                                                                        ],
+                                                                    },
+                                                                    op: Sub,
+                                                                },
+                                                            },
+                                                        ),
+                                                        Assign(
+                                                            Assign {
+                                                                assignee: Ident(
+                                                                    "y",
+                                                                ),
+                                                                value: Binary {
+                                                                    lhs: Ident(
+                                                                        "y",
+                                                                    ),
+                                                                    rhs: FuncCall {
+                                                                        callee: Ident(
+                                                                            "v2",
+                                                                        ),
+                                                                        args: [
+                                                                            Str(
+                                                                                "y",
+                                                                            ),
+                                                                        ],
+                                                                    },
+                                                                    op: Sub,
+                                                                },
+                                                            },
+                                                        ),
+                                                    ],
+                                                    value: Some(
+                                                        If {
+                                                            cond: Binary {
+                                                                lhs: Binary {
+                                                                    lhs: Ident(
+                                                                        "x",
+                                                                    ),
+                                                                    rhs: Num(
+                                                                        0,
+                                                                    ),
+                                                                    op: Lt,
+                                                                },
+                                                                rhs: Binary {
+                                                                    lhs: Ident(
+                                                                        "y",
+                                                                    ),
+                                                                    rhs: Num(
+                                                                        0,
+                                                                    ),
+                                                                    op: Lt,
+                                                                },
+                                                                op: LogAnd,
+                                                            },
+                                                            block: Block {
+                                                                stats: [],
+                                                                value: Some(
+                                                                    Binary {
+                                                                        lhs: Unary {
+                                                                            rhs: Ident(
+                                                                                "x",
+                                                                            ),
+                                                                            op: NumNeg,
+                                                                        },
+                                                                        rhs: Unary {
+                                                                            rhs: Ident(
+                                                                                "y",
+                                                                            ),
+                                                                            op: NumNeg,
+                                                                        },
+                                                                        op: Add,
+                                                                    },
+                                                                ),
+                                                            },
+                                                            elifs: [
+                                                                Elif {
+                                                                    cond: Binary {
+                                                                        lhs: Ident(
+                                                                            "x",
+                                                                        ),
+                                                                        rhs: Num(
+                                                                            0,
+                                                                        ),
+                                                                        op: Lt,
+                                                                    },
+                                                                    block: Block {
+                                                                        stats: [],
+                                                                        value: Some(
+                                                                            Binary {
+                                                                                lhs: Unary {
+                                                                                    rhs: Ident(
+                                                                                        "x",
+                                                                                    ),
+                                                                                    op: NumNeg,
+                                                                                },
+                                                                                rhs: Ident(
+                                                                                    "y",
+                                                                                ),
+                                                                                op: Add,
+                                                                            },
+                                                                        ),
+                                                                    },
+                                                                },
+                                                                Elif {
+                                                                    cond: Binary {
+                                                                        lhs: Ident(
+                                                                            "y",
+                                                                        ),
+                                                                        rhs: Num(
+                                                                            0,
+                                                                        ),
+                                                                        op: Lt,
+                                                                    },
+                                                                    block: Block {
+                                                                        stats: [],
+                                                                        value: Some(
+                                                                            Binary {
+                                                                                lhs: Ident(
+                                                                                    "x",
+                                                                                ),
+                                                                                rhs: Unary {
+                                                                                    rhs: Ident(
+                                                                                        "y",
+                                                                                    ),
+                                                                                    op: NumNeg,
+                                                                                },
+                                                                                op: Add,
+                                                                            },
+                                                                        ),
+                                                                    },
+                                                                },
+                                                            ],
+                                                            els: Some(
+                                                                Else {
+                                                                    block: Block {
+                                                                        stats: [],
+                                                                        value: Some(
+                                                                            Binary {
+                                                                                lhs: Ident(
+                                                                                    "x",
+                                                                                ),
+                                                                                rhs: Ident(
+                                                                                    "y",
+                                                                                ),
+                                                                                op: Add,
+                                                                            },
+                                                                        ),
+                                                                    },
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                },
+                                                is_recursive: false,
+                                            },
+                                        ),
+                                    },
+                                ],
+                            },
+                            is_recursive: false,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "v1",
+                    ),
+                    value: FuncCall {
+                        callee: Ident(
+                            "new_vector",
+                        ),
+                        args: [
+                            Num(
+                                0,
+                            ),
+                            Num(
+                                1,
+                            ),
+                        ],
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "v2",
+                    ),
+                    value: FuncCall {
+                        callee: Ident(
+                            "new_vector",
+                        ),
+                        args: [
+                            Num(
+                                5,
+                            ),
+                            Num(
+                                3,
+                            ),
+                        ],
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Manhattan Distance: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        FuncCall {
+                            callee: FuncCall {
+                                callee: Ident(
+                                    "v2",
+                                ),
+                                args: [
+                                    Str(
+                                        "dist",
+                                    ),
+                                ],
+                            },
+                            args: [
+                                Ident(
+                                    "v1",
+                                ),
+                            ],
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Norm of v2: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        FuncCall {
+                            callee: Ident(
+                                "v2",
+                            ),
+                            args: [
+                                Str(
+                                    "norm",
+                                ),
+                            ],
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Norm of v1: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        FuncCall {
+                            callee: Ident(
+                                "v1",
+                            ),
+                            args: [
+                                Str(
+                                    "norm",
+                                ),
+                            ],
+                        },
+                    ],
+                },
+            ),
+        ],
+        value: None,
+    },
+}

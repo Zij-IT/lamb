@@ -1,0 +1,1062 @@
+Script {
+    block: Block {
+        stats: [
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Bool(
+                                true,
+                            ),
+                            rhs: Binary {
+                                lhs: Num(
+                                    1,
+                                ),
+                                rhs: Num(
+                                    1,
+                                ),
+                                op: Eq,
+                            },
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Bool(
+                                false,
+                            ),
+                            rhs: Binary {
+                                lhs: Num(
+                                    1,
+                                ),
+                                rhs: Num(
+                                    0,
+                                ),
+                                op: Eq,
+                            },
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Str(
+                                "hello",
+                            ),
+                            rhs: Str(
+                                "hello",
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Str(
+                                    "hello",
+                                ),
+                                rhs: Str(
+                                    "world",
+                                ),
+                                op: Eq,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                ],
+                                op: Eq,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Num(
+                                1,
+                            ),
+                            rhs: Num(
+                                0,
+                            ),
+                            op: Ne,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Num(
+                                    1,
+                                ),
+                                rhs: Num(
+                                    1,
+                                ),
+                                op: Ne,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Str(
+                                "hello",
+                            ),
+                            rhs: Str(
+                                "world",
+                            ),
+                            op: Ne,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Str(
+                                    "hello",
+                                ),
+                                rhs: Str(
+                                    "hello",
+                                ),
+                                op: Ne,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                            ],
+                            op: Ne,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                op: Ne,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Num(
+                                0,
+                            ),
+                            rhs: Num(
+                                1,
+                            ),
+                            op: Lt,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Num(
+                                    1,
+                                ),
+                                rhs: Num(
+                                    0,
+                                ),
+                                op: Lt,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                                Num(
+                                    4,
+                                ),
+                            ],
+                            op: Lt,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    0,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Lt,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                ],
+                                op: Lt,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Num(
+                                1,
+                            ),
+                            rhs: Num(
+                                0,
+                            ),
+                            op: Gt,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Num(
+                                    0,
+                                ),
+                                rhs: Num(
+                                    1,
+                                ),
+                                op: Gt,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                                Num(
+                                    4,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Gt,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    4,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Gt,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                op: Gt,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Num(
+                                1,
+                            ),
+                            rhs: Num(
+                                0,
+                            ),
+                            op: Ge,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Num(
+                                    0,
+                                ),
+                                rhs: Num(
+                                    1,
+                                ),
+                                op: Ge,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                            ],
+                            op: Ne,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                op: Ne,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                                Num(
+                                    4,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Ge,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                            ],
+                            op: Ge,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Ge,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        0,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                op: Ge,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Num(
+                                0,
+                            ),
+                            rhs: Num(
+                                1,
+                            ),
+                            op: Le,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: Num(
+                                    1,
+                                ),
+                                rhs: Num(
+                                    0,
+                                ),
+                                op: Le,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Le,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    0,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Le,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                            ],
+                            rhs: [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                            ],
+                            op: Le,
+                        },
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "assert",
+                    ),
+                    args: [
+                        Binary {
+                            lhs: Binary {
+                                lhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                    Num(
+                                        4,
+                                    ),
+                                ],
+                                rhs: [
+                                    Num(
+                                        1,
+                                    ),
+                                    Num(
+                                        2,
+                                    ),
+                                    Num(
+                                        3,
+                                    ),
+                                ],
+                                op: Le,
+                            },
+                            rhs: Bool(
+                                false,
+                            ),
+                            op: Eq,
+                        },
+                    ],
+                },
+            ),
+        ],
+        value: None,
+    },
+}

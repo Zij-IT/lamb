@@ -1,0 +1,365 @@
+Script {
+    block: Block {
+        stats: [
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "x",
+                    ),
+                    value: Str(
+                        "global",
+                    ),
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "outer",
+                    ),
+                    value: FuncDef {
+                        args: [],
+                        body: Block {
+                            stats: [
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "x",
+                                        ),
+                                        value: Str(
+                                            "outer",
+                                        ),
+                                    },
+                                ),
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "y",
+                                        ),
+                                        value: Str(
+                                            "hi",
+                                        ),
+                                    },
+                                ),
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "z",
+                                        ),
+                                        value: FuncDef {
+                                            args: [],
+                                            body: FuncCall {
+                                                callee: Ident(
+                                                    "print",
+                                                ),
+                                                args: [
+                                                    Binary {
+                                                        lhs: Ident(
+                                                            "x",
+                                                        ),
+                                                        rhs: Ident(
+                                                            "y",
+                                                        ),
+                                                        op: Add,
+                                                    },
+                                                ],
+                                            },
+                                            is_recursive: false,
+                                        },
+                                    },
+                                ),
+                                Expr(
+                                    FuncCall {
+                                        callee: Ident(
+                                            "z",
+                                        ),
+                                        args: [],
+                                    },
+                                ),
+                            ],
+                            value: None,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "This should output 'outerhi': ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "outer",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        Str(
+                            "=====",
+                        ),
+                    ],
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "make_closure",
+                    ),
+                    value: FuncDef {
+                        args: [],
+                        body: Block {
+                            stats: [
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "local",
+                                        ),
+                                        value: Str(
+                                            "local",
+                                        ),
+                                    },
+                                ),
+                                Return(
+                                    Some(
+                                        FuncDef {
+                                            args: [],
+                                            body: FuncCall {
+                                                callee: Ident(
+                                                    "print",
+                                                ),
+                                                args: [
+                                                    Ident(
+                                                        "local",
+                                                    ),
+                                                ],
+                                            },
+                                            is_recursive: false,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            value: None,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "closure",
+                    ),
+                    value: FuncCall {
+                        callee: Ident(
+                            "make_closure",
+                        ),
+                        args: [],
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "This should output 'local': ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "closure",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        Str(
+                            "=====",
+                        ),
+                    ],
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "make_name",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "name",
+                            ),
+                        ],
+                        body: Block {
+                            stats: [
+                                Return(
+                                    Some(
+                                        FuncDef {
+                                            args: [],
+                                            body: FuncCall {
+                                                callee: Ident(
+                                                    "print",
+                                                ),
+                                                args: [
+                                                    Ident(
+                                                        "name",
+                                                    ),
+                                                ],
+                                            },
+                                            is_recursive: false,
+                                        },
+                                    ),
+                                ),
+                            ],
+                            value: None,
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "doughnut",
+                    ),
+                    value: FuncCall {
+                        callee: Ident(
+                            "make_name",
+                        ),
+                        args: [
+                            Str(
+                                "doughnut",
+                            ),
+                        ],
+                    },
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "bagel",
+                    ),
+                    value: FuncCall {
+                        callee: Ident(
+                            "make_name",
+                        ),
+                        args: [
+                            Str(
+                                "bagel",
+                            ),
+                        ],
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "This should output 'doughnut': ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "doughnut",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "This should output 'bagel': ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "bagel",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [],
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "println",
+                    ),
+                    args: [
+                        Str(
+                            "=====",
+                        ),
+                    ],
+                },
+            ),
+        ],
+        value: None,
+    },
+}

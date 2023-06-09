@@ -1,0 +1,462 @@
+Script {
+    block: Block {
+        stats: [
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "sum",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "xs",
+                            ),
+                        ],
+                        body: Block {
+                            stats: [
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "x",
+                                        ),
+                                        value: Str(
+                                            "THIS SHOULD NOT BE PRINTED",
+                                        ),
+                                    },
+                                ),
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "length",
+                                        ),
+                                        value: FuncCall {
+                                            callee: Ident(
+                                                "len",
+                                            ),
+                                            args: [
+                                                Ident(
+                                                    "xs",
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                ),
+                                Assign(
+                                    Assign {
+                                        assignee: Ident(
+                                            "helper",
+                                        ),
+                                        value: FuncDef {
+                                            args: [
+                                                Ident(
+                                                    "xs",
+                                                ),
+                                                Ident(
+                                                    "n",
+                                                ),
+                                            ],
+                                            body: Block {
+                                                stats: [],
+                                                value: Some(
+                                                    If {
+                                                        cond: Binary {
+                                                            lhs: Ident(
+                                                                "n",
+                                                            ),
+                                                            rhs: Num(
+                                                                0,
+                                                            ),
+                                                            op: Eq,
+                                                        },
+                                                        block: Block {
+                                                            stats: [],
+                                                            value: Some(
+                                                                Index {
+                                                                    indexee: Ident(
+                                                                        "xs",
+                                                                    ),
+                                                                    index: Ident(
+                                                                        "n",
+                                                                    ),
+                                                                },
+                                                            ),
+                                                        },
+                                                        elifs: [],
+                                                        els: Some(
+                                                            Else {
+                                                                block: Block {
+                                                                    stats: [],
+                                                                    value: Some(
+                                                                        Binary {
+                                                                            lhs: Index {
+                                                                                indexee: Ident(
+                                                                                    "xs",
+                                                                                ),
+                                                                                index: Ident(
+                                                                                    "n",
+                                                                                ),
+                                                                            },
+                                                                            rhs: FuncCall {
+                                                                                callee: Ident(
+                                                                                    "helper",
+                                                                                ),
+                                                                                args: [
+                                                                                    Ident(
+                                                                                        "xs",
+                                                                                    ),
+                                                                                    Binary {
+                                                                                        lhs: Ident(
+                                                                                            "n",
+                                                                                        ),
+                                                                                        rhs: Num(
+                                                                                            1,
+                                                                                        ),
+                                                                                        op: Sub,
+                                                                                    },
+                                                                                ],
+                                                                            },
+                                                                            op: Add,
+                                                                        },
+                                                                    ),
+                                                                },
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                            is_recursive: true,
+                                        },
+                                    },
+                                ),
+                            ],
+                            value: Some(
+                                FuncCall {
+                                    callee: Ident(
+                                        "helper",
+                                    ),
+                                    args: [
+                                        Ident(
+                                            "xs",
+                                        ),
+                                        Binary {
+                                            lhs: FuncCall {
+                                                callee: Ident(
+                                                    "len",
+                                                ),
+                                                args: [
+                                                    Ident(
+                                                        "xs",
+                                                    ),
+                                                ],
+                                            },
+                                            rhs: Num(
+                                                1,
+                                            ),
+                                            op: Sub,
+                                        },
+                                    ],
+                                },
+                            ),
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 0: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: FuncCall {
+                        callee: Ident(
+                            "sum",
+                        ),
+                        args: [
+                            [
+                                Num(
+                                    4,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    1,
+                                ),
+                                Unary {
+                                    rhs: Num(
+                                        1,
+                                    ),
+                                    op: NumNeg,
+                                },
+                                Unary {
+                                    rhs: Num(
+                                        2,
+                                    ),
+                                    op: NumNeg,
+                                },
+                                Unary {
+                                    rhs: Num(
+                                        3,
+                                    ),
+                                    op: NumNeg,
+                                },
+                                Unary {
+                                    rhs: Num(
+                                        4,
+                                    ),
+                                    op: NumNeg,
+                                },
+                            ],
+                        ],
+                    },
+                    rhs: Ident(
+                        "println",
+                    ),
+                    op: RApply,
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 10: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: FuncCall {
+                        callee: Ident(
+                            "sum",
+                        ),
+                        args: [
+                            [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                                Num(
+                                    4,
+                                ),
+                            ],
+                        ],
+                    },
+                    rhs: Ident(
+                        "println",
+                    ),
+                    op: RApply,
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "sum2",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "xs",
+                            ),
+                        ],
+                        body: Block {
+                            stats: [],
+                            value: Some(
+                                Num(
+                                    4,
+                                ),
+                            ),
+                        },
+                        is_recursive: false,
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 4: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: [
+                        Num(
+                            1,
+                        ),
+                        Num(
+                            2,
+                        ),
+                    ],
+                    rhs: Binary {
+                        lhs: Ident(
+                            "sum2",
+                        ),
+                        rhs: Ident(
+                            "println",
+                        ),
+                        op: RCompose,
+                    },
+                    op: RApply,
+                },
+            ),
+            Assign(
+                Assign {
+                    assignee: Ident(
+                        "helper",
+                    ),
+                    value: FuncDef {
+                        args: [
+                            Ident(
+                                "xs",
+                            ),
+                            Ident(
+                                "n",
+                            ),
+                        ],
+                        body: Block {
+                            stats: [],
+                            value: Some(
+                                If {
+                                    cond: Binary {
+                                        lhs: Ident(
+                                            "n",
+                                        ),
+                                        rhs: Num(
+                                            0,
+                                        ),
+                                        op: Eq,
+                                    },
+                                    block: Block {
+                                        stats: [],
+                                        value: Some(
+                                            Index {
+                                                indexee: Ident(
+                                                    "xs",
+                                                ),
+                                                index: Ident(
+                                                    "n",
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                    elifs: [],
+                                    els: Some(
+                                        Else {
+                                            block: Block {
+                                                stats: [],
+                                                value: Some(
+                                                    Binary {
+                                                        lhs: Index {
+                                                            indexee: Ident(
+                                                                "xs",
+                                                            ),
+                                                            index: Ident(
+                                                                "n",
+                                                            ),
+                                                        },
+                                                        rhs: FuncCall {
+                                                            callee: Ident(
+                                                                "helper",
+                                                            ),
+                                                            args: [
+                                                                Ident(
+                                                                    "xs",
+                                                                ),
+                                                                Binary {
+                                                                    lhs: Ident(
+                                                                        "n",
+                                                                    ),
+                                                                    rhs: Num(
+                                                                        1,
+                                                                    ),
+                                                                    op: Sub,
+                                                                },
+                                                            ],
+                                                        },
+                                                        op: Add,
+                                                    },
+                                                ),
+                                            },
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                        is_recursive: true,
+                    },
+                },
+            ),
+            Expr(
+                FuncCall {
+                    callee: Ident(
+                        "print",
+                    ),
+                    args: [
+                        Str(
+                            "Should print 10: ",
+                        ),
+                    ],
+                },
+            ),
+            Expr(
+                Binary {
+                    lhs: FuncCall {
+                        callee: Ident(
+                            "helper",
+                        ),
+                        args: [
+                            [
+                                Num(
+                                    1,
+                                ),
+                                Num(
+                                    2,
+                                ),
+                                Num(
+                                    3,
+                                ),
+                                Num(
+                                    4,
+                                ),
+                            ],
+                            Num(
+                                3,
+                            ),
+                        ],
+                    },
+                    rhs: Ident(
+                        "print",
+                    ),
+                    op: RApply,
+                },
+            ),
+        ],
+        value: None,
+    },
+}
