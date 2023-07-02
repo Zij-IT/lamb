@@ -41,3 +41,9 @@ pub struct LambOptions {
 
     pub path: Option<PathBuf>,
 }
+
+impl LambOptions {
+    pub fn parse() -> Self {
+        <Self as Parser>::parse()
+    }
+}

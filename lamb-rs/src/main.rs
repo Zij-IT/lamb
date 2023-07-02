@@ -5,8 +5,6 @@
     clippy::cast_possible_wrap
 )]
 
-use clap::Parser;
-use cli::LambOptions;
 use ffi::run_script;
 use optimization::Optimize;
 
@@ -16,7 +14,7 @@ mod ffi;
 mod optimization;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let options = LambOptions::parse();
+    let options = cli::LambOptions::parse();
 
     let mut script = ffi::parse_script(&options.path)?;
     match options.optimization_level {
