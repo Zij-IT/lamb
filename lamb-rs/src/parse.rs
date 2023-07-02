@@ -43,22 +43,8 @@ pub fn script<'a>() -> impl Parser<'a, T<'a>, Script, E<'a>> {
 }
 
 pub fn statement<'a>() -> impl Parser<'a, T<'a>, Statement, E<'a>> {
-    // STMT : ID TokenDefine EXPR TokenSemicolon
-    // 	    | EXPR TokenSemicolon
-    // 	    | TokenReturn TokenSemicolon
-    // 	    | TokenReturn EXPR TokenSemicolon
     recursive(|stat| {
         let expr = recursive(|expr| {
-            // EXPR:
-            // +++   BINARY_EXPR
-            // +++ | UNARY_EXPR
-            // +++ | FUNC_CALL
-            // +++ | INDEX
-            // +++ | IF_EXPR
-            // +++ | CASE_EXPR
-            // +++ | FUNC_DEF
-            // +++ | BLOCK
-            // +++ | ATOM
             let literal = literal().map(|l| Expr::Atom(Atom::Literal(l)));
 
             let parend = parend(expr.clone());
