@@ -9,4 +9,5 @@ bindgen = "0.65.1"
 cc = "1.0.73"
 
 [dependencies]
+chumsky = { path = "../../../rust/others/chumsky", features = ["pratt"] }
 clap = { version = "4.3.0", features = ["derive"] }
