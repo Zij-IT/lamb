@@ -1,16 +1,19 @@
 #[allow(warnings, clippy::all)]
 mod bindings;
 mod convert;
+
+use crate::ast::Script;
+use bindings::AstNode_T;
+use convert::Convert;
+
+#[cfg(test)]
 mod repr;
 
-use bindings::AstNode_T;
 #[cfg(test)]
 use repr::AstRepr as Ast;
 
-use crate::ast::Script;
-
 pub fn run_script(script: &Script, print_fns: bool, print_main: bool) {
-    let ptr = script.to_ptr();
+    let ptr = script.convert();
     unsafe {
         // Safety:
         // `Script::to_ptr` creates a valid `*mut AstNode_T` which is the only
@@ -22,10 +25,4 @@ pub fn run_script(script: &Script, print_fns: bool, print_main: bool) {
         // and must be therefor freed via `free_ast`
         bindings::free_ast(ptr);
     };
-}
-
-impl Script {
-    pub fn to_ptr(&self) -> *mut AstNode_T {
-        convert::Convert::convert(self)
-    }
 }
