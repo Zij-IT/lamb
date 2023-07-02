@@ -3,7 +3,6 @@
 #include "./compile/chunk.h"
 #include "./debug/debug.h"
 #include "./vm/vm.h"
-#include "parsing/lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -55,38 +54,4 @@ void run_ast(AstNode *root, bool print_fns, bool print_main) {
 
     compiler_free(&vm, &compiler);
     vm_free(&vm);
-}
-
-AstNode *parse_or_die(void) {
-    AstNode *root = NULL;
-    ParseResult res = yyparse(&root);
-    if (res == ParseResultReject) {
-        fprintf(stderr, "\nSyntax Error. Sorry.");
-        exit(EXIT_FAILURE);
-    }
-
-    return root;
-}
-
-AstNode *parse_stdin(void) {
-    set_lexer_file(stdin);
-    printf("~Lamb> Enter your code. Press Ctrl-D when finished.\n");
-    return parse_or_die();
-}
-
-AstNode *parse_path(str path) {
-    if (path == NULL) {
-        return NULL;
-    }
-
-    FILE *file = fopen(path, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Unable to open '%s'. Exiting...\n", path);
-        exit(EXIT_FAILURE);
-    }
-    set_lexer_file(file);
-
-    AstNode *root = parse_or_die();
-    fclose(file);
-    return root;
 }

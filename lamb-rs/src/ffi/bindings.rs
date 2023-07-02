@@ -3,7 +3,6 @@
 pub const MAX_AST_KID_COUNT: u32 = 3;
 pub type i64_ = i64;
 pub type string = *mut ::std::os::raw::c_char;
-pub type str_ = *mut ::std::os::raw::c_char;
 pub const AstNodeType_AstntStrLit: AstNodeType = 0;
 pub const AstNodeType_AstntNumLit: AstNodeType = 1;
 pub const AstNodeType_AstntCharLit: AstNodeType = 2;
@@ -184,12 +183,6 @@ extern "C" {
 }
 extern "C" {
     pub fn run_ast(root: *mut AstNode, print_fns: bool, print_main: bool);
-}
-extern "C" {
-    pub fn parse_stdin() -> *mut AstNode;
-}
-extern "C" {
-    pub fn parse_path(path: str_) -> *mut AstNode;
 }
 extern "C" {
     pub fn strdup(__s: *const ::std::os::raw::c_char) -> *mut ::std::os::raw::c_char;

@@ -35,8 +35,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let ffi_script = ffi::parse_script(&options.path)?;
-
-    assert_eq!(script, ffi_script);
     Ok(())
 }

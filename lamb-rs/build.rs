@@ -2,8 +2,6 @@ const C_FILES: &[&str] = &[
     "./src/ffi/c/lib.c",
     "./src/ffi/c/ast/ast.c",
     "./src/ffi/c/ast/optimization.c",
-    "./src/ffi/c/parsing/built/lexer.c",
-    "./src/ffi/c/parsing/built/parser.tab.c",
     "./src/ffi/c/compile/value.c",
     "./src/ffi/c/compile/chunk.c",
     "./src/ffi/c/compile/ast.c",
@@ -36,8 +34,6 @@ fn main() {
     bindgen::Builder::default()
         .header("wrapper.h")
         .allowlist_function("run_ast")
-        .allowlist_function("parse_stdin")
-        .allowlist_function("parse_path")
         .allowlist_function("free_ast")
         .allowlist_function("new_astnode")
         .allowlist_function("strdup")
