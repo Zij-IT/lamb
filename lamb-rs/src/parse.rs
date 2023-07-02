@@ -12,6 +12,14 @@ type T<'a> = &'a [Token];
 
 type E<'a> = extra::Err<Rich<'a, Token>>;
 
+// expr() and expr[] would lead the parser to reparse the expression
+// if it's not parsed as: `expr` then (`()` or `[]`). To do this, a
+// middle man is introduced
+enum Chain {
+    Index(Expr),
+    Call(Vec<Expr>),
+}
+
 macro_rules! bin {
     ($tok:ident, $str:expr) => {{
         chumsky::pratt::left_infix(just(Token::Op(Op::$tok)), $str, |lhs, rhs| {
@@ -76,34 +84,11 @@ pub fn statement<'a>() -> impl Parser<'a, T<'a>, Statement, E<'a>> {
                 .or(case)
                 .or(block.map(Expr::Block));
 
-            enum Chain {
-                Index(Expr),
-                Call(Vec<Expr>),
-            }
-
             let chain = atom.foldl(
-                {
-                    let call = expr
-                        .clone()
-                        .separated_by(just(Token::Comma))
-                        .allow_trailing()
-                        .collect()
-                        .delimited_by(
-                            just(Token::Open(Delim::Paren)),
-                            just(Token::Close(Delim::Paren)),
-                        )
-                        .map(Chain::Call);
-
-                    let index = expr
-                        .delimited_by(
-                            just(Token::Open(Delim::Brack)),
-                            just(Token::Close(Delim::Brack)),
-                        )
-                        .map(Chain::Index);
-
-                    call.or(index)
-                }
-                .repeated(),
+                call(expr.clone())
+                    .map(Chain::Call)
+                    .or(index(expr).map(Chain::Index))
+                    .repeated(),
                 |lhs, rhs| match rhs {
                     Chain::Index(i) => Expr::Index(Index {
                         indexee: Box::new(lhs),
@@ -143,8 +128,8 @@ pub fn statement<'a>() -> impl Parser<'a, T<'a>, Statement, E<'a>> {
 
             let prefixes = choice((
                 unary!(Op::Sub, UnaryOp::NumNeg, 12),
-                unary!(Op::Sub, UnaryOp::NumNeg, 12),
-                unary!(Op::Sub, UnaryOp::NumNeg, 12),
+                unary!(Op::LogNot, UnaryOp::LogNot, 12),
+                unary!(Op::BinComp, UnaryOp::BinNot, 12),
             ));
 
             chain.pratt(binaries).with_prefix_ops(prefixes)
@@ -173,6 +158,27 @@ pub fn statement<'a>() -> impl Parser<'a, T<'a>, Statement, E<'a>> {
 
         assign.or(expr_stmt).or(ret)
     })
+}
+
+fn index<'a>(
+    expr: impl Parser<'a, T<'a>, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, T<'a>, Expr, E<'a>> + Clone {
+    expr.delimited_by(
+        just(Token::Open(Delim::Brack)),
+        just(Token::Close(Delim::Brack)),
+    )
+}
+
+fn call<'a>(
+    expr: impl Parser<'a, T<'a>, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, T<'a>, Vec<Expr>, E<'a>> + Clone {
+    expr.separated_by(just(Token::Comma))
+        .allow_trailing()
+        .collect()
+        .delimited_by(
+            just(Token::Open(Delim::Paren)),
+            just(Token::Close(Delim::Paren)),
+        )
 }
 
 fn case<'a>(
@@ -236,7 +242,7 @@ fn block<'a>(
 ) -> impl Parser<'a, T<'a>, Block, E<'a>> + Clone {
     stat.repeated()
         .collect()
-        .then(expr.clone().or_not())
+        .then(expr.or_not())
         .delimited_by(
             just(Token::Open(Delim::Brace)),
             just(Token::Close(Delim::Brace)),
@@ -251,7 +257,7 @@ fn if_<'a>(
     expr: impl Parser<'a, T<'a>, Expr, E<'a>> + Clone,
     block: impl Parser<'a, T<'a>, Block, E<'a>> + Clone,
 ) -> impl Parser<'a, T<'a>, Expr, E<'a>> + Clone {
-    let if_ = just(Token::If)
+    just(Token::If)
         .ignore_then(expr.clone())
         .then(block.clone())
         .then(
@@ -264,7 +270,7 @@ fn if_<'a>(
         )
         .then(
             just(Token::Else)
-                .ignore_then(block.clone())
+                .ignore_then(block)
                 .map(|block| Box::new(Else { block }))
                 .or_not(),
         )
@@ -275,8 +281,7 @@ fn if_<'a>(
                 elifs,
                 els,
             })
-        });
-    if_
+        })
 }
 
 fn ident<'a>() -> impl Parser<'a, T<'a>, Ident, E<'a>> + Clone {
@@ -288,7 +293,7 @@ fn literal<'a>() -> impl Parser<'a, T<'a>, Literal, E<'a>> + Clone {
         Token::Nil => Literal::Nil,
         Token::Num(l) => Literal::Num(l),
         Token::Bool(l) => Literal::Bool(l),
-        Token::Char(l) => Literal::Char(l),
+        Token::chars(l) => Literal::Char(l),
         Token::Str(l) => Literal::Str(l),
     }
 }

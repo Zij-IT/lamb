@@ -1,3 +1,5 @@
+#![allow(clippy::needless_bitwise_bool)]
+
 use crate::ast::{
     Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
     If, Index, Literal, Script, Statement, Unary,
@@ -119,7 +121,7 @@ impl Optimize for If {
         self.cond.optimize()
             | self.block.optimize()
             | self.elifs.optimize()
-            | self.els.as_deref_mut().is_some_and(|e| e.optimize())
+            | self.els.as_deref_mut().is_some_and(Optimize::optimize)
     }
 }
 
@@ -137,7 +139,7 @@ impl Optimize for Else {
 
 impl Optimize for Block {
     fn optimize(&mut self) -> bool {
-        self.stats.optimize() | self.value.as_deref_mut().is_some_and(|v| v.optimize())
+        self.stats.optimize() | self.value.as_deref_mut().is_some_and(Optimize::optimize)
     }
 }
 

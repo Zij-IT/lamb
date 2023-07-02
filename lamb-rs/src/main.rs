@@ -17,7 +17,7 @@ mod token;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = cli::LambOptions::parse();
 
-    let contents = std::fs::read_to_string(&options.path.as_ref().unwrap()).unwrap();
+    let contents = std::fs::read_to_string(options.path.as_ref().unwrap()).unwrap();
 
     let tokens = match token::lexer().parse(&*contents).into_output_errors() {
         (Some(t), errs) if errs.is_empty() => t,
