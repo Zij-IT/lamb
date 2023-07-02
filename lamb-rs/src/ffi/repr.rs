@@ -5,6 +5,37 @@ use crate::ast::Atom::{self, Ident};
 use crate::ast::{self, BinaryOp, Block, Expr, Literal, Statement, UnaryOp};
 use crate::ffi::bindings;
 
+#[derive(Debug)]
+pub enum NodeError {
+    UnknownNodeType(u32),
+    InvalidUtf8(Utf8Error),
+    MalformedNode,
+}
+
+impl NodeError {
+    // Helper function for debugging mistakes between the C and Rust representations
+    fn malformed() -> Self {
+        let bt = std::backtrace::Backtrace::force_capture();
+        println!("{bt}");
+
+        Self::MalformedNode
+    }
+}
+
+impl std::fmt::Display for NodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NodeError::UnknownNodeType(ty) => write!(f, "[NodeError] Unknown Node Type: {ty:#?}"),
+            NodeError::InvalidUtf8(err) => write!(f, "[NodeError] InvalidUtf8: {err}"),
+            NodeError::MalformedNode => write!(f, "[NodeError] Malformed Node"),
+        }
+    }
+}
+
+impl std::error::Error for NodeError {}
+
+pub type Result<T> = std::result::Result<T, NodeError>;
+
 impl ast::Script {
     /// # Safety
     /// `node` must point to a validly constructed `AstNode_T` with the following
@@ -41,7 +72,7 @@ impl ast::Script {
     /// `AstntBlock`      | `kids[0]` contains an `AstntNodeList`, which ends `null` *OR* an expression
     /// `AstntNodeList`   | `kids[0]` contains a node of type T, `kids[1]` contains an `AstntNodeList` of type
     /// `AstntArray`      | `kids[0]` contains an `AstntNodeList`
-    pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
+    pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self> {
         Ok(Self {
             block: block_inner(node)?.expect_expr()?.expect_block()?,
         })
@@ -66,18 +97,18 @@ impl std::fmt::Debug for AstRepr {
 
 impl AstRepr {
     #[cfg(test)]
-    pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self, NodeError> {
+    pub unsafe fn from_ptr(node: *mut AstNode_T) -> Result<Self> {
         into_rust_repr(node)
     }
 
-    fn expect_expr(self) -> Result<Expr, NodeError> {
+    fn expect_expr(self) -> Result<Expr> {
         match self {
             Self::Expr(e) => Ok(e),
             Self::Statement(_) => Err(NodeError::malformed()),
         }
     }
 
-    fn expect_stmt(self) -> Result<Statement, NodeError> {
+    fn expect_stmt(self) -> Result<Statement> {
         match self {
             Self::Statement(s) => Ok(s),
             Self::Expr(_) => Err(NodeError::malformed()),
@@ -95,7 +126,7 @@ where
 }
 
 impl Expr {
-    fn expect_block(self) -> Result<Block, NodeError> {
+    fn expect_block(self) -> Result<Block> {
         match self {
             Expr::Block(b) => Ok(b),
             _ => Err(NodeError::malformed()),
@@ -103,39 +134,10 @@ impl Expr {
     }
 }
 
-#[derive(Debug)]
-pub enum NodeError {
-    UnknownNodeType(u32),
-    InvalidUtf8(Utf8Error),
-    MalformedNode,
-}
-
-impl NodeError {
-    // Helper function for debugging mistakes between the C and Rust representations
-    fn malformed() -> Self {
-        let bt = std::backtrace::Backtrace::force_capture();
-        println!("{bt}");
-
-        Self::MalformedNode
-    }
-}
-
-impl std::fmt::Display for NodeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NodeError::UnknownNodeType(ty) => write!(f, "[NodeError] Unknown Node Type: {ty:#?}"),
-            NodeError::InvalidUtf8(err) => write!(f, "[NodeError] InvalidUtf8: {err}"),
-            NodeError::MalformedNode => write!(f, "[NodeError] Malformed Node"),
-        }
-    }
-}
-
-impl std::error::Error for NodeError {}
-
 /// # Safety
 ///
 /// See 'Safety' section for `Script::from_ptr`
-unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr> {
     if node.is_null() {
         return Err(NodeError::malformed());
     }
@@ -205,17 +207,15 @@ unsafe fn into_rust_repr(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + `kids[0]` contains an `AstntNodeList`, which ends in `null` *OR* an expression
-unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_block(node: *mut AstNode_T) -> Result<AstRepr> {
     block_inner((*node).kids[0])
 }
 
 /// # Safety
 /// The `node` must be an `AstntNodeList` of statements which ends in either `null`
 /// or an expression.
-unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
-    // Can't work with CListIter because the final expression node
-    // is hung directly on the final node
-    let (stats, node) = CListIter::new(
+unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr> {
+    let mut list = LinkedList::new(
         |node| {
             if (*node).type_ == bindings::AstNodeType_AstntNodeList && !(*node).kids[0].is_null() {
                 Some(into_rust_repr((*node).kids[0]).and_then(AstRepr::expect_stmt))
@@ -226,8 +226,10 @@ unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
         |node| node,
         |node| (*node).kids[1],
         node,
-    )
-    .collect_with_node()?;
+    );
+
+    let stats = list.into_iter().collect::<Result<_>>()?;
+    let node = list.node;
 
     let value = if node.is_null() {
         None
@@ -242,7 +244,7 @@ unsafe fn block_inner(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be of the type `AstntAssignStmt` and have the following structure:
 /// + `kids[0]` contains an `AstntAssignStmt`
 /// + `kids[1]` contains an expression
-unsafe fn new_binding(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_binding(node: *mut AstNode_T) -> Result<AstRepr> {
     let Expr::Atom(Ident(ident)) = into_rust_repr((*node).kids[0])?.expect_expr()? else {
         return Err(NodeError::malformed());
     };
@@ -258,7 +260,7 @@ unsafe fn new_binding(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// # Safety
 /// The `node` must be of the type `AstntExprStmt` and have the following structure:
 /// + `kids[0]` contains an expression
-unsafe fn new_expr_stmt(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_expr_stmt(node: *mut AstNode_T) -> Result<AstRepr> {
     let expr = into_rust_repr((*node).kids[0])?.expect_expr()?;
     Ok(AstRepr::Statement(Statement::Expr(expr)))
 }
@@ -266,7 +268,7 @@ unsafe fn new_expr_stmt(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// # Safety
 /// The `node` must be of the type `AstntReturn` and have the following structure:
 /// + `kids[0]` may contain an expression
-unsafe fn new_return(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_return(node: *mut AstNode_T) -> Result<AstRepr> {
     let value = if (*node).kids[0].is_null() {
         None
     } else {
@@ -280,7 +282,7 @@ unsafe fn new_return(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be of the type `AstntArrayIndex` and have the following structure:
 /// + `kids[0]` may contain an expression
 /// + `kids[1]` may contain an expression
-unsafe fn new_index(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_index(node: *mut AstNode_T) -> Result<AstRepr> {
     let indexee = into_rust_repr((*node).kids[0])?.expect_expr()?;
     let index = into_rust_repr((*node).kids[1])?.expect_expr()?;
 
@@ -294,7 +296,7 @@ unsafe fn new_index(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be of the type `AstntFuncCall` and have the following structure:
 /// + `kids[0]` contains an expression
 /// + `kids[1]` may contain an `AstntNodeList` of expressions
-unsafe fn new_func_call(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_func_call(node: *mut AstNode_T) -> Result<AstRepr> {
     let callee = into_rust_repr((*node).kids[0])?.expect_expr()?;
     let args = expr_list((*node).kids[1])?;
 
@@ -309,7 +311,7 @@ unsafe fn new_func_call(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// + `kids[0]` may contain an `AstntNodeList` of `AstntIdent`
 /// + `kids[1]` contains an expression
 /// + `kids[2]` contains a `AstntBoolLit`
-unsafe fn new_func_def(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_func_def(node: *mut AstNode_T) -> Result<AstRepr> {
     let args = ident_list((*node).kids[0])?;
     let body = into_rust_repr((*node).kids[1])?.expect_expr()?;
 
@@ -327,7 +329,7 @@ unsafe fn new_func_def(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// # Safety
 /// The `node` must be of the type `AstntUnaryXX` and have the following structure:
 /// + `kids[0]` contains an expression
-unsafe fn new_unary(node: *mut AstNode_T, op: UnaryOp) -> Result<AstRepr, NodeError> {
+unsafe fn new_unary(node: *mut AstNode_T, op: UnaryOp) -> Result<AstRepr> {
     Ok(AstRepr::Expr(Expr::Unary(ast::Unary::new(
         into_rust_repr((*node).kids[0])?.expect_expr()?,
         op,
@@ -338,7 +340,7 @@ unsafe fn new_unary(node: *mut AstNode_T, op: UnaryOp) -> Result<AstRepr, NodeEr
 /// The `node` must be of the type `AstntBinaryXX` and have the following structure:
 /// + `kids[0]` contains an expression
 /// + `kids[1]` contains an expression
-unsafe fn new_binary(node: *mut AstNode_T, op: BinaryOp) -> Result<AstRepr, NodeError> {
+unsafe fn new_binary(node: *mut AstNode_T, op: BinaryOp) -> Result<AstRepr> {
     let lhs = into_rust_repr((*node).kids[0])?.expect_expr()?;
     let rhs = into_rust_repr((*node).kids[1])?.expect_expr()?;
 
@@ -350,19 +352,21 @@ unsafe fn new_binary(node: *mut AstNode_T, op: BinaryOp) -> Result<AstRepr, Node
 /// + `kids[0]` contains an expression
 /// + `kids[1]` contains a block
 /// + `kids[2]` *may* contain an `AstntIf` *OR* (else) `AstntBlock`
-unsafe fn new_if(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_if(node: *mut AstNode_T) -> Result<AstRepr> {
     let cond = into_rust_repr((*node).kids[0])?.expect_expr()?;
     let block = into_rust_repr((*node).kids[1])?
         .expect_expr()?
         .expect_block()?;
 
-    let (elifs, node) = CListIter::new(
+    let mut list = LinkedList::new(
         |node| ((*node).type_ == bindings::AstNodeType_AstntIf).then(|| new_elif(node)),
         |node| node,
         |node| (*node).kids[2],
         (*node).kids[2],
-    )
-    .collect_with_node()?;
+    );
+
+    let elifs = list.into_iter().collect::<Result<_>>()?;
+    let node = list.node;
 
     let els = if node.is_null() {
         None
@@ -380,7 +384,7 @@ unsafe fn new_if(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// + `kids[0]` contains an expression
 /// + `kids[1]` contains a block
 /// + `kids[2]` *may* contain an `AstntIf` *OR* (else) `AstntBlock`
-unsafe fn new_elif(node: *mut AstNode_T) -> Result<ast::Elif, NodeError> {
+unsafe fn new_elif(node: *mut AstNode_T) -> Result<ast::Elif> {
     let cond = into_rust_repr((*node).kids[0])?.expect_expr()?;
     let block = into_rust_repr((*node).kids[1])?
         .expect_expr()?
@@ -392,7 +396,7 @@ unsafe fn new_elif(node: *mut AstNode_T) -> Result<ast::Elif, NodeError> {
 /// # Safety
 /// The `node` must be of the type `AstntBlock` and have the following structure:
 /// + `kids[0]` contains an `AstntNodeList`, which ends in `null` *OR* an expression
-unsafe fn new_else(node: *mut AstNode_T) -> Result<ast::Else, NodeError> {
+unsafe fn new_else(node: *mut AstNode_T) -> Result<ast::Else> {
     let block = into_rust_repr(node)?.expect_expr()?.expect_block()?;
     Ok(ast::Else::new(block))
 }
@@ -401,15 +405,16 @@ unsafe fn new_else(node: *mut AstNode_T) -> Result<ast::Else, NodeError> {
 /// The `node` must be of the type `AstntCase` and have the following structure:
 /// + `kids[0]` contains an expression
 /// + `kids[1]` *may* contain a valid `AstntCaseArm`
-unsafe fn new_case(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_case(node: *mut AstNode_T) -> Result<AstRepr> {
     let value = Box::new(into_rust_repr((*node).kids[0])?.expect_expr()?);
-    let arms = CListIter::new(
+    let arms = LinkedList::new(
         |node| Some(new_case_arm(node)),
         |node| node,
         |node| (*node).kids[2],
         (*node).kids[1],
     )
-    .collect::<Result<_, _>>()?;
+    .into_iter()
+    .collect::<Result<_>>()?;
 
     Ok(AstRepr::Expr(Expr::Case(ast::Case { value, arms })))
 }
@@ -419,7 +424,7 @@ unsafe fn new_case(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// + `kids[0]` contains an `Astnt__Lit` *OR* `AstntId`
 /// + `kids[1]` contains a valid expression or `AstntBlock`
 /// + `kids[2]` *may* contain an `AstntCaseArm`
-unsafe fn new_case_arm(node: *mut AstNode_T) -> Result<ast::CaseArm, NodeError> {
+unsafe fn new_case_arm(node: *mut AstNode_T) -> Result<ast::CaseArm> {
     let pattern = match into_rust_repr((*node).kids[0])? {
         AstRepr::Expr(Expr::Atom(ast::Atom::Literal(l))) => ast::Either::Left(l),
         AstRepr::Expr(Expr::Atom(Ident(i))) => ast::Either::Right(i),
@@ -438,7 +443,7 @@ unsafe fn new_case_arm(node: *mut AstNode_T) -> Result<ast::CaseArm, NodeError> 
 /// # Safety
 /// The `node` must be of the type `AstntArray` and have the following structure:
 /// + `kids[0]` contains an `AstntNodeList` of expressions
-unsafe fn new_array(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
+unsafe fn new_array(node: *mut AstNode_T) -> Result<AstRepr> {
     Ok(AstRepr::Expr(Expr::Atom(ast::Atom::Array(expr_list(
         (*node).kids[0],
     )?))))
@@ -448,13 +453,14 @@ unsafe fn new_array(node: *mut AstNode_T) -> Result<AstRepr, NodeError> {
 /// The `node` must be of the type `AstntNodeList` and have the following structure:
 /// + `kids[0]` contains an expressions
 /// + `kids[1]` contains an `AstntNodeList` of expressions
-unsafe fn expr_list(node: *mut AstNode_T) -> Result<Vec<Expr>, NodeError> {
-    CListIter::new(
+unsafe fn expr_list(node: *mut AstNode_T) -> Result<Vec<Expr>> {
+    LinkedList::new(
         |node| Some(into_rust_repr(node).and_then(AstRepr::expect_expr)),
         |node| (*node).kids[0],
         |node| (*node).kids[1],
         node,
     )
+    .into_iter()
     .collect()
 }
 
@@ -462,8 +468,8 @@ unsafe fn expr_list(node: *mut AstNode_T) -> Result<Vec<Expr>, NodeError> {
 /// The `node` must be of the type `AstntNodeList` and have the following structure:
 /// + `kids[0]` contains an `AstntIdent`
 /// + `kids[1]` contains an `AstntNodeList` of `AstntIdent`
-unsafe fn ident_list(node: *mut AstNode_T) -> Result<Vec<ast::Ident>, NodeError> {
-    CListIter::new(
+unsafe fn ident_list(node: *mut AstNode_T) -> Result<Vec<ast::Ident>> {
+    LinkedList::new(
         |node| match into_rust_repr(node) {
             Ok(AstRepr::Expr(Expr::Atom(Ident(i)))) => Some(Ok(i)),
             _ => Some(Err(NodeError::malformed())),
@@ -472,19 +478,20 @@ unsafe fn ident_list(node: *mut AstNode_T) -> Result<Vec<ast::Ident>, NodeError>
         |node| (*node).kids[1],
         node,
     )
+    .into_iter()
     .collect()
 }
 
-struct CListIter<F, N, K> {
+struct LinkedList<F, N, K> {
     f: F,
     kid: K,
     next: N,
     node: *mut AstNode_T,
 }
 
-impl<F, T, N, K> CListIter<F, N, K>
+impl<F, T, N, K> LinkedList<F, N, K>
 where
-    F: FnMut(*mut AstNode_T) -> Option<Result<T, NodeError>>,
+    F: FnMut(*mut AstNode_T) -> Option<Result<T>>,
     K: FnMut(*mut AstNode_T) -> *mut AstNode_T,
     N: FnMut(*mut AstNode_T) -> *mut AstNode_T,
 {
@@ -492,25 +499,40 @@ where
         Self { f, kid, next, node }
     }
 
-    // Behaves like `Iter::collect` for `Result<Vec<T>>` but returns the last node held by `self`, as
-    // well as the `Vec<T>` that is expected
-    fn collect_with_node(mut self) -> Result<(Vec<T>, *mut AstNode_T), NodeError> {
-        (&mut self)
-            .collect::<Result<_, _>>()
-            .map(|x| (x, self.node))
+    fn into_node(self) -> *mut AstNode_T {
+        self.node
     }
 }
 
-impl<F, N, K, T> Iterator for CListIter<F, N, K>
+impl<'a, F, T, N, K> IntoIterator for &'a mut LinkedList<F, N, K>
 where
-    F: FnMut(*mut AstNode_T) -> Option<Result<T, NodeError>>,
+    F: FnMut(*mut AstNode_T) -> Option<Result<T>>,
     K: FnMut(*mut AstNode_T) -> *mut AstNode_T,
     N: FnMut(*mut AstNode_T) -> *mut AstNode_T,
 {
-    type Item = Result<T, NodeError>;
+    type Item = Result<T>;
+
+    type IntoIter = Iter<'a, F, N, K>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Iter { list: self }
+    }
+}
+
+struct Iter<'a, F, N, K> {
+    list: &'a mut LinkedList<F, N, K>,
+}
+
+impl<'a, T, F, N, K> Iterator for Iter<'a, F, N, K>
+where
+    F: FnMut(*mut AstNode_T) -> Option<Result<T>>,
+    K: FnMut(*mut AstNode_T) -> *mut AstNode_T,
+    N: FnMut(*mut AstNode_T) -> *mut AstNode_T,
+{
+    type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Self { f, kid, next, node } = self;
+        let LinkedList { f, kid, next, node } = self.list;
 
         if node.is_null() {
             None
