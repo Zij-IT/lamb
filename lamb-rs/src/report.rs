@@ -36,9 +36,14 @@ impl<'a> ariadne::Span for SrcSpan<'a> {
     }
 }
 
-pub fn report_errors<P: AsRef<Path>>(src: P, errs: Vec<Rich<Token>>) {
-    let mut builder = Report::build(ReportKind::Error, src.as_ref().to_owned(), 0)
-        .with_message("[Lamb] Parse Errors:");
+pub fn report_errors<P, T, M>(src: P, errs: Vec<Rich<T>>, msg: M)
+where
+    P: AsRef<Path>,
+    T: std::fmt::Debug,
+    M: ToString,
+{
+    let mut builder =
+        Report::build(ReportKind::Error, src.as_ref().to_owned(), 0).with_message(msg);
 
     for err in errs {
         attach_err(&mut builder, err, src.as_ref());
@@ -47,7 +52,11 @@ pub fn report_errors<P: AsRef<Path>>(src: P, errs: Vec<Rich<Token>>) {
     builder.finish().eprint(FileCache::default()).unwrap()
 }
 
-fn attach_err<'a>(report: &mut ReportBuilder<SrcSpan<'a>>, err: Rich<Token>, path: &'a Path) {
+fn attach_err<'a, T: std::fmt::Debug>(
+    report: &mut ReportBuilder<SrcSpan<'a>>,
+    err: Rich<T>,
+    path: &'a Path,
+) {
     attach_reason(
         report,
         SrcSpan::from_simple(err.span().clone(), path),
@@ -55,10 +64,10 @@ fn attach_err<'a>(report: &mut ReportBuilder<SrcSpan<'a>>, err: Rich<Token>, pat
     );
 }
 
-fn attach_reason<'a>(
+fn attach_reason<'a, T: std::fmt::Debug>(
     report: &mut ReportBuilder<SrcSpan<'a>>,
     range: SrcSpan<'a>,
-    reason: &RichReason<Token>,
+    reason: &RichReason<T>,
 ) {
     match reason {
         RichReason::ExpectedFound { found, .. } => {
