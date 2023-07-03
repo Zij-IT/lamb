@@ -279,7 +279,7 @@ fn literal<'a>() -> impl Parser<'a, T<'a>, Literal, E<'a>> + Clone {
         Token::Nil => Literal::Nil,
         Token::Num(l) => Literal::Num(l),
         Token::Bool(l) => Literal::Bool(l),
-        Token::chars(l) => Literal::Char(l),
+        Token::Char(l) => Literal::Char(l),
         Token::Str(l) => Literal::Str(l),
     }
 }
