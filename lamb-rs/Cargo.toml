@@ -9,5 +9,6 @@ bindgen = "0.66.1"
 cc = "1.0.73"
 
 [dependencies]
+ariadne = { version = "0.3.0", features = ["auto-color"] }
 chumsky = { path = "../../../rust/others/chumsky", features = ["pratt"] }
 clap = { version = "4.3.0", features = ["derive"] }

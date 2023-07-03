@@ -104,7 +104,7 @@ pub enum Error {
 type I<'a> = &'a str;
 type E<'a> = extra::Err<Rich<'a, char>>;
 
-pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<Token>, E<'a>> {
+pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
     // TODO:
     // + Reduce the weird budget being used for odd choice
     //   of escape char
@@ -145,6 +145,7 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<Token>, E<'a>> {
     let comment = just("--").ignore_then(none_of('\n').repeated()).padded();
 
     lang_element
+        .map_with_span(|tok, sp| (tok, sp))
         .padded_by(comment.repeated())
         .padded()
         .repeated()
