@@ -12,7 +12,7 @@ mod cli;
 mod ffi;
 mod optimization;
 mod parse;
-mod token;
+mod tokenize;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = cli::LambOptions::parse();
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let script = match parse::script().parse(&*tokens).into_output_errors() {
+    let _script = match parse::script().parse(&*tokens).into_output_errors() {
         (Some(t), errs) if errs.is_empty() => t,
         (_, errs) => {
             dbg!(errs);
@@ -35,5 +35,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    println!("Parsed '{}' successfully", options.path.unwrap().display());
     Ok(())
 }

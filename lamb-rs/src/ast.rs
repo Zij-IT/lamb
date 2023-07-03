@@ -151,6 +151,7 @@ pub struct If {
 }
 
 impl If {
+    #[cfg(test)]
     pub fn new(cond: Expr, block: Block, elifs: Vec<Elif>, els: Option<Else>) -> Self {
         Self {
             cond: Box::new(cond),
@@ -226,6 +227,7 @@ pub struct Elif {
 }
 
 impl Elif {
+    #[cfg(test)]
     pub fn new(cond: Expr, block: Block) -> Self {
         Self { cond, block }
     }
@@ -237,6 +239,7 @@ pub struct Else {
 }
 
 impl Else {
+    #[cfg(test)]
     pub fn new(block: Block) -> Self {
         Self { block }
     }

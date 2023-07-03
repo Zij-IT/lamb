@@ -12,6 +12,7 @@ mod repr;
 #[cfg(test)]
 use repr::AstRepr as Ast;
 
+#[allow(dead_code)]
 pub fn run_script(script: &Script, print_fns: bool, print_main: bool) {
     let ptr = script.convert();
     unsafe {
