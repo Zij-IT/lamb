@@ -3,8 +3,6 @@ use std::{ops::Range, path::Path};
 use ariadne::*;
 use chumsky::{error::RichReason, prelude::Rich, span::SimpleSpan};
 
-use crate::tokenize::Token;
-
 #[derive(Clone)]
 struct SrcSpan<'a> {
     path: &'a Path,

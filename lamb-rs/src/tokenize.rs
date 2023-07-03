@@ -1,7 +1,7 @@
 use chumsky::{
     error, extra,
     prelude::*,
-    text::{ascii, digits, int},
+    text::{ascii, digits},
 };
 
 macro_rules! parse_num {
