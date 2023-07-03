@@ -142,7 +142,7 @@ where
             .then_ignore(just(Token::Semi))
             .map(|(i, e)| {
                 Statement::Assign(Assign {
-                    assignee: i.into(),
+                    assignee: i,
                     value: e,
                 })
             });

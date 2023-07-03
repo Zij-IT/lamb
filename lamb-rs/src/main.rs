@@ -13,7 +13,7 @@ use chumsky::{
     Parser,
 };
 
-use crate::{report::report_errors, tokenize::Token};
+use crate::{report::errors, tokenize::Token};
 
 mod ast;
 mod cli;
@@ -32,11 +32,11 @@ fn main() {
     let tokens = match tokenize::lamb().parse(&*contents).into_output_errors() {
         (Some(t), errs) if errs.is_empty() => t,
         (Some(t), errs) => {
-            report_errors(path, errs, "[Lamb] Lexer Errors:");
+            errors(path, errs, "[Lamb] Lexer Errors:");
             t
         }
         (_, errs) => {
-            report_errors(path, errs, "[Lamb] Lexer Errors:");
+            errors(path, errs, "[Lamb] Lexer Errors:");
             return;
         }
     };
@@ -45,11 +45,11 @@ fn main() {
     let _script = match parse_script(tokens, eoi) {
         (Some(t), errs) if errs.is_empty() => t,
         (Some(t), errs) => {
-            report_errors(path, errs, "[Lamb] Parser Errors:");
+            errors(path, errs, "[Lamb] Parser Errors:");
             t
         }
         (_, errs) => {
-            report_errors(path, errs, "[Lamb] Parser Errors:");
+            errors(path, errs, "[Lamb] Parser Errors:");
             return;
         }
     };

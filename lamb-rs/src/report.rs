@@ -1,6 +1,6 @@
 use std::{ops::Range, path::Path};
 
-use ariadne::*;
+use ariadne::{FileCache, Label, Report, ReportBuilder, ReportKind};
 use chumsky::{error::RichReason, prelude::Rich, span::SimpleSpan};
 
 #[derive(Clone)]
@@ -34,7 +34,7 @@ impl<'a> ariadne::Span for SrcSpan<'a> {
     }
 }
 
-pub fn report_errors<P, T, M>(src: P, errs: Vec<Rich<T>>, msg: M)
+pub fn errors<P, T, M>(src: P, errs: Vec<Rich<T>>, msg: M)
 where
     P: AsRef<Path>,
     T: std::fmt::Debug,
@@ -44,20 +44,20 @@ where
         Report::build(ReportKind::Error, src.as_ref().to_owned(), 0).with_message(msg);
 
     for err in errs {
-        attach_err(&mut builder, err, src.as_ref());
+        attach_err(&mut builder, &err, src.as_ref());
     }
 
-    builder.finish().eprint(FileCache::default()).unwrap()
+    builder.finish().eprint(FileCache::default()).unwrap();
 }
 
 fn attach_err<'a, T: std::fmt::Debug>(
     report: &mut ReportBuilder<SrcSpan<'a>>,
-    err: Rich<T>,
+    err: &Rich<T>,
     path: &'a Path,
 ) {
     attach_reason(
         report,
-        SrcSpan::from_simple(err.span().clone(), path),
+        SrcSpan::from_simple(*err.span(), path),
         err.reason(),
     );
 }
@@ -69,7 +69,7 @@ fn attach_reason<'a, T: std::fmt::Debug>(
 ) {
     match reason {
         RichReason::ExpectedFound { found, .. } => {
-            report.add_label(Label::new(range).with_message(format!("Found {found:?}.")))
+            report.add_label(Label::new(range).with_message(format!("Found {found:?}.")));
         }
         RichReason::Custom(s) => report.add_label(Label::new(range).with_message(s)),
         RichReason::Many(reasons) => {
