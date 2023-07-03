@@ -1,13 +1,18 @@
 use chumsky::{
     error, extra,
     prelude::*,
-    text::{ascii, int},
+    text::{ascii, digits, int},
 };
 
 macro_rules! parse_num {
     ($prefix:literal, $filter:expr, $radix:literal, $on_fail:literal $(,)?) => {
         just($prefix)
-            .ignore_then(any().filter(|c: &char| c.is_whitespace()).slice())
+            .ignore_then(
+                any()
+                    .filter(|c: &char| !c.is_whitespace())
+                    .repeated()
+                    .slice(),
+            )
             .validate(|bin: &str, span, emitter| {
                 if !bin.chars().all(|c| c.is_digit($radix) || c == '_') {
                     emitter.emit(Rich::custom(span, $on_fail));
@@ -130,8 +135,8 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
         syntax(),
         ops(),
         delimeters(),
-        word,
         numbers(),
+        word,
     ))
     .or(any().validate(|t: char, span, emitter| {
         emitter.emit(<Rich<_> as error::Error<I<'a>>>::expected_found(
@@ -197,13 +202,21 @@ fn numbers<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
 
     let decimal = just("0d")
         .or_not()
-        .ignore_then(int(10).separated_by(just('_')).at_least(1).slice())
+        .ignore_then(digits(10).separated_by(just('_')).at_least(1).slice())
         .map(|s: I<'a>| s.chars().filter(|&c| c != '_').collect::<String>())
         .from_str()
         .unwrapped()
         .map(Token::Num);
 
     choice((binary, hex, octal, decimal))
+        .then(ascii::ident().or_not().map_with_span(|t, s| (t, s)))
+        .validate(|(num, (t, s)), _, emitter| {
+            if !t.map_or(true, str::is_empty) {
+                emitter.emit(Rich::custom(s, "Invalid suffix for number literal"));
+            }
+
+            num
+        })
 }
 
 fn delimeters<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
@@ -268,4 +281,33 @@ fn escape_chars<'a>() -> impl Parser<'a, I<'a>, char, E<'a>> {
         just('r').to('\r'),
         just('t').to('\t'),
     )))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn numbers_() {
+        let test = |s| numbers().parse(s).into_result().unwrap();
+        let test_err = |s| numbers().parse(s).into_result().unwrap_err();
+
+        [
+            "00",
+            "12_341",
+            "0h0123_4567_89ab_cDEF",
+            "0d123_496_789",
+            "0o0123_4567",
+            "0b01010_1010",
+        ]
+        .map(test);
+
+        [
+            "0acdefgh",
+            "0h_ghij_klmn",
+            "0d_abcd_efgh",
+            "0o_89ab_cdef",
+            "0b_0123_4567",
+        ]
+        .map(test_err);
+    }
 }
