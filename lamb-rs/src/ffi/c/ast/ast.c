@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "ast.h"
-#include "optimization.h"
 
 AstNode *new_astnode(AstNodeType type) {
     AstNode *node = calloc(1, sizeof(AstNode));

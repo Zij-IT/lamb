@@ -1,7 +1,6 @@
 const C_FILES: &[&str] = &[
     "./src/ffi/c/lib.c",
     "./src/ffi/c/ast/ast.c",
-    "./src/ffi/c/ast/optimization.c",
     "./src/ffi/c/compile/value.c",
     "./src/ffi/c/compile/chunk.c",
     "./src/ffi/c/compile/ast.c",
