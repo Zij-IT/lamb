@@ -6,7 +6,7 @@ use chumsky::{
 
 macro_rules! parse_num {
     ($prefix:literal, $filter:expr, $radix:literal, $on_fail:literal $(,)?) => {
-        just::<_, &'_ str, E<'_>>($prefix)
+        just($prefix)
             .ignore_then(any().filter(|c: &char| c.is_whitespace()).slice())
             .validate(|bin: &str, span, emitter| {
                 if !bin.chars().all(|c| c.is_digit($radix) || c == '_') {
@@ -134,7 +134,7 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
         numbers(),
     ))
     .or(any().validate(|t: char, span, emitter| {
-        emitter.emit(<Rich<_> as error::Error<&'_ str>>::expected_found(
+        emitter.emit(<Rich<_> as error::Error<I<'a>>>::expected_found(
             None,
             Some(t.into()),
             span,
@@ -195,10 +195,10 @@ fn numbers<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
         "Octal number may only contain [0-7_]"
     );
 
-    let decimal = just::<_, &'_ str, E<'_>>("0d")
+    let decimal = just("0d")
         .or_not()
         .ignore_then(int(10).separated_by(just('_')).at_least(1).slice())
-        .map(|s| s.chars().filter(|&c| c != '_').collect::<String>())
+        .map(|s: I<'a>| s.chars().filter(|&c| c != '_').collect::<String>())
         .from_str()
         .unwrapped()
         .map(Token::Num);
