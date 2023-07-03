@@ -3,7 +3,7 @@ use crate::{
         Assign, Atom, Binary, BinaryOp, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall,
         FuncDef, Ident, If, Index, Literal, Script, Statement, Unary, UnaryOp,
     },
-    token::{Delim, Op, Token},
+    tokenize::{Delim, Op, Token},
 };
 use chumsky::{extra, prelude::Rich, primitive::choice, Parser};
 use chumsky::{primitive::just, recursive::recursive, select, IterParser};

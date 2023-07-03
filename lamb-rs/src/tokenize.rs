@@ -1,6 +1,5 @@
 use chumsky::{
-    error::Error,
-    extra,
+    error, extra,
     prelude::*,
     text::{ascii, int},
 };
@@ -12,7 +11,7 @@ macro_rules! parse_num {
             .validate(|bin: &str, span, emitter| {
                 if !bin.chars().all(|c| c.is_digit($radix) || c == '_') {
                     emitter.emit(Rich::custom(span, $on_fail));
-                    return Token::Error(TokError::InvalidNumLit);
+                    return Token::Error(Error::InvalidNumLit);
                 }
 
                 let num = bin.chars().filter(|&c| c != '_').collect::<String>();
@@ -93,11 +92,11 @@ pub enum Token {
     Semi,
 
     // Error Handling
-    Error(TokError),
+    Error(Error),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum TokError {
+pub enum Error {
     InvalidChar(char),
     InvalidNumLit,
 }
@@ -105,7 +104,7 @@ pub enum TokError {
 type I<'a> = &'a str;
 type E<'a> = extra::Err<Rich<'a, char>>;
 
-pub fn lexer<'a>() -> impl Parser<'a, I<'a>, Vec<Token>, E<'a>> {
+pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<Token>, E<'a>> {
     // TODO:
     // + Reduce the weird budget being used for odd choice
     //   of escape char
@@ -135,12 +134,12 @@ pub fn lexer<'a>() -> impl Parser<'a, I<'a>, Vec<Token>, E<'a>> {
         numbers(),
     ))
     .or(any().validate(|t: char, span, emitter| {
-        emitter.emit(<Rich<_> as Error<&'_ str>>::expected_found(
+        emitter.emit(<Rich<_> as error::Error<&'_ str>>::expected_found(
             None,
             Some(t.into()),
             span,
         ));
-        Token::Error(TokError::InvalidChar(t))
+        Token::Error(Error::InvalidChar(t))
     }));
 
     let comment = just("--").ignore_then(none_of('\n').repeated()).padded();

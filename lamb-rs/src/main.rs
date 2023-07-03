@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let contents = std::fs::read_to_string(options.path.as_ref().unwrap()).unwrap();
 
-    let tokens = match token::lexer().parse(&*contents).into_output_errors() {
+    let tokens = match tokenize::lamb().parse(&*contents).into_output_errors() {
         (Some(t), errs) if errs.is_empty() => t,
         (_, errs) => {
             dbg!(errs);
