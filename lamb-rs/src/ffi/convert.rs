@@ -81,6 +81,7 @@ impl Convert for Statement {
 impl Convert for Expr {
     fn convert(&self) -> *mut AstNode_T {
         match self {
+            Expr::Error => panic!("Attempt to convert error node!"),
             Expr::Binary(b) => b.convert(),
             Expr::Unary(u) => u.convert(),
             Expr::FuncCall(f) => f.convert(),

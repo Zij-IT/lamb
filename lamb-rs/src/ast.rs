@@ -32,6 +32,7 @@ pub enum Expr {
     FuncDef(FuncDef),
     Block(Block),
     Atom(Atom),
+    Error,
 }
 
 impl std::fmt::Debug for Expr {
@@ -46,6 +47,7 @@ impl std::fmt::Debug for Expr {
             Expr::FuncDef(i) => i,
             Expr::Block(i) => i,
             Expr::Atom(i) => i,
+            Expr::Error => &"Error",
         };
 
         if f.alternate() {

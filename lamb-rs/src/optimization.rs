@@ -49,6 +49,7 @@ impl Optimize for Statement {
 impl Optimize for Expr {
     fn optimize(&mut self) -> bool {
         match self {
+            Expr::Error => false,
             Expr::Binary(b) => {
                 let change = b.optimize();
                 if let Some(e) = b.constant_fold() {
