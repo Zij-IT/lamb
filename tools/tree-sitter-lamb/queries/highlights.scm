@@ -1,5 +1,12 @@
 (line_comment) @comment.line
-(escape_sequence) @constant.character.escape
+
+(string_literal
+  (escape_sequence) @constant.character.escape
+  )
+
+(char_literal 
+  (escape_sequence) @constant.character.escape
+  )
 
 (function_call
   (identifier) @function
@@ -52,7 +59,7 @@
 
 [
   "rec"
-] @keyword.storage
+] @keyword.storage.modifier
 
 [
   (string_literal)
@@ -80,8 +87,8 @@
 ] @punctuation.bracket
 
 [
-  ":"
   ","
   ";"
   "->"
 ] @punctuation.delimeter
+
