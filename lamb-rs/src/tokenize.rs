@@ -160,9 +160,28 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
 
 fn chars<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
     just('\'')
-        .ignore_then(any().filter(|c| *c != ':' && *c != '\'').or(escape_chars()))
+        .ignore_then(
+            any()
+                .filter(|c| *c != ':' && *c != '\'')
+                .or(escape_chars())
+                .repeated()
+                .slice(),
+        )
         .then_ignore(just('\''))
-        .map(Token::Char)
+        .validate(|ch, span, emitter| {
+            if ch.len() == 1 {
+                Token::Char(ch.chars().next().expect("ch should have length 1"))
+            } else {
+                emitter.emit(Rich::custom(
+                    span,
+                    format!(
+                        "Char literal should contain {} 1 character",
+                        if ch.len() > 1 { "at most" } else { "at least" }
+                    ),
+                ));
+                Token::Char('f')
+            }
+        })
 }
 
 fn strings<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
