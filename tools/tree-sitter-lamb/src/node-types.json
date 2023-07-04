@@ -398,7 +398,17 @@
   {
     "type": "char_literal",
     "named": true,
-    "fields": {}
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "escape_sequence",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "elif",
@@ -1133,7 +1143,17 @@
   {
     "type": "string_literal",
     "named": true,
-    "fields": {}
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "escape_sequence",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "unary_expression",
@@ -1295,10 +1315,6 @@
     "named": false
   },
   {
-    "type": ":",
-    "named": false
-  },
-  {
     "type": ":=",
     "named": false
   },
@@ -1367,6 +1383,10 @@
     "named": false
   },
   {
+    "type": "escape_sequence",
+    "named": true
+  },
+  {
     "type": "false",
     "named": false
   },
@@ -1385,10 +1405,6 @@
   {
     "type": "line_comment",
     "named": true
-  },
-  {
-    "type": "n",
-    "named": false
   },
   {
     "type": "nil_literal",

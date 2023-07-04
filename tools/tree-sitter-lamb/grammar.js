@@ -187,32 +187,25 @@ module.exports = grammar({
       $._expression,
       ')',
     ),
+    _char_rest:        $ => token.immediate(prec(1, /[^:'\n]+/)),
+    _string_rest:      $ => token.immediate(prec(1, /[^:"\n]+/)),
     
-    _string_literal: $ => seq(
+    string_literal: $ => seq(
       '"',
-      repeat(
-        choice(
-          token.immediate(prec(1, /[^:"\n]+/)),
-          seq(':', choice('n', '"', ':',)),
-        )
-      ),
+      repeat(choice($._string_rest, $.escape_sequence)),
       '"',
     ),
     
-    _char_literal: $ => seq(
+    char_literal: $ => seq(
       "'",
-      choice(
-        token.immediate(prec(1, /[^:'\n]+/)),
-        seq(':', choice('n', "'", ':',)),
-      ),
+      repeat(choice($._char_rest, $.escape_sequence)),
       "'",
     ),
     
     // Tokens
+    escape_sequence:   $ => token.immediate(seq(':', choice('n', "'", ':', '"'))),
     number_literal:    $ => choice(seq(choice('0b'), repeat1(/[01]+/)), seq(choice('0o'), repeat1(/[0-7]+/)), seq(choice('0h'), repeat1(/[0-9abcdefABCDEF]+/)), seq(choice('0d'), repeat1(/[0-9]+/)), /[1-9][0-9]*|0/),
-    string_literal:    $ => $._string_literal,
     bool_literal:      $ => choice("true", "false"),
-    char_literal:      $ => $._char_literal,
     nil_literal:       $ => "nil",
     identifier:        $ => /[_a-zA-Z][_a-zA-Z0-9]*/,
 
