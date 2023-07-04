@@ -34,36 +34,40 @@ impl<'a> ariadne::Span for SrcSpan<'a> {
     }
 }
 
-pub fn errors<P, T, M>(src: P, errs: Vec<Rich<T>>, msg: M)
+pub fn errors<'a, S, T, M>(path: S, errs: Vec<Rich<T>>, msg: M)
 where
-    P: AsRef<Path>,
+    S: Into<Option<&'a Path>>,
     T: std::fmt::Debug,
     M: ToString,
 {
-    let mut builder =
-        Report::build(ReportKind::Error, src.as_ref().to_owned(), 0).with_message(msg);
+    let path = path.into().map_or(Path::new("repl"), |p| p.as_ref());
 
-    for err in errs {
-        attach_err(&mut builder, &err, src.as_ref());
-    }
-
-    builder.finish().eprint(FileCache::default()).unwrap();
+    errs.iter()
+        .fold(
+            Report::build(ReportKind::Error, path, 0).with_message(msg),
+            |report, err| attach_err(report, err, path),
+        )
+        .finish()
+        .eprint(FileCache::default())
+        .unwrap();
 }
 
-fn attach_err<'a, T: std::fmt::Debug>(
-    report: &mut ReportBuilder<SrcSpan<'a>>,
+fn attach_err<'p, 'r, T: std::fmt::Debug>(
+    mut report: ReportBuilder<'r, SrcSpan<'p>>,
     err: &Rich<T>,
-    path: &'a Path,
-) {
+    path: &'p Path,
+) -> ReportBuilder<'r, SrcSpan<'p>> {
     attach_reason(
-        report,
+        &mut report,
         SrcSpan::from_simple(*err.span(), path),
         err.reason(),
     );
+
+    report
 }
 
-fn attach_reason<'a, T: std::fmt::Debug>(
-    report: &mut ReportBuilder<SrcSpan<'a>>,
+fn attach_reason<'a, 'r, T: std::fmt::Debug>(
+    report: &mut ReportBuilder<'r, SrcSpan<'a>>,
     range: SrcSpan<'a>,
     reason: &RichReason<T>,
 ) {
