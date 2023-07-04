@@ -2,7 +2,7 @@ use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
 #[repr(C)]
-#[derive(ValueEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq)]
 pub enum OptLevel {
     None,
     Basic,
@@ -11,7 +11,7 @@ pub enum OptLevel {
 }
 
 #[repr(C)]
-#[derive(ValueEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq)]
 pub enum DebugLevel {
     None,
     Basic,
@@ -19,7 +19,7 @@ pub enum DebugLevel {
 }
 
 #[repr(C)]
-#[derive(ValueEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq)]
 pub enum GcDebugLevel {
     None,
     Alloc,

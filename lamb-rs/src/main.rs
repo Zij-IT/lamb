@@ -13,7 +13,7 @@ use chumsky::{
     Parser,
 };
 
-use crate::{report::errors, tokenize::Token};
+use crate::{cli::DebugLevel, report::errors, tokenize::Token};
 
 mod ast;
 mod cli;
@@ -31,10 +31,6 @@ fn main() {
 
     let tokens = match tokenize::lamb().parse(&*contents).into_output_errors() {
         (Some(t), errs) if errs.is_empty() => t,
-        (Some(t), errs) => {
-            errors(path, errs, "[Lamb] Lexer Errors:");
-            t
-        }
         (_, errs) => {
             errors(path, errs, "[Lamb] Lexer Errors:");
             return;
@@ -42,17 +38,19 @@ fn main() {
     };
 
     let eoi = SimpleSpan::new(contents.len(), contents.len());
-    let _script = match parse_script(tokens, eoi) {
+    let script = match parse_script(tokens, eoi) {
         (Some(t), errs) if errs.is_empty() => t,
-        (Some(t), errs) => {
-            errors(path, errs, "[Lamb] Parser Errors:");
-            t
-        }
         (_, errs) => {
             errors(path, errs, "[Lamb] Parser Errors:");
             return;
         }
     };
+
+    ffi::run_script(
+        &dbg!(script),
+        options.debug_level == DebugLevel::Full,
+        options.debug_level != DebugLevel::None,
+    );
 
     println!("Parsed '{}' successfully", options.path.unwrap().display());
 }
@@ -62,12 +60,6 @@ where
     I: IntoIterator<Item = (Token, SimpleSpan)> + 'a,
 {
     parse::script()
-        .parse(
-            Stream::from_iter(
-                toks.into_iter()
-                    .filter(|(tok, _span)| matches!(tok, Token::Error(..))),
-            )
-            .spanned(eoi),
-        )
+        .parse(Stream::from_iter(toks.into_iter()).spanned(eoi))
         .into_output_errors()
 }
