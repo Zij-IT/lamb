@@ -5,14 +5,14 @@
     clippy::cast_possible_wrap
 )]
 
-use crate::{cli::DebugLevel, report::errors};
+use crate::cli::DebugLevel;
 
 mod cli;
 mod optimization;
 mod repl;
 mod report;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> std::io::Result<()> {
     human_panic::setup_panic!();
 
     let cli::LambOptions {
@@ -30,8 +30,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    let Ok(script) = lamb_parse::parse_script(src.as_str(), path.as_deref(), errors, errors) else {
-        return Ok(());  
+    let script = match lamb_parse::parse_script(src.as_str()) {
+        Ok(s) => s,
+        Err(errs) => {
+            report::errors(&src, path.as_deref(), &errs, "[Lamb] Compiler Errors:");
+            return Ok(());
+        }
     };
 
     lamb_ffi::run_script(

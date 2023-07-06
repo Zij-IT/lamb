@@ -1,7 +1,32 @@
 use std::{ops::Range, path::Path};
 
-use ariadne::{FileCache, Label, Report, ReportBuilder, ReportKind};
-use chumsky::{error::RichReason, prelude::Rich, span::SimpleSpan};
+use ariadne::{Label, Report, ReportKind, Source};
+use lamb_parse::SyntaxError;
+
+pub fn errors<'a, S, P, M>(src: S, path: P, errs: &[SyntaxError], msg: M)
+where
+    S: AsRef<str>,
+    P: Into<Option<&'a Path>>,
+    M: ToString,
+{
+    let path = path.into().unwrap_or(Path::new("repl"));
+
+    errs.iter()
+        .fold(
+            Report::build(ReportKind::Error, path, 0).with_message(msg),
+            |mut report, err| {
+                let span = SrcSpan::from_span(err.raw_span(), path);
+                for reason in err.reasons() {
+                    report.add_label(Label::new(span.clone()).with_message(reason));
+                }
+
+                report
+            },
+        )
+        .finish()
+        .eprint(SrcCache::new(src.as_ref()))
+        .unwrap();
+}
 
 #[derive(Clone)]
 struct SrcSpan<'a> {
@@ -10,11 +35,8 @@ struct SrcSpan<'a> {
 }
 
 impl<'a> SrcSpan<'a> {
-    fn from_simple(span: SimpleSpan, path: &'a Path) -> Self {
-        Self {
-            span: span.into_range(),
-            path,
-        }
+    fn from_span(span: Range<usize>, path: &'a Path) -> Self {
+        Self { path, span }
     }
 }
 
@@ -34,52 +56,24 @@ impl<'a> ariadne::Span for SrcSpan<'a> {
     }
 }
 
-pub fn errors<'a, S, T, M>(path: S, errs: &[Rich<T>], msg: M)
-where
-    S: Into<Option<&'a Path>>,
-    T: std::fmt::Debug,
-    M: ToString,
-{
-    let path = path.into().unwrap_or(Path::new("repl"));
-
-    errs.iter()
-        .fold(
-            Report::build(ReportKind::Error, path, 0).with_message(msg),
-            |report, err| attach_err(report, err, path),
-        )
-        .finish()
-        .eprint(FileCache::default())
-        .unwrap();
+struct SrcCache {
+    src: Source,
 }
 
-fn attach_err<'p, 'r, T: std::fmt::Debug>(
-    mut report: ReportBuilder<'r, SrcSpan<'p>>,
-    err: &Rich<T>,
-    path: &'p Path,
-) -> ReportBuilder<'r, SrcSpan<'p>> {
-    attach_reason(
-        &mut report,
-        SrcSpan::from_simple(*err.span(), path),
-        err.reason(),
-    );
-
-    report
+impl SrcCache {
+    fn new(src: &str) -> Self {
+        Self {
+            src: Source::from(src),
+        }
+    }
 }
 
-fn attach_reason<'a, T: std::fmt::Debug>(
-    report: &mut ReportBuilder<'_, SrcSpan<'a>>,
-    range: SrcSpan<'a>,
-    reason: &RichReason<T>,
-) {
-    match reason {
-        RichReason::ExpectedFound { found, .. } => {
-            report.add_label(Label::new(range).with_message(format!("Found {found:?}.")));
-        }
-        RichReason::Custom(s) => report.add_label(Label::new(range).with_message(s)),
-        RichReason::Many(reasons) => {
-            for reason in reasons {
-                attach_reason(report, range.clone(), reason);
-            }
-        }
+impl ariadne::Cache<Path> for SrcCache {
+    fn fetch(&mut self, _id: &Path) -> Result<&Source, Box<dyn std::fmt::Debug + '_>> {
+        Ok(&self.src)
+    }
+
+    fn display<'a>(&self, id: &'a Path) -> Option<Box<dyn std::fmt::Display + 'a>> {
+        Some(Box::new(id.display()))
     }
 }
