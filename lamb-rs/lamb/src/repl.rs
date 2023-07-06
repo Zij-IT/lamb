@@ -1,3 +1,5 @@
+#![allow(clippy::unused_io_amount)]
+
 use std::io::{BufRead, Write};
 
 const REPL_START: &[u8] = concat!(
