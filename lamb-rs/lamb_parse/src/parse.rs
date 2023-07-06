@@ -17,14 +17,6 @@ use lamb_ast::{
     Index, Literal, Script, Statement, UnaryOp,
 };
 
-// expr() and expr[] would lead the parser to reparse the expression
-// if it's not parsed as: `expr` then (`()` or `[]`). To do this, a
-// middle man is introduced
-enum Chain {
-    Index(Expr),
-    Call(Vec<Expr>),
-}
-
 macro_rules! bin {
     ($tok:ident, $str:expr) => {{
         ::chumsky::pratt::left_infix(
@@ -51,6 +43,14 @@ macro_rules! unary {
     }};
 }
 
+// expr() and expr[] would lead the parser to reparse the expression
+// if it's not parsed as: `expr` then (`()` or `[]`). To do this, a
+// middle man is introduced in the form of `Chain`
+enum Chain {
+    Index(Expr),
+    Call(Vec<Expr>),
+}
+
 type E<'a, S> = extra::Err<Rich<'a, Token, S>>;
 
 pub fn script<'a, I, S>() -> impl Parser<'a, I, Script, E<'a, S>>
@@ -63,112 +63,134 @@ where
     })
 }
 
-fn statement<'a, I, S>() -> impl Parser<'a, I, Statement, E<'a, S>>
+pub fn statement<'a, I, S>() -> impl Parser<'a, I, Statement, E<'a, S>>
 where
     S: 'a,
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
 {
-    recursive(|stat| {
-        let expr = recursive(|expr| {
-            let literal = literal().map(|l| Expr::Atom(Atom::Literal(l)));
+    stat_inner(expr())
+}
 
-            let parend = parend(expr.clone());
+pub fn expr<'a, I, S>() -> impl Parser<'a, I, Expr, E<'a, S>> + Clone
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    recursive(|expr| {
+        // This cannot call `statement`, as that would result in infinite
+        // recursion. A statment must be defined in terms of an expression
+        // and in this case, we need the statements to be define by *THIS*
+        // expr that is currently being constructed.
+        //
+        // The definitions are pulled apart for easier maintainability.
+        let stat = stat_inner(expr.clone());
 
-            let array = array(expr.clone());
+        let literal = literal().map(|l| Expr::Atom(Atom::Literal(l)));
 
-            let ident = ident().map(|i| Expr::Atom(Atom::Ident(i)));
+        let parend = parend(expr.clone());
 
-            let block = block(stat.clone(), expr.clone());
+        let array = array(expr.clone());
 
-            let if_ = if_(expr.clone(), block.clone());
+        let ident = ident().map(|i| Expr::Atom(Atom::Ident(i)));
 
-            let fun_def = fun_def(expr.clone()).map(Expr::FuncDef);
+        let block = block(stat.clone(), expr.clone());
 
-            let case = case(stat.clone(), expr.clone()).map(Expr::Case);
+        let if_ = if_(expr.clone(), block.clone());
 
-            let atom = literal
-                .or(parend)
-                .or(array)
-                .or(ident)
-                .or(if_)
-                .or(fun_def)
-                .or(case)
-                .or(block.map(Expr::Block));
+        let fun_def = fun_def(expr.clone()).map(Expr::FuncDef);
 
-            let chain = atom.foldl(
-                call(expr.clone())
-                    .map(Chain::Call)
-                    .or(index(expr).map(Chain::Index))
-                    .repeated(),
-                |lhs, rhs| match rhs {
-                    Chain::Index(i) => Expr::Index(Index {
-                        indexee: Box::new(lhs),
-                        index: Box::new(i),
-                    }),
-                    Chain::Call(args) => Expr::FuncCall(FuncCall {
-                        callee: Box::new(lhs),
-                        args,
-                    }),
-                },
-            );
+        let case = case(stat.clone(), expr.clone()).map(Expr::Case);
 
-            let binaries = choice((
-                bin!(LApply, 1),
-                bin!(RApply, 1),
-                bin!(LCompose, 2),
-                bin!(RCompose, 2),
-                bin!(LogAnd, 3),
-                bin!(LogOr, 4),
-                bin!(Gt, 5),
-                bin!(Ge, 5),
-                bin!(Lt, 5),
-                bin!(Le, 5),
-                bin!(Eq, 5),
-                bin!(Ne, 5),
-                bin!(BinOr, 6),
-                bin!(BinXor, 7),
-                bin!(BinAnd, 8),
-                bin!(RShift, 9),
-                bin!(LShift, 9),
-                bin!(Add, 10),
-                bin!(Sub, 10),
-                bin!(Div, 11),
-                bin!(Mul, 11),
-                bin!(Mod, 11),
-            ));
+        let atom = literal
+            .or(parend)
+            .or(array)
+            .or(ident)
+            .or(if_)
+            .or(fun_def)
+            .or(case)
+            .or(block.map(Expr::Block));
 
-            let prefixes = choice((
-                unary!(Op::Sub, UnaryOp::NumNeg, 12),
-                unary!(Op::LogNot, UnaryOp::LogNot, 12),
-                unary!(Op::BinComp, UnaryOp::BinNot, 12),
-            ));
+        let chain = atom.foldl(
+            call(expr.clone())
+                .map(Chain::Call)
+                .or(index(expr).map(Chain::Index))
+                .repeated(),
+            |lhs, rhs| match rhs {
+                Chain::Index(i) => Expr::Index(Index {
+                    indexee: Box::new(lhs),
+                    index: Box::new(i),
+                }),
+                Chain::Call(args) => Expr::FuncCall(FuncCall {
+                    callee: Box::new(lhs),
+                    args,
+                }),
+            },
+        );
 
-            chain.pratt(binaries).with_prefix_ops(prefixes)
+        let binaries = choice((
+            bin!(LApply, 1),
+            bin!(RApply, 1),
+            bin!(LCompose, 2),
+            bin!(RCompose, 2),
+            bin!(LogAnd, 3),
+            bin!(LogOr, 4),
+            bin!(Gt, 5),
+            bin!(Ge, 5),
+            bin!(Lt, 5),
+            bin!(Le, 5),
+            bin!(Eq, 5),
+            bin!(Ne, 5),
+            bin!(BinOr, 6),
+            bin!(BinXor, 7),
+            bin!(BinAnd, 8),
+            bin!(RShift, 9),
+            bin!(LShift, 9),
+            bin!(Add, 10),
+            bin!(Sub, 10),
+            bin!(Div, 11),
+            bin!(Mul, 11),
+            bin!(Mod, 11),
+        ));
+
+        let prefixes = choice((
+            unary!(Op::Sub, UnaryOp::NumNeg, 12),
+            unary!(Op::LogNot, UnaryOp::LogNot, 12),
+            unary!(Op::BinComp, UnaryOp::BinNot, 12),
+        ));
+
+        chain.pratt(binaries).with_prefix_ops(prefixes)
+    })
+}
+
+fn stat_inner<'a, I, S>(
+    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
+) -> impl Parser<'a, I, Statement, E<'a, S>> + Clone
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    let assign = ident()
+        .then_ignore(just(Token::Define))
+        .then(expr.clone())
+        .then_ignore(just(Token::Semi))
+        .map(|(i, e)| {
+            Statement::Assign(Assign {
+                assignee: i,
+                value: e,
+            })
         });
 
-        let assign = ident()
-            .then_ignore(just(Token::Define))
-            .then(expr.clone())
-            .then_ignore(just(Token::Semi))
-            .map(|(i, e)| {
-                Statement::Assign(Assign {
-                    assignee: i,
-                    value: e,
-                })
-            });
+    let expr_stmt = expr
+        .clone()
+        .then_ignore(just(Token::Semi))
+        .map(Statement::Expr);
 
-        let expr_stmt = expr
-            .clone()
-            .then_ignore(just(Token::Semi))
-            .map(Statement::Expr);
+    let ret = just(Token::Return)
+        .ignore_then(expr.clone().or_not())
+        .then_ignore(just(Token::Semi))
+        .map(Statement::Return);
 
-        let ret = just(Token::Return)
-            .ignore_then(expr.or_not())
-            .then_ignore(just(Token::Semi))
-            .map(Statement::Return);
-
-        assign.or(expr_stmt).or(ret)
-    })
+    assign.or(expr_stmt).or(ret)
 }
 
 fn index<'a, I, S>(
@@ -397,6 +419,8 @@ where
     ))
 }
 
+// This was copied from the original `chumsky` implementation that is currently
+// not available in 1.0.0.alpha-4.
 fn nested_delimiters<'a, I, O, E, F, const N: usize>(
     start: I::Token,
     end: I::Token,
@@ -409,7 +433,6 @@ where
     E: extra::ParserExtra<'a, I> + MaybeSync,
     F: Fn(I::Span) -> O + Clone,
 {
-    // TODO: Does this actually work? TESTS!
     recursive({
         let (start, end) = (start.clone(), end.clone());
         |block| {
