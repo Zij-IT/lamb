@@ -1,15 +1,9 @@
-[package]
-name = "lamb"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[build-dependencies]
-bindgen = "0.66.1"
-cc = "1.0.73"
-
-[dependencies]
-ariadne = { version = "0.3.0", features = ["auto-color"] }
-chumsky = { path = "../../../rust/others/chumsky", features = ["pratt"] }
-clap = { version = "4.3.0", features = ["derive"] }
-human-panic = "1.1.5"
+members = [
+    "lamb_parse",
+    "lamb_ffi",
+    "lamb_ast",
+    "lamb",
+]

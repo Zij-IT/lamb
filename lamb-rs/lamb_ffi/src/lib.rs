@@ -2,9 +2,9 @@
 mod bindings;
 mod convert;
 
-use crate::ast::Script;
 use bindings::AstNode_T;
 use convert::Convert;
+use lamb_ast::Script;
 
 #[cfg(test)]
 mod repr;

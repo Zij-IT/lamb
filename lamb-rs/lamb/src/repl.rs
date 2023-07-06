@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-const REPL_START: &'static [u8] = concat!(
+const REPL_START: &[u8] = concat!(
     ",---@> Baaaah... Welcome to the Lamb REPL! (Lamb v0.1.0)\n",
     " W-W'  Type ':quit' to exit, or ':run' to run the input.\n",
     "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",

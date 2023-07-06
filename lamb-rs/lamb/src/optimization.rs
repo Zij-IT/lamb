@@ -1,9 +1,11 @@
 #![allow(clippy::needless_bitwise_bool)]
 
-use crate::ast::{
+use lamb_ast::{
     Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
     If, Index, Literal, Script, Statement, Unary,
 };
+
+use self::extra_impls::{BinaryExt, UnaryExt};
 
 pub trait Optimize {
     fn optimize(&mut self) -> bool;
@@ -184,10 +186,14 @@ impl Optimize for Atom {
 }
 
 mod extra_impls {
-    use crate::ast::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
+    use lamb_ast::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
 
-    impl Expr {
-        pub fn as_literal_mut(&mut self) -> Option<&mut Literal> {
+    pub(super) trait ExprExt {
+        fn as_literal_mut(&mut self) -> Option<&mut Literal>;
+    }
+
+    impl ExprExt for Expr {
+        fn as_literal_mut(&mut self) -> Option<&mut Literal> {
             match self {
                 Expr::Atom(Atom::Literal(l)) => Some(l),
                 _ => None,
@@ -195,8 +201,14 @@ mod extra_impls {
         }
     }
 
-    impl Binary {
-        pub fn constant_fold(&mut self) -> Option<Expr> {
+    pub(super) trait BinaryExt {
+        fn constant_fold(&mut self) -> Option<Expr>;
+
+        fn as_literal_tuple_mut(&mut self) -> Option<(&mut Literal, &mut BinaryOp, &mut Literal)>;
+    }
+
+    impl BinaryExt for Binary {
+        fn constant_fold(&mut self) -> Option<Expr> {
             match self.as_literal_tuple_mut()? {
                 (Literal::Nil, op, Literal::Nil) => op.apply_to_nils(),
                 (Literal::Str(l), op, Literal::Str(r)) => op.apply_to_strs(l, r),
@@ -215,7 +227,15 @@ mod extra_impls {
         }
     }
 
-    impl BinaryOp {
+    pub(super) trait BinaryOpExt {
+        fn apply_to_nums(self, l: i64, r: i64) -> Option<Expr>;
+        fn apply_to_strs(self, l: &str, r: &str) -> Option<Expr>;
+        fn apply_to_chars(self, l: char, r: char) -> Option<Expr>;
+        fn apply_to_bools(self, l: bool, r: bool) -> Option<Expr>;
+        fn apply_to_nils(self) -> Option<Expr>;
+    }
+
+    impl BinaryOpExt for BinaryOp {
         fn apply_to_nums(self, l: i64, r: i64) -> Option<Expr> {
             Some(Expr::Atom(Atom::Literal(match self {
                 BinaryOp::Add => Literal::Num(l + r),
@@ -238,7 +258,7 @@ mod extra_impls {
             })))
         }
 
-        fn apply_to_strs(self, l: &String, r: &String) -> Option<Expr> {
+        fn apply_to_strs(self, l: &str, r: &str) -> Option<Expr> {
             Some(Expr::Atom(Atom::Literal(match self {
                 BinaryOp::Add => Literal::Str(format!("{l}{r}")),
                 BinaryOp::Gt => Literal::Bool(l > r),
@@ -286,8 +306,12 @@ mod extra_impls {
         }
     }
 
-    impl Unary {
-        pub fn constant_fold(&mut self) -> Option<Expr> {
+    pub(super) trait UnaryExt {
+        fn constant_fold(&mut self) -> Option<Expr>;
+    }
+
+    impl UnaryExt for Unary {
+        fn constant_fold(&mut self) -> Option<Expr> {
             let Unary { rhs, op } = self;
             match (rhs.as_literal_mut()?, op) {
                 (Literal::Num(n), UnaryOp::NumNeg) => Some(Expr::from(Literal::Num(-*n))),

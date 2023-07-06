@@ -1,21 +1,25 @@
-use crate::{
-    ast::{
-        Assign, Atom, Binary, BinaryOp, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall,
-        FuncDef, Ident, If, Index, Literal, Script, Statement, Unary, UnaryOp,
-    },
-    tokenize::{Delim, Op, Token},
-};
+mod tokenize;
+use std::path::Path;
+
+use tokenize::{Delim, Op, Token};
+
 use chumsky::{
     extra,
-    input::ValueInput,
+    input::{Stream, ValueInput},
     prelude::{Input, Rich},
-    primitive::{any, choice, none_of},
+    primitive::{any, choice, just, none_of},
     recovery::{via_parser, ViaParser},
+    recursive::recursive,
+    select,
+    span::SimpleSpan,
     util::MaybeSync,
-    Parser,
+    IterParser, Parser,
 };
 
-use chumsky::{primitive::just, recursive::recursive, select, IterParser};
+use lamb_ast::{
+    Assign, Atom, Binary, BinaryOp, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall,
+    FuncDef, Ident, If, Index, Literal, Script, Statement, Unary, UnaryOp,
+};
 
 type E<'a, S> = extra::Err<Rich<'a, Token, S>>;
 
@@ -43,7 +47,39 @@ macro_rules! unary {
     }};
 }
 
-pub fn script<'a, I, S>() -> impl Parser<'a, I, Script, E<'a, S>>
+pub fn parse_script<'p, F1, F2, P>(
+    src: &str,
+    path: P,
+    mut on_errs_c: F1,
+    mut on_errs_t: F2,
+) -> Result<lamb_ast::Script, ()>
+where
+    P: Into<Option<&'p Path>>,
+    F1: FnMut(P, &[Rich<char>], String),
+    F2: FnMut(P, &[Rich<Token>], String),
+{
+    let tokens = match tokenize::lamb().parse(src).into_output_errors() {
+        (Some(t), errs) if errs.is_empty() => t,
+        (_, errs) => {
+            on_errs_c(path, &errs, "[Lamb] Lexer Errors:".into());
+            return Err(());
+        }
+    };
+
+    let eoi = SimpleSpan::new(src.len(), src.len());
+    match script()
+        .parse(Stream::from_iter(tokens.into_iter()).spanned(eoi))
+        .into_output_errors()
+    {
+        (Some(t), errs) if errs.is_empty() => Ok(t),
+        (_, errs) => {
+            on_errs_t(path, &errs, "[Lamb] Parser Errors:".into());
+            Err(())
+        }
+    }
+}
+
+fn script<'a, I, S>() -> impl Parser<'a, I, Script, E<'a, S>>
 where
     S: 'a,
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
@@ -53,7 +89,7 @@ where
     })
 }
 
-pub fn statement<'a, I, S>() -> impl Parser<'a, I, Statement, E<'a, S>>
+fn statement<'a, I, S>() -> impl Parser<'a, I, Statement, E<'a, S>>
 where
     S: 'a,
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,

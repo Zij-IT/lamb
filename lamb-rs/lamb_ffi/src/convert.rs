@@ -1,6 +1,6 @@
 use std::ffi::{CStr, CString};
 
-use crate::ast::{
+use lamb_ast::{
     Assign, Atom, Binary, BinaryOp, Block, Case, Either, Else, Expr, FuncCall, FuncDef, Ident, If,
     Index, Literal, Script, Statement, Unary, UnaryOp,
 };
@@ -156,7 +156,7 @@ impl Convert for FuncCall {
         unsafe {
             let node = new_node(NodeKind::FuncCall);
             (*node).kids[0] = callee.convert();
-            (*node).kids[1] = args.iter().map(Convert::convert).convert();
+            (*node).kids[1] = args.convert();
             node
         }
     }
@@ -263,7 +263,7 @@ impl Convert for Literal {
 
 impl Convert for FuncDef {
     fn convert(&self) -> *mut AstNode_T {
-        let args = self.args.iter().map(Convert::convert).convert();
+        let args = self.args.convert();
         let body = self.body.convert();
         let is_rec = Literal::Bool(self.is_recursive).convert();
 
@@ -284,7 +284,7 @@ impl Convert for Atom {
             Atom::Literal(l) => l.convert(),
             Atom::Array(a) => unsafe {
                 let node = new_node(NodeKind::Array);
-                (*node).kids[0] = a.iter().map(Convert::convert).convert();
+                (*node).kids[0] = a.convert();
                 node
             },
         }
@@ -335,10 +335,7 @@ impl Convert for Ident {
     }
 }
 
-impl<T> Convert for T
-where
-    T: Iterator<Item = *mut AstNode_T> + Clone + DoubleEndedIterator,
-{
+impl<T: Convert> Convert for Vec<T> {
     fn convert(&self) -> *mut AstNode_T {
         // Build the list backwards:
         //
@@ -374,7 +371,8 @@ where
         //   node
         //
 
-        self.clone()
+        self.iter()
+            .map(Convert::convert)
             .rev()
             .fold(std::ptr::null_mut(), |acc, i| unsafe {
                 let node = new_node(NodeKind::NodeList);
@@ -512,13 +510,10 @@ impl NodeKind {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        ast::{
-            Assign, Atom, Binary, BinaryOp, Block, Expr, Ident, Literal, Script, Statement, Unary,
-            UnaryOp,
-        },
-        ffi::convert::Convert,
-        ffi::Ast,
+    use crate::{convert::Convert, repr::script_from_ptr, Ast};
+    use lamb_ast::{
+        Assign, Atom, Binary, BinaryOp, Block, Expr, Ident, Literal, Script, Statement, Unary,
+        UnaryOp,
     };
 
     #[test]
@@ -804,7 +799,7 @@ mod tests {
 
         for script in scripts {
             let clone = script.clone();
-            let scr = unsafe { Script::from_ptr(clone.convert()).unwrap() };
+            let scr = unsafe { script_from_ptr(clone.convert()).unwrap() };
             assert_eq!(script, scr);
         }
     }

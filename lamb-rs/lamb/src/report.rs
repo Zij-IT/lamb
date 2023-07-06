@@ -34,13 +34,13 @@ impl<'a> ariadne::Span for SrcSpan<'a> {
     }
 }
 
-pub fn errors<'a, S, T, M>(path: S, errs: Vec<Rich<T>>, msg: M)
+pub fn errors<'a, S, T, M>(path: S, errs: &[Rich<T>], msg: M)
 where
     S: Into<Option<&'a Path>>,
     T: std::fmt::Debug,
     M: ToString,
 {
-    let path = path.into().map_or(Path::new("repl"), |p| p.as_ref());
+    let path = path.into().unwrap_or(Path::new("repl"));
 
     errs.iter()
         .fold(
@@ -66,8 +66,8 @@ fn attach_err<'p, 'r, T: std::fmt::Debug>(
     report
 }
 
-fn attach_reason<'a, 'r, T: std::fmt::Debug>(
-    report: &mut ReportBuilder<'r, SrcSpan<'a>>,
+fn attach_reason<'a, T: std::fmt::Debug>(
+    report: &mut ReportBuilder<'_, SrcSpan<'a>>,
     range: SrcSpan<'a>,
     reason: &RichReason<T>,
 ) {

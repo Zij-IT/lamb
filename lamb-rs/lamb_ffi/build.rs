@@ -1,17 +1,17 @@
 const C_FILES: &[&str] = &[
-    "./src/ffi/c/lib.c",
-    "./src/ffi/c/ast/ast.c",
-    "./src/ffi/c/compile/value.c",
-    "./src/ffi/c/compile/chunk.c",
-    "./src/ffi/c/compile/ast.c",
-    "./src/ffi/c/compile/object.c",
-    "./src/ffi/c/compile/table.c",
-    "./src/ffi/c/compile/compiler.c",
-    "./src/ffi/c/compile/memory.c",
-    "./src/ffi/c/compile/misc.c",
-    "./src/ffi/c/debug/debug.c",
-    "./src/ffi/c/vm/vm.c",
-    "./src/ffi/c/vm/native.c",
+    "./src/c/lib.c",
+    "./src/c/ast/ast.c",
+    "./src/c/compile/value.c",
+    "./src/c/compile/chunk.c",
+    "./src/c/compile/ast.c",
+    "./src/c/compile/object.c",
+    "./src/c/compile/table.c",
+    "./src/c/compile/compiler.c",
+    "./src/c/compile/memory.c",
+    "./src/c/compile/misc.c",
+    "./src/c/debug/debug.c",
+    "./src/c/vm/vm.c",
+    "./src/c/vm/native.c",
 ];
 
 fn main() {
@@ -42,6 +42,6 @@ fn main() {
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Unable to generate bindings")
-        .write_to_file("src/ffi/bindings.rs")
+        .write_to_file("src/bindings.rs")
         .expect("Couldn't write bindings!");
 }
