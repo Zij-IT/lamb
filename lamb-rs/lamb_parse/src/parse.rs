@@ -186,7 +186,7 @@ where
         .map(Statement::Expr);
 
     let ret = just(Token::Return)
-        .ignore_then(expr.clone().or_not())
+        .ignore_then(expr.or_not())
         .then_ignore(just(Token::Semi))
         .map(Statement::Return);
 

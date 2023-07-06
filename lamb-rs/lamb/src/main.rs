@@ -25,7 +25,7 @@ fn main() -> std::io::Result<()> {
         },
     };
 
-    let script = match lamb_parse::parse_script(src.as_str()) {
+    let script = match lamb_parse::script(src.as_str()) {
         Ok(s) => s,
         Err(errs) => {
             report::errors(&src, path.as_deref(), &errs, "[Lamb] Compiler Errors:");
