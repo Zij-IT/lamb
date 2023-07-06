@@ -13,8 +13,8 @@ use chumsky::{
 };
 
 use lamb_ast::{
-    Assign, Atom, Binary, BinaryOp, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall,
-    FuncDef, Ident, If, Index, Literal, Script, Statement, Unary, UnaryOp,
+    Assign, Atom, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident, If,
+    Index, Literal, Script, Statement, UnaryOp,
 };
 
 // expr() and expr[] would lead the parser to reparse the expression
@@ -27,17 +27,27 @@ enum Chain {
 
 macro_rules! bin {
     ($tok:ident, $str:expr) => {{
-        chumsky::pratt::left_infix(just(Token::Op(Op::$tok)), $str, |lhs, rhs| {
-            Expr::Binary(Binary::new(lhs, rhs, BinaryOp::$tok))
-        })
+        ::chumsky::pratt::left_infix(
+            ::chumsky::primitive::just(crate::tokenize::Token::Op(crate::tokenize::Op::$tok)),
+            $str,
+            |lhs, rhs| {
+                ::lamb_ast::Expr::Binary(::lamb_ast::Binary::new(
+                    lhs,
+                    rhs,
+                    ::lamb_ast::BinaryOp::$tok,
+                ))
+            },
+        )
     }};
 }
 
 macro_rules! unary {
     ($op:expr, $uop:expr, $str:expr) => {{
-        chumsky::pratt::prefix(just(Token::Op($op)), $str, |rhs| {
-            Expr::Unary(Unary::new(rhs, $uop))
-        })
+        ::chumsky::pratt::prefix(
+            ::chumsky::primitive::just(crate::tokenize::Token::Op($op)),
+            $str,
+            |rhs| ::lamb_ast::Expr::Unary(::lamb_ast::Unary::new(rhs, $uop)),
+        )
     }};
 }
 
