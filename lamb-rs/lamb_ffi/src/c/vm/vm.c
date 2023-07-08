@@ -205,11 +205,6 @@ InterpretResult vm_run(Vm *vm) {
                 vm_push_stack(vm, value);
                 break;
             }
-            case OpDefineLocal: {
-                i32 slot = vm_read_constant(vm).as.intn;
-                vm_frame(vm)->slots[slot] = *vm_peek_stack(vm);
-                break;
-            }
             case OpGetLocal: {
                 i32 slot = vm_read_constant(vm).as.intn;
                 vm_push_stack(vm, vm_frame(vm)->slots[slot]);

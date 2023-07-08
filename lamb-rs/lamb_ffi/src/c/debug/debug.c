@@ -48,8 +48,6 @@ static i32 print_op(Chunk *chunk, i32 offset) {
             return print_simple_op("OpDefineGlobal");
         case OpGetGlobal:
             return print_simple_op("OpGetGlobal");
-        case OpDefineLocal:
-            return print_simple_op("OpDefineLocal");
         case OpGetLocal:
             return print_simple_op("OpGetLocal");
         case OpJump:

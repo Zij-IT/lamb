@@ -160,9 +160,6 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
         Local loc = {
             .depth = compiler->scope_depth, .name = rec_func_ident->chars, .is_captured = false};
         local_arr_write(vm, &compiler->locals, loc);
-
-        chunk_write(vm, compiler_chunk(compiler), OpDefineLocal);
-        chunk_write_constant(vm, compiler_chunk(compiler), new_int(compiler->locals.len - 1));
     }
 
     return CarOk;
@@ -604,9 +601,6 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 Local loc = {
                     .depth = compiler->scope_depth, .name = ident->chars, .is_captured = false};
                 local_arr_write(vm, &compiler->locals, loc);
-
-                chunk_write(vm, compiler_chunk(compiler), OpDefineLocal);
-                chunk_write_constant(vm, compiler_chunk(compiler), new_int(compiler->locals.len));
             }
 
             break;
