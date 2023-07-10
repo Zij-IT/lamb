@@ -54,6 +54,27 @@ static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
     return new_nil();
 }
 
+static Value lamb_NATIVE_assert_eq(i32 arg_count, Value *args) {
+    if (arg_count == 2) {
+        switch (value_compare(args, args + 1)) {
+            case OrderEqual:
+                return new_nil();
+            case OrderGreater:
+            case OrderLess:
+                // TODO: These should output to stderr
+                printf("Equality assertion failed:");
+                printf("\n * lhs: ");
+                print_value(args[0]);
+                printf("\n * rhs: ");
+                print_value(args[1]);
+                printf("\n");
+                break;
+        }
+    }
+
+    return new_nil();
+}
+
 static Value lamb_user_int(__attribute__((unused)) i32 arg_count,
                            __attribute__((unused)) Value *args) {
     char x_buffer[80];
@@ -100,4 +121,5 @@ void set_natives(Vm *vm) {
     define_native(vm, "rand", lamb_rand);
     define_native(vm, "len", lamb_len);
     define_native(vm, "assert", lamb_NATIVE_assert);
+    define_native(vm, "assert_eq", lamb_NATIVE_assert_eq);
 }

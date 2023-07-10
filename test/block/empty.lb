@@ -1,0 +1,12 @@
+{};
+
+if true {};
+if false {} else {};
+
+empty_func := fn(x) -> {};
+
+empty_case := case {} {
+  nil -> {},
+};
+
+assert_eq({}, nil);
