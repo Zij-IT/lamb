@@ -134,7 +134,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
     // depth must match.
-    func_comp.locals.values[0].depth = 1;
+    func_comp.locals.values[0].depth = func_comp.scope_depth;
     block.offset += 1;
 
     if (is_recursive->val.b) {
@@ -187,6 +187,22 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
                                         str name) {
     Compiler func_comp;
     compiler_init(vm, &func_comp, FtNormal);
+    Block block = {
+        .base = 1,
+        .offset = 0,
+        .depth = func_comp.scope_depth + 1,
+        .prev = compiler->block,
+    };
+
+    func_comp.block = &block;
+
+    // The first local in a function is actually either a nameless value,
+    // or the function itself, and in order for it to be accessible the
+    // depth must match.
+    func_comp.locals.values[0].depth = 1;
+    block.offset += 1;
+
+    // Implicitly done through 
     compiler_new_scope(&func_comp);
     func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
     func_comp.function->name = ANON_FUNC_NAME;
@@ -657,6 +673,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             if (value_node->type == AstntFuncDef && value_node->kids[2]->val.b) {
                 BUBBLE(compile_rec_func_def(vm, compiler, node));
+                STACK_DIFF(compiler, 1);
                 break;
             }
 
