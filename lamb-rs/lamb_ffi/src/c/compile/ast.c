@@ -122,12 +122,28 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     AstNode *is_recursive = node->kids[2];
 
     Compiler func_comp = new_function_compiler(vm, compiler, name);
+    Block block = {
+        .base = 0,
+        .offset = 0,
+        .depth = func_comp.scope_depth,
+        .prev = NULL,
+    };
+
+    func_comp.block = &block;
+
+    // The first local in a function is actually either a nameless value,
+    // or the function itself, and in order for it to be accessible the
+    // depth must match.
+    func_comp.locals.values[0].depth = 1;
+    block.offset += 1;
+
     if (is_recursive->val.b) {
         func_comp.locals.values[0].name = name;
     }
 
     for (AstNode *arg = func_args; arg != NULL; arg = arg->kids[1]) {
         add_arg_to_compiler(vm, &func_comp, arg);
+        block.offset += 1;
     }
 
     BUBBLE(compile(vm, &func_comp, func_body));
