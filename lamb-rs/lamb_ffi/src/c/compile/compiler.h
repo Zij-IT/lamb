@@ -20,6 +20,13 @@ typedef struct {
     bool is_local;
 } Upvalue;
 
+typedef struct Block {
+    i32 base;
+    i32 offset;
+    i32 depth;
+    struct Block* prev;
+} Block;
+
 typedef struct Compiler {
     LocalArray locals;
 
@@ -27,6 +34,7 @@ typedef struct Compiler {
     Upvalue upvalues[UINT8_MAX];
 
     struct Compiler *enclosing;
+    Block *block;
 
     i32 scope_depth;
     FuncType type;

@@ -7,6 +7,7 @@
 void compiler_init(Vm *vm, Compiler *compiler, FuncType type) {
     compiler->enclosing = NULL;
     compiler->function = NULL;
+    compiler->block = NULL;
     compiler->scope_depth = 0;
     compiler->type = type;
     local_arr_init(&compiler->locals);

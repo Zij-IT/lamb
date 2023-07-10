@@ -11,6 +11,8 @@
 #define UPVALUE_NOT_FOUND -1
 #define ANON_FUNC_NAME "anonymous"
 
+#define STACK_DIFF(compiler, diff) ((compiler)->block->offset += (diff))
+
 static bool is_stmt(AstNodeType type) {
     switch (type) {
         case AstntReturn:
@@ -210,10 +212,12 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
 }
 
 CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
+    compiler->block->depth = compiler->scope_depth;
     switch (node->type) {
         case AstntStrLit: {
             LambString *lit = cstr_to_lambstring(vm, node->val.s);
             chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)lit));
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntIdent: {
@@ -222,6 +226,22 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             i32 local_slot = resolve_local(compiler, ident);
             if (local_slot != LOCAL_NOT_FOUND) {
                 chunk_write(vm, compiler_chunk(compiler), OpGetLocal);
+
+                i32 depth = compiler->locals.values[local_slot].depth; 
+                i32 base = -1;
+                for (Block* bl = compiler->block; bl != NULL; bl = bl->prev) {
+                    if (bl->depth == depth) {
+                        base = bl->base;
+                        break;
+                    }
+                }
+
+                i32 local_idx = 0;
+                for (i32 idx = local_slot - 1; idx >= 0 && compiler->locals.values[idx].depth == depth; idx--) {
+                    local_idx++;
+                }
+
+                i32 local_slot = base + local_idx;
                 chunk_write_constant(vm, compiler_chunk(compiler), new_int(local_slot));
             } else {
                 i32 upvalue_slot = resolve_upvalue(compiler, ident);
@@ -234,133 +254,157 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 }
             }
 
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntNilLit: {
             chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntNumLit: {
             chunk_write_constant(vm, compiler_chunk(compiler), new_int(node->val.n));
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntCharLit: {
             chunk_write_constant(vm, compiler_chunk(compiler), new_char(node->val.c));
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntBoolLit: {
             chunk_write_constant(vm, compiler_chunk(compiler), new_boolean(node->val.b));
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntUnaryNeg: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             chunk_write(vm, compiler_chunk(compiler), OpNumNeg);
+            STACK_DIFF(compiler, 0);
             break;
         }
         case AstntUnaryLogNot: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             chunk_write(vm, compiler_chunk(compiler), OpLogNeg);
+            STACK_DIFF(compiler, 0);
             break;
         }
         case AstntUnaryBitNot: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             chunk_write(vm, compiler_chunk(compiler), OpBinNeg);
+            STACK_DIFF(compiler, 0);
             break;
         }
         case AstntBinaryAdd: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpAdd);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinarySub: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpSub);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryMul: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpMul);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryDiv: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpDiv);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryMod: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpMod);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryEq: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpEq);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryNe: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpNe);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryGt: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpGt);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryGe: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpGe);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLt: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpLt);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLe: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpLe);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryOr: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpBinOr);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryXor: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpBinXor);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryAnd: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpBinAnd);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryRShift: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpRShift);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLShift: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpLShift);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLogAnd: {
@@ -369,6 +413,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             chunk_write(vm, compiler_chunk(compiler), OpPop);
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_patch_jump(compiler_chunk(compiler), if_false);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLogOr: {
@@ -379,6 +424,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             chunk_write(vm, compiler_chunk(compiler), OpPop);
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_patch_jump(compiler_chunk(compiler), skip_right);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLCompose: {
@@ -386,12 +432,14 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             AstNode *rhs = node->kids[1];
 
             compile_compose(vm, compiler, lhs, rhs, "BinaryLCompose");
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryRCompose: {
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
             compile_compose(vm, compiler, rhs, lhs, "BinaryRCompose");
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLApply: {
@@ -403,6 +451,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             chunk_write(vm, compiler_chunk(compiler), OpCall);
             chunk_write_constant(vm, compiler_chunk(compiler), new_int(1));
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryRApply: {
@@ -414,10 +463,12 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             chunk_write(vm, compiler_chunk(compiler), OpCall);
             chunk_write_constant(vm, compiler_chunk(compiler), new_int(1));
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntFuncDef: {
             BUBBLE(compile_function(vm, compiler, node, ANON_FUNC_NAME));
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntFuncCall: {
@@ -433,9 +484,10 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             chunk_write(vm, compiler_chunk(compiler), OpCall);
             chunk_write_constant(vm, compiler_chunk(compiler), new_int((i64)arg_count));
+            STACK_DIFF(compiler, -arg_count);
             break;
         }
-        case AstntReturn: {
+    case AstntReturn: {
             AstNode *val = node->kids[0];
             if (val == NULL) {
                 chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
@@ -443,6 +495,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 BUBBLE(compile(vm, compiler, val));
             }
             chunk_write(vm, compiler_chunk(compiler), OpReturn);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntArray: {
@@ -452,6 +505,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             if (curr == NULL) {
                 chunk_write_constant(vm, compiler_chunk(compiler), new_int(0));
                 chunk_write(vm, compiler_chunk(compiler), OpMakeArray);
+                STACK_DIFF(compiler, 1);
                 return CarOk;
             }
 
@@ -476,12 +530,14 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             }
             chunk_write_constant(vm, compiler_chunk(compiler), new_int(len));
             chunk_write(vm, compiler_chunk(compiler), OpMakeArray);
+            STACK_DIFF(compiler, -len + 1);
             break;
         }
         case AstntArrayIndex: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
             chunk_write(vm, compiler_chunk(compiler), OpIndexArray);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntIf: {
@@ -511,11 +567,13 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             chunk_patch_jump(compiler_chunk(compiler), past_else);
 
+            STACK_DIFF(compiler, 0);
             break;
         }
         case AstntCase: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
+            STACK_DIFF(compiler, 0);
             break;
         }
         case AstntCaseArm: {
@@ -548,6 +606,11 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntBlock: {
+            Block *prev = compiler->block;
+            i32 prev_offset = prev->offset;
+            Block block = { .base = prev->base + prev->offset, .offset = 0, .depth = compiler->scope_depth, .prev = prev };
+            compiler->block = &block;
+
             compiler_new_scope(compiler);
             AstNode *stmt = node->kids[0];
             for (; stmt != NULL && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type);
@@ -560,12 +623,16 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             } else {
                 chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
             }
+
             compiler_end_scope(vm, compiler);
+            compiler->block = prev;
+            compiler->block->offset = prev_offset + 1;
             break;
         }
         case AstntExprStmt: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             chunk_write(vm, compiler_chunk(compiler), OpPop);
+            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntAssignStmt: {
@@ -597,10 +664,12 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                     chunk_write(vm, compiler_chunk(compiler), OpConstant);
                     chunk_write(vm, compiler_chunk(compiler), (u8)idx);
                 }
+                STACK_DIFF(compiler, -1);
             } else {
                 Local loc = {
                     .depth = compiler->scope_depth, .name = ident->chars, .is_captured = false};
                 local_arr_write(vm, &compiler->locals, loc);
+                STACK_DIFF(compiler, 0);
             }
 
             break;
@@ -628,3 +697,4 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 }
 
 #undef BUBBLE
+#undef STACK_DIFF
