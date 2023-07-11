@@ -150,6 +150,7 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
         .padded()
         .repeated()
         .collect()
+        .then_ignore(comment.repeated())
         .then_ignore(end())
 }
 
