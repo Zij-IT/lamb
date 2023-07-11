@@ -202,7 +202,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     func_comp.locals.values[0].depth = 1;
     block.offset += 1;
 
-    // Implicitly done through 
+    // Implicitly done through
     compiler_new_scope(&func_comp);
     func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
     func_comp.function->name = ANON_FUNC_NAME;
@@ -259,9 +259,9 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             if (local_slot != LOCAL_NOT_FOUND) {
                 chunk_write(vm, compiler_chunk(compiler), OpGetLocal);
 
-                i32 depth = compiler->locals.values[local_slot].depth; 
+                i32 depth = compiler->locals.values[local_slot].depth;
                 i32 base = -1;
-                for (Block* bl = compiler->block; bl != NULL; bl = bl->prev) {
+                for (Block *bl = compiler->block; bl != NULL; bl = bl->prev) {
                     if (bl->depth == depth) {
                         base = bl->base;
                         break;
@@ -269,7 +269,8 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 }
 
                 i32 local_idx = 0;
-                for (i32 idx = local_slot - 1; idx >= 0 && compiler->locals.values[idx].depth == depth; idx--) {
+                for (i32 idx = local_slot - 1;
+                     idx >= 0 && compiler->locals.values[idx].depth == depth; idx--) {
                     local_idx++;
                 }
 
@@ -519,7 +520,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             STACK_DIFF(compiler, -arg_count);
             break;
         }
-    case AstntReturn: {
+        case AstntReturn: {
             AstNode *val = node->kids[0];
             if (val == NULL) {
                 chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
@@ -640,7 +641,10 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
         case AstntBlock: {
             Block *prev = compiler->block;
             i32 prev_offset = prev->offset;
-            Block block = { .base = prev->base + prev->offset, .offset = 0, .depth = compiler->scope_depth, .prev = prev };
+            Block block = {.base = prev->base + prev->offset,
+                           .offset = 0,
+                           .depth = compiler->scope_depth,
+                           .prev = prev};
             compiler->block = &block;
 
             compiler_new_scope(compiler);

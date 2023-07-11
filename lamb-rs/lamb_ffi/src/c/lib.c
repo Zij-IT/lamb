@@ -11,7 +11,7 @@ void run_ast(AstNode *root, bool print_fns, bool print_main) {
     if (root == NULL) {
         return;
     }
-    
+
     VmOptions options = {
         .print_main_chunk = print_main,
         .print_fn_chunks = print_fns,
@@ -23,7 +23,7 @@ void run_ast(AstNode *root, bool print_fns, bool print_main) {
     vm_init(&vm, options);
 
     Compiler compiler;
-    Block block = { .base = 0, .offset = 1, .depth = 0, .prev = NULL };
+    Block block = {.base = 0, .offset = 1, .depth = 0, .prev = NULL};
 
     vm.curr_compiler = &compiler;
     compiler_init(&vm, &compiler, FtScript);

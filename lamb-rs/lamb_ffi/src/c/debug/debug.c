@@ -101,7 +101,7 @@ static i32 print_op(Chunk *chunk, i32 offset) {
         case OpClosure: {
             printf("OpClosure\n");
             i32 x = 3;
-            i32 idx = (chunk->bytes[offset + 2] << 8) | chunk -> bytes[offset + 3];
+            i32 idx = (chunk->bytes[offset + 2] << 8) | chunk->bytes[offset + 3];
             LambFunc *func = (LambFunc *)chunk->constants.values[idx].as.obj;
 
             // NOTE: x bytes for constant + 2 bytes per upvalue + 1 to jump over

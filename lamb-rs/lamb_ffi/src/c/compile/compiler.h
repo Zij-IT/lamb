@@ -24,7 +24,7 @@ typedef struct Block {
     i32 base;
     i32 offset;
     i32 depth;
-    struct Block* prev;
+    struct Block *prev;
 } Block;
 
 typedef struct Compiler {

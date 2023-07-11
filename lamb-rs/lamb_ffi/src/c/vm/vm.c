@@ -108,47 +108,45 @@ Value vm_pop_stack(Vm *vm) {
 
 InterpretResult vm_run(Vm *vm) {
     Callframe *frame = &vm->frames[vm->frame_count - 1];
-    
-    #define READ_BYTE()(*frame->ip++)
-    #define READ_SHORT() \
-        (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
-    #define READ_CONSTANT() \
-        (frame->ip += 1, frame->closure->function->chunk.constants.values[READ_SHORT()])
+#define READ_BYTE() (*frame->ip++)
+#define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
-    #define PUSH(val)(*vm->stack_top = val, vm->stack_top += 1)
+#define READ_CONSTANT()                                                                            \
+    (frame->ip += 1, frame->closure->function->chunk.constants.values[READ_SHORT()])
 
-    #define POP()(*--vm->stack_top)
+#define PUSH(val) (*vm->stack_top = val, vm->stack_top += 1)
 
-    #define DROP()(vm->stack_top -= 1)
+#define POP() (*--vm->stack_top)
 
-    #define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
-        do {                                                                                           \
-            Value rhs = POP();                                                                         \
-            Value *lhs = vm_peek_stack(vm);                                                            \
-                                                                                                       \
-            if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
-                lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
-            } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {                                \
-                lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;                                         \
-            } else {                                                                                   \
-                binary_type_error(*lhs, #op, rhs);                                                     \
-            }                                                                                          \
-        } while (0)
+#define DROP() (vm->stack_top -= 1)
 
-    #define BINARY_INT_OP(vm, op)                                                                      \
-        do {                                                                                           \
-            Value rhs = POP();                                                                         \
-            Value *lhs = vm_peek_stack(vm);                                                            \
-                                                                                                       \
-            if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
-                lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
-            } else {                                                                                   \
-                binary_type_error(*lhs, #op, rhs);                                                     \
-            }                                                                                          \
-        } while (0)
+#define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
+    do {                                                                                           \
+        Value rhs = POP();                                                                         \
+        Value *lhs = vm_peek_stack(vm);                                                            \
+                                                                                                   \
+        if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
+            lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
+        } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {                                \
+            lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;                                         \
+        } else {                                                                                   \
+            binary_type_error(*lhs, #op, rhs);                                                     \
+        }                                                                                          \
+    } while (0)
 
-    
+#define BINARY_INT_OP(vm, op)                                                                      \
+    do {                                                                                           \
+        Value rhs = POP();                                                                         \
+        Value *lhs = vm_peek_stack(vm);                                                            \
+                                                                                                   \
+        if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
+            lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
+        } else {                                                                                   \
+            binary_type_error(*lhs, #op, rhs);                                                     \
+        }                                                                                          \
+    } while (0)
+
     for (;;) {
         switch (READ_BYTE()) {
             case OpConstant: {
