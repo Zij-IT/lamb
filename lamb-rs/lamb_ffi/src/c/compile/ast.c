@@ -102,7 +102,7 @@ static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode
     AstNode *ident_node = arg->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
     chunk_add_constant(vm, compiler_chunk(func_comp), new_object((Object *)ident));
-    Local loc = {.depth = func_comp->scope_depth, .name = ident->chars, .is_captured = false};
+    Local loc = {.depth = func_comp->block->depth, .name = ident->chars, .is_captured = false};
     local_arr_write(vm, &func_comp->locals, loc);
     func_comp->function->arity++;
 }
@@ -135,7 +135,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
     // depth must match.
-    func_comp.locals.values[0].depth = func_comp.scope_depth;
+    func_comp.locals.values[0].depth = func_comp.block->depth;
     block.offset += 1;
 
     if (is_recursive->val.b) {
@@ -172,12 +172,12 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
 
     BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
 
-    if (compiler->scope_depth == 0) {
+    if (compiler->block->depth == 0) {
         chunk_write(vm, compiler_chunk(compiler), OpDefineGlobal);
         chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)rec_func_ident));
     } else {
         Local loc = {
-            .depth = compiler->scope_depth, .name = rec_func_ident->chars, .is_captured = false};
+            .depth = compiler->block->depth, .name = rec_func_ident->chars, .is_captured = false};
         local_arr_write(vm, &compiler->locals, loc);
     }
 
@@ -191,7 +191,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     Block block = {
         .base = 1,
         .offset = 0,
-        .depth = func_comp.scope_depth + 1,
+        .depth = 0,
         .prev = compiler->block,
     };
 
@@ -643,7 +643,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             i32 prev_offset = prev->offset;
             Block block = {.base = prev->base + prev->offset,
                            .offset = 0,
-                           .depth = compiler->scope_depth,
+                           .depth = compiler->block->depth,
                            .prev = prev};
             compiler->block = &block;
 
@@ -686,7 +686,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
             i32 idx = chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
 
-            if (compiler->scope_depth == 0) {
+            if (compiler->block->depth == 0) {
                 chunk_write(vm, compiler_chunk(compiler), OpDefineGlobal);
                 u8 hi = (idx >> 8) & 0xFF;
                 u8 lo = (idx >> 0) & 0xFF;
@@ -697,7 +697,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 STACK_DIFF(compiler, -1);
             } else {
                 Local loc = {
-                    .depth = compiler->scope_depth, .name = ident->chars, .is_captured = false};
+                    .depth = compiler->block->depth, .name = ident->chars, .is_captured = false};
                 local_arr_write(vm, &compiler->locals, loc);
                 STACK_DIFF(compiler, 0);
             }
