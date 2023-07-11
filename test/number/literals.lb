@@ -1,9 +1,9 @@
 -- Can parse normal literals
-123456789
+123456789;
 assert(01234 != 0o1234);
 
 -- Can parse binary numbers
-0b010101
+0b010101;
 
 -- Can parse hex numbers
 0h0123456789abcdef;
@@ -12,7 +12,7 @@ assert(01234 != 0o1234);
 0o01234567;
 
 -- Can parse decimal numbers
-0d0123456789
+0d0123456789;
 
 -- Can have seperators
 123_456;

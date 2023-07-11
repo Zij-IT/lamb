@@ -1,10 +1,10 @@
 isEven := fn(n) -> {
-  if n = 0 { return true };
+  if n = 0 { return true; };
   isOdd(n - 1)
 };
 
 isOdd := fn(n) -> {
-  if n = 0 { return false };
+  if n = 0 { return false; };
   isEven(n - 1)
 };
 

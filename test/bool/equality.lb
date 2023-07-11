@@ -1,8 +1,8 @@
 -- Test equality with self
-assert_eq(true == true, true);
-assert_eq(true == false, false);
-assert_eq(false == true, false);
-assert_eq(false == false, true);
+assert_eq(true = true, true);
+assert_eq(true = false, false);
+assert_eq(false = true, false);
+assert_eq(false = false, true);
 
 -- Testing non-equality with self
 assert_eq(true != true, false);
@@ -11,11 +11,11 @@ assert_eq(false != true, true);
 assert_eq(false != false, false);
 
 -- Test equality with other types
-assert_eq(true == 1, false);
-assert_eq(false == 0, false);
-assert_eq(true == "true", false);
-assert_eq(false == "false", false);
-assert_eq(false == "", false);
+assert_eq(true = 1, false);
+assert_eq(false = 0, false);
+assert_eq(true = "true", false);
+assert_eq(false = "false", false);
+assert_eq(false = "", false);
 
 -- Test non-equality with other types.
 assert_eq(true != 1, true);
