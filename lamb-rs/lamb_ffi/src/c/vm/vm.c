@@ -152,7 +152,7 @@ InterpretResult vm_run(Vm *vm) {
     for (;;) {
         switch (READ_BYTE()) {
             case OpConstant: {
-                vm_push_stack(vm, frame->closure->function->chunk.constants.values[READ_SHORT()]);
+                PUSH(frame->closure->function->chunk.constants.values[READ_SHORT()]);
                 break;
             }
             case OpDefineGlobal: {
