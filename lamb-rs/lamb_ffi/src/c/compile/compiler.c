@@ -21,7 +21,10 @@ void compiler_free(Vm *vm, Compiler *compiler) {
     local_arr_init(&compiler->locals);
 }
 
-void compiler_new_scope(Compiler *compiler) { compiler->scope_depth++; }
+void compiler_new_scope(Compiler *compiler) {
+    compiler->scope_depth++;
+    compiler->block->depth++;
+}
 
 void compiler_end_scope(Vm *vm, Compiler *compiler) {
     compiler->scope_depth--;

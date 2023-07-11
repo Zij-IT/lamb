@@ -85,9 +85,10 @@ static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
 
 static Chunk *compiler_chunk(Compiler *compiler) { return &compiler->function->chunk; }
 
-static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, str name) {
+static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Block *const block, str name) {
     Compiler func_comp;
     compiler_init(vm, &func_comp, FtNormal);
+    func_comp.block = block;
     compiler_new_scope(&func_comp);
     func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
     func_comp.function->name = name;
@@ -120,14 +121,14 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     AstNode *func_args = node->kids[0];
     AstNode *func_body = node->kids[1];
     AstNode *is_recursive = node->kids[2];
-
-    Compiler func_comp = new_function_compiler(vm, compiler, name);
     Block block = {
         .base = 0,
         .offset = 0,
-        .depth = func_comp.scope_depth,
+        .depth = 0,
         .prev = NULL,
     };
+
+    Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
 
     func_comp.block = &block;
 
@@ -244,7 +245,6 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
 }
 
 CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
-    compiler->block->depth = compiler->scope_depth;
     switch (node->type) {
         case AstntStrLit: {
             LambString *lit = cstr_to_lambstring(vm, node->val.s);
