@@ -15,7 +15,7 @@ static i32 print_jump(Chunk *chunk, str name, i32 offset, i32 sign) {
     return 3;
 }
 
-static i32 print_constant(Chunk *chunk, str name, i32 offset, bool is_long) {
+static i32 print_constant(Chunk *chunk, str name, i32 offset) {
     u8 hi = chunk->bytes[offset + 1];
     u8 lo = chunk->bytes[offset + 2];
     Value val = chunk->constants.values[((u16)hi) << 8 | lo];
@@ -29,7 +29,7 @@ static i32 print_constant(Chunk *chunk, str name, i32 offset, bool is_long) {
 static i32 print_op(Chunk *chunk, i32 offset) {
     switch (chunk->bytes[offset]) {
         case OpConstant:
-            return print_constant(chunk, "OpConstant", offset, false);
+            return print_constant(chunk, "OpConstant", offset);
         case OpDefineGlobal:
             return print_simple_op("OpDefineGlobal");
         case OpGetGlobal:
