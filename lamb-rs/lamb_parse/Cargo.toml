@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 lamb_ast = { path = "../lamb_ast" }
-chumsky = { path = "../../../../rust/others/chumsky", features = ["pratt"] }
+chumsky = { path = "../../../../rust/others/chumsky", features = ["pratt", "label"] }

@@ -108,7 +108,8 @@ where
             .or(if_)
             .or(fun_def)
             .or(case)
-            .or(block.map(Expr::Block));
+            .or(block.map(Expr::Block))
+            .labelled("an expression");
 
         let chain = atom.foldl(
             call(expr.clone())
@@ -150,13 +151,15 @@ where
             bin!(Div, 11),
             bin!(Mul, 11),
             bin!(Mod, 11),
-        ));
+        ))
+        .labelled("a binary operator");
 
         let prefixes = choice((
             unary!(Op::Sub, UnaryOp::NumNeg, 12),
             unary!(Op::LogNot, UnaryOp::LogNot, 12),
             unary!(Op::BinComp, UnaryOp::BinNot, 12),
-        ));
+        ))
+        .labelled("a unary operator");
 
         chain.pratt(binaries).with_prefix_ops(prefixes)
     })
