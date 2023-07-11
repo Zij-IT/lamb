@@ -1,0 +1,9 @@
+explode := fn() -> assert(false);
+
+-- Short-circuit at the first true argument.
+assert_eq(true || explode(), true);
+assert_eq(false || true || explode(), true);
+
+-- Return the last argument if all are false.
+assert_eq(false || false, false);
+assert_eq(false || false || false, false);

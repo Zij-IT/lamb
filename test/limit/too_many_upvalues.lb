@@ -1,0 +1,106 @@
+-- Error: too many upvalues
+f := fn() -> {
+  v00 := 0; v01 := 0; v02 := 0; v03 := 0; v04 := 0; v05 := 0; v06 := 0; v07 := 0;
+  v08 := 0; v09 := 0; v0a := 0; v0b := 0; v0c := 0; v0d := 0; v0e := 0; v0f := 0;
+
+  v10 := 0; v11 := 0; v12 := 0; v13 := 0; v14 := 0; v15 := 0; v16 := 0; v17 := 0;
+  v18 := 0; v19 := 0; v1a := 0; v1b := 0; v1c := 0; v1d := 0; v1e := 0; v1f := 0;
+
+  v20 := 0; v21 := 0; v22 := 0; v23 := 0; v24 := 0; v25 := 0; v26 := 0; v27 := 0;
+  v28 := 0; v29 := 0; v2a := 0; v2b := 0; v2c := 0; v2d := 0; v2e := 0; v2f := 0;
+
+  v30 := 0; v31 := 0; v32 := 0; v33 := 0; v34 := 0; v35 := 0; v36 := 0; v37 := 0;
+  v38 := 0; v39 := 0; v3a := 0; v3b := 0; v3c := 0; v3d := 0; v3e := 0; v3f := 0;
+
+  v40 := 0; v41 := 0; v42 := 0; v43 := 0; v44 := 0; v45 := 0; v46 := 0; v47 := 0;
+  v48 := 0; v49 := 0; v4a := 0; v4b := 0; v4c := 0; v4d := 0; v4e := 0; v4f := 0;
+
+  v50 := 0; v51 := 0; v52 := 0; v53 := 0; v54 := 0; v55 := 0; v56 := 0; v57 := 0;
+  v58 := 0; v59 := 0; v5a := 0; v5b := 0; v5c := 0; v5d := 0; v5e := 0; v5f := 0;
+
+  v60 := 0; v61 := 0; v62 := 0; v63 := 0; v64 := 0; v65 := 0; v66 := 0; v67 := 0;
+  v68 := 0; v69 := 0; v6a := 0; v6b := 0; v6c := 0; v6d := 0; v6e := 0; v6f := 0;
+
+  v70 := 0; v71 := 0; v72 := 0; v73 := 0; v74 := 0; v75 := 0; v76 := 0; v77 := 0;
+  v78 := 0; v79 := 0; v7a := 0; v7b := 0; v7c := 0; v7d := 0; v7e := 0; v7f := 0;
+
+  g := fn() -> {
+    v80 := 0; v81 := 0; v82 := 0; v83 := 0; v84 := 0; v85 := 0; v86 := 0; v87 := 0;
+    v88 := 0; v89 := 0; v8a := 0; v8b := 0; v8c := 0; v8d := 0; v8e := 0; v8f := 0;
+
+    v90 := 0; v91 := 0; v92 := 0; v93 := 0; v94 := 0; v95 := 0; v96 := 0; v97 := 0;
+    v98 := 0; v99 := 0; v9a := 0; v9b := 0; v9c := 0; v9d := 0; v9e := 0; v9f := 0;
+
+    va0 := 0; va1 := 0; va2 := 0; va3 := 0; va4 := 0; va5 := 0; va6 := 0; va7 := 0;
+    va8 := 0; va9 := 0; vaa := 0; vab := 0; vac := 0; vad := 0; vae := 0; vaf := 0;
+
+    vb0 := 0; vb1 := 0; vb2 := 0; vb3 := 0; vb4 := 0; vb5 := 0; vb6 := 0; vb7 := 0;
+    vb8 := 0; vb9 := 0; vba := 0; vbb := 0; vbc := 0; vbd := 0; vbe := 0; vbf := 0;
+
+    vc0 := 0; vc1 := 0; vc2 := 0; vc3 := 0; vc4 := 0; vc5 := 0; vc6 := 0; vc7 := 0;
+    vc8 := 0; vc9 := 0; vca := 0; vcb := 0; vcc := 0; vcd := 0; vce := 0; vcf := 0;
+
+    vd0 := 0; vd1 := 0; vd2 := 0; vd3 := 0; vd4 := 0; vd5 := 0; vd6 := 0; vd7 := 0;
+    vd8 := 0; vd9 := 0; vda := 0; vdb := 0; vdc := 0; vdd := 0; vde := 0; vdf := 0;
+
+    ve0 := 0; ve1 := 0; ve2 := 0; ve3 := 0; ve4 := 0; ve5 := 0; ve6 := 0; ve7 := 0;
+    ve8 := 0; ve9 := 0; vea := 0; veb := 0; vec := 0; ved := 0; vee := 0; vef := 0;
+
+    vf0 := 0; vf1 := 0; vf2 := 0; vf3 := 0; vf4 := 0; vf5 := 0; vf6 := 0; vf7 := 0;
+    vf8 := 0; vf9 := 0; vfa := 0; vfb := 0; vfc := 0; vfd := 0; vfe := 0; vff := 0;
+
+    oops := 0;
+
+    h := fn() -> {
+      v00; v01; v02; v03; v04; v05; v06; v07;
+      v08; v09; v0a; v0b; v0c; v0d; v0e; v0f;
+
+      v10; v11; v12; v13; v14; v15; v16; v17;
+      v18; v19; v1a; v1b; v1c; v1d; v1e; v1f;
+
+      v20; v21; v22; v23; v24; v25; v26; v27;
+      v28; v29; v2a; v2b; v2c; v2d; v2e; v2f;
+
+      v30; v31; v32; v33; v34; v35; v36; v37;
+      v38; v39; v3a; v3b; v3c; v3d; v3e; v3f;
+
+      v40; v41; v42; v43; v44; v45; v46; v47;
+      v48; v49; v4a; v4b; v4c; v4d; v4e; v4f;
+
+      v50; v51; v52; v53; v54; v55; v56; v57;
+      v58; v59; v5a; v5b; v5c; v5d; v5e; v5f;
+
+      v60; v61; v62; v63; v64; v65; v66; v67;
+      v68; v69; v6a; v6b; v6c; v6d; v6e; v6f;
+
+      v70; v71; v72; v73; v74; v75; v76; v77;
+      v78; v79; v7a; v7b; v7c; v7d; v7e; v7f;
+
+      v80; v81; v82; v83; v84; v85; v86; v87;
+      v88; v89; v8a; v8b; v8c; v8d; v8e; v8f;
+
+      v90; v91; v92; v93; v94; v95; v96; v97;
+      v98; v99; v9a; v9b; v9c; v9d; v9e; v9f;
+
+      va0; va1; va2; va3; va4; va5; va6; va7;
+      va8; va9; vaa; vab; vac; vad; vae; vaf;
+
+      vb0; vb1; vb2; vb3; vb4; vb5; vb6; vb7;
+      vb8; vb9; vba; vbb; vbc; vbd; vbe; vbf;
+
+      vc0; vc1; vc2; vc3; vc4; vc5; vc6; vc7;
+      vc8; vc9; vca; vcb; vcc; vcd; vce; vcf;
+
+      vd0; vd1; vd2; vd3; vd4; vd5; vd6; vd7;
+      vd8; vd9; vda; vdb; vdc; vdd; vde; vdf;
+
+      ve0; ve1; ve2; ve3; ve4; ve5; ve6; ve7;
+      ve8; ve9; vea; veb; vec; ved; vee; vef;
+
+      vf0; vf1; vf2; vf3; vf4; vf5; vf6; vf7;
+      vf8; vf9; vfa; vfb; vfc; vfd; vfe; vff;
+
+      oops;
+    }
+  }
+}

@@ -1,0 +1,10 @@
+explode := fn() -> assert(false);
+
+-- Short Circuits with false
+assert(false && explode());
+assert_eq(true && false && explode(), false);
+
+-- True if all are true
+assert_eq(true && true,   true);
+assert_eq(true && false, false);
+assert_eq(true && true && true, true);
