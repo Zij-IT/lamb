@@ -191,7 +191,7 @@ InterpretResult vm_run(Vm *vm) {
                 if (!is_bool(*vm_peek_stack(vm))) {
                     runtime_error("A branching expression '&&', '||' and 'if' cannot "
                                   "branch with expressions of type %s",
-                                  "__PLACEHOLDER__");
+                                  kind_as_cstr(*vm_peek_stack(vm)));
                 }
 
                 if (!vm_peek_stack(vm)->as.boolean) {
