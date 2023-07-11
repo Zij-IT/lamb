@@ -22,7 +22,7 @@ macro_rules! parse_num {
             })
     };
 }
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash)]
 pub enum Op {
     Add,
     Sub,
@@ -50,14 +50,47 @@ pub enum Op {
     RApply,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+impl std::fmt::Display for Op {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let item = match self {
+            Op::Add => "+",
+            Op::Sub => "-",
+            Op::Div => "/",
+            Op::Mul => "*",
+            Op::Mod => "%",
+            Op::BinAnd => "&",
+            Op::BinOr => "|",
+            Op::BinXor => "^",
+            Op::BinComp => "~",
+            Op::LShift => "<<",
+            Op::RShift => ">>",
+            Op::Eq => "=",
+            Op::Ne => "!=",
+            Op::Gt => ">",
+            Op::Lt => "<",
+            Op::Ge => ">=",
+            Op::Le => "<=",
+            Op::LogAnd => "&&",
+            Op::LogOr => "||",
+            Op::LogNot => "!",
+            Op::LCompose => "<.",
+            Op::RCompose => ".>",
+            Op::LApply => "<$",
+            Op::RApply => "$>",
+        };
+
+        write!(f, "{item}")
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash)]
 pub enum Delim {
     Brace,
     Brack,
     Paren,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub enum Token {
     Op(Op),
 
@@ -93,6 +126,46 @@ pub enum Token {
 
     // Error Handling
     Error(Error),
+}
+
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let item: &dyn std::fmt::Display = match self {
+            Token::Bool(b) => b,
+            Token::Char(c) => c,
+            Token::Ident(i) => i,
+            Token::Num(n) => n,
+            Token::Op(op) => op,
+            Token::Str(s) => s,
+            Token::Open(Delim::Brace) => &"{",
+            Token::Open(Delim::Brack) => &"[",
+            Token::Open(Delim::Paren) => &"(",
+            Token::Close(Delim::Brace) => &"}",
+            Token::Close(Delim::Brack) => &"]",
+            Token::Close(Delim::Paren) => &")",
+            Token::Nil => &"nil",
+            Token::Fn => &"fn",
+            Token::Case => &"case",
+            Token::If => &"if",
+            Token::Elif => &"elif",
+            Token::Else => &"else",
+            Token::Return => &"return",
+            Token::Struct => &"struct",
+            Token::Enum => &"enum",
+            Token::Rec => &"rec",
+            Token::Arrow => &"arrow",
+            Token::Define => &":=",
+            Token::Comma => &",",
+            Token::Colon => &":",
+            Token::Semi => &";",
+            Token::Error(e) => {
+                write!(f, "{e:?}")?;
+                return Ok(());
+            }
+        };
+
+        write!(f, "{item}")
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
