@@ -92,7 +92,7 @@ static void trace_refs(Vm *vm) {
 
 static void sweep_unused(Vm *vm) {
     Object *prev = NULL;
-    Object *curr = vm->poor_mans_gc;
+    Object *curr = vm->objects;
 
     while (curr != NULL) {
         if (curr->is_marked) {
@@ -104,7 +104,7 @@ static void sweep_unused(Vm *vm) {
             curr = curr->next;
 
             if (prev == NULL) {
-                vm->poor_mans_gc = curr;
+                vm->objects = curr;
             } else {
                 prev->next = curr;
             }

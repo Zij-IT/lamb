@@ -43,7 +43,7 @@ typedef struct Vm {
     u16 frame_count;
 
     LambUpvalue *open_upvalues;
-    Object *poor_mans_gc;
+    Object *objects;
 
     VmOptions options;
 } Vm;

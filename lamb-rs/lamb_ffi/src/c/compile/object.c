@@ -18,14 +18,14 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->poor_mans_gc,
+                .next = vm->objects,
             };
             st->obj = obj;
             st->chars = NULL;
             st->len = 0;
             st->hash = 0;
-            vm->poor_mans_gc = (Object *)st;
-            return vm->poor_mans_gc;
+            vm->objects = (Object *)st;
+            return vm->objects;
         }
         case OtArray: {
             LambArray *arr = ALLOCATE(vm, LambArray, 1);
@@ -35,14 +35,14 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->poor_mans_gc,
+                .next = vm->objects,
             };
             arr->obj = obj;
             ValueArray v_arr;
             value_arr_init(&v_arr);
             arr->items = v_arr;
-            vm->poor_mans_gc = (Object *)arr;
-            return vm->poor_mans_gc;
+            vm->objects = (Object *)arr;
+            return vm->objects;
         }
         case OtFunc: {
             LambFunc *func = ALLOCATE(vm, LambFunc, 1);
@@ -52,15 +52,15 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->poor_mans_gc,
+                .next = vm->objects,
             };
             func->obj = obj;
             func->name = NULL;
             func->arity = 0;
             func->upvalue_count = 0;
             chunk_init(&func->chunk);
-            vm->poor_mans_gc = (Object *)func;
-            return vm->poor_mans_gc;
+            vm->objects = (Object *)func;
+            return vm->objects;
         }
         case OtNative: {
             NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);
@@ -70,12 +70,12 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->poor_mans_gc,
+                .next = vm->objects,
             };
             func->obj = obj;
             func->func = NULL;
-            vm->poor_mans_gc = (Object *)func;
-            return vm->poor_mans_gc;
+            vm->objects = (Object *)func;
+            return vm->objects;
         }
         case OtClosure: {
             LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
@@ -85,12 +85,12 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->poor_mans_gc,
+                .next = vm->objects,
             };
             closure->obj = obj;
             closure->function = NULL;
-            vm->poor_mans_gc = (Object *)closure;
-            return vm->poor_mans_gc;
+            vm->objects = (Object *)closure;
+            return vm->objects;
         }
         case OtUpvalue: {
             LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
@@ -100,13 +100,13 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->poor_mans_gc,
+                .next = vm->objects,
             };
             upvalue->obj = obj;
             upvalue->next = NULL;
             upvalue->location = NULL;
-            vm->poor_mans_gc = (Object *)upvalue;
-            return vm->poor_mans_gc;
+            vm->objects = (Object *)upvalue;
+            return vm->objects;
         }
     }
 
