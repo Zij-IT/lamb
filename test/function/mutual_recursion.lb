@@ -1,0 +1,12 @@
+isEven := fn(n) -> {
+  if n = 0 { return true };
+  isOdd(n - 1)
+};
+
+isOdd := fn(n) -> {
+  if n = 0 { return false };
+  isEven(n - 1)
+};
+
+assert_eq(isEven(4), true);
+assert_eq(isOdd(3), true);

@@ -1,0 +1,3 @@
+-- Error: Missing args
+f := fn(a, b) -> {};
+f(1);

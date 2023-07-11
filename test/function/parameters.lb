@@ -1,0 +1,26 @@
+f0 := fn() -> { return 0; }
+assert_eq(f0(), 0);
+
+f1 := fn(a) -> { return a; }
+assert_eq(f1(1), 1);
+
+f2 := fn(a, b) -> { return a + b; }
+assert_eq(f2(1, 2), 3);
+
+f3 := fn(a, b, c) -> { return a + b + c; }
+assert_eq(f3(1, 2, 3), 6);
+
+f4 := fn(a, b, c, d) -> { return a + b + c + d; }
+assert_eq(f4(1, 2, 3, 4), 10);
+
+f5 := fn(a, b, c, d, e) -> { return a + b + c + d + e; }
+assert_eq(f5(1, 2, 3, 4, 5), 15);
+
+f6 := fn(a, b, c, d, e, f) -> { return a + b + c + d + e + f; }
+assert_eq(f6(1, 2, 3, 4, 5, 6), 21);
+
+f7 := fn(a, b, c, d, e, f, g) -> { return a + b + c + d + e + f + g; }
+assert_eq(f7(1, 2, 3, 4, 5, 6, 7), 28);
+
+f8 := fn(a, b, c, d, e, f, g, h) -> { return a + b + c + d + e + f + g + h; }
+assert_eq(f8(1, 2, 3, 4, 5, 6, 7, 8), 36);

@@ -1,0 +1,2 @@
+-- Error: Expected comma
+fn(a, b c, d, e, f) -> {};

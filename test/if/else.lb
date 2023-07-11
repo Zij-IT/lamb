@@ -1,0 +1,3 @@
+-- Evaluate the 'else' expression if the condition is false.
+if true  { } else { assert(false); };
+if false { assert(false); } else { };
