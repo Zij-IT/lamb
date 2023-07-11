@@ -36,7 +36,6 @@ typedef struct Compiler {
     struct Compiler *enclosing;
     Block *block;
 
-    i32 scope_depth;
     FuncType type;
 } Compiler;
 

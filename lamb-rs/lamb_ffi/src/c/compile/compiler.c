@@ -8,7 +8,6 @@ void compiler_init(Vm *vm, Compiler *compiler, FuncType type) {
     compiler->enclosing = NULL;
     compiler->function = NULL;
     compiler->block = NULL;
-    compiler->scope_depth = 0;
     compiler->type = type;
     local_arr_init(&compiler->locals);
 
@@ -22,16 +21,17 @@ void compiler_free(Vm *vm, Compiler *compiler) {
 }
 
 void compiler_new_scope(Compiler *compiler) {
-    compiler->scope_depth++;
     compiler->block->depth++;
 }
 
 void compiler_end_scope(Vm *vm, Compiler *compiler) {
-    compiler->scope_depth--;
+    compiler->block = compiler->block->prev;
+    i32 depth = compiler->block == NULL ? -1 : compiler->block->depth;
+
     chunk_write(vm, &compiler->function->chunk, OpSaveValue);
 
     while (compiler->locals.len > 0 &&
-           compiler->locals.values[compiler->locals.len - 1].depth > compiler->scope_depth) {
+           compiler->locals.values[compiler->locals.len - 1].depth > depth) {
         if (compiler->locals.values[compiler->locals.len - 1].is_captured) {
             chunk_write(vm, &compiler->function->chunk, OpCloseValue);
         } else {
