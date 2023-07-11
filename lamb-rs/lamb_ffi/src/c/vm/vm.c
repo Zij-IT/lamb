@@ -27,8 +27,6 @@
     runtime_error("Unary '" op_str "' operator is not defined for values of type %s",              \
                   kind_as_cstr(rhs));
 
-static Callframe *vm_frame(Vm *vm) { return &vm->frames[vm->frame_count - 1]; }
-
 static LambUpvalue *capture_upvalue(Vm *vm, Value *local) {
     LambUpvalue *prev_upvalue = NULL;
     LambUpvalue *curr_upvalue = vm->open_upvalues;
@@ -61,27 +59,6 @@ static void close_upvalues(Vm *vm, Value *last) {
         upvalue->location = &upvalue->closed;
         vm->open_upvalues = upvalue->next;
     }
-}
-
-static Chunk *vm_chunk(Vm *vm) { return &vm_frame(vm)->closure->function->chunk; }
-
-static u8 vm_read_byte(Vm *vm) {
-    vm_assert("Reading bytes past end of chunk",
-              vm_frame(vm)->ip - vm_chunk(vm)->bytes < vm_chunk(vm)->len);
-
-    return *vm_frame(vm)->ip++;
-}
-
-static u16 vm_read_short(Vm *vm) {
-    u8 hi = vm_read_byte(vm);
-    u8 lo = vm_read_byte(vm);
-
-    return ((u16)hi << 8) | (u16)lo;
-}
-
-static Value vm_read_constant(Vm *vm) {
-    vm_read_byte(vm);
-    return vm_chunk(vm)->constants.values[vm_read_short(vm)];
 }
 
 static Value *vm_peek_stack(Vm *vm) {
@@ -130,6 +107,15 @@ Value vm_pop_stack(Vm *vm) {
 }
 
 InterpretResult vm_run(Vm *vm) {
+    Callframe *frame = &vm->frames[vm->frame_count - 1];
+    
+    #define READ_BYTE()(*frame->ip++)
+    #define READ_SHORT() \
+        (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+
+    #define READ_CONSTANT() \
+        (frame->ip += 1, frame->closure->function->chunk.constants.values[READ_SHORT()])
+
     #define PUSH(val)(*vm->stack_top = val, vm->stack_top += 1)
 
     #define POP()(*--vm->stack_top)
@@ -164,13 +150,13 @@ InterpretResult vm_run(Vm *vm) {
 
     
     for (;;) {
-        switch (vm_read_byte(vm)) {
+        switch (READ_BYTE()) {
             case OpConstant: {
-                vm_push_stack(vm, vm_frame(vm)->closure->function->chunk.constants.values[vm_read_short(vm)]);
+                vm_push_stack(vm, frame->closure->function->chunk.constants.values[READ_SHORT()]);
                 break;
             }
             case OpDefineGlobal: {
-                LambString *ident = (LambString *)vm_read_constant(vm).as.obj;
+                LambString *ident = (LambString *)READ_CONSTANT().as.obj;
                 Value *val = vm_peek_stack(vm);
 
                 if (!table_insert(vm, &vm->globals, ident, *val)) {
@@ -181,7 +167,7 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpGetGlobal: {
-                Value val = vm_read_constant(vm);
+                Value val = READ_CONSTANT();
                 LambString *ident = (LambString *)val.as.obj;
 
                 Value value;
@@ -193,17 +179,17 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpGetLocal: {
-                i32 slot = vm_read_constant(vm).as.intn;
-                PUSH(vm_frame(vm)->slots[slot]);
+                i32 slot = READ_CONSTANT().as.intn;
+                PUSH(frame->slots[slot]);
                 break;
             }
             case OpGetUpvalue: {
-                i32 slot = vm_read_constant(vm).as.intn;
-                PUSH(*vm_frame(vm)->closure->upvalues[slot]->location);
+                i32 slot = READ_CONSTANT().as.intn;
+                PUSH(*frame->closure->upvalues[slot]->location);
                 break;
             }
             case OpJumpIfFalse: {
-                u16 offset = vm_read_short(vm);
+                u16 offset = READ_SHORT();
                 if (!is_bool(*vm_peek_stack(vm))) {
                     runtime_error("A branching expression '&&', '||' and 'if' cannot "
                                   "branch with expressions of type %s",
@@ -211,13 +197,13 @@ InterpretResult vm_run(Vm *vm) {
                 }
 
                 if (!vm_peek_stack(vm)->as.boolean) {
-                    vm_frame(vm)->ip += offset;
+                    frame->ip += offset;
                 }
                 break;
             }
             case OpJump: {
-                u16 offset = vm_read_short(vm);
-                vm_frame(vm)->ip += offset;
+                u16 offset = READ_SHORT();
+                frame->ip += offset;
                 break;
             }
             case OpNumNeg: {
@@ -423,7 +409,7 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpCall: {
-                i32 arg_count = vm_read_constant(vm).as.intn;
+                i32 arg_count = READ_CONSTANT().as.intn;
                 Value *callee = vm_peekn_stack(vm, arg_count);
 
                 if (!is_object(*callee)) {
@@ -446,6 +432,7 @@ InterpretResult vm_run(Vm *vm) {
                         new_frame->closure = closure;
                         new_frame->ip = closure->function->chunk.bytes;
                         new_frame->slots = vm->stack_top - arg_count - 1;
+                        frame = new_frame;
                         break;
                     }
                     case OtNative: {
@@ -463,18 +450,18 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpClosure: {
-                LambFunc *function = (LambFunc *)vm_read_constant(vm).as.obj;
+                LambFunc *function = (LambFunc *)READ_CONSTANT().as.obj;
                 LambClosure *closure = to_closure(vm, function);
                 PUSH(new_object((Object *)closure));
 
                 for (i32 i = 0; i < closure->upvalue_count; i++) {
-                    bool is_local = vm_read_byte(vm);
-                    u8 index = vm_read_byte(vm);
+                    bool is_local = READ_BYTE();
+                    u8 index = READ_BYTE();
 
                     if (is_local) {
-                        closure->upvalues[i] = capture_upvalue(vm, vm_frame(vm)->slots + index);
+                        closure->upvalues[i] = capture_upvalue(vm, frame->slots + index);
                     } else {
-                        closure->upvalues[i] = vm_frame(vm)->closure->upvalues[index];
+                        closure->upvalues[i] = frame->closure->upvalues[index];
                     }
                 }
 
@@ -482,14 +469,15 @@ InterpretResult vm_run(Vm *vm) {
             }
             case OpReturn: {
                 Value ret = POP();
-                close_upvalues(vm, vm_frame(vm)->slots);
-                vm->stack_top = vm_frame(vm)->slots;
+                close_upvalues(vm, frame->slots);
+                vm->stack_top = frame->slots;
                 vm->frame_count--;
                 if (vm->frame_count == 0) {
                     vm_assert("Stack is empty upon ending script", vm->stack_top == vm->stack);
                     return InterpretOk;
                 }
 
+                frame = &vm->frames[vm->frame_count - 1];
                 PUSH(ret);
                 break;
             }
