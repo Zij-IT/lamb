@@ -7,19 +7,14 @@ use chumsky::{
 macro_rules! parse_num {
     ($prefix:literal, $filter:expr, $radix:literal, $on_fail:literal $(,)?) => {
         just($prefix)
-            .ignore_then(
-                any()
-                    .filter(|c: &char| !c.is_whitespace())
-                    .repeated()
-                    .slice(),
-            )
-            .validate(|bin: &str, span, emitter| {
-                if !bin.chars().all(|c| c.is_digit($radix) || c == '_') {
+            .ignore_then(digits($radix).repeated().at_least(1).slice())
+            .validate(|num: &str, span, emitter| {
+                if !num.chars().all(|c| c.is_digit($radix) || c == '_') {
                     emitter.emit(Rich::custom(span, $on_fail));
                     return Token::Error(Error::InvalidNumLit);
                 }
 
-                let num = bin.chars().filter(|&c| c != '_').collect::<String>();
+                let num = num.chars().filter(|&c| c != '_').collect::<String>();
                 match i64::from_str_radix(num.as_str(), $radix) {
                     Ok(num) => Token::Num(num),
                     Err(_) => unreachable!(),
