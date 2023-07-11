@@ -16,34 +16,20 @@ static i32 print_jump(Chunk *chunk, str name, i32 offset, i32 sign) {
 }
 
 static i32 print_constant(Chunk *chunk, str name, i32 offset, bool is_long) {
-    if (is_long) {
-        u8 lo = chunk->bytes[offset + 3];
-        u8 mi = chunk->bytes[offset + 2];
-        u8 hi = chunk->bytes[offset + 1];
+    u8 hi = chunk->bytes[offset + 1];
+    u8 lo = chunk->bytes[offset + 2];
+    Value val = chunk->constants.values[((u16)hi) << 8 | lo];
 
-        i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | (i32)lo;
-        Value val = chunk->constants.values[idx];
-        printf("%-16s %4d '", name, idx);
-        print_value(val);
-        printf("'\n");
-        return 4;
-    } else {
-        u8 idx = chunk->bytes[offset + 1];
-        Value val = chunk->constants.values[idx];
-
-        printf("%-16s %4d '", name, idx);
-        print_value(val);
-        printf("'\n");
-        return 2;
-    }
+    printf("%-16s %4d '", name, ((u16)hi) << 8 | lo);
+    print_value(val);
+    printf("'\n");
+    return 3;
 }
 
 static i32 print_op(Chunk *chunk, i32 offset) {
     switch (chunk->bytes[offset]) {
         case OpConstant:
             return print_constant(chunk, "OpConstant", offset, false);
-        case OpLongConstant:
-            return print_constant(chunk, "OpLongConstant", offset, true);
         case OpDefineGlobal:
             return print_simple_op("OpDefineGlobal");
         case OpGetGlobal:
@@ -114,20 +100,8 @@ static i32 print_op(Chunk *chunk, i32 offset) {
             return print_simple_op("OpGetUpvalue");
         case OpClosure: {
             printf("OpClosure\n");
-            i32 x = 0;
-            i32 idx = 0;
-            if (chunk->bytes[offset + 1] == OpConstant) {
-                x = 2;
-                idx = chunk->bytes[offset + x];
-            } else {
-                x = 4;
-                u8 lo = chunk->bytes[offset + 4];
-                u8 mi = chunk->bytes[offset + 3];
-                u8 hi = chunk->bytes[offset + 2];
-
-                idx = ((i32)hi) << 16 | ((i32)mi) << 8 | (i32)lo;
-            }
-
+            i32 x = 3;
+            i32 idx = (chunk->bytes[offset + 2] << 8) | chunk -> bytes[offset + 3];
             LambFunc *func = (LambFunc *)chunk->constants.values[idx].as.obj;
 
             // NOTE: x bytes for constant + 2 bytes per upvalue + 1 to jump over

@@ -5,7 +5,6 @@
 
 typedef enum {
     OpConstant,
-    OpLongConstant,
     OpDefineGlobal,
     OpGetGlobal,
     OpGetLocal,

@@ -33,20 +33,12 @@ i32 chunk_add_constant(Vm *vm, Chunk *chunk, Value val) {
 
 void chunk_write_constant(Vm *vm, Chunk *chunk, Value val) {
     i32 idx = chunk_add_constant(vm, chunk, val);
+    u8 hi = (idx >> 8) & 0xFF;
+    u8 lo = idx & 0xFF;
 
-    if (idx >= 256) {
-        u8 hi = (idx >> 16) & 0xFF;
-        u8 mi = (idx >> 8) & 0xFF;
-        u8 lo = (idx >> 0) & 0xFF;
-
-        chunk_write(vm, chunk, OpLongConstant);
-        chunk_write(vm, chunk, hi);
-        chunk_write(vm, chunk, mi);
-        chunk_write(vm, chunk, lo);
-    } else {
-        chunk_write(vm, chunk, OpConstant);
-        chunk_write(vm, chunk, (u8)idx);
-    }
+    chunk_write(vm, chunk, OpConstant);
+    chunk_write(vm, chunk, hi);
+    chunk_write(vm, chunk, lo);
 }
 
 i32 chunk_write_jump(Vm *vm, Chunk *chunk, u8 op) {

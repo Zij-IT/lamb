@@ -80,16 +80,8 @@ static u16 vm_read_short(Vm *vm) {
 }
 
 static Value vm_read_constant(Vm *vm) {
-    if (vm_read_byte(vm) == OpConstant) {
-        return vm_chunk(vm)->constants.values[vm_read_byte(vm)];
-    } else {
-        u8 hi = vm_read_byte(vm);
-        u8 mi = vm_read_byte(vm);
-        u8 lo = vm_read_byte(vm);
-
-        i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
-        return vm_chunk(vm)->constants.values[idx];
-    }
+    vm_read_byte(vm);
+    return vm_chunk(vm)->constants.values[vm_read_short(vm)];
 }
 
 static Value *vm_peek_stack(Vm *vm) {
@@ -137,49 +129,44 @@ Value vm_pop_stack(Vm *vm) {
     return *vm->stack_top;
 }
 
-#define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
-    do {                                                                                           \
-        Value rhs = vm_pop_stack(vm);                                                              \
-        Value *lhs = vm_peek_stack(vm);                                                            \
-                                                                                                   \
-        if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
-            lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
-        } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {                                \
-            lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;                                         \
-        } else {                                                                                   \
-            binary_type_error(*lhs, #op, rhs);                                                     \
-        }                                                                                          \
-    } while (0)
-
-#define BINARY_INT_OP(vm, op)                                                                      \
-    do {                                                                                           \
-        Value rhs = vm_pop_stack(vm);                                                              \
-        Value *lhs = vm_peek_stack(vm);                                                            \
-                                                                                                   \
-        if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
-            lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
-        } else {                                                                                   \
-            binary_type_error(*lhs, #op, rhs);                                                     \
-        }                                                                                          \
-    } while (0)
-
 InterpretResult vm_run(Vm *vm) {
+    #define PUSH(val)(*vm->stack_top = val, vm->stack_top += 1)
+
+    #define POP()(*--vm->stack_top)
+
+    #define DROP()(vm->stack_top -= 1)
+
+    #define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
+        do {                                                                                           \
+            Value rhs = POP();                                                                         \
+            Value *lhs = vm_peek_stack(vm);                                                            \
+                                                                                                       \
+            if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
+                lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
+            } else if (rhs.kind == lhs->kind && rhs.kind == VkDouble) {                                \
+                lhs->as.doubn = lhs->as.doubn op rhs.as.doubn;                                         \
+            } else {                                                                                   \
+                binary_type_error(*lhs, #op, rhs);                                                     \
+            }                                                                                          \
+        } while (0)
+
+    #define BINARY_INT_OP(vm, op)                                                                      \
+        do {                                                                                           \
+            Value rhs = POP();                                                                         \
+            Value *lhs = vm_peek_stack(vm);                                                            \
+                                                                                                       \
+            if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
+                lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
+            } else {                                                                                   \
+                binary_type_error(*lhs, #op, rhs);                                                     \
+            }                                                                                          \
+        } while (0)
+
+    
     for (;;) {
         switch (vm_read_byte(vm)) {
             case OpConstant: {
-                Value val = vm_chunk(vm)->constants.values[vm_read_byte(vm)];
-                vm_push_stack(vm, val);
-                break;
-            }
-            case OpLongConstant: {
-                u8 hi = vm_read_byte(vm);
-                u8 mi = vm_read_byte(vm);
-                u8 lo = vm_read_byte(vm);
-
-                i32 idx = ((i32)hi) << 16 | ((i32)mi) << 8 | ((i32)lo) << 0;
-                Value val = vm_chunk(vm)->constants.values[idx];
-
-                vm_push_stack(vm, val);
+                vm_push_stack(vm, vm_frame(vm)->closure->function->chunk.constants.values[vm_read_short(vm)]);
                 break;
             }
             case OpDefineGlobal: {
@@ -190,7 +177,7 @@ InterpretResult vm_run(Vm *vm) {
                     runtime_error("Multiple definitions found for global %s", ident->chars);
                 }
 
-                vm_pop_stack(vm);
+                DROP();
                 break;
             }
             case OpGetGlobal: {
@@ -202,17 +189,17 @@ InterpretResult vm_run(Vm *vm) {
                     runtime_error("'%s' does not have an associated binding", ident->chars);
                 }
 
-                vm_push_stack(vm, value);
+                PUSH(value);
                 break;
             }
             case OpGetLocal: {
                 i32 slot = vm_read_constant(vm).as.intn;
-                vm_push_stack(vm, vm_frame(vm)->slots[slot]);
+                PUSH(vm_frame(vm)->slots[slot]);
                 break;
             }
             case OpGetUpvalue: {
                 i32 slot = vm_read_constant(vm).as.intn;
-                vm_push_stack(vm, *vm_frame(vm)->closure->upvalues[slot]->location);
+                PUSH(*vm_frame(vm)->closure->upvalues[slot]->location);
                 break;
             }
             case OpJumpIfFalse: {
@@ -267,17 +254,17 @@ InterpretResult vm_run(Vm *vm) {
                 Value *rhs = vm_peek_stack(vm);
                 if (rhs->kind == lhs->kind && rhs->kind == VkInt) {
                     lhs->as.intn = lhs->as.intn + rhs->as.intn;
-                    vm_pop_stack(vm);
+                    DROP();
                 } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
                     lhs->as.doubn = lhs->as.doubn + rhs->as.doubn;
-                    vm_pop_stack(vm);
+                    DROP();
                 } else if (is_object(*lhs) && is_of_type(lhs->as.obj, OtString) &&
                            is_object(*rhs) && is_of_type(rhs->as.obj, OtString)) {
                     LambString *st =
                         concat(vm, (LambString *)lhs->as.obj, (LambString *)rhs->as.obj);
-                    vm_pop_stack(vm);
-                    vm_pop_stack(vm);
-                    vm_push_stack(vm, new_object((Object *)st));
+                    DROP();
+                    DROP();
+                    PUSH(new_object((Object *)st));
                 } else {
                     binary_type_error(*lhs, "+", *rhs);
                 }
@@ -294,7 +281,7 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             // This operator must be expanded to escape % in the printf
             case OpMod: {
-                Value rhs = vm_pop_stack(vm);
+                Value rhs = POP();
                 Value *lhs = vm_peek_stack(vm);
                 if (rhs.kind == lhs->kind && rhs.kind == VkInt) {
                     lhs->as.intn = lhs->as.intn % rhs.as.intn;
@@ -319,82 +306,82 @@ InterpretResult vm_run(Vm *vm) {
                 BINARY_INT_OP(vm, >>);
                 break;
             case OpEq: {
-                Value rhs = vm_pop_stack(vm);
-                Value lhs = vm_pop_stack(vm);
+                Value rhs = POP();
+                Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderEqual));
+                    PUSH(new_boolean(value_compare(&lhs, &rhs) == OrderEqual));
                     break;
                 } else {
                     binary_type_error(lhs, "=", rhs);
                 }
             }
             case OpNe: {
-                Value rhs = vm_pop_stack(vm);
-                Value lhs = vm_pop_stack(vm);
+                Value rhs = POP();
+                Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderEqual));
+                    PUSH(new_boolean(value_compare(&lhs, &rhs) != OrderEqual));
                     break;
                 } else {
                     binary_type_error(lhs, "!=", rhs);
                 }
             }
             case OpGt: {
-                Value rhs = vm_pop_stack(vm);
-                Value lhs = vm_pop_stack(vm);
+                Value rhs = POP();
+                Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderGreater));
+                    PUSH(new_boolean(value_compare(&lhs, &rhs) == OrderGreater));
                     break;
                 } else {
                     binary_type_error(lhs, ">", rhs);
                 }
             }
             case OpGe: {
-                Value rhs = vm_pop_stack(vm);
-                Value lhs = vm_pop_stack(vm);
+                Value rhs = POP();
+                Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderLess));
+                    PUSH(new_boolean(value_compare(&lhs, &rhs) != OrderLess));
                     break;
                 } else {
                     binary_type_error(lhs, ">=", rhs);
                 }
             }
             case OpLt: {
-                Value rhs = vm_pop_stack(vm);
-                Value lhs = vm_pop_stack(vm);
+                Value rhs = POP();
+                Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) == OrderLess));
+                    PUSH(new_boolean(value_compare(&lhs, &rhs) == OrderLess));
                     break;
                 } else {
                     binary_type_error(lhs, "<", rhs);
                 }
             }
             case OpLe: {
-                Value rhs = vm_pop_stack(vm);
-                Value lhs = vm_pop_stack(vm);
+                Value rhs = POP();
+                Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    vm_push_stack(vm, new_boolean(value_compare(&lhs, &rhs) != OrderGreater));
+                    PUSH(new_boolean(value_compare(&lhs, &rhs) != OrderGreater));
                     break;
                 } else {
                     binary_type_error(lhs, "<=", rhs);
                 }
             } break;
             case OpMakeArray: {
-                i32 len = vm_pop_stack(vm).as.intn;
+                i32 len = POP().as.intn;
                 ValueArray items;
                 value_arr_init(&items);
 
                 for (i32 i = 0; i < len; i++) {
-                    value_arr_write(vm, &items, vm_pop_stack(vm));
+                    value_arr_write(vm, &items, POP());
                 }
 
                 LambArray *arr = (LambArray *)alloc_obj(vm, OtArray);
                 arr->items = items;
-                vm_push_stack(vm, new_object((Object *)arr));
+                PUSH(new_object((Object *)arr));
                 break;
             }
             case OpIndexArray: {
-                Value idx = vm_pop_stack(vm);
-                Value arr_val = vm_pop_stack(vm);
+                Value idx = POP();
+                Value arr_val = POP();
 
                 if (!is_integer(idx)) {
                     runtime_error("Unable to index into an array with a value of type %s",
@@ -407,7 +394,7 @@ InterpretResult vm_run(Vm *vm) {
                     case OtString: {
                         LambString *st = (LambString *)arr_val.as.obj;
                         if (idx.as.intn < st->len) {
-                            vm_push_stack(vm, new_char(st->chars[idx.as.intn]));
+                            PUSH(new_char(st->chars[idx.as.intn]));
                         } else {
                             runtime_error(
                                 "Index out of bounds. Desired index: (%ld) | Length: (%d)",
@@ -418,7 +405,7 @@ InterpretResult vm_run(Vm *vm) {
                     case OtArray: {
                         LambArray *arr = (LambArray *)arr_val.as.obj;
                         if (idx.as.intn < arr->items.len) {
-                            vm_push_stack(vm, arr->items.values[idx.as.intn]);
+                            PUSH(arr->items.values[idx.as.intn]);
                         } else {
                             runtime_error(
                                 "Index out of bounds. Desired index: (%ld) | Length: (%d)",
@@ -455,17 +442,17 @@ InterpretResult vm_run(Vm *vm) {
                             runtime_error("Callstack overflow");
                         }
 
-                        Callframe *frame = &vm->frames[vm->frame_count++];
-                        frame->closure = closure;
-                        frame->ip = closure->function->chunk.bytes;
-                        frame->slots = vm->stack_top - arg_count - 1;
+                        Callframe *new_frame = &vm->frames[vm->frame_count++];
+                        new_frame->closure = closure;
+                        new_frame->ip = closure->function->chunk.bytes;
+                        new_frame->slots = vm->stack_top - arg_count - 1;
                         break;
                     }
                     case OtNative: {
                         NativeFunc *native = (NativeFunc *)callee->as.obj;
                         Value result = native->func(arg_count, vm->stack_top - arg_count);
                         vm->stack_top -= arg_count + 1;
-                        vm_push_stack(vm, result);
+                        PUSH(result);
                         break;
                     }
                     default: {
@@ -478,7 +465,7 @@ InterpretResult vm_run(Vm *vm) {
             case OpClosure: {
                 LambFunc *function = (LambFunc *)vm_read_constant(vm).as.obj;
                 LambClosure *closure = to_closure(vm, function);
-                vm_push_stack(vm, new_object((Object *)closure));
+                PUSH(new_object((Object *)closure));
 
                 for (i32 i = 0; i < closure->upvalue_count; i++) {
                     bool is_local = vm_read_byte(vm);
@@ -494,7 +481,7 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpReturn: {
-                Value ret = vm_pop_stack(vm);
+                Value ret = POP();
                 close_upvalues(vm, vm_frame(vm)->slots);
                 vm->stack_top = vm_frame(vm)->slots;
                 vm->frame_count--;
@@ -503,29 +490,29 @@ InterpretResult vm_run(Vm *vm) {
                     return InterpretOk;
                 }
 
-                vm_push_stack(vm, ret);
+                PUSH(ret);
                 break;
             }
             case OpPop: {
-                vm_pop_stack(vm);
+                DROP();
                 break;
             }
             case OpCloseValue: {
                 close_upvalues(vm, vm->stack_top - 1);
-                vm_pop_stack(vm);
+                DROP();
                 break;
             }
             case OpDup: {
                 Value *ret = vm_peek_stack(vm);
-                vm_push_stack(vm, *ret);
+                PUSH(*ret);
                 break;
             }
             case OpSaveValue: {
-                vm->saved_value = vm_pop_stack(vm);
+                vm->saved_value = POP();
                 break;
             }
             case OpUnsaveValue: {
-                vm_push_stack(vm, vm->saved_value);
+                PUSH(vm->saved_value);
                 break;
             }
         }

@@ -684,19 +684,12 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             if (compiler->scope_depth == 0) {
                 chunk_write(vm, compiler_chunk(compiler), OpDefineGlobal);
-                if (idx >= 256) {
-                    u8 hi = (idx >> 16) & 0xFF;
-                    u8 mi = (idx >> 8) & 0xFF;
-                    u8 lo = (idx >> 0) & 0xFF;
+                u8 hi = (idx >> 8) & 0xFF;
+                u8 lo = (idx >> 0) & 0xFF;
 
-                    chunk_write(vm, compiler_chunk(compiler), OpLongConstant);
-                    chunk_write(vm, compiler_chunk(compiler), hi);
-                    chunk_write(vm, compiler_chunk(compiler), mi);
-                    chunk_write(vm, compiler_chunk(compiler), lo);
-                } else {
-                    chunk_write(vm, compiler_chunk(compiler), OpConstant);
-                    chunk_write(vm, compiler_chunk(compiler), (u8)idx);
-                }
+                chunk_write(vm, compiler_chunk(compiler), OpConstant);
+                chunk_write(vm, compiler_chunk(compiler), hi);
+                chunk_write(vm, compiler_chunk(compiler), lo);
                 STACK_DIFF(compiler, -1);
             } else {
                 Local loc = {
