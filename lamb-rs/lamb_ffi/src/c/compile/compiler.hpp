@@ -40,7 +40,7 @@ struct Compiler {
 
     Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity);
 
-    void add_local(Vm* vm, Local loc);
+    void add_local(Vm* vm, char const* name);
 
     void new_scope();
 

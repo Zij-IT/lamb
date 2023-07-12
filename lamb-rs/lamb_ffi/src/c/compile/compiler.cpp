@@ -41,7 +41,9 @@ Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, cha
     local_arr_write(vm, &this->locals, loc);
 }
 
-void Compiler::add_local(Vm* vm, Local loc) {
+void Compiler::add_local(Vm* vm, char const* name) {
+    Local loc = {
+        .name = name, .depth = this->block->depth, .is_captured = false};
     local_arr_write(vm, &this->locals, loc);
 }
 

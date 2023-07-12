@@ -96,8 +96,7 @@ static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode
     AstNode *ident_node = arg->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
     chunk_add_constant(vm, func_comp->chunk(), new_object((Object *)ident));
-    Local loc = {.name = ident->chars, .depth = func_comp->block->depth, .is_captured = false};
-    func_comp->add_local(vm, loc);
+    func_comp->add_local(vm, ident->chars);
     func_comp->function->arity++;
 }
 
@@ -170,9 +169,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
         chunk_write(vm, compiler->chunk(), OpDefineGlobal);
         chunk_write_constant(vm, compiler->chunk(), new_object((Object *)rec_func_ident));
     } else {
-        Local loc = {
-            .name = rec_func_ident->chars, .depth = compiler->block->depth, .is_captured = false};
-        compiler->add_local(vm, loc);
+        compiler->add_local(vm, rec_func_ident->chars);
     }
 
     return CarOk;
@@ -703,9 +700,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 STACK_DIFF(compiler, -1);
             } else {
                 chunk_add_constant(vm, compiler->chunk(), new_object((Object *)ident));
-                Local loc = {
-                    .name = ident->chars, .depth = compiler->block->depth, .is_captured = false};
-                compiler->add_local(vm, loc);
+                compiler->add_local(vm, ident->chars);
                 STACK_DIFF(compiler, 0);
             }
 
