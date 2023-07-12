@@ -38,7 +38,7 @@ struct Compiler {
 
     FuncType type;
 
-    Compiler(Vm* vm, FuncType type);
+    Compiler(Vm* vm, Block* block, FuncType type);
 
     void new_scope();
 

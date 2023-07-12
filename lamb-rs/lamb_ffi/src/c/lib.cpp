@@ -22,8 +22,8 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     Vm vm;
     vm_init(&vm, options);
 
-    Compiler compiler(&vm, FtScript);
     Block block = {.base = 0, .offset = 1, .depth = 0, .prev = NULL};
+    Compiler compiler(&vm, &block, FtScript);
 
     vm.curr_compiler = &compiler;
     compiler.block = &block;

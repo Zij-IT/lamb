@@ -4,10 +4,10 @@
 #include "table.hpp"
 #include <stdlib.h>
 
-Compiler::Compiler(Vm* vm, FuncType type) {
+Compiler::Compiler(Vm* vm, Block* block, FuncType type) {
     this->enclosing = nullptr;
     this->function = nullptr;
-    this->block = nullptr;
+    this->block = block;
     this->type = type;
 
     local_arr_init(&this->locals);
