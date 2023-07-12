@@ -87,11 +87,8 @@ static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
 static Chunk *compiler_chunk(Compiler *compiler) { return &compiler->function->chunk; }
 
 static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Block *const block, char const* name) {
-    Compiler func_comp(vm, block, FtNormal);
+    Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
     func_comp.new_scope();
-    func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
-    func_comp.function->name = name;
-    func_comp.enclosing = compiler;
     vm->curr_compiler = &func_comp;
 
     return func_comp;
@@ -193,8 +190,8 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
         .depth = 0,
         .prev = compiler->block,
     };
-
-    Compiler func_comp(vm, &block, FtNormal);
+    
+    Compiler func_comp(vm, compiler, &block, FtNormal, ANON_FUNC_NAME, 1);
 
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
@@ -203,9 +200,6 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     block.offset += 1;
 
     func_comp.new_scope();
-    func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
-    func_comp.function->name = ANON_FUNC_NAME;
-    func_comp.function->arity = 1;
     func_comp.enclosing = compiler;
     vm->curr_compiler = &func_comp;
 

@@ -4,11 +4,14 @@
 #include "table.hpp"
 #include <stdlib.h>
 
-Compiler::Compiler(Vm* vm, Block* block, FuncType type) {
-    this->enclosing = nullptr;
-    this->function = nullptr;
+Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
     this->block = block;
     this->type = type;
+    this->enclosing = enclosing;
+
+    this->function = (LambFunc *)alloc_obj(vm, OtFunc);
+    this->function->name = name;
+    this->function->arity = arity;
 
     local_arr_init(&this->locals);
 
