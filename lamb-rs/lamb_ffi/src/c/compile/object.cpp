@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../debug/debug.h"
-#include "../vm/vm.h"
-#include "memory.h"
-#include "misc.h"
-#include "object.h"
+#include "../debug/debug.hpp"
+#include "../vm/vm.hpp"
+#include "memory.hpp"
+#include "misc.hpp"
+#include "object.hpp"
 
 Object *alloc_obj(Vm *vm, ObjectType type) {
     switch (type) {
@@ -170,7 +170,7 @@ void object_free(Vm *vm, Object *obj) {
 
 bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
 
-LambString *cstr_to_lambstring(Vm *vm, str cstr) {
+LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
     u64 len = strlen(cstr);
     u32 hash = hash_string(cstr);
     LambString *interned = table_find_string(&vm->strings, cstr, len, hash);
@@ -244,7 +244,7 @@ void objectptr_array_write(__attribute__((unused)) Vm *vm, ObjectPtrArray *arr, 
     if (arr->capacity < arr->len + 1) {
         i32 old_cap = arr->capacity;
         arr->capacity = GROW_CAPACITY(old_cap);
-        arr->values = realloc(arr->values, sizeof(Object *) * arr->capacity);
+        arr->values = (Object**)realloc(arr->values, sizeof(Object *) * arr->capacity);
     }
 
     vm->bytes_allocated = 0;

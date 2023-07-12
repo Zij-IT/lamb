@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ast.h"
+#include "ast.hpp"
 
 AstNode *new_astnode(AstNodeType type) {
-    AstNode *node = calloc(1, sizeof(AstNode));
+    AstNode *node = (AstNode*)calloc(1, sizeof(AstNode));
     node->type = type;
 
     return node;

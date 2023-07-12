@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../debug/debug.h"
-#include "ast.h"
-#include "chunk.h"
-#include "misc.h"
-#include "object.h"
+#include "../debug/debug.hpp"
+#include "ast.hpp"
+#include "chunk.hpp"
+#include "misc.hpp"
+#include "object.hpp"
 
 #define LOCAL_NOT_FOUND -1
 #define UPVALUE_NOT_FOUND -1
@@ -86,7 +86,7 @@ static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
 
 static Chunk *compiler_chunk(Compiler *compiler) { return &compiler->function->chunk; }
 
-static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Block *const block, str name) {
+static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Block *const block, char const* name) {
     Compiler func_comp;
     compiler_init(vm, &func_comp, FtNormal);
     func_comp.block = block;
@@ -103,7 +103,7 @@ static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode
     AstNode *ident_node = arg->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
     chunk_add_constant(vm, compiler_chunk(func_comp), new_object((Object *)ident));
-    Local loc = {.depth = func_comp->block->depth, .name = ident->chars, .is_captured = false};
+    Local loc = {.name = ident->chars, .depth = func_comp->block->depth, .is_captured = false};
     local_arr_write(vm, &func_comp->locals, loc);
     func_comp->function->arity++;
 }
@@ -118,7 +118,7 @@ static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
     }
 }
 
-static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *node, str name) {
+static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *node, char const* name) {
     AstNode *func_args = node->kids[0];
     AstNode *func_body = node->kids[1];
     AstNode *is_recursive = node->kids[2];
@@ -178,7 +178,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
         chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)rec_func_ident));
     } else {
         Local loc = {
-            .depth = compiler->block->depth, .name = rec_func_ident->chars, .is_captured = false};
+            .name = rec_func_ident->chars, .depth = compiler->block->depth, .is_captured = false};
         local_arr_write(vm, &compiler->locals, loc);
     }
 
@@ -186,7 +186,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
 }
 
 static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *first, AstNode *second,
-                                        str name) {
+                                        char const* name) {
     // Turns: `f1 .> f2` or `f2 <. f1` into:
     // result := fn(x) -> f2(f1(x));
     Compiler func_comp;
@@ -714,9 +714,9 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
                 STACK_DIFF(compiler, -1);
             } else {
-                i32 idx = chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
+                chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
                 Local loc = {
-                    .depth = compiler->block->depth, .name = ident->chars, .is_captured = false};
+                    .name = ident->chars, .depth = compiler->block->depth, .is_captured = false};
                 local_arr_write(vm, &compiler->locals, loc);
                 STACK_DIFF(compiler, 0);
             }

@@ -2,40 +2,40 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "./object.h"
-#include "./value.h"
-#include "memory.h"
+#include "./object.hpp"
+#include "./value.hpp"
+#include "memory.hpp"
 
 Value new_nil() {
     Value val = {
         .kind = VkNil,
-        .as.boolean = false,
+        .as = { .boolean = false },
     };
     return val;
 }
 
 Value new_boolean(bool b) {
-    Value val = {.kind = VkBool, .as.boolean = b};
+    Value val = {.kind = VkBool, .as = { .boolean = b }};
     return val;
 }
 
 Value new_int(i64 num) {
-    Value val = {.kind = VkInt, .as.intn = num};
+    Value val = {.kind = VkInt, .as = { .intn = num }};
     return val;
 }
 
 Value new_double(double num) {
-    Value val = {.kind = VkDouble, .as.doubn = num};
+    Value val = {.kind = VkDouble, .as = { .doubn = num }};
     return val;
 }
 
 Value new_char(char c) {
-    Value val = {.kind = VkChar, .as.ch = c};
+    Value val = {.kind = VkChar, .as = { .ch = c }};
     return val;
 }
 
 Value new_object(Object *obj) {
-    Value val = {.kind = VkObj, .as.obj = obj};
+    Value val = {.kind = VkObj, .as = { .obj = obj }};
     return val;
 }
 
@@ -51,7 +51,7 @@ bool is_char(Value val) { return val.kind == VkChar; }
 
 bool is_object(Value val) { return val.kind == VkObj; }
 
-str kind_as_cstr(Value val) {
+char const* kind_as_cstr(Value val) {
     switch (val.kind) {
         case VkNil:
             return "nil";

@@ -176,9 +176,11 @@ fn bindgen_test_layout_AstNode_T() {
 }
 pub type AstNode = AstNode_T;
 extern "C" {
+    #[link_name = "\u{1}_Z11new_astnode11AstNodeType"]
     pub fn new_astnode(type_: AstNodeType) -> *mut AstNode;
 }
 extern "C" {
+    #[link_name = "\u{1}_Z8free_astP9AstNode_T"]
     pub fn free_ast(root: *mut AstNode);
 }
 extern "C" {

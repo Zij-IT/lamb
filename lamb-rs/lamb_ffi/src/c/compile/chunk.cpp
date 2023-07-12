@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../vm/vm.h"
-#include "./chunk.h"
-#include "./value.h"
-#include "memory.h"
+#include "../vm/vm.hpp"
+#include "./chunk.hpp"
+#include "./value.hpp"
+#include "memory.hpp"
 
 void chunk_init(Chunk *chunk) {
     chunk->len = 0;

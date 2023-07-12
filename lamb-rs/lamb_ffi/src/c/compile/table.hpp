@@ -1,8 +1,8 @@
 #ifndef TABLE_HEADER
 #define TABLE_HEADER
 
-#include "../types.h"
-#include "object.h"
+#include "../types.hpp"
+#include "object.hpp"
 
 #define TABLE_MAX_LOAD 0.75
 
@@ -23,7 +23,7 @@ void table_free(Vm *vm, Table *table);
 
 Entry *table_find(Table *table, LambString *key);
 
-LambString *table_find_string(Table *table, str chars, i32 len, u32 hash);
+LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash);
 
 bool table_insert(Vm *vm, Table *table, LambString *key, Value val);
 

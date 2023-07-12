@@ -1,7 +1,7 @@
-#include "native.h"
-#include "../compile/compiler.h"
-#include "../compile/misc.h"
-#include "../debug/debug.h"
+#include "native.hpp"
+#include "../compile/compiler.hpp"
+#include "../compile/misc.hpp"
+#include "../debug/debug.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +12,7 @@ static NativeFunc *new_native(Vm *vm, CFunc cfunc) {
     return native_func;
 }
 
-static void define_native(Vm *vm, str fn_name, CFunc function) {
+static void define_native(Vm *vm, char const* fn_name, CFunc function) {
     LambString *interned = cstr_to_lambstring(vm, fn_name);
     vm_push_stack(vm, new_object((Object *)interned));
     vm_push_stack(vm, new_object((Object *)new_native(vm, function)));

@@ -1,8 +1,8 @@
 #ifndef COMPILING_AST_HEADER
 #define COMPILING_AST_HEADER
 
-#include "../ast/ast.h"
-#include "../vm/vm.h"
+#include "../ast/ast.hpp"
+#include "../vm/vm.hpp"
 
 typedef enum {
     CarOk,

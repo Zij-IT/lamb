@@ -1,6 +1,6 @@
-#include "table.h"
-#include "../debug/debug.h"
-#include "memory.h"
+#include "table.hpp"
+#include "../debug/debug.hpp"
+#include "memory.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +12,7 @@ static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
 
     // This table is required due to table_find call below, and has no other
     // function hence the length being set to 0 despite entries being filled
-    Table temp_table = {.capacity = capacity, .entries = entries, .len = 0};
+    Table temp_table = {.len = 0, .capacity = capacity, .entries = entries};
 
     for (i32 i = 0; i < capacity; i++) {
         entries[i].key = NULL;
@@ -120,7 +120,7 @@ Entry *table_find(Table *table, LambString *key) {
     }
 }
 
-LambString *table_find_string(Table *table, str chars, i32 len, u32 hash) {
+LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash) {
     if (table->len == 0) {
         return NULL;
     }

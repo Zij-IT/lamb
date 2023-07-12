@@ -1,7 +1,7 @@
 #ifndef AST_HEADER
 #define AST_HEADER
 
-#include "../types.h"
+#include "../types.hpp"
 
 #define MAX_AST_KID_COUNT 3
 

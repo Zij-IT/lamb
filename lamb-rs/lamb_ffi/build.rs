@@ -1,17 +1,17 @@
 const C_FILES: &[&str] = &[
-    "./src/c/lib.c",
-    "./src/c/ast/ast.c",
-    "./src/c/compile/value.c",
-    "./src/c/compile/chunk.c",
-    "./src/c/compile/ast.c",
-    "./src/c/compile/object.c",
-    "./src/c/compile/table.c",
-    "./src/c/compile/compiler.c",
-    "./src/c/compile/memory.c",
-    "./src/c/compile/misc.c",
-    "./src/c/debug/debug.c",
-    "./src/c/vm/vm.c",
-    "./src/c/vm/native.c",
+    "./src/c/lib.cpp",
+    "./src/c/ast/ast.cpp",
+    "./src/c/compile/value.cpp",
+    "./src/c/compile/chunk.cpp",
+    "./src/c/compile/ast.cpp",
+    "./src/c/compile/object.cpp",
+    "./src/c/compile/table.cpp",
+    "./src/c/compile/compiler.cpp",
+    "./src/c/compile/memory.cpp",
+    "./src/c/compile/misc.cpp",
+    "./src/c/debug/debug.cpp",
+    "./src/c/vm/vm.cpp",
+    "./src/c/vm/native.cpp",
 ];
 
 fn main() {
@@ -24,14 +24,16 @@ fn main() {
                 .iter()
                 .inspect(|f| println!("cargo:rerun-if-changed={f}")),
         )
+        .cpp(true)
         .flag("-lfl")
+        .flag("-std=c++20")
         .warnings(true)
         .compile("lamb_c");
 
     // This build-iful piece here generates the necessary headers required
     // for the bindings.
     bindgen::Builder::default()
-        .header("wrapper.h")
+        .header("wrapper.hpp")
         .allowlist_function("run_ast")
         .allowlist_function("free_ast")
         .allowlist_function("new_astnode")

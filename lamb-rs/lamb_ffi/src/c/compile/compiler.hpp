@@ -1,10 +1,10 @@
 #ifndef BLOCK_HEADER
 #define BLOCK_HEADER
 
-#include "object.h"
+#include "object.hpp"
 
 typedef struct {
-    str name;
+    char const* name;
     i32 depth;
     bool is_captured;
 } Local;

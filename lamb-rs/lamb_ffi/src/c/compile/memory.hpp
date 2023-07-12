@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "value.h"
+#include "value.hpp"
 
 typedef struct Vm Vm;
 typedef struct Table Table;

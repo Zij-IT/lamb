@@ -3,17 +3,15 @@
 #include <string.h>
 #include <time.h>
 
-#include "../compile/value.h"
-#include "../debug/debug.h"
-#include "native.h"
-#include "vm.h"
+#include "../compile/value.hpp"
+#include "../debug/debug.hpp"
+#include "native.hpp"
+#include "vm.hpp"
 
 #define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))
 
 #define runtime_error(...)                                                                         \
     do {                                                                                           \
-        fprintf(stderr, "[Lamb] RuntimeError: "__VA_ARGS__);                                       \
-        fprintf(stderr, "\n");                                                                     \
         return InterpretRuntimeError;                                                              \
     } while (0)
 

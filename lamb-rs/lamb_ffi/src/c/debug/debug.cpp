@@ -1,13 +1,13 @@
 #include <stdio.h>
 
-#include "debug.h"
+#include "debug.hpp"
 
-static i32 print_simple_op(str name) {
+static i32 print_simple_op(char const* name) {
     printf("%s\n", name);
     return 1;
 }
 
-static i32 print_jump(Chunk *chunk, str name, i32 offset, i32 sign) {
+static i32 print_jump(Chunk *chunk, char const* name, i32 offset, i32 sign) {
     u16 jump = (u16)(chunk->bytes[offset + 1] << 8);
     jump |= chunk->bytes[offset + 2];
 
@@ -15,7 +15,7 @@ static i32 print_jump(Chunk *chunk, str name, i32 offset, i32 sign) {
     return 3;
 }
 
-static i32 print_constant(Chunk *chunk, str name, i32 offset) {
+static i32 print_constant(Chunk *chunk, char const* name, i32 offset) {
     u8 hi = chunk->bytes[offset + 1];
     u8 lo = chunk->bytes[offset + 2];
     Value val = chunk->constants.values[((u16)hi) << 8 | lo];
@@ -115,7 +115,7 @@ static i32 print_op(Chunk *chunk, i32 offset) {
     }
 }
 
-void chunk_debug(Chunk *chunk, str name) {
+void chunk_debug(Chunk *chunk, char const* name) {
     printf("====== %s ======\n", name);
     i32 offset = 0;
     while (offset < chunk->len) {

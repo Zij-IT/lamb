@@ -1,7 +1,7 @@
 #ifndef VALUE_HEADER
 #define VALUE_HEADER
 
-#include "../types.h"
+#include "../types.hpp"
 
 // Forward declare from object.h
 typedef struct Object Object;
@@ -66,7 +66,7 @@ Value new_object(Object *obj);
 
 Order value_compare(Value *lhs, Value *rhs);
 
-str kind_as_cstr(Value val);
+char const* kind_as_cstr(Value val);
 
 void value_arr_init(ValueArray *arr);
 

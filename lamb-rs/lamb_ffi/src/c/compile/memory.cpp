@@ -1,6 +1,6 @@
-#include "memory.h"
-#include "../vm/vm.h"
-#include "value.h"
+#include "memory.hpp"
+#include "../vm/vm.hpp"
+#include "value.hpp"
 
 #include <stdio.h>
 

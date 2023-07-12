@@ -1,8 +1,8 @@
 #ifndef OBJECT_HEADER
 #define OBJECT_HEADER
 
-#include "../types.h"
-#include "chunk.h"
+#include "../types.hpp"
+#include "chunk.hpp"
 
 // Forward declare vm in vm.h
 typedef struct Vm Vm;
@@ -39,7 +39,7 @@ typedef struct LambArray {
 typedef struct LambFunc {
     Object obj;
     Chunk chunk;
-    str name;
+    char const* name;
     i32 upvalue_count;
     u8 arity;
 } LambFunc;
@@ -80,7 +80,7 @@ bool is_of_type(Object *obj, ObjectType type);
 
 void object_free(Vm *vm, Object *obj);
 
-LambString *cstr_to_lambstring(Vm *vm, str cstr);
+LambString *cstr_to_lambstring(Vm *vm, char const* cstr);
 
 LambString *concat(Vm *vm, LambString *lhs, LambString *rhs);
 

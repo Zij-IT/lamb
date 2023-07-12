@@ -1,12 +1,12 @@
-#include "./ast/ast.h"
-#include "./compile/ast.h"
-#include "./compile/chunk.h"
-#include "./debug/debug.h"
-#include "./vm/vm.h"
+#include "./ast/ast.hpp"
+#include "./compile/ast.hpp"
+#include "./compile/chunk.hpp"
+#include "./debug/debug.hpp"
+#include "./vm/vm.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 
-void run_ast(AstNode *root, bool print_fns, bool print_main) {
+extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     // Occurs when with an empty script
     if (root == NULL) {
         return;

@@ -1,7 +1,7 @@
 #ifndef NATIVE_HEADER
 #define NATIVE_HEADER
 
-#include "vm.h"
+#include "vm.hpp"
 
 void set_natives(Vm *vm);
 

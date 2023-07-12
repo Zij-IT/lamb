@@ -1,7 +1,7 @@
 #ifndef CHUNK_HEADER
 #define CHUNK_HEADER
 
-#include "./value.h"
+#include "./value.hpp"
 
 typedef enum {
     OpConstant,

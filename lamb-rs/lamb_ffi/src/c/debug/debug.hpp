@@ -3,11 +3,11 @@
 
 #include <assert.h>
 
-#include "../compile/object.h"
+#include "../compile/object.hpp"
 
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 
-void chunk_debug(Chunk *chunk, str name);
+void chunk_debug(Chunk *chunk, char const* name);
 
 void print_value(Value v);
 

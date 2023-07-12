@@ -1,9 +1,9 @@
 #ifndef VM_HEADER
 #define VM_HEADER
 
-#include "../compile/chunk.h"
-#include "../compile/compiler.h"
-#include "../compile/table.h"
+#include "../compile/chunk.hpp"
+#include "../compile/compiler.hpp"
+#include "../compile/table.hpp"
 
 #define MAX_FRAMES 1024
 #define MAX_VALUES (MAX_FRAMES * UINT8_MAX)

@@ -1,7 +1,7 @@
-#include "compiler.h"
-#include "chunk.h"
-#include "memory.h"
-#include "table.h"
+#include "compiler.hpp"
+#include "chunk.hpp"
+#include "memory.hpp"
+#include "table.hpp"
 #include <stdlib.h>
 
 void compiler_init(Vm *vm, Compiler *compiler, FuncType type) {
