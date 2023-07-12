@@ -26,13 +26,13 @@ typedef struct Table {
 
     LambString *find_string(char const* chars, i32 len, u32 hash);
 
+    bool get(LambString *key, Value *val);
+
     bool insert(Vm *vm, LambString *key, Value val);
 
     bool remove(LambString* key);
 
     void remove_marked();
 } Table;
-
-bool table_get(Table *table, LambString *key, Value *val);
 
 #endif // TABLE_HEADER

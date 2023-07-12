@@ -167,7 +167,7 @@ InterpretResult vm_run(Vm *vm) {
                 LambString *ident = (LambString *)val.as.obj;
 
                 Value value;
-                if (!table_get(&vm->globals, ident, &value)) {
+                if (!vm->globals.get(ident, &value)) {
                     runtime_error("'%s' does not have an associated binding", ident->chars);
                 }
 

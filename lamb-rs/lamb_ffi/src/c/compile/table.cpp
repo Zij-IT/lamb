@@ -107,6 +107,20 @@ LambString *Table::find_string(char const* chars, i32 len, u32 hash) {
     }
 }
 
+bool Table::get(LambString *key, Value *value) {
+    if (this->len == 0) {
+        return false;
+    }
+
+    Entry *entry = this->find(key);
+    if (entry->key == NULL) {
+        return false;
+    }
+
+    *value = entry->val;
+    return true;
+}
+
 bool Table::insert(Vm *vm, LambString *key, Value value) {
     if (this->len + 1 > this->capacity * TABLE_MAX_LOAD) {
         i32 capacity = GROW_CAPACITY(this->capacity);
