@@ -9,7 +9,36 @@
 
 static bool is_tombstone(Entry *entry) { return is_bool(entry->val) && entry->val.as.boolean; }
 
-static Entry *table_find(Table *table, LambString *key) {
+static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
+    Entry *entries = ALLOCATE(vm, Entry, capacity);
+
+    // This table is required due to table_find call below, and has no other
+    // function hence the length being set to 0 despite entries being filled
+    Table temp_table(0, capacity, entries);
+
+    for (i32 i = 0; i < capacity; i++) {
+        entries[i].key = NULL;
+        // This is a dummy value and should probably be replaced with something
+        // in the future. This is a poor man's Option::None
+        entries[i].val = new_boolean(false);
+    }
+
+    table->len = 0;
+    for (i32 i = 0; i < table->capacity; i++) {
+        Entry *entry = &table->entries[i];
+        if (entry->key == NULL) {
+            continue;
+        }
+
+        Entry *dest = table->find(entry->key);
+        dest->key = entry->key;
+        dest->val = entry->val;
+        table->len++;
+    }
+
+    FREE_ARRAY(vm, Entry, table->entries, table->capacity);
+    table->entries = entries;
+    table->capacity = capacity;
 }
 
 Table::Table() {
@@ -48,53 +77,20 @@ Entry *Table::find(LambString* key) {
     }
 }
 
-static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
-    Entry *entries = ALLOCATE(vm, Entry, capacity);
-
-    // This table is required due to table_find call below, and has no other
-    // function hence the length being set to 0 despite entries being filled
-    Table temp_table(0, capacity, entries);
-
-    for (i32 i = 0; i < capacity; i++) {
-        entries[i].key = NULL;
-        // This is a dummy value and should probably be replaced with something
-        // in the future. This is a poor man's Option::None
-        entries[i].val = new_boolean(false);
+bool Table::insert(Vm *vm, LambString *key, Value value) {
+    if (this->len + 1 > this->capacity * TABLE_MAX_LOAD) {
+        i32 capacity = GROW_CAPACITY(this->capacity);
+        table_adjust_capacity(vm, this, capacity);
     }
 
-    table->len = 0;
-    for (i32 i = 0; i < table->capacity; i++) {
-        Entry *entry = &table->entries[i];
-        if (entry->key == NULL) {
-            continue;
-        }
-
-        Entry *dest = table->find(entry->key);
-        dest->key = entry->key;
-        dest->val = entry->val;
-        table->len++;
-    }
-
-    FREE_ARRAY(vm, Entry, table->entries, table->capacity);
-    table->entries = entries;
-    table->capacity = capacity;
-}
-
-bool table_insert(Vm *vm, Table *table, LambString *key, Value val) {
-    // printf("Inserting into table key: '%s'\n", key->chars);
-    if (table->len + 1 > table->capacity * TABLE_MAX_LOAD) {
-        i32 capacity = GROW_CAPACITY(table->capacity);
-        table_adjust_capacity(vm, table, capacity);
-    }
-
-    Entry *entry = table->find(key);
+    Entry *entry = this->find(key);
     bool is_new = entry->key == NULL;
     if (is_new && !is_tombstone(entry)) {
-        table->len++;
+        this->len++;
     }
 
     entry->key = key;
-    entry->val = val;
+    entry->val = value;
 
     return is_new;
 }

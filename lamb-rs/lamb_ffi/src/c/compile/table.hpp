@@ -21,13 +21,13 @@ typedef struct Table {
     Table(i32 len, i32 capacity, Entry* entries);
 
     Entry *find(LambString* key);
+    bool insert(Vm *vm, LambString *key, Value val);
+
 } Table;
 
 void table_free(Vm *vm, Table *table);
 
 LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash);
-
-bool table_insert(Vm *vm, Table *table, LambString *key, Value val);
 
 bool table_remove(Table *table, LambString *key);
 

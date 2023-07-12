@@ -181,7 +181,7 @@ LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
         interned->len = len;
 
         vm_push_stack(vm, new_object((Object *)interned));
-        table_insert(vm, &vm->strings, interned, new_boolean(false));
+        vm->strings.insert(vm, interned, new_boolean(false));
         vm_pop_stack(vm);
     }
 
@@ -209,7 +209,7 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
     ret->hash = hash_string(chars);
 
     vm_push_stack(vm, new_object((Object *)(ret)));
-    table_insert(vm, &vm->strings, ret, new_boolean(false));
+    vm->strings.insert(vm, ret, new_boolean(false));
     vm_pop_stack(vm);
 
     return ret;
