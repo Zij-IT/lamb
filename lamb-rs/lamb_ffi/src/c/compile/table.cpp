@@ -95,12 +95,12 @@ bool Table::insert(Vm *vm, LambString *key, Value value) {
     return is_new;
 }
 
-bool table_remove(Table *table, LambString *key) {
-    if (table->len == 0) {
+bool Table::remove(LambString* key) {
+    if (this->len == 0) {
         return false;
     }
 
-    Entry *entry = table->find(key);
+    Entry *entry = this->find(key);
     if (entry->key == NULL) {
         return false;
     }
@@ -109,6 +109,15 @@ bool table_remove(Table *table, LambString *key) {
     entry->val = TOMBSTONE;
 
     return true;
+}
+
+void Table::remove_marked() {
+    for (i32 i = 0; i < this->capacity; i++) {
+        Entry *entry = &this->entries[i];
+        if (entry->key != NULL && !entry->key->obj.is_marked) {
+            this->remove(entry->key);
+        }
+    }
 }
 
 bool table_get(Table *table, LambString *key, Value *out) {
@@ -145,15 +154,6 @@ LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash
         }
 
         index = (index + 1) & (table->capacity - 1);
-    }
-}
-
-void table_remove_white(Table *table) {
-    for (i32 i = 0; i < table->capacity; i++) {
-        Entry *entry = &table->entries[i];
-        if (entry->key != NULL && !entry->key->obj.is_marked) {
-            table_remove(table, entry->key);
-        }
     }
 }
 

@@ -192,7 +192,7 @@ void collect_garbage(Vm *vm) {
 
     trace_refs(vm);
 
-    table_remove_white(&vm->strings);
+    vm->strings.remove_marked();
 
     sweep_unused(vm);
 
