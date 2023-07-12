@@ -27,7 +27,7 @@ typedef struct Block {
     struct Block *prev;
 } Block;
 
-typedef struct Compiler {
+struct Compiler {
     LocalArray locals;
 
     LambFunc *function;
@@ -37,17 +37,15 @@ typedef struct Compiler {
     Block *block;
 
     FuncType type;
-} Compiler;
 
-void compiler_init(Vm *vm, Compiler *compiler, FuncType type);
+    Compiler(Vm* vm, FuncType type);
 
-void compiler_free(Vm *vm, Compiler *compiler);
+    void new_scope();
 
-void compiler_new_scope(Compiler *compiler);
+    void end_scope(Vm* vm);
 
-void compiler_end_scope(Vm *vm, Compiler *compiler);
-
-void compiler_declare_var(Compiler *compiler, str name);
+    void destroy(Vm* vm);
+};
 
 void local_arr_init(LocalArray *arr);
 

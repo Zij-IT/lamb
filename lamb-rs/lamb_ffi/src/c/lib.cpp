@@ -22,11 +22,10 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     Vm vm;
     vm_init(&vm, options);
 
-    Compiler compiler;
+    Compiler compiler(&vm, FtScript);
     Block block = {.base = 0, .offset = 1, .depth = 0, .prev = NULL};
 
     vm.curr_compiler = &compiler;
-    compiler_init(&vm, &compiler, FtScript);
     compiler.block = &block;
     compiler.function = (LambFunc *)alloc_obj(&vm, OtFunc);
     vm_push_stack(&vm, new_object((Object *)compiler.function));
@@ -55,6 +54,6 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
                "compiled.\n");
     }
 
-    compiler_free(&vm, &compiler);
+    compiler.destroy(&vm);
     vm_free(&vm);
 }

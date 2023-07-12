@@ -87,10 +87,9 @@ static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
 static Chunk *compiler_chunk(Compiler *compiler) { return &compiler->function->chunk; }
 
 static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Block *const block, char const* name) {
-    Compiler func_comp;
-    compiler_init(vm, &func_comp, FtNormal);
+    Compiler func_comp(vm, FtNormal);
     func_comp.block = block;
-    compiler_new_scope(&func_comp);
+    func_comp.new_scope();
     func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
     func_comp.function->name = name;
     func_comp.enclosing = compiler;
@@ -157,8 +156,8 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
 
     write_as_closure(vm, &func_comp);
 
-    compiler_end_scope(vm, &func_comp);
-    compiler_free(vm, &func_comp);
+    func_comp.end_scope(vm);
+    func_comp.destroy(vm);
     vm->curr_compiler = func_comp.enclosing;
 
     return CarOk;
@@ -189,8 +188,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
                                         char const* name) {
     // Turns: `f1 .> f2` or `f2 <. f1` into:
     // result := fn(x) -> f2(f1(x));
-    Compiler func_comp;
-    compiler_init(vm, &func_comp, FtNormal);
+    Compiler func_comp(vm, FtNormal);
     Block block = {
         .base = 1,
         .offset = 0,
@@ -206,7 +204,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     func_comp.locals.values[0].depth = 1;
     block.offset += 1;
 
-    compiler_new_scope(&func_comp);
+    func_comp.new_scope();
     func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
     func_comp.function->name = ANON_FUNC_NAME;
     func_comp.function->arity = 1;
@@ -242,8 +240,8 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
         chunk_write(vm, compiler_chunk(compiler), func_comp.upvalues[i].index);
     }
 
-    compiler_end_scope(vm, &func_comp);
-    compiler_free(vm, &func_comp);
+    func_comp.end_scope(vm);
+    func_comp.destroy(vm);
     vm->curr_compiler = func_comp.enclosing;
 
     return CarOk;
@@ -672,7 +670,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                            .prev = prev};
             compiler->block = &block;
 
-            compiler_new_scope(compiler);
+            compiler->new_scope();
             AstNode *stmt = node->kids[0];
             for (; stmt != NULL && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type);
                  stmt = stmt->kids[1]) {
@@ -685,7 +683,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
             }
 
-            compiler_end_scope(vm, compiler);
+            compiler->end_scope(vm);
             compiler->block->offset = prev_offset + 1;
             break;
         }
