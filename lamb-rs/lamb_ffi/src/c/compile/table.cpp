@@ -53,6 +53,13 @@ Table::Table(i32 len, i32 capacity, Entry* entries) {
     this->entries = entries;
 }
 
+void Table::destroy(Vm *vm) {
+    FREE_ARRAY(vm, Entry, this->entries, this->capacity);
+    this->entries = nullptr;
+    this->capacity = 0;
+    this->len = 0;
+}
+
 Entry *Table::find(LambString* key) {
     // Correctness: Table capacity is guarunteed to be a multiple of 2
     //              in which case x % n is the same as X & (n - 1)
@@ -155,36 +162,6 @@ bool table_get(Table *table, LambString *key, Value *out) {
 
     *out = entry->val;
     return true;
-}
-
-LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash) {
-    if (table->len == 0) {
-        return NULL;
-    }
-
-    // Correctness: Table capacity is guarunteed to be a multiple of 2
-    //              in which case x % n is the same as X & (n - 1)
-    u32 index = hash & (table->capacity - 1);
-    while (true) {
-        Entry *entry = &table->entries[index];
-        if (entry->key == NULL) {
-            if (!is_tombstone(entry)) {
-                return NULL;
-            }
-        } else if (entry->key->len == len && entry->key->hash == hash &&
-                   memcmp(entry->key->chars, chars, len) == 0) {
-            return entry->key;
-        }
-
-        index = (index + 1) & (table->capacity - 1);
-    }
-}
-
-void table_free(Vm *vm, Table *table) {
-    FREE_ARRAY(vm, Entry, table->entries, table->capacity);
-    table->entries = nullptr;
-    table->capacity = 0;
-    table->len = 0;
 }
 
 #undef TOMBSTONE

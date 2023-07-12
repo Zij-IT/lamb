@@ -511,8 +511,8 @@ void vm_free(Vm *vm) {
         obj = next;
     }
 
-    table_free(vm, &vm->strings);
-    table_free(vm, &vm->globals);
+    vm->strings.destroy(vm);
+    vm->globals.destroy(vm);
     objectptr_array_free(vm, &vm->gray_stack);
 }
 

@@ -20,6 +20,8 @@ typedef struct Table {
 
     Table(i32 len, i32 capacity, Entry* entries);
 
+    void destroy(Vm *vm);
+
     Entry *find(LambString* key);
 
     LambString *find_string(char const* chars, i32 len, u32 hash);
@@ -30,8 +32,6 @@ typedef struct Table {
 
     void remove_marked();
 } Table;
-
-void table_free(Vm *vm, Table *table);
 
 bool table_get(Table *table, LambString *key, Value *val);
 
