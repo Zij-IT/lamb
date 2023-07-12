@@ -31,7 +31,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     CompileAstResult car = compile(&vm, &compiler, root);
 
     if (car == CarOk) {
-        chunk_write(&vm, &compiler.function->chunk, OpReturn);
+        compiler.chunk()->write(&vm, OpReturn);
         LambClosure *closure = to_closure(&vm, compiler.function);
         vm_pop_stack(&vm);
         vm_push_stack(&vm, new_object((Object *)closure));

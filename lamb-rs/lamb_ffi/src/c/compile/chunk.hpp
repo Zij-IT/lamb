@@ -42,24 +42,22 @@ typedef enum {
     OpUnsaveValue,
 } OpCode;
 
-typedef struct Chunk {
+struct Chunk {
     i32 capacity;
     i32 len;
     u8 *bytes;
     ValueArray constants;
-} Chunk;
 
-void chunk_init(Chunk *chunk);
+    Chunk();
+    void destroy(Vm* vm);
 
-void chunk_write(Vm *vm, Chunk *chunk, u8 byte);
+    void write(Vm* vm, u8 byte);
 
-void chunk_free(Vm *vm, Chunk *chunk);
+    i32 write_jump(Vm* vm, u8 op);
+    void patch_jump(i32 offset);
 
-i32 chunk_add_constant(Vm *vm, Chunk *chunk, Value val);
+    void write_const(Vm* vm, Value val);
+    i32 add_const(Vm* vm, Value val);
+};
 
-void chunk_write_constant(Vm *vm, Chunk *chunk, Value val);
-
-i32 chunk_write_jump(Vm *vm, Chunk *chunk, u8 op);
-
-void chunk_patch_jump(Chunk *chunk, i32 offset);
 #endif // CHUNK_HEADER

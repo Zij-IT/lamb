@@ -55,19 +55,19 @@ void Compiler::end_scope(Vm* vm) {
     this->block = this->block->prev;
     i32 depth = this->block == NULL ? -1 : this->block->depth;
 
-    chunk_write(vm, &this->function->chunk, OpSaveValue);
+    this->function->chunk.write(vm, OpSaveValue);
 
     while (this->locals.len > 0 &&
            this->locals.values[this->locals.len - 1].depth > depth) {
         if (this->locals.values[this->locals.len - 1].is_captured) {
-            chunk_write(vm, &this->function->chunk, OpCloseValue);
+            this->function->chunk.write(vm, OpCloseValue);
         } else {
-            chunk_write(vm, &this->function->chunk, OpPop);
+            this->function->chunk.write(vm, OpPop);
         }
         this->locals.len--;
     }
 
-    chunk_write(vm, &this->function->chunk, OpUnsaveValue);
+    this->function->chunk.write(vm, OpUnsaveValue);
 }
 
 Chunk* Compiler::chunk() {

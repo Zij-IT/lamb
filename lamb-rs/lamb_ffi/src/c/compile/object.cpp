@@ -58,7 +58,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             func->name = NULL;
             func->arity = 0;
             func->upvalue_count = 0;
-            chunk_init(&func->chunk);
+            func->chunk = Chunk();
             vm->objects = (Object *)func;
             return vm->objects;
         }
@@ -138,7 +138,7 @@ void object_free(Vm *vm, Object *obj) {
             printf("Freeing %p of type OtFunc\n", obj);
 #endif
             LambFunc *func = (LambFunc *)obj;
-            chunk_free(vm, &func->chunk);
+            func->chunk.destroy(vm);
             FREE(vm, LambFunc, func);
             break;
         }
