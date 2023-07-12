@@ -7,12 +7,53 @@
 
 #define TOMBSTONE new_boolean(true)
 
+static bool is_tombstone(Entry *entry) { return is_bool(entry->val) && entry->val.as.boolean; }
+
+static Entry *table_find(Table *table, LambString *key) {
+}
+
+Table::Table() {
+    this->len = 0;
+    this->capacity = 0;
+    this->entries = nullptr;
+}
+
+Table::Table(i32 len, i32 capacity, Entry* entries) {
+    this->len = len;
+    this->capacity = capacity;
+    this->entries = entries;
+}
+
+Entry *Table::find(LambString* key) {
+    // Correctness: Table capacity is guarunteed to be a multiple of 2
+    //              in which case x % n is the same as X & (n - 1)
+    u32 index = key->hash & (this->capacity - 1);
+    Entry *tombstone = NULL;
+
+    while (true) {
+        Entry *entry = &this->entries[index];
+        if (entry->key == NULL) {
+            if (is_tombstone(entry)) {
+                if (tombstone == NULL) {
+                    tombstone = entry;
+                }
+            } else {
+                return tombstone != NULL ? tombstone : entry;
+            }
+        } else if (entry->key == key) {
+            return entry;
+        }
+
+        index = (index + 1) & (this->capacity - 1);
+    }
+}
+
 static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
     Entry *entries = ALLOCATE(vm, Entry, capacity);
 
     // This table is required due to table_find call below, and has no other
     // function hence the length being set to 0 despite entries being filled
-    Table temp_table = {.len = 0, .capacity = capacity, .entries = entries};
+    Table temp_table(0, capacity, entries);
 
     for (i32 i = 0; i < capacity; i++) {
         entries[i].key = NULL;
@@ -28,7 +69,7 @@ static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
             continue;
         }
 
-        Entry *dest = table_find(&temp_table, entry->key);
+        Entry *dest = table->find(entry->key);
         dest->key = entry->key;
         dest->val = entry->val;
         table->len++;
@@ -39,14 +80,6 @@ static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
     table->capacity = capacity;
 }
 
-static bool is_tombstone(Entry *entry) { return is_bool(entry->val) && entry->val.as.boolean; }
-
-void table_init(Table *table) {
-    table->capacity = 0;
-    table->len = 0;
-    table->entries = NULL;
-}
-
 bool table_insert(Vm *vm, Table *table, LambString *key, Value val) {
     // printf("Inserting into table key: '%s'\n", key->chars);
     if (table->len + 1 > table->capacity * TABLE_MAX_LOAD) {
@@ -54,7 +87,7 @@ bool table_insert(Vm *vm, Table *table, LambString *key, Value val) {
         table_adjust_capacity(vm, table, capacity);
     }
 
-    Entry *entry = table_find(table, key);
+    Entry *entry = table->find(key);
     bool is_new = entry->key == NULL;
     if (is_new && !is_tombstone(entry)) {
         table->len++;
@@ -71,7 +104,7 @@ bool table_remove(Table *table, LambString *key) {
         return false;
     }
 
-    Entry *entry = table_find(table, key);
+    Entry *entry = table->find(key);
     if (entry->key == NULL) {
         return false;
     }
@@ -87,37 +120,13 @@ bool table_get(Table *table, LambString *key, Value *out) {
         return false;
     }
 
-    Entry *entry = table_find(table, key);
+    Entry *entry = table->find(key);
     if (entry->key == NULL) {
         return false;
     }
 
     *out = entry->val;
     return true;
-}
-
-Entry *table_find(Table *table, LambString *key) {
-    // Correctness: Table capacity is guarunteed to be a multiple of 2
-    //              in which case x % n is the same as X & (n - 1)
-    u32 index = key->hash & (table->capacity - 1);
-    Entry *tombstone = NULL;
-
-    while (true) {
-        Entry *entry = &table->entries[index];
-        if (entry->key == NULL) {
-            if (is_tombstone(entry)) {
-                if (tombstone == NULL) {
-                    tombstone = entry;
-                }
-            } else {
-                return tombstone != NULL ? tombstone : entry;
-            }
-        } else if (entry->key == key) {
-            return entry;
-        }
-
-        index = (index + 1) & (table->capacity - 1);
-    }
 }
 
 LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash) {
@@ -154,7 +163,9 @@ void table_remove_white(Table *table) {
 
 void table_free(Vm *vm, Table *table) {
     FREE_ARRAY(vm, Entry, table->entries, table->capacity);
-    table_init(table);
+    table->entries = nullptr;
+    table->capacity = 0;
+    table->len = 0;
 }
 
 #undef TOMBSTONE

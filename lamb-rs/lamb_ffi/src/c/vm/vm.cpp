@@ -82,8 +82,8 @@ void vm_init(Vm *vm, VmOptions options) {
     vm->options = options;
     vm->saved_value = new_nil();
 
-    table_init(&vm->strings);
-    table_init(&vm->globals);
+    vm->strings = Table();
+    vm->globals = Table();
     objectptr_array_init(&vm->gray_stack);
 
     srand(time(NULL));
