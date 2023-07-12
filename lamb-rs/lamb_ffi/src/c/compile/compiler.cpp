@@ -4,6 +4,28 @@
 #include "table.hpp"
 #include <stdlib.h>
 
+static void local_arr_init(LocalArray *arr) {
+    arr->len = 0;
+    arr->capacity = 0;
+    arr->values = NULL;
+}
+
+static void local_arr_write(Vm *vm, LocalArray *arr, Local val) {
+    if (arr->capacity < arr->len + 1) {
+        i32 old_cap = arr->capacity;
+        arr->capacity = GROW_CAPACITY(old_cap);
+        arr->values = GROW_ARRAY(vm, Local, arr->values, old_cap, arr->capacity);
+    }
+
+    arr->values[arr->len] = val;
+    arr->len += 1;
+}
+
+static void local_arr_free(Vm *vm, LocalArray *arr) {
+    FREE_ARRAY(vm, Value, arr->values, arr->capacity);
+    local_arr_init(arr);
+}
+
 Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
     this->block = block;
     this->type = type;
@@ -16,6 +38,10 @@ Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, cha
     local_arr_init(&this->locals);
 
     Local loc = {.name = "", .depth = 0, .is_captured = false};
+    local_arr_write(vm, &this->locals, loc);
+}
+
+void Compiler::add_local(Vm* vm, Local loc) {
     local_arr_write(vm, &this->locals, loc);
 }
 
@@ -49,26 +75,4 @@ Chunk* Compiler::chunk() {
 void Compiler::destroy(Vm* vm) {
     local_arr_free(vm, &this->locals);
     local_arr_init(&this->locals);
-}
-
-void local_arr_init(LocalArray *arr) {
-    arr->len = 0;
-    arr->capacity = 0;
-    arr->values = NULL;
-}
-
-void local_arr_write(Vm *vm, LocalArray *arr, Local val) {
-    if (arr->capacity < arr->len + 1) {
-        i32 old_cap = arr->capacity;
-        arr->capacity = GROW_CAPACITY(old_cap);
-        arr->values = GROW_ARRAY(vm, Local, arr->values, old_cap, arr->capacity);
-    }
-
-    arr->values[arr->len] = val;
-    arr->len += 1;
-}
-
-void local_arr_free(Vm *vm, LocalArray *arr) {
-    FREE_ARRAY(vm, Value, arr->values, arr->capacity);
-    local_arr_init(arr);
 }

@@ -40,6 +40,8 @@ struct Compiler {
 
     Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity);
 
+    void add_local(Vm* vm, Local loc);
+
     void new_scope();
 
     void end_scope(Vm* vm);
@@ -48,11 +50,5 @@ struct Compiler {
 
     void destroy(Vm* vm);
 };
-
-void local_arr_init(LocalArray *arr);
-
-void local_arr_write(Vm *vm, LocalArray *arr, Local val);
-
-void local_arr_free(Vm *vm, LocalArray *arr);
 
 #endif // BLOCK_HEADER
