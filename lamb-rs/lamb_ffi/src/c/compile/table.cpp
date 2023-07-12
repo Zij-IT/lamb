@@ -30,7 +30,7 @@ static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
             continue;
         }
 
-        Entry *dest = table->find(entry->key);
+        Entry *dest = temp_table.find(entry->key);
         dest->key = entry->key;
         dest->val = entry->val;
         table->len++;
