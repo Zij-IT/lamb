@@ -4,6 +4,7 @@
 
 #include "../debug/debug.h"
 #include "ast.h"
+#include "chunk.h"
 #include "misc.h"
 #include "object.h"
 
@@ -121,6 +122,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     AstNode *func_args = node->kids[0];
     AstNode *func_body = node->kids[1];
     AstNode *is_recursive = node->kids[2];
+
     Block block = {
         .base = 0,
         .offset = 0,
@@ -130,14 +132,13 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
 
     Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
 
-    func_comp.block = &block;
-
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
     // depth must match.
     func_comp.locals.values[0].depth = func_comp.block->depth;
     block.offset += 1;
 
+    // In a recursive function the starting value must be findable via name
     if (is_recursive->val.b) {
         func_comp.locals.values[0].name = name;
     }
@@ -186,6 +187,8 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
 
 static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *first, AstNode *second,
                                         str name) {
+    // Turns: `f1 .> f2` or `f2 <. f1` into:
+    // result := fn(x) -> f2(f1(x));
     Compiler func_comp;
     compiler_init(vm, &func_comp, FtNormal);
     Block block = {
@@ -203,7 +206,6 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     func_comp.locals.values[0].depth = 1;
     block.offset += 1;
 
-    // Implicitly done through
     compiler_new_scope(&func_comp);
     func_comp.function = (LambFunc *)alloc_obj(vm, OtFunc);
     func_comp.function->name = ANON_FUNC_NAME;
@@ -214,6 +216,9 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     BUBBLE(compile(vm, &func_comp, first));
     BUBBLE(compile(vm, &func_comp, second));
 
+    // This gets the first variable off of the stack. Remember:
+    // * The variable at position 0 is the function itself
+    // * Position of the first arg is at index 1
     chunk_write(vm, compiler_chunk(&func_comp), OpGetLocal);
     chunk_write_constant(vm, compiler_chunk(&func_comp), new_int(1));
 
@@ -614,27 +619,47 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             AstNode *branch = node->kids[1];
             AstNode *next_arm = node->kids[2];
 
+            // Compare the value of the arm with a duplicate of the case value
             chunk_write(vm, compiler_chunk(compiler), OpDup);
             BUBBLE(compile(vm, compiler, value));
             chunk_write(vm, compiler_chunk(compiler), OpEq);
 
             i32 if_neq = chunk_write_jump(vm, compiler_chunk(compiler), OpJumpIfFalse);
 
+            // If equal -------->
+            // Pop the case 'true' off of the stack
             chunk_write(vm, compiler_chunk(compiler), OpPop);
-            chunk_write(vm, compiler_chunk(compiler), OpPop);
-            BUBBLE(compile(vm, compiler, branch));
-            i32 past_else = chunk_write_jump(vm, compiler_chunk(compiler), OpJump);
 
+            // Pop the case value off of the stack
+            chunk_write(vm, compiler_chunk(compiler), OpPop);
+
+            // Run through the body of the arm
+            BUBBLE(compile(vm, compiler, branch));
+
+            // Jump over the other arms of the case expression
+            i32 past_else = chunk_write_jump(vm, compiler_chunk(compiler), OpJump);
+            // If equal <-------
+
+            // If not equal -------->
             chunk_patch_jump(compiler_chunk(compiler), if_neq);
+            // Pop the 'false' from the previous EQ check off of the stack
             chunk_write(vm, compiler_chunk(compiler), OpPop);
 
             if (next_arm != NULL) {
+                // Attempt the next arm
                 BUBBLE(compile(vm, compiler, next_arm));
             } else {
+                // Pop the compare value off of the stack
                 chunk_write(vm, compiler_chunk(compiler), OpPop);
+
+                // We can't check for exhaustivity at compile time, so we write
+                // a default nil in the event none of arms matched successfully
                 chunk_write_constant(vm, compiler_chunk(compiler), new_nil());
             }
+            // If not equal <-------
 
+            // If successfull, we can jump over all of the arms thanks to the
+            // recursive nature of the case arms representation
             chunk_patch_jump(compiler_chunk(compiler), past_else);
             break;
         }
@@ -661,7 +686,6 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             }
 
             compiler_end_scope(vm, compiler);
-            compiler->block = prev;
             compiler->block->offset = prev_offset + 1;
             break;
         }
@@ -684,18 +708,13 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, value_node));
 
             LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-            i32 idx = chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
 
             if (compiler->block->depth == 0) {
                 chunk_write(vm, compiler_chunk(compiler), OpDefineGlobal);
-                u8 hi = (idx >> 8) & 0xFF;
-                u8 lo = (idx >> 0) & 0xFF;
-
-                chunk_write(vm, compiler_chunk(compiler), OpConstant);
-                chunk_write(vm, compiler_chunk(compiler), hi);
-                chunk_write(vm, compiler_chunk(compiler), lo);
+                chunk_write_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
                 STACK_DIFF(compiler, -1);
             } else {
+                i32 idx = chunk_add_constant(vm, compiler_chunk(compiler), new_object((Object *)ident));
                 Local loc = {
                     .depth = compiler->block->depth, .name = ident->chars, .is_captured = false};
                 local_arr_write(vm, &compiler->locals, loc);
