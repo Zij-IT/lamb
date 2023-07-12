@@ -77,6 +77,29 @@ Entry *Table::find(LambString* key) {
     }
 }
 
+LambString *Table::find_string(char const* chars, i32 len, u32 hash) {
+    if (this->len == 0) {
+        return NULL;
+    }
+
+    // Correctness: the capacity is guarunteed to be a multiple of 2
+    //              in which case x % n is the same as X & (n - 1)
+    u32 index = hash & (this->capacity - 1);
+    while (true) {
+        Entry *entry = &this->entries[index];
+        if (entry->key == NULL) {
+            if (!is_tombstone(entry)) {
+                return NULL;
+            }
+        } else if (entry->key->len == len && entry->key->hash == hash &&
+                   memcmp(entry->key->chars, chars, len) == 0) {
+            return entry->key;
+        }
+
+        index = (index + 1) & (this->capacity - 1);
+    }
+}
+
 bool Table::insert(Vm *vm, LambString *key, Value value) {
     if (this->len + 1 > this->capacity * TABLE_MAX_LOAD) {
         i32 capacity = GROW_CAPACITY(this->capacity);

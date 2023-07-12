@@ -22,6 +22,8 @@ typedef struct Table {
 
     Entry *find(LambString* key);
 
+    LambString *find_string(char const* chars, i32 len, u32 hash);
+
     bool insert(Vm *vm, LambString *key, Value val);
 
     bool remove(LambString* key);
@@ -30,10 +32,6 @@ typedef struct Table {
 } Table;
 
 void table_free(Vm *vm, Table *table);
-
-LambString *table_find_string(Table *table, char const* chars, i32 len, u32 hash);
-
-void table_remove_white(Table *table);
 
 bool table_get(Table *table, LambString *key, Value *val);
 
