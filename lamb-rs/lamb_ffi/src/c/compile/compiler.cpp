@@ -42,6 +42,10 @@ void Compiler::end_scope(Vm* vm) {
     chunk_write(vm, &this->function->chunk, OpUnsaveValue);
 }
 
+Chunk* Compiler::chunk() {
+    return &this->function->chunk;
+}
+
 void Compiler::destroy(Vm* vm) {
     local_arr_free(vm, &this->locals);
     local_arr_init(&this->locals);

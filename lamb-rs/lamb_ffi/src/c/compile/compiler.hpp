@@ -44,6 +44,8 @@ struct Compiler {
 
     void end_scope(Vm* vm);
 
+    Chunk* chunk();
+
     void destroy(Vm* vm);
 };
 
