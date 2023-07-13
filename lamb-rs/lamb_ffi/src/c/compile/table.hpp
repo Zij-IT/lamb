@@ -25,7 +25,7 @@ typedef struct Table {
 
     Entry *find(LambString* key);
 
-    LambString *find_string(char const* chars, i32 len, u32 hash);
+    std::optional<LambString*> find_string(char const* chars, i32 len, u32 hash);
 
     std::optional<Value> get(LambString *key);
 

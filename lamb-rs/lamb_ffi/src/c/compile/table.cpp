@@ -85,9 +85,9 @@ Entry *Table::find(LambString* key) {
     }
 }
 
-LambString *Table::find_string(char const* chars, i32 len, u32 hash) {
+std::optional<LambString*> Table::find_string(char const* chars, i32 len, u32 hash) {
     if (this->len == 0) {
-        return NULL;
+        return std::nullopt;
     }
 
     // Correctness: the capacity is guarunteed to be a multiple of 2
@@ -97,7 +97,7 @@ LambString *Table::find_string(char const* chars, i32 len, u32 hash) {
         Entry *entry = &this->entries[index];
         if (entry->key == NULL) {
             if (!is_tombstone(entry)) {
-                return NULL;
+                return std::nullopt;
             }
         } else if (entry->key->len == len && entry->key->hash == hash &&
                    memcmp(entry->key->chars, chars, len) == 0) {

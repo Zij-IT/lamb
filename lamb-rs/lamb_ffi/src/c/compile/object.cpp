@@ -173,19 +173,21 @@ bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
 LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
     u64 len = strlen(cstr);
     u32 hash = hash_string(cstr);
-    LambString *interned = vm->strings.find_string(cstr, len, hash);
-    if (interned == NULL) {
-        interned = (LambString *)alloc_obj(vm, OtString);
-        interned->chars = strdup(cstr);
-        interned->hash = hash;
-        interned->len = len;
-
-        vm_push_stack(vm, new_object((Object *)interned));
-        vm->strings.insert(vm, interned, new_boolean(false));
-        vm_pop_stack(vm);
+    auto interned = vm->strings.find_string(cstr, len, hash);
+    if (interned) {
+        return interned.value();
     }
+   
+    auto lamb_str = (LambString *)alloc_obj(vm, OtString);
+    lamb_str->chars = strdup(cstr);
+    lamb_str->hash = hash;
+    lamb_str->len = len;
 
-    return interned;
+    vm_push_stack(vm, new_object((Object *)lamb_str));
+    vm->strings.insert(vm, lamb_str, new_boolean(false));
+    vm_pop_stack(vm);
+
+    return lamb_str;
 }
 
 LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
@@ -197,10 +199,10 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
     chars[len] = '\0';
 
     u32 hash = hash_string(chars);
-    LambString *interned = vm->strings.find_string(chars, len, hash);
-    if (interned != NULL) {
+    auto interned = vm->strings.find_string(chars, len, hash);
+    if (interned) {
         free(chars);
-        return interned;
+        return interned.value();
     }
 
     LambString *ret = (LambString *)alloc_obj(vm, OtString);
