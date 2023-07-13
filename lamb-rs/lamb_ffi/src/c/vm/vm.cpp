@@ -186,7 +186,7 @@ InterpretResult vm_run(Vm *vm) {
             }
             case OpJumpIfFalse: {
                 u16 offset = READ_SHORT();
-                if (!is_bool(*vm_peek_stack(vm))) {
+                if (!vm_peek_stack(vm)->is_bool()) {
                     runtime_error("A branching expression '&&', '||' and 'if' cannot "
                                   "branch with expressions of type %s",
                                   kind_as_cstr(*vm_peek_stack(vm)));
@@ -240,8 +240,8 @@ InterpretResult vm_run(Vm *vm) {
                 } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
                     lhs->as.doubn = lhs->as.doubn + rhs->as.doubn;
                     DROP();
-                } else if (is_object(*lhs) && is_of_type(lhs->as.obj, OtString) &&
-                           is_object(*rhs) && is_of_type(rhs->as.obj, OtString)) {
+                } else if (lhs->is_object() && is_of_type(lhs->as.obj, OtString) &&
+                           rhs->is_object() && is_of_type(rhs->as.obj, OtString)) {
                     LambString *st =
                         concat(vm, (LambString *)lhs->as.obj, (LambString *)rhs->as.obj);
                     DROP();
@@ -365,10 +365,10 @@ InterpretResult vm_run(Vm *vm) {
                 Value idx = POP();
                 Value arr_val = POP();
 
-                if (!is_integer(idx)) {
+                if (!idx.is_integer()) {
                     runtime_error("Unable to index into an array with a value of type %s",
                                   kind_as_cstr(idx));
-                } else if (!is_object(arr_val)) {
+                } else if (!arr_val.is_object()) {
                     runtime_error("Unable to index into an item of type %s", kind_as_cstr(arr_val));
                 }
 
@@ -408,7 +408,7 @@ InterpretResult vm_run(Vm *vm) {
                 i32 arg_count = READ_CONSTANT().as.intn;
                 Value *callee = vm_peekn_stack(vm, arg_count);
 
-                if (!is_object(*callee)) {
+                if (!callee->is_object()) {
                     runtime_error("Unable to call a value of type %s", kind_as_cstr(*callee));
                 }
 

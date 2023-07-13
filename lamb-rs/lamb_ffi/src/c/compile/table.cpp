@@ -8,7 +8,7 @@
 
 #define TOMBSTONE new_boolean(true)
 
-static bool is_tombstone(Entry *entry) { return is_bool(entry->val) && entry->val.as.boolean; }
+static bool is_tombstone(Entry *entry) { return entry->val.is_bool() && entry->val.as.boolean; }
 
 static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
     Entry *entries = ALLOCATE(vm, Entry, capacity);

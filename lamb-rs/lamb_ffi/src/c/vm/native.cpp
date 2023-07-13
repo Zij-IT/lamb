@@ -40,8 +40,8 @@ static Value lamb_println(i32 arg_count, Value *args) {
 
 static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
     if (arg_count == 2) {
-        bool assertion_failed = is_bool(args[0]) && !args[0].as.boolean;
-        bool assertion_explanation = is_object(args[1]) && is_of_type(args[1].as.obj, OtString);
+        bool assertion_failed = args[0].is_bool() && !args[0].as.boolean;
+        bool assertion_explanation = args[1].is_object() && is_of_type(args[1].as.obj, OtString);
 
         if (assertion_failed && assertion_explanation) {
             LambString *str = (LambString *)args[1].as.obj;
@@ -91,7 +91,7 @@ static Value lamb_user_char(__attribute__((unused)) i32 arg_count,
 }
 
 static Value lamb_rand(i32 arg_count, Value *args) {
-    if (arg_count == 1 && is_integer(*args)) {
+    if (arg_count == 1 && args->is_integer()) {
         return new_int(rand() % args->as.intn);
     }
 

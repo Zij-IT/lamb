@@ -26,6 +26,19 @@ struct Value {
         char ch;
         Object *obj;
     } as;
+
+    
+    bool is_bool();
+
+    bool is_double();
+
+    bool is_integer();
+
+    bool is_char();
+
+    bool is_object();
+
+    bool is_nil();
 };
 
 struct ValueArray {
@@ -39,18 +52,6 @@ enum Order {
     OrderEqual = 0,
     OrderGreater = 1,
 };
-
-bool is_bool(Value val);
-
-bool is_double(Value val);
-
-bool is_integer(Value val);
-
-bool is_char(Value val);
-
-bool is_object(Value val);
-
-bool is_nil(Value val);
 
 Value new_nil();
 

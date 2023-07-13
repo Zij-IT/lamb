@@ -39,17 +39,29 @@ Value new_object(Object *obj) {
     return val;
 }
 
-bool is_nil(Value val) { return val.kind == VkNil; }
+bool Value::is_bool() {
+    return this->kind == VkBool;
+}
 
-bool is_bool(Value val) { return val.kind == VkBool; }
+bool Value::is_double() {
+    return this->kind == VkDouble;
+}
 
-bool is_double(Value val) { return val.kind == VkDouble; }
+bool Value::is_integer() {
+    return this->kind == VkInt;
+}
 
-bool is_integer(Value val) { return val.kind == VkInt; }
+bool Value::is_char() {
+    return this->kind == VkChar;
+}
 
-bool is_char(Value val) { return val.kind == VkChar; }
+bool Value::is_object() {
+    return this->kind == VkObj;
+}
 
-bool is_object(Value val) { return val.kind == VkObj; }
+bool Value::is_nil() {
+    return this->kind == VkNil;
+}
 
 char const* kind_as_cstr(Value val) {
     switch (val.kind) {
