@@ -31,6 +31,8 @@ struct LambString {
     u32 hash;
 
     static LambString* alloc(Vm& vm, char const* chars, i32 len, u32 hash);
+
+    static LambString* from_cstr(Vm&vm, char const* chars);
 };
 
 struct LambArray {
@@ -83,8 +85,6 @@ enum FuncType {
 bool is_of_type(Object *obj, ObjectType type);
 
 void object_free(Vm& vm, Object *obj);
-
-LambString *cstr_to_lambstring(Vm& vm, char const* cstr);
 
 LambString *concat(Vm& vm, LambString *lhs, LambString *rhs);
 

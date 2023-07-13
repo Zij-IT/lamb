@@ -94,7 +94,7 @@ static Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *c
 
 static void add_arg_to_compiler(Vm& vm, Compiler *const func_comp, AstNode const *arg) {
     AstNode *ident_node = arg->kids[0];
-    LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
+    auto ident = LambString::from_cstr(vm, ident_node->val.i);
     func_comp->chunk().add_const(vm, Value::from_obj((Object *)ident));
     func_comp->add_local(vm, ident->chars);
     func_comp->function->arity++;
@@ -160,7 +160,7 @@ static CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode
     AstNode *ident = node->kids[0];
     AstNode *func_def = node->kids[1];
 
-    LambString *rec_func_ident = cstr_to_lambstring(vm, ident->val.i);
+    auto rec_func_ident = LambString::from_cstr(vm, ident->val.i);
     compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
 
     BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
@@ -237,13 +237,13 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
 CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
     switch (node->type) {
         case AstntStrLit: {
-            LambString *lit = cstr_to_lambstring(vm, node->val.s);
+            auto lit = LambString::from_cstr(vm, node->val.s);
             compiler->chunk().write_const(vm, Value::from_obj((Object *)lit));
             STACK_DIFF(compiler, 1);
             break;
         }
         case AstntIdent: {
-            LambString *ident = cstr_to_lambstring(vm, node->val.i);
+            auto ident = LambString::from_cstr(vm, node->val.i);
 
             i32 local_slot = resolve_local(compiler, ident);
             if (local_slot != LOCAL_NOT_FOUND) {
@@ -694,7 +694,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
             BUBBLE(compile(vm, compiler, value_node));
 
-            LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
+            auto ident = LambString::from_cstr(vm, ident_node->val.i);
 
             if (compiler->block->depth == 0) {
                 compiler->chunk().write(vm, OpDefineGlobal);

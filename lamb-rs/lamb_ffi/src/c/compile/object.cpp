@@ -19,6 +19,22 @@ LambString* LambString::alloc(Vm& vm, char const* chars, i32 len, u32 hash) {
     return st;
 }
 
+LambString* LambString::from_cstr(Vm&vm, char const* chars) {
+    u64 len = strlen(chars);
+    u32 hash = hash_string(chars);
+    auto match = vm.strings.find_matching_key(chars, len, hash);
+    if (match) {
+        return match.value();
+    }
+   
+    auto lamb_str = LambString::alloc(vm, strdup(chars), len, hash);
+    vm_push_stack(vm, Value::from_obj((Object *)lamb_str));
+    vm.strings.insert(vm, lamb_str, Value::from_bool(false));
+    vm_pop_stack(vm);
+
+    return lamb_str;
+}
+
 LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
     LambArray *arr = ALLOCATE(vm, LambArray, 1);
     arr->obj = { .next = vm.objects, .type = OtArray, .is_marked = false, };
@@ -132,22 +148,6 @@ void object_free(Vm& vm, Object *obj) {
 }
 
 bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
-
-LambString *cstr_to_lambstring(Vm& vm, char const*  cstr) {
-    u64 len = strlen(cstr);
-    u32 hash = hash_string(cstr);
-    auto match = vm.strings.find_matching_key(cstr, len, hash);
-    if (match) {
-        return match.value();
-    }
-   
-    auto lamb_str = LambString::alloc(vm, strdup(cstr), len, hash);
-    vm_push_stack(vm, Value::from_obj((Object *)lamb_str));
-    vm.strings.insert(vm, lamb_str, Value::from_bool(false));
-    vm_pop_stack(vm);
-
-    return lamb_str;
-}
 
 LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     i32 len = lhs->len + rhs->len;

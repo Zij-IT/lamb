@@ -7,7 +7,7 @@
 #include <string.h>
 
 static void define_native(Vm& vm, char const* fn_name, CFunc function) {
-    LambString *interned = cstr_to_lambstring(vm, fn_name);
+    auto interned = LambString::from_cstr(vm, fn_name);
     vm_push_stack(vm, Value::from_obj((Object *)interned));
     vm_push_stack(vm, Value::from_obj((Object *)NativeFunc::alloc(vm, function)));
     vm.globals.insert(vm, (LambString *)(vm.stack[0].as.obj), vm.stack[1]);
