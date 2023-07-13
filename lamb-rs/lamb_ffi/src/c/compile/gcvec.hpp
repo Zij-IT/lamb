@@ -9,14 +9,10 @@
 // Forward declaration. See "../vm/vm.hpp"
 struct Vm;
 
-// TODO: i32 should not be used for the length
-//       this should probably be `usize` or at
-//       least `u32`, as currently `truncate`
-//       will be the cause of UB if `len` < 0
 template<typename T> 
 class GcVec {
-    i32 capacity;
-    i32 _len;
+    u32 capacity;
+    u32 _len;
     T*  values;
 
 public:
@@ -26,13 +22,13 @@ public:
 
     constexpr T* as_raw() const { return this->values; };
 
-    constexpr void truncate(i32 len) { this->_len = std::min(len, this->_len); };
+    constexpr void truncate(u32 len) { this->_len = std::min(len, this->_len); };
 
     void destroy(Vm& vm);
 
     constexpr i32 len() const { return this->_len; };
 
-    constexpr T& operator[](i32 idx) const { return this->values[idx]; };
+    constexpr T& operator[](u32 idx) const { return this->values[idx]; };
 };
 
 #endif

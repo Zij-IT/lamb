@@ -372,7 +372,7 @@ InterpretResult vm_run(Vm& vm) {
                 switch (arr_val.as.obj->type) {
                     case OtString: {
                         LambString *st = (LambString *)arr_val.as.obj;
-                        if (idx.as.intn < st->len) {
+                        if (idx.as.intn < st->len && idx.as.intn >= 0) {
                             PUSH(Value::from_char(st->chars[idx.as.intn]));
                         } else {
                             runtime_error(
@@ -383,7 +383,7 @@ InterpretResult vm_run(Vm& vm) {
                     }
                     case OtArray: {
                         LambArray *arr = (LambArray *)arr_val.as.obj;
-                        if (idx.as.intn < arr->items.len()) {
+                        if (idx.as.intn < arr->items.len() && idx.as.intn >= 0) {
                             PUSH(arr->items[idx.as.intn]);
                         } else {
                             runtime_error(
