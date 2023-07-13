@@ -11,16 +11,16 @@ Chunk::Chunk() {
     this->constants = GcVec<Value>();
 }
 
-void Chunk::destroy(Vm* vm) {
+void Chunk::destroy(Vm& vm) {
     this->bytes.destroy(vm);
     this->constants.destroy(vm);
 }
 
-void Chunk::write(Vm* vm, u8 byte) {
+void Chunk::write(Vm& vm, u8 byte) {
     this->bytes.push(vm, byte);
 }
 
-i32 Chunk::write_jump(Vm* vm, u8 op) {
+i32 Chunk::write_jump(Vm& vm, u8 op) {
     this->write(vm, op);
     this->write(vm, 0xff);
     this->write(vm, 0xff);
@@ -39,7 +39,7 @@ void Chunk::patch_jump(i32 offset) {
     this->bytes[offset + 1] = jump & 0xff;
 }
 
-void Chunk::write_const(Vm* vm, Value val) {
+void Chunk::write_const(Vm& vm, Value val) {
     i32 idx = this->add_const(vm, val);
     u8 hi = (idx >> 8) & 0xFF;
     u8 lo = idx & 0xFF;
@@ -49,7 +49,7 @@ void Chunk::write_const(Vm* vm, Value val) {
     this->write(vm, lo);
 }
 
-i32 Chunk::add_const(Vm* vm, Value val) {
+i32 Chunk::add_const(Vm& vm, Value val) {
     vm_push_stack(vm, val);
     this->constants.push(vm, val);
     vm_pop_stack(vm);

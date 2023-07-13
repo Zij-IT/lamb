@@ -8,7 +8,7 @@
 #include "misc.hpp"
 #include "object.hpp"
 
-Object *alloc_obj(Vm *vm, ObjectType type) {
+Object *alloc_obj(Vm& vm, ObjectType type) {
     switch (type) {
         case OtString: {
             LambString *st = ALLOCATE(vm, LambString, 1);
@@ -18,14 +18,14 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->objects,
+                .next = vm.objects,
             };
             st->obj = obj;
             st->chars = NULL;
             st->len = 0;
             st->hash = 0;
-            vm->objects = (Object *)st;
-            return vm->objects;
+            vm.objects = (Object *)st;
+            return vm.objects;
         }
         case OtArray: {
             LambArray *arr = ALLOCATE(vm, LambArray, 1);
@@ -35,12 +35,12 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->objects,
+                .next = vm.objects,
             };
             arr->obj = obj;
             arr->items = GcVec<Value>();
-            vm->objects = (Object *)arr;
-            return vm->objects;
+            vm.objects = (Object *)arr;
+            return vm.objects;
         }
         case OtFunc: {
             LambFunc *func = ALLOCATE(vm, LambFunc, 1);
@@ -50,15 +50,15 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->objects,
+                .next = vm.objects,
             };
             func->obj = obj;
             func->name = NULL;
             func->arity = 0;
             func->upvalue_count = 0;
             func->chunk = Chunk();
-            vm->objects = (Object *)func;
-            return vm->objects;
+            vm.objects = (Object *)func;
+            return vm.objects;
         }
         case OtNative: {
             NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);
@@ -68,12 +68,12 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->objects,
+                .next = vm.objects,
             };
             func->obj = obj;
             func->func = NULL;
-            vm->objects = (Object *)func;
-            return vm->objects;
+            vm.objects = (Object *)func;
+            return vm.objects;
         }
         case OtClosure: {
             LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
@@ -83,12 +83,12 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->objects,
+                .next = vm.objects,
             };
             closure->obj = obj;
             closure->function = NULL;
-            vm->objects = (Object *)closure;
-            return vm->objects;
+            vm.objects = (Object *)closure;
+            return vm.objects;
         }
         case OtUpvalue: {
             LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
@@ -98,20 +98,20 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
             Object obj = {
                 .type = type,
                 .is_marked = false,
-                .next = vm->objects,
+                .next = vm.objects,
             };
             upvalue->obj = obj;
             upvalue->next = NULL;
             upvalue->location = NULL;
-            vm->objects = (Object *)upvalue;
-            return vm->objects;
+            vm.objects = (Object *)upvalue;
+            return vm.objects;
         }
     }
 
     return NULL;
 }
 
-void object_free(Vm *vm, Object *obj) {
+void object_free(Vm& vm, Object *obj) {
     switch (obj->type) {
         case OtString: {
 #ifdef DEBUG_LOG_GC
@@ -168,10 +168,10 @@ void object_free(Vm *vm, Object *obj) {
 
 bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
 
-LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
+LambString *cstr_to_lambstring(Vm& vm, char const*  cstr) {
     u64 len = strlen(cstr);
     u32 hash = hash_string(cstr);
-    auto match = vm->strings.find_matching_key(cstr, len, hash);
+    auto match = vm.strings.find_matching_key(cstr, len, hash);
     if (match) {
         return match.value();
     }
@@ -182,13 +182,13 @@ LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
     lamb_str->len = len;
 
     vm_push_stack(vm, Value::from_obj((Object *)lamb_str));
-    vm->strings.insert(vm, lamb_str, Value::from_bool(false));
+    vm.strings.insert(vm, lamb_str, Value::from_bool(false));
     vm_pop_stack(vm);
 
     return lamb_str;
 }
 
-LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
+LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     i32 len = lhs->len + rhs->len;
 
     string chars = ALLOCATE(vm, char, len + 1);
@@ -197,7 +197,7 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
     chars[len] = '\0';
 
     u32 hash = hash_string(chars);
-    auto interned = vm->strings.find_matching_key(chars, len, hash);
+    auto interned = vm.strings.find_matching_key(chars, len, hash);
     if (interned) {
         free(chars);
         return interned.value();
@@ -209,13 +209,13 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
     ret->hash = hash_string(chars);
 
     vm_push_stack(vm, Value::from_obj((Object *)(ret)));
-    vm->strings.insert(vm, ret, Value::from_bool(false));
+    vm.strings.insert(vm, ret, Value::from_bool(false));
     vm_pop_stack(vm);
 
     return ret;
 }
 
-LambClosure *to_closure(Vm *vm, LambFunc *func) {
+LambClosure *to_closure(Vm& vm, LambFunc *func) {
     LambClosure *closure = (LambClosure *)alloc_obj(vm, OtClosure);
     closure->function = func;
     closure->upvalue_count = func->upvalue_count;
@@ -227,7 +227,7 @@ LambClosure *to_closure(Vm *vm, LambFunc *func) {
     return closure;
 }
 
-LambUpvalue *to_upvalue(Vm *vm, Value *slot) {
+LambUpvalue *to_upvalue(Vm& vm, Value *slot) {
     LambUpvalue *upvalue = (LambUpvalue *)alloc_obj(vm, OtUpvalue);
     upvalue->location = slot;
     upvalue->closed = Value::nil();

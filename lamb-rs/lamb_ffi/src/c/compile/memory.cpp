@@ -7,16 +7,16 @@
 #define GC_HEAP_GROWTH_FACTOR 2
 
 // NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: mark_array(Vm *vm, ValueArray *arr)
-static void mark_array(Vm *vm, GcVec<Value>& arr) {
+// TODO: Add Vm parameter to function: mark_array(Vm& vm, ValueArray *arr)
+static void mark_array(Vm& vm, GcVec<Value>& arr) {
     for (i32 i = 0; i < arr.len(); i++) {
         mark_value(vm, &arr[i]);
     }
 }
 
 // NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: blacken_object(Vm *vm, Object *obj)
-static void blacken_object(Vm *vm, Object *obj) {
+// TODO: Add Vm parameter to function: blacken_object(Vm& vm, Object *obj)
+static void blacken_object(Vm& vm, Object *obj) {
 #ifdef DEBUG_LOG_GC
     printf("Blackening %p with value: ", (void *)obj);
     print_value(Value::from_obj(obj));
@@ -53,46 +53,46 @@ static void blacken_object(Vm *vm, Object *obj) {
     }
 }
 
-static void mark_compiler_roots(Vm *vm) {
-    Compiler *compiler = vm->curr_compiler;
+static void mark_compiler_roots(Vm& vm) {
+    Compiler *compiler = vm.curr_compiler;
     while (compiler != NULL) {
         mark_object(vm, (Object *)compiler->function);
         compiler = compiler->enclosing;
     }
 }
 
-static void mark_roots(Vm *vm) {
-    mark_value(vm, &vm->saved_value);
+static void mark_roots(Vm& vm) {
+    mark_value(vm, &vm.saved_value);
 
-    for (Value *slot = vm->stack; slot < vm->stack_top; slot++) {
+    for (Value *slot = vm.stack; slot < vm.stack_top; slot++) {
         mark_value(vm, slot);
     }
 
-    for (i32 i = 0; i < vm->frame_count; i++) {
-        mark_object(vm, (Object *)vm->frames[i].closure);
+    for (i32 i = 0; i < vm.frame_count; i++) {
+        mark_object(vm, (Object *)vm.frames[i].closure);
     }
 
-    for (LambUpvalue *upvalue = vm->open_upvalues; upvalue != NULL; upvalue = upvalue->next) {
+    for (LambUpvalue *upvalue = vm.open_upvalues; upvalue != NULL; upvalue = upvalue->next) {
         mark_object(vm, (Object *)upvalue);
     }
 
-    mark_table(vm, &vm->globals);
+    mark_table(vm, &vm.globals);
 
     // mark current object in compilation as compilation can trigger GC
     // This means that the vm does have to have some link to the current compiler
     mark_compiler_roots(vm);
 }
 
-static void trace_refs(Vm *vm) {
-    while (vm->gray_stack.size() > 0) {
-        blacken_object(vm, vm->gray_stack.back());
-        vm->gray_stack.pop_back();
+static void trace_refs(Vm& vm) {
+    while (vm.gray_stack.size() > 0) {
+        blacken_object(vm, vm.gray_stack.back());
+        vm.gray_stack.pop_back();
     }
 }
 
-static void sweep_unused(Vm *vm) {
+static void sweep_unused(Vm& vm) {
     Object *prev = NULL;
-    Object *curr = vm->objects;
+    Object *curr = vm.objects;
 
     while (curr != NULL) {
         if (curr->is_marked) {
@@ -104,7 +104,7 @@ static void sweep_unused(Vm *vm) {
             curr = curr->next;
 
             if (prev == NULL) {
-                vm->objects = curr;
+                vm.objects = curr;
             } else {
                 prev->next = curr;
             }
@@ -124,11 +124,11 @@ static void sweep_unused(Vm *vm) {
 //  |--------------|------------------|-------------------|
 //  | non-zero     | larger than old  | grow exisitng     |
 //  -------------------------------------------------------
-void *reallocate(Vm *vm, void *ptr, size_t old_size, size_t new_size) {
+void *reallocate(Vm& vm, void *ptr, size_t old_size, size_t new_size) {
     if (new_size > old_size) {
-        vm->bytes_allocated += new_size - old_size;
+        vm.bytes_allocated += new_size - old_size;
     } else {
-        vm->bytes_allocated -= old_size - new_size;
+        vm.bytes_allocated -= old_size - new_size;
     }
 
     if (new_size == 0) {
@@ -136,8 +136,8 @@ void *reallocate(Vm *vm, void *ptr, size_t old_size, size_t new_size) {
         return NULL;
     }
 
-    if (vm->bytes_allocated > vm->next_collection) {
-        vm->next_collection = vm->bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+    if (vm.bytes_allocated > vm.next_collection) {
+        vm.next_collection = vm.bytes_allocated * GC_HEAP_GROWTH_FACTOR;
         collect_garbage(vm);
     }
 
@@ -150,7 +150,7 @@ void *reallocate(Vm *vm, void *ptr, size_t old_size, size_t new_size) {
     return result;
 }
 
-void mark_object(Vm *vm, Object *object) {
+void mark_object(Vm& vm, Object *object) {
     if (object == NULL || object->is_marked) {
         return;
     }
@@ -162,16 +162,16 @@ void mark_object(Vm *vm, Object *object) {
 #endif
 
     object->is_marked = true;
-    vm->gray_stack.push_back(object);
+    vm.gray_stack.push_back(object);
 }
 
-void mark_value(Vm *vm, Value *value) {
+void mark_value(Vm& vm, Value *value) {
     if (value->kind == VkObj) {
         mark_object(vm, (Object *)value->as.obj);
     }
 }
 
-void mark_table(Vm *vm, Table *table) {
+void mark_table(Vm& vm, Table *table) {
     for (i32 i = 0; i < table->capacity; i++) {
         Entry *entry = &table->entries[i];
         mark_object(vm, (Object *)entry->key);
@@ -179,9 +179,9 @@ void mark_table(Vm *vm, Table *table) {
     }
 }
 
-void collect_garbage(Vm *vm) {
+void collect_garbage(Vm& vm) {
 #ifdef DEBUG_LOG_GC
-    u64 before = vm->bytes_allocated;
+    u64 before = vm.bytes_allocated;
     printf("====== GC Begin ======\n");
 #endif
 
@@ -192,14 +192,14 @@ void collect_garbage(Vm *vm) {
 
     trace_refs(vm);
 
-    vm->strings.remove_marked();
+    vm.strings.remove_marked();
 
     sweep_unused(vm);
 
 #ifdef DEBUG_LOG_GC
-    printf("Collected %lu bytes (from %lu to %lu)\n", before - vm->bytes_allocated, before,
-           vm->bytes_allocated);
-    printf("Next collection at %lu bytes\n", vm->next_collection);
+    printf("Collected %lu bytes (from %lu to %lu)\n", before - vm.bytes_allocated, before,
+           vm.bytes_allocated);
+    printf("Next collection at %lu bytes\n", vm.next_collection);
     printf("====== GC End ======\n");
 #endif
 }

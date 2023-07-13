@@ -68,18 +68,18 @@ enum FuncType {
     FtNormal,
 };
 
-Object *alloc_obj(Vm *vm, ObjectType type);
+Object *alloc_obj(Vm& vm, ObjectType type);
 
 bool is_of_type(Object *obj, ObjectType type);
 
-void object_free(Vm *vm, Object *obj);
+void object_free(Vm& vm, Object *obj);
 
-LambString *cstr_to_lambstring(Vm *vm, char const* cstr);
+LambString *cstr_to_lambstring(Vm& vm, char const* cstr);
 
-LambString *concat(Vm *vm, LambString *lhs, LambString *rhs);
+LambString *concat(Vm& vm, LambString *lhs, LambString *rhs);
 
-LambClosure *to_closure(Vm *vm, LambFunc *func);
+LambClosure *to_closure(Vm& vm, LambFunc *func);
 
-LambUpvalue *to_upvalue(Vm *vm, Value *slot);
+LambUpvalue *to_upvalue(Vm& vm, Value *slot);
 
 #endif // OBJECT_HEADER

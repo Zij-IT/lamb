@@ -6,17 +6,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-static NativeFunc *new_native(Vm *vm, CFunc cfunc) {
+static NativeFunc *new_native(Vm& vm, CFunc cfunc) {
     NativeFunc *native_func = (NativeFunc *)alloc_obj(vm, OtNative);
     native_func->func = cfunc;
     return native_func;
 }
 
-static void define_native(Vm *vm, char const* fn_name, CFunc function) {
+static void define_native(Vm& vm, char const* fn_name, CFunc function) {
     LambString *interned = cstr_to_lambstring(vm, fn_name);
     vm_push_stack(vm, Value::from_obj((Object *)interned));
     vm_push_stack(vm, Value::from_obj((Object *)new_native(vm, function)));
-    vm->globals.insert(vm, (LambString *)(vm->stack[0].as.obj), vm->stack[1]);
+    vm.globals.insert(vm, (LambString *)(vm.stack[0].as.obj), vm.stack[1]);
 
     vm_pop_stack(vm);
     vm_pop_stack(vm);
@@ -113,7 +113,7 @@ static Value lamb_len(i32 arg_count, Value *args) {
     return Value::nil();
 }
 
-void set_natives(Vm *vm) {
+void set_natives(Vm& vm) {
     define_native(vm, "print", lamb_print);
     define_native(vm, "println", lamb_println);
     define_native(vm, "user_int", lamb_user_int);

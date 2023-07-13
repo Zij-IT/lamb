@@ -84,15 +84,15 @@ static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
         return CarUnsupportedAst;                                                                  \
     }
 
-static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Block *const block, char const* name) {
+static Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *const block, char const* name) {
     Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
     func_comp.new_scope();
-    vm->curr_compiler = &func_comp;
+    vm.curr_compiler = &func_comp;
 
     return func_comp;
 }
 
-static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode const *arg) {
+static void add_arg_to_compiler(Vm& vm, Compiler *const func_comp, AstNode const *arg) {
     AstNode *ident_node = arg->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
     func_comp->chunk().add_const(vm, Value::from_obj((Object *)ident));
@@ -100,7 +100,7 @@ static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode
     func_comp->function->arity++;
 }
 
-static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
+static void write_as_closure(Vm& vm, Compiler *const func_comp) {
     Compiler *compiler = func_comp->enclosing;
     compiler->chunk().write(vm, OpClosure);
     compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
@@ -110,7 +110,7 @@ static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
     }
 }
 
-static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *node, char const* name) {
+static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *node, char const* name) {
     AstNode *func_args = node->kids[0];
     AstNode *func_body = node->kids[1];
     AstNode *is_recursive = node->kids[2];
@@ -143,7 +143,7 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     BUBBLE(compile(vm, &func_comp, func_body));
     func_comp.chunk().write(vm, OpReturn);
 
-    if (vm->options.print_fn_chunks) {
+    if (vm.options.print_fn_chunks) {
         chunk_debug(func_comp.chunk(), "Function Chunk");
     }
 
@@ -151,12 +151,12 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
 
     func_comp.end_scope(vm);
     func_comp.destroy(vm);
-    vm->curr_compiler = func_comp.enclosing;
+    vm.curr_compiler = func_comp.enclosing;
 
     return CarOk;
 }
 
-static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode *node) {
+static CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode *node) {
     AstNode *ident = node->kids[0];
     AstNode *func_def = node->kids[1];
 
@@ -175,7 +175,7 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
     return CarOk;
 }
 
-static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *first, AstNode *second,
+static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *first, AstNode *second,
                                         char const* name) {
     // Turns: `f1 .> f2` or `f2 <. f1` into:
     // result := fn(x) -> f2(f1(x));
@@ -196,7 +196,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
 
     func_comp.new_scope();
     func_comp.enclosing = compiler;
-    vm->curr_compiler = &func_comp;
+    vm.curr_compiler = &func_comp;
 
     BUBBLE(compile(vm, &func_comp, first));
     BUBBLE(compile(vm, &func_comp, second));
@@ -218,7 +218,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     compiler->chunk().write(vm, OpClosure);
     compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp.function));
 
-    if (vm->options.print_fn_chunks) {
+    if (vm.options.print_fn_chunks) {
         chunk_debug(func_comp.chunk(), name);
     }
 
@@ -229,12 +229,12 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
 
     func_comp.end_scope(vm);
     func_comp.destroy(vm);
-    vm->curr_compiler = func_comp.enclosing;
+    vm.curr_compiler = func_comp.enclosing;
 
     return CarOk;
 }
 
-CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
+CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
     switch (node->type) {
         case AstntStrLit: {
             LambString *lit = cstr_to_lambstring(vm, node->val.s);

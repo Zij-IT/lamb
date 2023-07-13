@@ -21,7 +21,7 @@ struct Table {
 
     Table(i32 len, i32 capacity, Entry* entries);
 
-    void destroy(Vm *vm);
+    void destroy(Vm& vm);
 
     Entry *entry(LambString* key) const;
 
@@ -29,7 +29,7 @@ struct Table {
 
     std::optional<Value> get(LambString *key) const;
 
-    bool insert(Vm *vm, LambString *key, Value val);
+    bool insert(Vm& vm, LambString *key, Value val);
 
     bool remove(LambString* key);
 

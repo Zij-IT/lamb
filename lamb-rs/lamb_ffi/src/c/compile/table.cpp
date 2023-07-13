@@ -10,7 +10,7 @@
 
 static bool is_tombstone(Entry *entry) { return entry->val.is_bool() && entry->val.as.boolean; }
 
-static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
+static void table_adjust_capacity(Vm& vm, Table *table, i32 capacity) {
     Entry *entries = ALLOCATE(vm, Entry, capacity);
 
     // This table is required due to table_find call below, and has no other
@@ -54,7 +54,7 @@ Table::Table(i32 len, i32 capacity, Entry* entries) {
     this->entries = entries;
 }
 
-void Table::destroy(Vm *vm) {
+void Table::destroy(Vm& vm) {
     FREE_ARRAY(vm, Entry, this->entries, this->capacity);
     this->entries = nullptr;
     this->capacity = 0;
@@ -121,7 +121,7 @@ std::optional<Value> Table::get(LambString *key) const {
     return entry->val;
 }
 
-bool Table::insert(Vm *vm, LambString *key, Value value) {
+bool Table::insert(Vm& vm, LambString *key, Value value) {
     if (this->len + 1 > this->capacity * TABLE_MAX_LOAD) {
         i32 capacity = GROW_CAPACITY(this->capacity);
         table_adjust_capacity(vm, this, capacity);

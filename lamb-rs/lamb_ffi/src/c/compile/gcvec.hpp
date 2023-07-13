@@ -22,13 +22,13 @@ class GcVec {
 public:
     GcVec();
 
-    void push(Vm* vm, T item);
+    void push(Vm& vm, T item);
 
     constexpr T* as_raw() const { return this->values; };
 
     constexpr void truncate(i32 len) { this->_len = std::min(len, this->_len); };
 
-    void destroy(Vm* vm);
+    void destroy(Vm& vm);
 
     constexpr i32 len() const { return this->_len; };
 

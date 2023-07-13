@@ -20,21 +20,21 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     };
 
     Vm vm;
-    vm_init(&vm, options);
+    vm_init(vm, options);
 
     Block block = {.base = 0, .offset = 1, .depth = 0, .prev = NULL};
-    Compiler compiler(&vm, nullptr, &block, FtScript, "", 0);
+    Compiler compiler(vm, nullptr, &block, FtScript, "", 0);
 
     vm.curr_compiler = &compiler;
-    vm_push_stack(&vm, Value::from_obj((Object *)compiler.function));
+    vm_push_stack(vm, Value::from_obj((Object *)compiler.function));
 
-    CompileAstResult car = compile(&vm, &compiler, root);
+    CompileAstResult car = compile(vm, &compiler, root);
 
     if (car == CarOk) {
-        compiler.chunk().write(&vm, OpReturn);
-        LambClosure *closure = to_closure(&vm, compiler.function);
-        vm_pop_stack(&vm);
-        vm_push_stack(&vm, Value::from_obj((Object *)closure));
+        compiler.chunk().write(vm, OpReturn);
+        LambClosure *closure = to_closure(vm, compiler.function);
+        vm_pop_stack(vm);
+        vm_push_stack(vm, Value::from_obj((Object *)closure));
 
         Callframe *frame = &vm.frames[vm.frame_count++];
         frame->closure = closure;
@@ -45,13 +45,13 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
             chunk_debug(compiler.chunk(), "Script Chunk");
         }
 
-        vm_run(&vm);
+        vm_run(vm);
         printf("\n");
     } else {
         printf("Lamb: Your source code contains code that is not able to be "
                "compiled.\n");
     }
 
-    compiler.destroy(&vm);
-    vm_free(&vm);
+    compiler.destroy(vm);
+    vm_free(vm);
 }

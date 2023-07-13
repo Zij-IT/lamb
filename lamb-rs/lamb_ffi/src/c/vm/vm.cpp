@@ -25,9 +25,9 @@
     runtime_error("Unary '" op_str "' operator is not defined for values of type %s",              \
                   kind_as_cstr(rhs));
 
-static LambUpvalue *capture_upvalue(Vm *vm, Value *local) {
+static LambUpvalue *capture_upvalue(Vm& vm, Value *local) {
     LambUpvalue *prev_upvalue = NULL;
-    LambUpvalue *curr_upvalue = vm->open_upvalues;
+    LambUpvalue *curr_upvalue = vm.open_upvalues;
 
     while (curr_upvalue != NULL && curr_upvalue->location > local) {
         prev_upvalue = curr_upvalue;
@@ -42,7 +42,7 @@ static LambUpvalue *capture_upvalue(Vm *vm, Value *local) {
     created_upvalue->next = curr_upvalue;
 
     if (prev_upvalue == NULL) {
-        vm->open_upvalues = created_upvalue;
+        vm.open_upvalues = created_upvalue;
     } else {
         prev_upvalue->next = created_upvalue;
     }
@@ -50,61 +50,61 @@ static LambUpvalue *capture_upvalue(Vm *vm, Value *local) {
     return created_upvalue;
 }
 
-static void close_upvalues(Vm *vm, Value *last) {
-    while (vm->open_upvalues != NULL && vm->open_upvalues->location >= last) {
-        LambUpvalue *upvalue = vm->open_upvalues;
+static void close_upvalues(Vm& vm, Value *last) {
+    while (vm.open_upvalues != NULL && vm.open_upvalues->location >= last) {
+        LambUpvalue *upvalue = vm.open_upvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
-        vm->open_upvalues = upvalue->next;
+        vm.open_upvalues = upvalue->next;
     }
 }
 
-static Value *vm_peek_stack(Vm *vm) {
-    vm_assert("Peeking non-stack bytes", vm->stack_top != vm->stack);
+static Value *vm_peek_stack(Vm& vm) {
+    vm_assert("Peeking non-stack bytes", vm.stack_top != vm.stack);
 
-    return vm->stack_top - 1;
+    return vm.stack_top - 1;
 }
 
-static Value *vm_peekn_stack(Vm *vm, i32 n) {
-    vm_assert("Peeking non-stack bytes", vm->stack_top != vm->stack - n);
+static Value *vm_peekn_stack(Vm& vm, i32 n) {
+    vm_assert("Peeking non-stack bytes", vm.stack_top != vm.stack - n);
 
-    return vm->stack_top - n - 1;
+    return vm.stack_top - n - 1;
 }
 
-void vm_init(Vm *vm, VmOptions options) {
-    vm->frame_count = 0;
-    vm->bytes_allocated = 0;
-    vm->next_collection = 1024 * 1024;
-    vm->stack_top = vm->stack;
-    vm->objects = NULL;
-    vm->open_upvalues = NULL;
-    vm->curr_compiler = NULL;
-    vm->options = options;
-    vm->saved_value = Value::nil();
+void vm_init(Vm& vm, VmOptions options) {
+    vm.frame_count = 0;
+    vm.bytes_allocated = 0;
+    vm.next_collection = 1024 * 1024;
+    vm.stack_top = vm.stack;
+    vm.objects = NULL;
+    vm.open_upvalues = NULL;
+    vm.curr_compiler = NULL;
+    vm.options = options;
+    vm.saved_value = Value::nil();
 
-    vm->strings = Table();
-    vm->globals = Table();
+    vm.strings = Table();
+    vm.globals = Table();
 
     srand(time(NULL));
     set_natives(vm);
 }
 
-void vm_push_stack(Vm *vm, Value val) {
-    vm_assert("Stack overflow", vm->stack_top - vm->stack != MAX_VALUES);
+void vm_push_stack(Vm& vm, Value val) {
+    vm_assert("Stack overflow", vm.stack_top - vm.stack != MAX_VALUES);
 
-    *vm->stack_top = val;
-    vm->stack_top += 1;
+    *vm.stack_top = val;
+    vm.stack_top += 1;
 }
 
-Value vm_pop_stack(Vm *vm) {
-    vm_assert("Stack underflow", vm->stack_top != vm->stack);
+Value vm_pop_stack(Vm& vm) {
+    vm_assert("Stack underflow", vm.stack_top != vm.stack);
 
-    vm->stack_top -= 1;
-    return *vm->stack_top;
+    vm.stack_top -= 1;
+    return *vm.stack_top;
 }
 
-InterpretResult vm_run(Vm *vm) {
-    Callframe *frame = &vm->frames[vm->frame_count - 1];
+InterpretResult vm_run(Vm& vm) {
+    Callframe *frame = &vm.frames[vm.frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
@@ -112,11 +112,11 @@ InterpretResult vm_run(Vm *vm) {
 #define READ_CONSTANT()                                                                            \
     (frame->ip += 1, frame->closure->function->chunk.constants[READ_SHORT()])
 
-#define PUSH(val) (*vm->stack_top = val, vm->stack_top += 1)
+#define PUSH(val) (*vm.stack_top = val, vm.stack_top += 1)
 
-#define POP() (*--vm->stack_top)
+#define POP() (*--vm.stack_top)
 
-#define DROP() (vm->stack_top -= 1)
+#define DROP() (vm.stack_top -= 1)
 
 #define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
     do {                                                                                           \
@@ -154,7 +154,7 @@ InterpretResult vm_run(Vm *vm) {
                 LambString *ident = (LambString *)READ_CONSTANT().as.obj;
                 Value *val = vm_peek_stack(vm);
 
-                if (!vm->globals.insert(vm, ident, *val)) {
+                if (!vm.globals.insert(vm, ident, *val)) {
                     runtime_error("Multiple definitions found for global %s", ident->chars);
                 }
 
@@ -165,7 +165,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value val = READ_CONSTANT();
                 LambString *ident = (LambString *)val.as.obj;
 
-                auto global = vm->globals.get(ident);
+                auto global = vm.globals.get(ident);
                 if (!global) {
                     runtime_error("'%s' does not have an associated binding", ident->chars);
                 }
@@ -417,21 +417,21 @@ InterpretResult vm_run(Vm *vm) {
                                           closure->function->arity, arg_count);
                         }
 
-                        if (vm->frame_count == MAX_FRAMES) {
+                        if (vm.frame_count == MAX_FRAMES) {
                             runtime_error("Callstack overflow");
                         }
 
-                        Callframe *new_frame = &vm->frames[vm->frame_count++];
+                        Callframe *new_frame = &vm.frames[vm.frame_count++];
                         new_frame->closure = closure;
                         new_frame->ip = closure->function->chunk.bytes.as_raw();
-                        new_frame->slots = vm->stack_top - arg_count - 1;
+                        new_frame->slots = vm.stack_top - arg_count - 1;
                         frame = new_frame;
                         break;
                     }
                     case OtNative: {
                         NativeFunc *native = (NativeFunc *)callee->as.obj;
-                        Value result = native->func(arg_count, vm->stack_top - arg_count);
-                        vm->stack_top -= arg_count + 1;
+                        Value result = native->func(arg_count, vm.stack_top - arg_count);
+                        vm.stack_top -= arg_count + 1;
                         PUSH(result);
                         break;
                     }
@@ -463,14 +463,14 @@ InterpretResult vm_run(Vm *vm) {
             case OpReturn: {
                 Value ret = POP();
                 close_upvalues(vm, frame->slots);
-                vm->stack_top = frame->slots;
-                vm->frame_count--;
-                if (vm->frame_count == 0) {
-                    vm_assert("Stack is empty upon ending script", vm->stack_top == vm->stack);
+                vm.stack_top = frame->slots;
+                vm.frame_count--;
+                if (vm.frame_count == 0) {
+                    vm_assert("Stack is empty upon ending script", vm.stack_top == vm.stack);
                     return InterpretOk;
                 }
 
-                frame = &vm->frames[vm->frame_count - 1];
+                frame = &vm.frames[vm.frame_count - 1];
                 PUSH(ret);
                 break;
             }
@@ -479,7 +479,7 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpCloseValue: {
-                close_upvalues(vm, vm->stack_top - 1);
+                close_upvalues(vm, vm.stack_top - 1);
                 DROP();
                 break;
             }
@@ -489,27 +489,27 @@ InterpretResult vm_run(Vm *vm) {
                 break;
             }
             case OpSaveValue: {
-                vm->saved_value = POP();
+                vm.saved_value = POP();
                 break;
             }
             case OpUnsaveValue: {
-                PUSH(vm->saved_value);
+                PUSH(vm.saved_value);
                 break;
             }
         }
     }
 }
 
-void vm_free(Vm *vm) {
-    Object *obj = vm->objects;
+void vm_free(Vm& vm) {
+    Object *obj = vm.objects;
     while (obj != NULL) {
         Object *next = obj->next;
         object_free(vm, obj);
         obj = next;
     }
 
-    vm->strings.destroy(vm);
-    vm->globals.destroy(vm);
+    vm.strings.destroy(vm);
+    vm.globals.destroy(vm);
 }
 
 #undef BINARY_INT_DOUBLE_OP

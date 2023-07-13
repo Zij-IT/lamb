@@ -38,17 +38,17 @@ struct Compiler {
 
     FuncType type;
 
-    Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity);
+    Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity);
 
-    void add_local(Vm* vm, char const* name);
+    void add_local(Vm& vm, char const* name);
 
     constexpr void new_scope() { this->block->depth++; }
 
-    void end_scope(Vm* vm);
+    void end_scope(Vm& vm);
 
     constexpr Chunk& chunk() const { return this->function->chunk; }
 
-    void destroy(Vm* vm);
+    void destroy(Vm& vm);
 };
 
 #endif // BLOCK_HEADER

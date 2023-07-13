@@ -4,7 +4,7 @@
 #include "table.hpp"
 #include <stdlib.h>
 
-Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
+Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
     this->block = block;
     this->type = type;
     this->enclosing = enclosing;
@@ -19,13 +19,13 @@ Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, cha
     this->locals.push(vm, loc);
 }
 
-void Compiler::add_local(Vm* vm, char const* name) {
+void Compiler::add_local(Vm& vm, char const* name) {
     Local loc = {
         .name = name, .depth = this->block->depth, .is_captured = false};
     this->locals.push(vm, loc);
 }
 
-void Compiler::end_scope(Vm* vm) {
+void Compiler::end_scope(Vm& vm) {
     this->block = this->block->prev;
     i32 depth = this->block == NULL ? -1 : this->block->depth;
 
@@ -48,6 +48,6 @@ void Compiler::end_scope(Vm* vm) {
     this->function->chunk.write(vm, OpUnsaveValue);
 }
 
-void Compiler::destroy(Vm* vm) {
+void Compiler::destroy(Vm& vm) {
     this->locals.destroy(vm);
 }

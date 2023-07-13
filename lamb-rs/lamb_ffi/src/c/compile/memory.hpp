@@ -21,14 +21,14 @@ struct Table;
 #define FREE_ARRAY(vm, type, pointer, oldCount)                                                    \
     reallocate(vm, pointer, sizeof(type) * (oldCount), 0)
 
-void *reallocate(Vm *vm, void *pointer, size_t oldSize, size_t newSize);
+void *reallocate(Vm& vm, void *pointer, size_t oldSize, size_t newSize);
 
-void mark_object(Vm *vm, Object *obj);
+void mark_object(Vm& vm, Object *obj);
 
-void mark_value(Vm *vm, Value *value);
+void mark_value(Vm& vm, Value *value);
 
-void mark_table(Vm *vm, Table *table);
+void mark_table(Vm& vm, Table *table);
 
-void collect_garbage(Vm *vm);
+void collect_garbage(Vm& vm);
 
 #endif // MEMORY_HEADER
