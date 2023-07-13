@@ -40,6 +40,17 @@ LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
     return func;
 }
 
+LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
+    LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
+    upvalue->obj = { .next = vm.objects, .type = OtUpvalue, .is_marked = false, };
+    upvalue->location = slot;
+    upvalue->next = next;
+    upvalue->closed = Value::nil();
+
+    vm.objects = (Object *)upvalue;
+    return upvalue;
+}
+
 Object *alloc_obj(Vm& vm, ObjectType type) {
     switch (type) {
         case OtString: {
@@ -85,20 +96,8 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             return vm.objects;
         }
         case OtUpvalue: {
-            LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
-#ifdef DEBUG_LOG_GC
-            printf("%p allocating OtUpvalue\n", (void *)upvalue);
-#endif
-            Object obj = {
-                .next = vm.objects,
-                .type = type,
-                .is_marked = false,
-            };
-            upvalue->obj = obj;
-            upvalue->next = NULL;
-            upvalue->location = NULL;
-            vm.objects = (Object *)upvalue;
-            return vm.objects;
+            printf("Uncaught alloc_obj!?\n");
+            exit(1);
         }
     }
 
@@ -211,11 +210,4 @@ LambClosure *to_closure(Vm& vm, LambFunc *func) {
     }
 
     return closure;
-}
-
-LambUpvalue *to_upvalue(Vm& vm, Value *slot) {
-    LambUpvalue *upvalue = (LambUpvalue *)alloc_obj(vm, OtUpvalue);
-    upvalue->location = slot;
-    upvalue->closed = Value::nil();
-    return upvalue;
 }

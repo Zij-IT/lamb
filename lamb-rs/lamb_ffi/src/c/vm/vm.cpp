@@ -38,9 +38,7 @@ static LambUpvalue *capture_upvalue(Vm& vm, Value *local) {
         return curr_upvalue;
     }
 
-    LambUpvalue *created_upvalue = to_upvalue(vm, local);
-    created_upvalue->next = curr_upvalue;
-
+    auto created_upvalue = LambUpvalue::alloc(vm, local, curr_upvalue);
     if (prev_upvalue == NULL) {
         vm.open_upvalues = created_upvalue;
     } else {

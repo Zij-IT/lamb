@@ -60,6 +60,8 @@ struct LambUpvalue {
     Value closed;
     Value *location;
     LambUpvalue *next;
+
+    static LambUpvalue* alloc(Vm& vm, Value* slot, LambUpvalue* next);
 };
 
 struct LambClosure {
@@ -85,7 +87,5 @@ LambString *cstr_to_lambstring(Vm& vm, char const* cstr);
 LambString *concat(Vm& vm, LambString *lhs, LambString *rhs);
 
 LambClosure *to_closure(Vm& vm, LambFunc *func);
-
-LambUpvalue *to_upvalue(Vm& vm, Value *slot);
 
 #endif // OBJECT_HEADER
