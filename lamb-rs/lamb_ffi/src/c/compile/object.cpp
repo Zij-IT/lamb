@@ -40,6 +40,16 @@ LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
     return func;
 }
 
+NativeFunc* NativeFunc::alloc(Vm& vm, CFunc func) {
+    NativeFunc *native = ALLOCATE(vm, NativeFunc, 1);
+    Object obj = { .next = vm.objects, .type = OtNative, .is_marked = false, };
+    native->obj = obj;
+    native->func = func;
+
+    vm.objects = (Object *)native;
+    return native;
+}
+
 LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
     LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
     upvalue->obj = { .next = vm.objects, .type = OtUpvalue, .is_marked = false, };
@@ -64,48 +74,6 @@ LambClosure* LambClosure::alloc(Vm& vm, LambFunc* func) {
 
     vm.objects = (Object *)closure;
     return closure;
-}
-
-Object *alloc_obj(Vm& vm, ObjectType type) {
-    switch (type) {
-        case OtString: {
-            printf("Uncaught alloc_obj!?\n");
-            exit(1);
-        }
-        case OtArray: {
-            printf("Uncaught alloc_obj!?\n");
-            exit(1);
-        }
-        case OtFunc: {
-            printf("Uncaught alloc_obj!?\n");
-            exit(1);
-        }
-        case OtNative: {
-            NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);
-#ifdef DEBUG_LOG_GC
-            printf("%p allocating OtNative\n", (void *)func);
-#endif
-            Object obj = {
-                .next = vm.objects,
-                .type = type,
-                .is_marked = false,
-            };
-            func->obj = obj;
-            func->func = NULL;
-            vm.objects = (Object *)func;
-            return vm.objects;
-        }
-        case OtClosure: {
-            printf("Uncaught alloc_obj!?\n");
-            exit(1);
-        }
-        case OtUpvalue: {
-            printf("Uncaught alloc_obj!?\n");
-            exit(1);
-        }
-    }
-
-    return NULL;
 }
 
 void object_free(Vm& vm, Object *obj) {

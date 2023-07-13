@@ -53,6 +53,8 @@ struct LambFunc {
 struct NativeFunc {
     Object obj;
     CFunc func;
+
+    static NativeFunc* alloc(Vm& vm, CFunc func);
 };
 
 struct LambUpvalue {
@@ -77,8 +79,6 @@ enum FuncType {
     FtScript,
     FtNormal,
 };
-
-Object *alloc_obj(Vm& vm, ObjectType type);
 
 bool is_of_type(Object *obj, ObjectType type);
 
