@@ -51,6 +51,21 @@ LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
     return upvalue;
 }
 
+LambClosure* LambClosure::alloc(Vm& vm, LambFunc* func) {
+    LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
+    closure->obj = { .next = vm.objects, .type = OtClosure, .is_marked = false, };
+    closure->function = func;
+    closure->upvalue_count = func->upvalue_count;
+
+    closure->upvalues = ALLOCATE(vm, LambUpvalue *, closure->upvalue_count);
+    for (int i = 0; i < closure->upvalue_count; i++) {
+        closure->upvalues[i] = NULL;
+    }
+
+    vm.objects = (Object *)closure;
+    return closure;
+}
+
 Object *alloc_obj(Vm& vm, ObjectType type) {
     switch (type) {
         case OtString: {
@@ -81,19 +96,8 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             return vm.objects;
         }
         case OtClosure: {
-            LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
-#ifdef DEBUG_LOG_GC
-            printf("%p allocating OtClosure\n", (void *)closure);
-#endif
-            Object obj = {
-                .next = vm.objects,
-                .type = type,
-                .is_marked = false,
-            };
-            closure->obj = obj;
-            closure->function = NULL;
-            vm.objects = (Object *)closure;
-            return vm.objects;
+            printf("Uncaught alloc_obj!?\n");
+            exit(1);
         }
         case OtUpvalue: {
             printf("Uncaught alloc_obj!?\n");
@@ -198,16 +202,4 @@ LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     vm_pop_stack(vm);
 
     return ret;
-}
-
-LambClosure *to_closure(Vm& vm, LambFunc *func) {
-    LambClosure *closure = (LambClosure *)alloc_obj(vm, OtClosure);
-    closure->function = func;
-    closure->upvalue_count = func->upvalue_count;
-    closure->upvalues = ALLOCATE(vm, LambUpvalue *, closure->upvalue_count);
-    for (int i = 0; i < closure->upvalue_count; i++) {
-        closure->upvalues[i] = NULL;
-    }
-
-    return closure;
 }

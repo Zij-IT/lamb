@@ -69,6 +69,8 @@ struct LambClosure {
     LambFunc *function;
     LambUpvalue **upvalues;
     i32 upvalue_count;
+
+    static LambClosure* alloc(Vm& vm, LambFunc* func);
 };
 
 enum FuncType {
@@ -85,7 +87,5 @@ void object_free(Vm& vm, Object *obj);
 LambString *cstr_to_lambstring(Vm& vm, char const* cstr);
 
 LambString *concat(Vm& vm, LambString *lhs, LambString *rhs);
-
-LambClosure *to_closure(Vm& vm, LambFunc *func);
 
 #endif // OBJECT_HEADER

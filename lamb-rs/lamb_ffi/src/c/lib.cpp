@@ -32,7 +32,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
 
     if (car == CarOk) {
         compiler.chunk().write(vm, OpReturn);
-        LambClosure *closure = to_closure(vm, compiler.function);
+        auto closure = LambClosure::alloc(vm, compiler.function);
         vm_pop_stack(vm);
         vm_push_stack(vm, Value::from_obj((Object *)closure));
 

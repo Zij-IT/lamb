@@ -441,7 +441,7 @@ InterpretResult vm_run(Vm& vm) {
             }
             case OpClosure: {
                 LambFunc *function = (LambFunc *)READ_CONSTANT().as.obj;
-                LambClosure *closure = to_closure(vm, function);
+                auto closure = LambClosure::alloc(vm, function);
                 PUSH(Value::from_obj((Object *)closure));
 
                 for (i32 i = 0; i < closure->upvalue_count; i++) {
