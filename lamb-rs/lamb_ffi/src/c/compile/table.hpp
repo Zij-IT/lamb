@@ -12,7 +12,7 @@ typedef struct {
     Value val;
 } Entry;
 
-typedef struct Table {
+struct Table {
     i32 len;
     i32 capacity;
     Entry *entries;
@@ -34,6 +34,6 @@ typedef struct Table {
     bool remove(LambString* key);
 
     void remove_marked();
-} Table;
+};
 
 #endif // TABLE_HEADER
