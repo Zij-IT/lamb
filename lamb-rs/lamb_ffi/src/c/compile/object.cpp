@@ -8,24 +8,22 @@
 #include "misc.hpp"
 #include "object.hpp"
 
+LambString* LambString::alloc(Vm& vm, char const* chars, i32 len, u32 hash) {
+    LambString *st = ALLOCATE(vm, LambString, 1);
+    st->obj = { .next = vm.objects, .type = OtString, .is_marked = false, };
+    st->chars = chars;
+    st->len = len;
+    st->hash = hash;
+
+    vm.objects = (Object *)st;
+    return st;
+}
+
 Object *alloc_obj(Vm& vm, ObjectType type) {
     switch (type) {
         case OtString: {
-            LambString *st = ALLOCATE(vm, LambString, 1);
-#ifdef DEBUG_LOG_GC
-            printf("%p allocating OtString\n", (void *)st);
-#endif
-            Object obj = {
-                .next = vm.objects,
-                .type = type,
-                .is_marked = false,
-            };
-            st->obj = obj;
-            st->chars = NULL;
-            st->len = 0;
-            st->hash = 0;
-            vm.objects = (Object *)st;
-            return vm.objects;
+            printf("Uncaught alloc_obj!?\n");
+            exit(1);
         }
         case OtArray: {
             LambArray *arr = ALLOCATE(vm, LambArray, 1);
@@ -176,11 +174,7 @@ LambString *cstr_to_lambstring(Vm& vm, char const*  cstr) {
         return match.value();
     }
    
-    auto lamb_str = (LambString *)alloc_obj(vm, OtString);
-    lamb_str->chars = strdup(cstr);
-    lamb_str->hash = hash;
-    lamb_str->len = len;
-
+    auto lamb_str = LambString::alloc(vm, strdup(cstr), len, hash);
     vm_push_stack(vm, Value::from_obj((Object *)lamb_str));
     vm.strings.insert(vm, lamb_str, Value::from_bool(false));
     vm_pop_stack(vm);
@@ -203,11 +197,7 @@ LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
         return interned.value();
     }
 
-    LambString *ret = (LambString *)alloc_obj(vm, OtString);
-    ret->chars = chars;
-    ret->len = len;
-    ret->hash = hash_string(chars);
-
+    auto ret = LambString::alloc(vm, chars, len, hash);
     vm_push_stack(vm, Value::from_obj((Object *)(ret)));
     vm.strings.insert(vm, ret, Value::from_bool(false));
     vm_pop_stack(vm);

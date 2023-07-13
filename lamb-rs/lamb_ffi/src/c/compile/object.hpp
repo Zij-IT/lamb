@@ -26,9 +26,11 @@ struct Object {
 
 struct LambString {
     Object obj;
-    string chars;
+    char const* chars;
     i32 len;
     u32 hash;
+
+    static LambString* alloc(Vm& vm, char const* chars, i32 len, u32 hash);
 };
 
 struct LambArray {

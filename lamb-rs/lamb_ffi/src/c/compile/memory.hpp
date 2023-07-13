@@ -19,7 +19,7 @@ struct Table;
     (type *)reallocate(vm, pointer, sizeof(type) * (oldCount), sizeof(type) * (newCount))
 
 #define FREE_ARRAY(vm, type, pointer, oldCount)                                                    \
-    reallocate(vm, pointer, sizeof(type) * (oldCount), 0)
+    reallocate(vm, (void*)pointer, sizeof(type) * (oldCount), 0)
 
 void *reallocate(Vm& vm, void *pointer, size_t oldSize, size_t newSize);
 
