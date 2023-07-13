@@ -23,7 +23,7 @@ struct Table {
 
     void destroy(Vm *vm);
 
-    Entry *find(LambString* key);
+    Entry *entry(LambString* key);
 
     std::optional<LambString*> find_string(char const* chars, i32 len, u32 hash);
 

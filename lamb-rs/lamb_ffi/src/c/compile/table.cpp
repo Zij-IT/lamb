@@ -31,7 +31,7 @@ static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
             continue;
         }
 
-        Entry *dest = temp_table.find(entry->key);
+        Entry *dest = temp_table.entry(entry->key);
         dest->key = entry->key;
         dest->val = entry->val;
         table->len++;
@@ -61,7 +61,7 @@ void Table::destroy(Vm *vm) {
     this->len = 0;
 }
 
-Entry *Table::find(LambString* key) {
+Entry *Table::entry(LambString* key) {
     // Correctness: Table capacity is guarunteed to be a multiple of 2
     //              in which case x % n is the same as X & (n - 1)
     u32 index = key->hash & (this->capacity - 1);
@@ -113,7 +113,7 @@ std::optional<Value> Table::get(LambString *key) {
         return std::nullopt;
     }
 
-    Entry *entry = this->find(key);
+    Entry *entry = this->entry(key);
     if (entry->key == NULL) {
         return std::nullopt;
     }
@@ -127,7 +127,7 @@ bool Table::insert(Vm *vm, LambString *key, Value value) {
         table_adjust_capacity(vm, this, capacity);
     }
 
-    Entry *entry = this->find(key);
+    Entry *entry = this->entry(key);
     bool is_new = entry->key == NULL;
     if (is_new && !is_tombstone(entry)) {
         this->len++;
@@ -144,7 +144,7 @@ bool Table::remove(LambString* key) {
         return false;
     }
 
-    Entry *entry = this->find(key);
+    Entry *entry = this->entry(key);
     if (entry->key == NULL) {
         return false;
     }
