@@ -50,8 +50,8 @@ static i32 add_upvalue(Compiler *const compiler, i32 index, bool is_local) {
 }
 
 static i32 resolve_local(Compiler *const compiler, LambString *const name) {
-    for (i32 i = compiler->locals.len - 1; i >= 0; i--) {
-        Local *local = &compiler->locals.values[i];
+    for (i32 i = compiler->locals.len() - 1; i >= 0; i--) {
+        Local *local = &compiler->locals[i];
         if (local->name == name->chars) {
             return i;
         }
@@ -67,7 +67,7 @@ static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
 
     i32 local = resolve_local(compiler->enclosing, name);
     if (local != LOCAL_NOT_FOUND) {
-        compiler->enclosing->locals.values[local].is_captured = true;
+        compiler->enclosing->locals[local].is_captured = true;
         return add_upvalue(compiler, local, true);
     }
 
@@ -127,12 +127,12 @@ static CompileAstResult compile_function(Vm *vm, Compiler *compiler, AstNode *no
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
     // depth must match.
-    func_comp.locals.values[0].depth = func_comp.block->depth;
+    func_comp.locals[0].depth = func_comp.block->depth;
     block.offset += 1;
 
     // In a recursive function the starting value must be findable via name
     if (is_recursive->val.b) {
-        func_comp.locals.values[0].name = name;
+        func_comp.locals[0].name = name;
     }
 
     for (AstNode *arg = func_args; arg != NULL; arg = arg->kids[1]) {
@@ -191,7 +191,7 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
     // depth must match.
-    func_comp.locals.values[0].depth = 1;
+    func_comp.locals[0].depth = 1;
     block.offset += 1;
 
     func_comp.new_scope();
@@ -249,7 +249,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             if (local_slot != LOCAL_NOT_FOUND) {
                 compiler->chunk()->write(vm, OpGetLocal);
 
-                i32 depth = compiler->locals.values[local_slot].depth;
+                i32 depth = compiler->locals[local_slot].depth;
                 i32 base = -1;
                 for (Block *bl = compiler->block; bl != NULL; bl = bl->prev) {
                     if (bl->depth == depth) {
@@ -260,7 +260,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
                 i32 local_idx = 0;
                 for (i32 idx = local_slot - 1;
-                     idx >= 0 && compiler->locals.values[idx].depth == depth; idx--) {
+                     idx >= 0 && compiler->locals[idx].depth == depth; idx--) {
                     local_idx++;
                 }
 

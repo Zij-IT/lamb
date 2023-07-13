@@ -1,5 +1,6 @@
 #include "vector.hpp"
 #include "memory.hpp"
+#include "compiler.hpp"
 
 template<typename T> 
 GcVec<T>::GcVec() {
@@ -29,3 +30,4 @@ void GcVec<T>::destroy(Vm* vm) {
 }
 
 template class GcVec<Value>;
+template class GcVec<Local>;

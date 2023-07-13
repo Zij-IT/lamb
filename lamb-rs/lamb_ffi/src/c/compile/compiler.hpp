@@ -28,7 +28,7 @@ struct Block {
 };
 
 struct Compiler {
-    LocalArray locals;
+    GcVec<Local> locals;
 
     LambFunc *function;
     Upvalue upvalues[UINT8_MAX];

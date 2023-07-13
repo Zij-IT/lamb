@@ -4,28 +4,6 @@
 #include "table.hpp"
 #include <stdlib.h>
 
-static void local_arr_init(LocalArray *arr) {
-    arr->len = 0;
-    arr->capacity = 0;
-    arr->values = NULL;
-}
-
-static void local_arr_write(Vm *vm, LocalArray *arr, Local val) {
-    if (arr->capacity < arr->len + 1) {
-        i32 old_cap = arr->capacity;
-        arr->capacity = GROW_CAPACITY(old_cap);
-        arr->values = GROW_ARRAY(vm, Local, arr->values, old_cap, arr->capacity);
-    }
-
-    arr->values[arr->len] = val;
-    arr->len += 1;
-}
-
-static void local_arr_free(Vm *vm, LocalArray *arr) {
-    FREE_ARRAY(vm, Value, arr->values, arr->capacity);
-    local_arr_init(arr);
-}
-
 Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
     this->block = block;
     this->type = type;
@@ -35,16 +13,16 @@ Compiler::Compiler(Vm* vm, Compiler* enclosing, Block* block, FuncType type, cha
     this->function->name = name;
     this->function->arity = arity;
 
-    local_arr_init(&this->locals);
+    this->locals = GcVec<Local>();
 
     Local loc = {.name = "", .depth = 0, .is_captured = false};
-    local_arr_write(vm, &this->locals, loc);
+    this->locals.push(vm, loc);
 }
 
 void Compiler::add_local(Vm* vm, char const* name) {
     Local loc = {
         .name = name, .depth = this->block->depth, .is_captured = false};
-    local_arr_write(vm, &this->locals, loc);
+    this->locals.push(vm, loc);
 }
 
 void Compiler::new_scope() {
@@ -57,16 +35,20 @@ void Compiler::end_scope(Vm* vm) {
 
     this->function->chunk.write(vm, OpSaveValue);
 
-    while (this->locals.len > 0 &&
-           this->locals.values[this->locals.len - 1].depth > depth) {
-        if (this->locals.values[this->locals.len - 1].is_captured) {
+    for(auto x = this->locals.len() - 1; x >= 0; x--) {
+        auto local = this->locals[x];
+        if (local.depth <= depth) { 
+            this->locals.truncate(x + 1);
+            break; 
+        }
+
+        if (local.is_captured) {
             this->function->chunk.write(vm, OpCloseValue);
         } else {
             this->function->chunk.write(vm, OpPop);
         }
-        this->locals.len--;
     }
-
+    
     this->function->chunk.write(vm, OpUnsaveValue);
 }
 
@@ -75,6 +57,5 @@ Chunk* Compiler::chunk() {
 }
 
 void Compiler::destroy(Vm* vm) {
-    local_arr_free(vm, &this->locals);
-    local_arr_init(&this->locals);
+    this->locals.destroy(vm);
 }
