@@ -72,9 +72,9 @@ struct Value {
 
     constexpr bool is_nil() const { return this->kind == VkNil; }
 
+    constexpr char const* kind_as_cstr() const;
+
     Order cmp(Value const& rhs) const;
 };
-
-char const* kind_as_cstr(Value val);
 
 #endif // VALUE_HEADER

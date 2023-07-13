@@ -107,8 +107,8 @@ Order Value::cmp(Value const& rhs) const {
     return OrderLess;
 }
 
-char const* kind_as_cstr(Value val) {
-    switch (val.kind) {
+constexpr char const* Value::kind_as_cstr() const {
+    switch (this->kind) {
         case VkNil:
             return "nil";
         case VkBool:
@@ -120,7 +120,7 @@ char const* kind_as_cstr(Value val) {
         case VkChar:
             return "char";
         case VkObj: {
-            switch (val.as.obj->type) {
+            switch (this->as.obj->type) {
                 case OtString:
                     return "string";
                 case OtArray:
@@ -138,6 +138,6 @@ char const* kind_as_cstr(Value val) {
         }
     }
 
-    fprintf(stderr, "Unknown kind value: %d", val.kind);
+    fprintf(stderr, "Unknown kind value: %d", this->kind);
     return "unknown";
 }

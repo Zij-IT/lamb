@@ -19,11 +19,11 @@
     runtime_error("Binary '" op_str                                                                \
                   "' is not defined for the following type combination: lhs(%s) " op_str           \
                   " rhs(%s)",                                                                      \
-                  kind_as_cstr(lhs), kind_as_cstr(rhs))
+                  lhs.kind_as_cstr(), rhs.kind_as_cstr())
 
 #define unary_type_error(op_str, rhs)                                                              \
     runtime_error("Unary '" op_str "' operator is not defined for values of type %s",              \
-                  kind_as_cstr(rhs));
+                  rhs.kind_as_cstr());
 
 static LambUpvalue *capture_upvalue(Vm& vm, Value *local) {
     LambUpvalue *prev_upvalue = NULL;
