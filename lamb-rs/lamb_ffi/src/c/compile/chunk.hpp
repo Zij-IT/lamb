@@ -3,7 +3,7 @@
 
 #include "./value.hpp"
 
-typedef enum {
+enum OpCode {
     OpConstant,
     OpDefineGlobal,
     OpGetGlobal,
@@ -40,7 +40,7 @@ typedef enum {
     OpCloseValue,
     OpSaveValue,
     OpUnsaveValue,
-} OpCode;
+};
 
 struct Chunk {
     i32 capacity;

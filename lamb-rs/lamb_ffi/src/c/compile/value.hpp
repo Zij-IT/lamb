@@ -4,20 +4,20 @@
 #include "../types.hpp"
 
 // Forward declare from object.h
-typedef struct Object Object;
-typedef struct LambString LambString;
-typedef struct Vm Vm;
+struct Object;
+struct LambString;
+struct Vm;
 
-typedef enum {
+enum ValueKind {
     VkBool,
     VkInt,
     VkDouble,
     VkChar,
     VkObj,
     VkNil,
-} ValueKind;
+};
 
-typedef struct {
+struct Value {
     ValueKind kind;
     union {
         bool boolean;
@@ -26,19 +26,19 @@ typedef struct {
         char ch;
         Object *obj;
     } as;
-} Value;
+};
 
-typedef struct {
+struct ValueArray {
     i32 capacity;
     i32 len;
     Value *values;
-} ValueArray;
+};
 
-typedef enum Order {
+enum Order {
     OrderLess = -1,
     OrderEqual = 0,
     OrderGreater = 1,
-} Order;
+};
 
 bool is_bool(Value val);
 

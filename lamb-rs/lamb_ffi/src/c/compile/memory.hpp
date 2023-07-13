@@ -5,8 +5,8 @@
 
 #include "value.hpp"
 
-typedef struct Vm Vm;
-typedef struct Table Table;
+struct Vm;
+struct Table;
 
 #define ALLOCATE(vm, type, count) (type *)reallocate(vm, NULL, 0, sizeof(type) * (count))
 

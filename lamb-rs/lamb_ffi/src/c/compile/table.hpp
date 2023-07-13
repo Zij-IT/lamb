@@ -7,10 +7,10 @@
 
 #define TABLE_MAX_LOAD 0.75
 
-typedef struct {
+struct Entry {
     LambString *key;
     Value val;
-} Entry;
+};
 
 struct Table {
     i32 len;

@@ -5,74 +5,74 @@
 #include "chunk.hpp"
 
 // Forward declare vm in vm.h
-typedef struct Vm Vm;
+struct Vm;
 
 typedef Value (*CFunc)(i32 args_passed, Value *args);
 
-typedef enum {
+enum ObjectType {
     OtString,
     OtArray,
     OtFunc,
     OtNative,
     OtClosure,
     OtUpvalue,
-} ObjectType;
+};
 
-typedef struct Object {
+struct Object {
     ObjectType type;
     bool is_marked;
-    struct Object *next;
-} Object;
+    Object *next;
+};
 
-typedef struct LambString {
+struct LambString {
     Object obj;
     i32 len;
     string chars;
     u32 hash;
-} LambString;
+};
 
-typedef struct LambArray {
+struct LambArray {
     Object obj;
     ValueArray items;
-} LambArray;
+};
 
-typedef struct LambFunc {
+struct LambFunc {
     Object obj;
     Chunk chunk;
     char const* name;
     i32 upvalue_count;
     u8 arity;
-} LambFunc;
+};
 
-typedef struct NativeFunc {
+struct NativeFunc {
     Object obj;
     CFunc func;
-} NativeFunc;
+};
 
-typedef struct LambUpvalue {
+struct LambUpvalue {
     Object obj;
     Value *location;
     Value closed;
-    struct LambUpvalue *next;
-} LambUpvalue;
+    LambUpvalue *next;
+};
 
-typedef struct LambClosure {
+struct LambClosure {
     Object obj;
     LambFunc *function;
     LambUpvalue **upvalues;
     i32 upvalue_count;
-} LambClosure;
+};
 
-typedef enum FuncType {
+enum FuncType {
     FtScript,
     FtNormal,
-} FuncType;
+};
 
-typedef struct ObjectPtrArray {
+struct ObjectPtrArray {
     Object **values;
     i32 capacity;
     i32 len;
-} ObjectPtrArray;
+};
 
 Object *alloc_obj(Vm *vm, ObjectType type);
 

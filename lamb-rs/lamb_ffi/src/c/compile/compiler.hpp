@@ -3,29 +3,29 @@
 
 #include "object.hpp"
 
-typedef struct {
+struct Local {
     char const* name;
     i32 depth;
     bool is_captured;
-} Local;
+};
 
-typedef struct {
+struct LocalArray {
     i32 capacity;
     i32 len;
     Local *values;
-} LocalArray;
+};
 
-typedef struct {
+struct Upvalue {
     u8 index;
     bool is_local;
-} Upvalue;
+};
 
-typedef struct Block {
+struct Block {
     i32 base;
     i32 offset;
     i32 depth;
-    struct Block *prev;
-} Block;
+    Block *prev;
+};
 
 struct Compiler {
     LocalArray locals;
@@ -33,7 +33,7 @@ struct Compiler {
     LambFunc *function;
     Upvalue upvalues[UINT8_MAX];
 
-    struct Compiler *enclosing;
+    Compiler *enclosing;
     Block *block;
 
     FuncType type;

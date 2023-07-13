@@ -4,10 +4,10 @@
 #include "../ast/ast.hpp"
 #include "../vm/vm.hpp"
 
-typedef enum {
+enum CompileAstResult {
     CarOk,
     CarUnsupportedAst,
-} CompileAstResult;
+};
 
 CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node);
 
