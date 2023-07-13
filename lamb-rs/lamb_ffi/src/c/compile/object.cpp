@@ -35,6 +35,30 @@ LambString* LambString::from_cstr(Vm&vm, char const* chars) {
     return lamb_str;
 }
 
+
+LambString* LambString::concat(Vm& vm, LambString* rhs) {
+    i32 len = this->len + rhs->len;
+
+    string chars = ALLOCATE(vm, char, len + 1);
+    strcpy(chars, this->chars);
+    strcpy(chars + this->len, rhs->chars);
+    chars[len] = '\0';
+
+    u32 hash = hash_string(chars);
+    auto interned = vm.strings.find_matching_key(chars, len, hash);
+    if (interned) {
+        free(chars);
+        return interned.value();
+    }
+
+    auto ret = LambString::alloc(vm, chars, len, hash);
+    vm_push_stack(vm, Value::from_obj((Object *)(ret)));
+    vm.strings.insert(vm, ret, Value::from_bool(false));
+    vm_pop_stack(vm);
+
+    return ret;
+} 
+
 LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
     LambArray *arr = ALLOCATE(vm, LambArray, 1);
     arr->obj = { .next = vm.objects, .type = OtArray, .is_marked = false, };

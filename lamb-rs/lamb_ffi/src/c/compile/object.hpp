@@ -33,6 +33,8 @@ struct LambString {
     static LambString* alloc(Vm& vm, char const* chars, i32 len, u32 hash);
 
     static LambString* from_cstr(Vm&vm, char const* chars);
+
+    LambString* concat(Vm& vm, LambString* rhs);
 };
 
 struct LambArray {
@@ -85,7 +87,5 @@ enum FuncType {
 bool is_of_type(Object *obj, ObjectType type);
 
 void object_free(Vm& vm, Object *obj);
-
-LambString *concat(Vm& vm, LambString *lhs, LambString *rhs);
 
 #endif // OBJECT_HEADER

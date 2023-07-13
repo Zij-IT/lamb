@@ -239,11 +239,13 @@ InterpretResult vm_run(Vm& vm) {
                     DROP();
                 } else if (lhs->is_object() && is_of_type(lhs->as.obj, OtString) &&
                            rhs->is_object() && is_of_type(rhs->as.obj, OtString)) {
-                    LambString *st =
-                        concat(vm, (LambString *)lhs->as.obj, (LambString *)rhs->as.obj);
+                    auto left = (LambString*)lhs->as.obj;
+                    auto right = (LambString*)rhs->as.obj;
+                    auto result = left->concat(vm, right);
+                    
                     DROP();
                     DROP();
-                    PUSH(Value::from_obj((Object *)st));
+                    PUSH(Value::from_obj((Object *)result));
                 } else {
                     binary_type_error(*lhs, "+", *rhs);
                 }
