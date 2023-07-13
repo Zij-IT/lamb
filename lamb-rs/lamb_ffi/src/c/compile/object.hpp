@@ -88,10 +88,4 @@ LambClosure *to_closure(Vm *vm, LambFunc *func);
 
 LambUpvalue *to_upvalue(Vm *vm, Value *slot);
 
-void objectptr_array_init(ObjectPtrArray *arr);
-
-void objectptr_array_write(Vm *vm, ObjectPtrArray *arr, Object *val);
-
-void objectptr_array_free(Vm *vm, ObjectPtrArray *arr);
-
 #endif // OBJECT_HEADER

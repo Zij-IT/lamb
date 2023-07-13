@@ -1,6 +1,8 @@
 #ifndef VM_HEADER
 #define VM_HEADER
 
+#include <vector>
+
 #include "../compile/chunk.hpp"
 #include "../compile/compiler.hpp"
 #include "../compile/table.hpp"
@@ -30,7 +32,7 @@ typedef struct Vm {
     Table strings;
     Table globals;
 
-    ObjectPtrArray gray_stack;
+    std::vector<Object*> gray_stack;
     Compiler *curr_compiler;
     u64 bytes_allocated;
     u64 next_collection;

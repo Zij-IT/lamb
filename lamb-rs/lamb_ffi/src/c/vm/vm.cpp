@@ -84,7 +84,6 @@ void vm_init(Vm *vm, VmOptions options) {
 
     vm->strings = Table();
     vm->globals = Table();
-    objectptr_array_init(&vm->gray_stack);
 
     srand(time(NULL));
     set_natives(vm);
@@ -511,7 +510,6 @@ void vm_free(Vm *vm) {
 
     vm->strings.destroy(vm);
     vm->globals.destroy(vm);
-    objectptr_array_free(vm, &vm->gray_stack);
 }
 
 #undef BINARY_INT_DOUBLE_OP

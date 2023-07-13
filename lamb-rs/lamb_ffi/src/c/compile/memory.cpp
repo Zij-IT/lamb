@@ -84,9 +84,9 @@ static void mark_roots(Vm *vm) {
 }
 
 static void trace_refs(Vm *vm) {
-    while (vm->gray_stack.len > 0) {
-        Object *obj = vm->gray_stack.values[--vm->gray_stack.len];
-        blacken_object(vm, obj);
+    while (vm->gray_stack.size() > 0) {
+        blacken_object(vm, vm->gray_stack.back());
+        vm->gray_stack.pop_back();
     }
 }
 
@@ -162,7 +162,7 @@ void mark_object(Vm *vm, Object *object) {
 #endif
 
     object->is_marked = true;
-    objectptr_array_write(vm, &vm->gray_stack, object);
+    vm->gray_stack.push_back(object);
 }
 
 void mark_value(Vm *vm, Value *value) {
