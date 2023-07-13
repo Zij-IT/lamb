@@ -8,11 +8,7 @@ Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, cha
     this->block = block;
     this->type = type;
     this->enclosing = enclosing;
-
-    this->function = (LambFunc *)alloc_obj(vm, OtFunc);
-    this->function->name = name;
-    this->function->arity = arity;
-
+    this->function = LambFunc::alloc(vm, name, arity);
     this->locals = GcVec<Local>();
 
     Local loc = {.name = "", .depth = 0, .is_captured = false};

@@ -28,6 +28,18 @@ LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
     return arr;
 }
 
+LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
+    LambFunc *func = ALLOCATE(vm, LambFunc, 1);
+    func->obj = { .next = vm.objects, .type = OtFunc, .is_marked = false, };
+    func->name = name;
+    func->arity = arity;
+    func->chunk = Chunk();
+    func->upvalue_count = 0;
+
+    vm.objects = (Object *)func;
+    return func;
+}
+
 Object *alloc_obj(Vm& vm, ObjectType type) {
     switch (type) {
         case OtString: {
@@ -39,22 +51,8 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             exit(1);
         }
         case OtFunc: {
-            LambFunc *func = ALLOCATE(vm, LambFunc, 1);
-#ifdef DEBUG_LOG_GC
-            printf("%p allocating OtFunc\n", (void *)func);
-#endif
-            Object obj = {
-                .next = vm.objects,
-                .type = type,
-                .is_marked = false,
-            };
-            func->obj = obj;
-            func->name = NULL;
-            func->arity = 0;
-            func->upvalue_count = 0;
-            func->chunk = Chunk();
-            vm.objects = (Object *)func;
-            return vm.objects;
+            printf("Uncaught alloc_obj!?\n");
+            exit(1);
         }
         case OtNative: {
             NativeFunc *func = ALLOCATE(vm, NativeFunc, 1);

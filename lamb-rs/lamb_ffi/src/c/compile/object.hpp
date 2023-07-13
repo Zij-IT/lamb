@@ -46,6 +46,8 @@ struct LambFunc {
     char const* name;
     i32 upvalue_count;
     u8 arity;
+
+    static LambFunc* alloc(Vm& vm, char const* name, u8 arity);
 };
 
 struct NativeFunc {
