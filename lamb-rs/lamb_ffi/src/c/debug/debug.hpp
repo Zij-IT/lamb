@@ -7,7 +7,7 @@
 
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 
-void chunk_debug(Chunk *chunk, char const* name);
+void chunk_debug(Chunk const& chunk, char const* name);
 
 void print_value(Value v);
 

@@ -7,18 +7,18 @@ static i32 print_simple_op(char const* name) {
     return 1;
 }
 
-static i32 print_jump(Chunk *chunk, char const* name, i32 offset, i32 sign) {
-    u16 jump = (u16)(chunk->bytes[offset + 1] << 8);
-    jump |= chunk->bytes[offset + 2];
+static i32 print_jump(Chunk const& chunk, char const* name, i32 offset, i32 sign) {
+    u16 jump = (u16)(chunk.bytes[offset + 1] << 8);
+    jump |= chunk.bytes[offset + 2];
 
     printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
     return 3;
 }
 
-static i32 print_constant(Chunk *chunk, char const* name, i32 offset) {
-    u8 hi = chunk->bytes[offset + 1];
-    u8 lo = chunk->bytes[offset + 2];
-    Value val = chunk->constants[((u16)hi) << 8 | lo];
+static i32 print_constant(Chunk const& chunk, char const* name, i32 offset) {
+    u8 hi = chunk.bytes[offset + 1];
+    u8 lo = chunk.bytes[offset + 2];
+    Value val = chunk.constants[((u16)hi) << 8 | lo];
 
     printf("%-16s %4d '", name, ((u16)hi) << 8 | lo);
     print_value(val);
@@ -26,8 +26,8 @@ static i32 print_constant(Chunk *chunk, char const* name, i32 offset) {
     return 3;
 }
 
-static i32 print_op(Chunk *chunk, i32 offset) {
-    switch (chunk->bytes[offset]) {
+static i32 print_op(Chunk const& chunk, i32 offset) {
+    switch (chunk.bytes[offset]) {
         case OpConstant:
             return print_constant(chunk, "OpConstant", offset);
         case OpDefineGlobal:
@@ -101,24 +101,24 @@ static i32 print_op(Chunk *chunk, i32 offset) {
         case OpClosure: {
             printf("OpClosure\n");
             i32 x = 3;
-            i32 idx = (chunk->bytes[offset + 2] << 8) | chunk->bytes[offset + 3];
-            LambFunc *func = (LambFunc *)chunk->constants[idx].as.obj;
+            i32 idx = (chunk.bytes[offset + 2] << 8) | chunk.bytes[offset + 3];
+            LambFunc *func = (LambFunc *)chunk.constants[idx].as.obj;
 
             // NOTE: x bytes for constant + 2 bytes per upvalue + 1 to jump over
             // OpClosure
             return x + 2 * func->upvalue_count + 1;
         }
         default:
-            fprintf(stderr, "Unknown OpCode (%d) in switch in %s at %d", chunk->bytes[offset],
+            fprintf(stderr, "Unknown OpCode (%d) in switch in %s at %d", chunk.bytes[offset],
                     __FILE__, __LINE__);
             return 1;
     }
 }
 
-void chunk_debug(Chunk *chunk, char const* name) {
+void chunk_debug(Chunk const& chunk, char const* name) {
     printf("====== %s ======\n", name);
     i32 offset = 0;
-    while (offset < chunk->len) {
+    while (offset < chunk.len) {
         offset += print_op(chunk, offset);
     }
     printf("====== %s ======\n", name);

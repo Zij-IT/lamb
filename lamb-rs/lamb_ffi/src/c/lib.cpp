@@ -31,7 +31,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     CompileAstResult car = compile(&vm, &compiler, root);
 
     if (car == CarOk) {
-        compiler.chunk()->write(&vm, OpReturn);
+        compiler.chunk().write(&vm, OpReturn);
         LambClosure *closure = to_closure(&vm, compiler.function);
         vm_pop_stack(&vm);
         vm_push_stack(&vm, Value::from_obj((Object *)closure));
@@ -42,7 +42,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
         frame->slots = vm.stack;
 
         if (options.print_main_chunk) {
-            chunk_debug(&compiler.function->chunk, "Script Chunk");
+            chunk_debug(compiler.chunk(), "Script Chunk");
         }
 
         vm_run(&vm);

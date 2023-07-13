@@ -46,7 +46,7 @@ struct Compiler {
 
     void end_scope(Vm* vm);
 
-    constexpr Chunk* chunk() const { return &this->function->chunk; }
+    constexpr Chunk& chunk() const { return this->function->chunk; }
 
     void destroy(Vm* vm);
 };
