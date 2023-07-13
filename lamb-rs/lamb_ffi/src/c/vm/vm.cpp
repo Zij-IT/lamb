@@ -166,12 +166,12 @@ InterpretResult vm_run(Vm *vm) {
                 Value val = READ_CONSTANT();
                 LambString *ident = (LambString *)val.as.obj;
 
-                Value value;
-                if (!vm->globals.get(ident, &value)) {
+                auto global = vm->globals.get(ident);
+                if (!global) {
                     runtime_error("'%s' does not have an associated binding", ident->chars);
                 }
 
-                PUSH(value);
+                PUSH(global.value());
                 break;
             }
             case OpGetLocal: {

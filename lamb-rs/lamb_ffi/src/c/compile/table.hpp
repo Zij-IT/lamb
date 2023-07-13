@@ -3,6 +3,7 @@
 
 #include "../types.hpp"
 #include "object.hpp"
+#include <optional>
 
 #define TABLE_MAX_LOAD 0.75
 
@@ -26,7 +27,7 @@ typedef struct Table {
 
     LambString *find_string(char const* chars, i32 len, u32 hash);
 
-    bool get(LambString *key, Value *val);
+    std::optional<Value> get(LambString *key);
 
     bool insert(Vm *vm, LambString *key, Value val);
 

@@ -33,6 +33,7 @@ fn main() {
     // This build-iful piece here generates the necessary headers required
     // for the bindings.
     bindgen::Builder::default()
+        .clang_arg("-std=c++20")
         .header("wrapper.hpp")
         .allowlist_function("run_ast")
         .allowlist_function("free_ast")

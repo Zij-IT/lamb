@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <optional>
 
 #define TOMBSTONE new_boolean(true)
 
@@ -107,18 +108,17 @@ LambString *Table::find_string(char const* chars, i32 len, u32 hash) {
     }
 }
 
-bool Table::get(LambString *key, Value *value) {
+std::optional<Value> Table::get(LambString *key) {
     if (this->len == 0) {
-        return false;
+        return std::nullopt;
     }
 
     Entry *entry = this->find(key);
     if (entry->key == NULL) {
-        return false;
+        return std::nullopt;
     }
 
-    *value = entry->val;
-    return true;
+    return entry->val;
 }
 
 bool Table::insert(Vm *vm, LambString *key, Value value) {
@@ -162,20 +162,6 @@ void Table::remove_marked() {
             this->remove(entry->key);
         }
     }
-}
-
-bool table_get(Table *table, LambString *key, Value *out) {
-    if (table->len == 0) {
-        return false;
-    }
-
-    Entry *entry = table->find(key);
-    if (entry->key == NULL) {
-        return false;
-    }
-
-    *out = entry->val;
-    return true;
 }
 
 #undef TOMBSTONE
