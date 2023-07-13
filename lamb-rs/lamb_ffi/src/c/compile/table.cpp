@@ -61,7 +61,7 @@ void Table::destroy(Vm *vm) {
     this->len = 0;
 }
 
-Entry *Table::entry(LambString* key) {
+Entry *Table::entry(LambString* key) const {
     // Correctness: Table capacity is guarunteed to be a multiple of 2
     //              in which case x % n is the same as X & (n - 1)
     u32 index = key->hash & (this->capacity - 1);
@@ -85,7 +85,7 @@ Entry *Table::entry(LambString* key) {
     }
 }
 
-std::optional<LambString*> Table::find_matching_key(char const* chars, i32 len, u32 hash) {
+std::optional<LambString*> Table::find_matching_key(char const* chars, i32 len, u32 hash) const {
     if (this->len == 0) {
         return std::nullopt;
     }
@@ -108,7 +108,7 @@ std::optional<LambString*> Table::find_matching_key(char const* chars, i32 len, 
     }
 }
 
-std::optional<Value> Table::get(LambString *key) {
+std::optional<Value> Table::get(LambString *key) const {
     if (this->len == 0) {
         return std::nullopt;
     }

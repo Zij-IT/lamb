@@ -23,11 +23,11 @@ struct Table {
 
     void destroy(Vm *vm);
 
-    Entry *entry(LambString* key);
+    Entry *entry(LambString* key) const;
 
-    std::optional<LambString*> find_matching_key(char const* chars, i32 len, u32 hash);
+    std::optional<LambString*> find_matching_key(char const* chars, i32 len, u32 hash) const;
 
-    std::optional<Value> get(LambString *key);
+    std::optional<Value> get(LambString *key) const;
 
     bool insert(Vm *vm, LambString *key, Value val);
 

@@ -42,11 +42,11 @@ struct Compiler {
 
     void add_local(Vm* vm, char const* name);
 
-    void new_scope();
+    constexpr void new_scope() { this->block->depth++; }
 
     void end_scope(Vm* vm);
 
-    Chunk* chunk();
+    constexpr Chunk* chunk() const { return &this->function->chunk; }
 
     void destroy(Vm* vm);
 };

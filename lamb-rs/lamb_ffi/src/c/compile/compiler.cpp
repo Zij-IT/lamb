@@ -25,10 +25,6 @@ void Compiler::add_local(Vm* vm, char const* name) {
     this->locals.push(vm, loc);
 }
 
-void Compiler::new_scope() {
-    this->block->depth++;
-}
-
 void Compiler::end_scope(Vm* vm) {
     this->block = this->block->prev;
     i32 depth = this->block == NULL ? -1 : this->block->depth;
@@ -50,10 +46,6 @@ void Compiler::end_scope(Vm* vm) {
     }
     
     this->function->chunk.write(vm, OpUnsaveValue);
-}
-
-Chunk* Compiler::chunk() {
-    return &this->function->chunk;
 }
 
 void Compiler::destroy(Vm* vm) {
