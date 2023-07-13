@@ -16,9 +16,9 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             printf("%p allocating OtString\n", (void *)st);
 #endif
             Object obj = {
+                .next = vm.objects,
                 .type = type,
                 .is_marked = false,
-                .next = vm.objects,
             };
             st->obj = obj;
             st->chars = NULL;
@@ -33,9 +33,9 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             printf("%p allocating OtArray\n", (void *)arr);
 #endif
             Object obj = {
+                .next = vm.objects,
                 .type = type,
                 .is_marked = false,
-                .next = vm.objects,
             };
             arr->obj = obj;
             arr->items = GcVec<Value>();
@@ -48,9 +48,9 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             printf("%p allocating OtFunc\n", (void *)func);
 #endif
             Object obj = {
+                .next = vm.objects,
                 .type = type,
                 .is_marked = false,
-                .next = vm.objects,
             };
             func->obj = obj;
             func->name = NULL;
@@ -66,9 +66,9 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             printf("%p allocating OtNative\n", (void *)func);
 #endif
             Object obj = {
+                .next = vm.objects,
                 .type = type,
                 .is_marked = false,
-                .next = vm.objects,
             };
             func->obj = obj;
             func->func = NULL;
@@ -81,9 +81,9 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             printf("%p allocating OtClosure\n", (void *)closure);
 #endif
             Object obj = {
+                .next = vm.objects,
                 .type = type,
                 .is_marked = false,
-                .next = vm.objects,
             };
             closure->obj = obj;
             closure->function = NULL;
@@ -96,9 +96,9 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             printf("%p allocating OtUpvalue\n", (void *)upvalue);
 #endif
             Object obj = {
+                .next = vm.objects,
                 .type = type,
                 .is_marked = false,
-                .next = vm.objects,
             };
             upvalue->obj = obj;
             upvalue->next = NULL;

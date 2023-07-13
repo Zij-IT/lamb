@@ -45,7 +45,6 @@ enum OpCode {
 
 struct Chunk {
     GcVec<u8> bytes;
-
     GcVec<Value> constants;
 
     Chunk();

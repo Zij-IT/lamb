@@ -10,25 +10,25 @@
 #define MAX_FRAMES 1024
 #define MAX_VALUES (MAX_FRAMES * UINT8_MAX)
 
-typedef enum {
+enum InterpretResult {
     InterpretOk,
     InterpretRuntimeError,
-} InterpretResult;
+};
 
-typedef struct VmOptions {
+struct VmOptions {
     bool print_main_chunk;
     bool print_fn_chunks;
     bool print_ast;
     bool optimized;
-} VmOptions;
+};
 
-typedef struct Callframe {
+struct Callframe {
     LambClosure *closure;
     Value *slots;
     u8 *ip;
-} Callframe;
+};
 
-typedef struct Vm {
+struct Vm {
     Table strings;
     Table globals;
 
@@ -48,7 +48,7 @@ typedef struct Vm {
     Object *objects;
 
     VmOptions options;
-} Vm;
+};
 
 void vm_init(Vm& vm, VmOptions options);
 

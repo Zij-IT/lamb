@@ -10,9 +10,9 @@ struct Local {
 };
 
 struct LocalArray {
+    Local *values;
     i32 capacity;
     i32 len;
-    Local *values;
 };
 
 struct Upvalue {
@@ -21,18 +21,17 @@ struct Upvalue {
 };
 
 struct Block {
+    Block *prev;
     i32 base;
     i32 offset;
     i32 depth;
-    Block *prev;
 };
 
 struct Compiler {
+    Upvalue upvalues[UINT8_MAX];
     GcVec<Local> locals;
 
     LambFunc *function;
-    Upvalue upvalues[UINT8_MAX];
-
     Compiler *enclosing;
     Block *block;
 

@@ -49,14 +49,14 @@ pub const AstNodeType_AstntNodeList: AstNodeType = 42;
 pub type AstNodeType = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct AstNode_T {
-    pub kids: [*mut AstNode_T; 3usize],
-    pub val: AstNode_T__bindgen_ty_1,
+pub struct AstNode {
+    pub kids: [*mut AstNode; 3usize],
+    pub val: AstNode__bindgen_ty_1,
     pub type_: AstNodeType,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union AstNode_T__bindgen_ty_1 {
+pub union AstNode__bindgen_ty_1 {
     pub s: string,
     pub i: string,
     pub c: ::std::os::raw::c_char,
@@ -64,26 +64,26 @@ pub union AstNode_T__bindgen_ty_1 {
     pub n: i64_,
 }
 #[test]
-fn bindgen_test_layout_AstNode_T__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<AstNode_T__bindgen_ty_1> =
+fn bindgen_test_layout_AstNode__bindgen_ty_1() {
+    const UNINIT: ::std::mem::MaybeUninit<AstNode__bindgen_ty_1> =
         ::std::mem::MaybeUninit::uninit();
     let ptr = UNINIT.as_ptr();
     assert_eq!(
-        ::std::mem::size_of::<AstNode_T__bindgen_ty_1>(),
+        ::std::mem::size_of::<AstNode__bindgen_ty_1>(),
         8usize,
-        concat!("Size of: ", stringify!(AstNode_T__bindgen_ty_1))
+        concat!("Size of: ", stringify!(AstNode__bindgen_ty_1))
     );
     assert_eq!(
-        ::std::mem::align_of::<AstNode_T__bindgen_ty_1>(),
+        ::std::mem::align_of::<AstNode__bindgen_ty_1>(),
         8usize,
-        concat!("Alignment of ", stringify!(AstNode_T__bindgen_ty_1))
+        concat!("Alignment of ", stringify!(AstNode__bindgen_ty_1))
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).s) as usize - ptr as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T__bindgen_ty_1),
+            stringify!(AstNode__bindgen_ty_1),
             "::",
             stringify!(s)
         )
@@ -93,7 +93,7 @@ fn bindgen_test_layout_AstNode_T__bindgen_ty_1() {
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T__bindgen_ty_1),
+            stringify!(AstNode__bindgen_ty_1),
             "::",
             stringify!(i)
         )
@@ -103,7 +103,7 @@ fn bindgen_test_layout_AstNode_T__bindgen_ty_1() {
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T__bindgen_ty_1),
+            stringify!(AstNode__bindgen_ty_1),
             "::",
             stringify!(c)
         )
@@ -113,7 +113,7 @@ fn bindgen_test_layout_AstNode_T__bindgen_ty_1() {
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T__bindgen_ty_1),
+            stringify!(AstNode__bindgen_ty_1),
             "::",
             stringify!(b)
         )
@@ -123,32 +123,32 @@ fn bindgen_test_layout_AstNode_T__bindgen_ty_1() {
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T__bindgen_ty_1),
+            stringify!(AstNode__bindgen_ty_1),
             "::",
             stringify!(n)
         )
     );
 }
 #[test]
-fn bindgen_test_layout_AstNode_T() {
-    const UNINIT: ::std::mem::MaybeUninit<AstNode_T> = ::std::mem::MaybeUninit::uninit();
+fn bindgen_test_layout_AstNode() {
+    const UNINIT: ::std::mem::MaybeUninit<AstNode> = ::std::mem::MaybeUninit::uninit();
     let ptr = UNINIT.as_ptr();
     assert_eq!(
-        ::std::mem::size_of::<AstNode_T>(),
+        ::std::mem::size_of::<AstNode>(),
         40usize,
-        concat!("Size of: ", stringify!(AstNode_T))
+        concat!("Size of: ", stringify!(AstNode))
     );
     assert_eq!(
-        ::std::mem::align_of::<AstNode_T>(),
+        ::std::mem::align_of::<AstNode>(),
         8usize,
-        concat!("Alignment of ", stringify!(AstNode_T))
+        concat!("Alignment of ", stringify!(AstNode))
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).kids) as usize - ptr as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T),
+            stringify!(AstNode),
             "::",
             stringify!(kids)
         )
@@ -158,7 +158,7 @@ fn bindgen_test_layout_AstNode_T() {
         24usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T),
+            stringify!(AstNode),
             "::",
             stringify!(val)
         )
@@ -168,19 +168,18 @@ fn bindgen_test_layout_AstNode_T() {
         32usize,
         concat!(
             "Offset of field: ",
-            stringify!(AstNode_T),
+            stringify!(AstNode),
             "::",
             stringify!(type_)
         )
     );
 }
-pub type AstNode = AstNode_T;
 extern "C" {
     #[link_name = "\u{1}_Z11new_astnode11AstNodeType"]
     pub fn new_astnode(type_: AstNodeType) -> *mut AstNode;
 }
 extern "C" {
-    #[link_name = "\u{1}_Z8free_astP9AstNode_T"]
+    #[link_name = "\u{1}_Z8free_astP7AstNode"]
     pub fn free_ast(root: *mut AstNode);
 }
 extern "C" {

@@ -5,7 +5,7 @@
 
 #define MAX_AST_KID_COUNT 3
 
-typedef enum {
+enum AstNodeType {
     // Literals
     AstntStrLit,
     AstntNumLit,
@@ -61,10 +61,10 @@ typedef enum {
     // Meta
     AstntNodeList,
 
-} AstNodeType;
+};
 
-typedef struct AstNode_T {
-    struct AstNode_T *kids[MAX_AST_KID_COUNT];
+struct AstNode {
+    struct AstNode *kids[MAX_AST_KID_COUNT];
     union {
         string s;
         string i;
@@ -73,7 +73,7 @@ typedef struct AstNode_T {
         i64 n;
     } val;
     AstNodeType type;
-} AstNode;
+};
 
 AstNode *new_astnode(AstNodeType type);
 

@@ -116,10 +116,10 @@ static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *no
     AstNode *is_recursive = node->kids[2];
 
     Block block = {
+        .prev = NULL,
         .base = 0,
         .offset = 0,
         .depth = 0,
-        .prev = NULL,
     };
 
     Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
@@ -180,10 +180,10 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
     // Turns: `f1 .> f2` or `f2 <. f1` into:
     // result := fn(x) -> f2(f1(x));
     Block block = {
+        .prev = compiler->block,
         .base = 1,
         .offset = 0,
         .depth = 0,
-        .prev = compiler->block,
     };
     
     Compiler func_comp(vm, compiler, &block, FtNormal, ANON_FUNC_NAME, 1);
@@ -651,10 +651,12 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntBlock: {
             Block *prev = compiler->block;
             i32 prev_offset = prev->offset;
-            Block block = {.base = prev->base + prev->offset,
-                           .offset = 0,
-                           .depth = compiler->block->depth,
-                           .prev = prev};
+            Block block = {
+                .prev = prev,
+                .base = prev->base + prev->offset,
+                .offset = 0,
+                .depth = compiler->block->depth,
+            };
             compiler->block = &block;
 
             compiler->new_scope();

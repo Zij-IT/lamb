@@ -2,7 +2,7 @@
 mod bindings;
 mod convert;
 
-use bindings::AstNode_T;
+use bindings::AstNode;
 use convert::Convert;
 use lamb_ast::Script;
 

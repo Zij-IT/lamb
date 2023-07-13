@@ -19,15 +19,15 @@ enum ObjectType {
 };
 
 struct Object {
+    Object *next;
     ObjectType type;
     bool is_marked;
-    Object *next;
 };
 
 struct LambString {
     Object obj;
-    i32 len;
     string chars;
+    i32 len;
     u32 hash;
 };
 
@@ -51,8 +51,8 @@ struct NativeFunc {
 
 struct LambUpvalue {
     Object obj;
-    Value *location;
     Value closed;
+    Value *location;
     LambUpvalue *next;
 };
 

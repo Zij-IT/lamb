@@ -13,9 +13,9 @@ struct Entry {
 };
 
 struct Table {
-    i32 len;
-    i32 capacity;
     Entry *entries;
+    i32 capacity;
+    i32 len;
 
     Table();
 

@@ -23,11 +23,11 @@ use super::{
         AstNodeType_AstntNumLit, AstNodeType_AstntReturn, AstNodeType_AstntStrLit,
         AstNodeType_AstntUnaryBitNot, AstNodeType_AstntUnaryLogNot, AstNodeType_AstntUnaryNeg,
     },
-    AstNode_T,
+    AstNode,
 };
 
 pub(super) trait Convert {
-    fn convert(&self) -> *mut AstNode_T;
+    fn convert(&self) -> *mut AstNode;
 }
 
 impl<L, R> Convert for Either<L, R>
@@ -35,7 +35,7 @@ where
     L: Convert,
     R: Convert,
 {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         match self {
             Self::Left(l) => l.convert(),
             Self::Right(r) => r.convert(),
@@ -44,7 +44,7 @@ where
 }
 
 impl Convert for Script {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let block = self.block.convert();
         unsafe {
             let kid = (*block).kids[0];
@@ -56,7 +56,7 @@ impl Convert for Script {
 }
 
 impl Convert for Statement {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         match self {
             Statement::Assign(Assign { assignee, value }) => unsafe {
                 let this = new_node(NodeKind::AssignStmt);
@@ -79,7 +79,7 @@ impl Convert for Statement {
 }
 
 impl Convert for Expr {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         match self {
             Expr::Error => panic!("Attempt to convert error node!"),
             Expr::Binary(b) => b.convert(),
@@ -96,7 +96,7 @@ impl Convert for Expr {
 }
 
 impl Convert for Binary {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let Binary { lhs, rhs, op } = self;
         let node_type = match op {
             BinaryOp::Add => NodeKind::BinaryAdd,
@@ -133,7 +133,7 @@ impl Convert for Binary {
 }
 
 impl Convert for Unary {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let Unary { rhs, op } = self;
         let node_type = match op {
             UnaryOp::NumNeg => NodeKind::UnaryNeg,
@@ -150,7 +150,7 @@ impl Convert for Unary {
 }
 
 impl Convert for FuncCall {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let FuncCall { callee, args } = self;
 
         unsafe {
@@ -163,7 +163,7 @@ impl Convert for FuncCall {
 }
 
 impl Convert for Index {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let Index { indexee, index } = self;
         unsafe {
             let node = new_node(NodeKind::ArrayIndex);
@@ -175,7 +175,7 @@ impl Convert for Index {
 }
 
 impl Convert for If {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let If {
             cond,
             block,
@@ -202,13 +202,13 @@ impl Convert for If {
 }
 
 impl Convert for Else {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         self.block.convert()
     }
 }
 
 impl Convert for Case {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let arms = self
             .arms
             .iter()
@@ -233,7 +233,7 @@ impl Convert for Case {
 }
 
 impl Convert for Literal {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         match self {
             Self::Num(n) => unsafe {
                 let node = new_node(NodeKind::NumLit);
@@ -262,7 +262,7 @@ impl Convert for Literal {
 }
 
 impl Convert for FuncDef {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let args = self.args.convert();
         let body = self.body.convert();
         let is_rec = Literal::Bool(self.is_recursive).convert();
@@ -278,7 +278,7 @@ impl Convert for FuncDef {
 }
 
 impl Convert for Atom {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         match self {
             Atom::Ident(i) => i.convert(),
             Atom::Literal(l) => l.convert(),
@@ -292,7 +292,7 @@ impl Convert for Atom {
 }
 
 impl Convert for Block {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let this = new_node(NodeKind::Block);
 
         // DO *NOT* try to inline this with `Convert::convert` on the iterator.
@@ -325,7 +325,7 @@ impl Convert for Block {
 }
 
 impl Convert for Ident {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         let node = new_node(NodeKind::Ident);
         let cstr = CString::new(self.0.clone()).expect("Ident can not contain internal 0 byte");
         unsafe {
@@ -336,7 +336,7 @@ impl Convert for Ident {
 }
 
 impl<T: Convert> Convert for Vec<T> {
-    fn convert(&self) -> *mut AstNode_T {
+    fn convert(&self) -> *mut AstNode {
         // Build the list backwards:
         //
         // Given the list:
@@ -383,14 +383,14 @@ impl<T: Convert> Convert for Vec<T> {
     }
 }
 
-fn new_node(kind: NodeKind) -> *mut AstNode_T {
+fn new_node(kind: NodeKind) -> *mut AstNode {
     let ptr = unsafe { bindings::new_astnode(kind.as_u32()) };
     assert!(!ptr.is_null(), "Memory allocation failed. Rough day buddy.");
 
     for x in 0..bindings::MAX_AST_KID_COUNT {
         // Safety
         // `bindings::new_astnode` returns a non-null ptr to a valid allocation of
-        // `AstNode_T`. It is not guarunteed that the values of kids are `null` so
+        // `AstNode`. It is not guarunteed that the values of kids are `null` so
         // we fix that ourselves
         unsafe {
             (*ptr).kids[x as usize] = std::ptr::null_mut();
