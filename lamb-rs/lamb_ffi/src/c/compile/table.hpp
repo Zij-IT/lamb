@@ -25,7 +25,7 @@ struct Table {
 
     Entry *entry(LambString* key);
 
-    std::optional<LambString*> find_string(char const* chars, i32 len, u32 hash);
+    std::optional<LambString*> find_matching_key(char const* chars, i32 len, u32 hash);
 
     std::optional<Value> get(LambString *key);
 

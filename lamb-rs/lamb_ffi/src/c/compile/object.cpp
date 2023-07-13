@@ -173,9 +173,9 @@ bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
 LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
     u64 len = strlen(cstr);
     u32 hash = hash_string(cstr);
-    auto interned = vm->strings.find_string(cstr, len, hash);
-    if (interned) {
-        return interned.value();
+    auto match = vm->strings.find_matching_key(cstr, len, hash);
+    if (match) {
+        return match.value();
     }
    
     auto lamb_str = (LambString *)alloc_obj(vm, OtString);
@@ -199,7 +199,7 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
     chars[len] = '\0';
 
     u32 hash = hash_string(chars);
-    auto interned = vm->strings.find_string(chars, len, hash);
+    auto interned = vm->strings.find_matching_key(chars, len, hash);
     if (interned) {
         free(chars);
         return interned.value();

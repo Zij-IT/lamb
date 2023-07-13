@@ -85,7 +85,7 @@ Entry *Table::entry(LambString* key) {
     }
 }
 
-std::optional<LambString*> Table::find_string(char const* chars, i32 len, u32 hash) {
+std::optional<LambString*> Table::find_matching_key(char const* chars, i32 len, u32 hash) {
     if (this->len == 0) {
         return std::nullopt;
     }
