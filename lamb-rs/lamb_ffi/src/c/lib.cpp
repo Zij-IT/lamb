@@ -26,7 +26,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     Compiler compiler(&vm, nullptr, &block, FtScript, "", 0);
 
     vm.curr_compiler = &compiler;
-    vm_push_stack(&vm, new_object((Object *)compiler.function));
+    vm_push_stack(&vm, Value::from_obj((Object *)compiler.function));
 
     CompileAstResult car = compile(&vm, &compiler, root);
 
@@ -34,7 +34,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
         compiler.chunk()->write(&vm, OpReturn);
         LambClosure *closure = to_closure(&vm, compiler.function);
         vm_pop_stack(&vm);
-        vm_push_stack(&vm, new_object((Object *)closure));
+        vm_push_stack(&vm, Value::from_obj((Object *)closure));
 
         Callframe *frame = &vm.frames[vm.frame_count++];
         frame->closure = closure;

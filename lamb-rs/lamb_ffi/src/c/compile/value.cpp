@@ -6,7 +6,7 @@
 #include "./value.hpp"
 #include "memory.hpp"
 
-Value new_nil() {
+Value Value::nil() {
     Value val = {
         .kind = VkNil,
         .as = { .boolean = false },
@@ -14,27 +14,27 @@ Value new_nil() {
     return val;
 }
 
-Value new_boolean(bool b) {
+Value Value::from_bool(bool b) {
     Value val = {.kind = VkBool, .as = { .boolean = b }};
     return val;
 }
 
-Value new_int(i64 num) {
+Value Value::from_i64(i64 num) {
     Value val = {.kind = VkInt, .as = { .intn = num }};
     return val;
 }
 
-Value new_double(double num) {
+Value Value::from_f64(f64 num) {
     Value val = {.kind = VkDouble, .as = { .doubn = num }};
     return val;
 }
 
-Value new_char(char c) {
+Value Value::from_char(char c) {
     Value val = {.kind = VkChar, .as = { .ch = c }};
     return val;
 }
 
-Value new_object(Object *obj) {
+Value Value::from_obj(Object *obj) {
     Value val = {.kind = VkObj, .as = { .obj = obj }};
     return val;
 }

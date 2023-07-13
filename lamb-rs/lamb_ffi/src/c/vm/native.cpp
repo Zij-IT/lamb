@@ -14,8 +14,8 @@ static NativeFunc *new_native(Vm *vm, CFunc cfunc) {
 
 static void define_native(Vm *vm, char const* fn_name, CFunc function) {
     LambString *interned = cstr_to_lambstring(vm, fn_name);
-    vm_push_stack(vm, new_object((Object *)interned));
-    vm_push_stack(vm, new_object((Object *)new_native(vm, function)));
+    vm_push_stack(vm, Value::from_obj((Object *)interned));
+    vm_push_stack(vm, Value::from_obj((Object *)new_native(vm, function)));
     vm->globals.insert(vm, (LambString *)(vm->stack[0].as.obj), vm->stack[1]);
 
     vm_pop_stack(vm);
@@ -27,7 +27,7 @@ static Value lamb_print(i32 arg_count, Value *args) {
         print_value(*args);
     }
 
-    return new_nil();
+    return Value::nil();
 }
 
 static Value lamb_println(i32 arg_count, Value *args) {
@@ -35,7 +35,7 @@ static Value lamb_println(i32 arg_count, Value *args) {
         print_value(*args);
     }
     printf("\n");
-    return new_nil();
+    return Value::nil();
 }
 
 static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
@@ -51,14 +51,14 @@ static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
         }
     }
 
-    return new_nil();
+    return Value::nil();
 }
 
 static Value lamb_NATIVE_assert_eq(i32 arg_count, Value *args) {
     if (arg_count == 2) {
         switch (value_compare(args, args + 1)) {
             case OrderEqual:
-                return new_nil();
+                return Value::nil();
             case OrderGreater:
             case OrderLess:
                 // TODO: These should output to stderr
@@ -72,45 +72,45 @@ static Value lamb_NATIVE_assert_eq(i32 arg_count, Value *args) {
         }
     }
 
-    return new_nil();
+    return Value::nil();
 }
 
 static Value lamb_user_int(__attribute__((unused)) i32 arg_count,
                            __attribute__((unused)) Value *args) {
     char x_buffer[80];
     if (fgets(x_buffer, 80, stdin) == NULL) {
-        return new_nil();
+        return Value::nil();
     } else {
-        return new_int(atoi(x_buffer));
+        return Value::from_i64(atoi(x_buffer));
     }
 }
 
 static Value lamb_user_char(__attribute__((unused)) i32 arg_count,
                             __attribute__((unused)) Value *args) {
-    return new_char(fgetc(stdin));
+    return Value::from_char(fgetc(stdin));
 }
 
 static Value lamb_rand(i32 arg_count, Value *args) {
     if (arg_count == 1 && args->is_integer()) {
-        return new_int(rand() % args->as.intn);
+        return Value::from_i64(rand() % args->as.intn);
     }
 
-    return new_int(rand());
+    return Value::from_i64(rand());
 }
 
 static Value lamb_len(i32 arg_count, Value *args) {
     if (arg_count == 1 && args->kind == VkObj) {
         switch (args->as.obj->type) {
             case OtArray:
-                return new_int(((LambArray *)args->as.obj)->items.len);
+                return Value::from_i64(((LambArray *)args->as.obj)->items.len);
             case OtString:
-                return new_int(((LambString *)args->as.obj)->len);
+                return Value::from_i64(((LambString *)args->as.obj)->len);
             default:
-                return new_nil();
+                return Value::nil();
         }
     }
 
-    return new_nil();
+    return Value::nil();
 }
 
 void set_natives(Vm *vm) {

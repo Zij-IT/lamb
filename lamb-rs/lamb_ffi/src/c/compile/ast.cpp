@@ -95,7 +95,7 @@ static Compiler new_function_compiler(Vm *const vm, Compiler *const compiler, Bl
 static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode const *arg) {
     AstNode *ident_node = arg->kids[0];
     LambString *ident = cstr_to_lambstring(vm, ident_node->val.i);
-    func_comp->chunk()->add_const(vm, new_object((Object *)ident));
+    func_comp->chunk()->add_const(vm, Value::from_obj((Object *)ident));
     func_comp->add_local(vm, ident->chars);
     func_comp->function->arity++;
 }
@@ -103,7 +103,7 @@ static void add_arg_to_compiler(Vm *const vm, Compiler *const func_comp, AstNode
 static void write_as_closure(Vm *const vm, Compiler *const func_comp) {
     Compiler *compiler = func_comp->enclosing;
     compiler->chunk()->write(vm, OpClosure);
-    compiler->chunk()->write_const(vm, new_object((Object *)func_comp->function));
+    compiler->chunk()->write_const(vm, Value::from_obj((Object *)func_comp->function));
     for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
          compiler->chunk()->write(vm, func_comp->upvalues[i].is_local);
          compiler->chunk()->write(vm, func_comp->upvalues[i].index);
@@ -161,13 +161,13 @@ static CompileAstResult compile_rec_func_def(Vm *vm, Compiler *compiler, AstNode
     AstNode *func_def = node->kids[1];
 
     LambString *rec_func_ident = cstr_to_lambstring(vm, ident->val.i);
-    compiler->chunk()->add_const(vm, new_object((Object *)rec_func_ident));
+    compiler->chunk()->add_const(vm, Value::from_obj((Object *)rec_func_ident));
 
     BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
 
     if (compiler->block->depth == 0) {
         compiler->chunk()->write(vm, OpDefineGlobal);
-        compiler->chunk()->write_const(vm, new_object((Object *)rec_func_ident));
+        compiler->chunk()->write_const(vm, Value::from_obj((Object *)rec_func_ident));
     } else {
         compiler->add_local(vm, rec_func_ident->chars);
     }
@@ -205,18 +205,18 @@ static CompileAstResult compile_compose(Vm *vm, Compiler *compiler, AstNode *fir
     // * The variable at position 0 is the function itself
     // * Position of the first arg is at index 1
     func_comp.chunk()->write(vm, OpGetLocal);
-    func_comp.chunk()->write_const(vm,  new_int(1));
+    func_comp.chunk()->write_const(vm,  Value::from_i64(1));
 
     func_comp.chunk()->write(vm, OpCall);
-    func_comp.chunk()->write_const(vm,  new_int(1));
+    func_comp.chunk()->write_const(vm,  Value::from_i64(1));
 
     func_comp.chunk()->write(vm, OpCall);
-    func_comp.chunk()->write_const(vm,  new_int(1));
+    func_comp.chunk()->write_const(vm,  Value::from_i64(1));
 
     func_comp.chunk()->write(vm, OpReturn);
 
     compiler->chunk()->write(vm, OpClosure);
-    compiler->chunk()->write_const(vm, new_object((Object *)func_comp.function));
+    compiler->chunk()->write_const(vm, Value::from_obj((Object *)func_comp.function));
 
     if (vm->options.print_fn_chunks) {
         chunk_debug(func_comp.chunk(), name);
@@ -238,7 +238,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
     switch (node->type) {
         case AstntStrLit: {
             LambString *lit = cstr_to_lambstring(vm, node->val.s);
-            compiler->chunk()->write_const(vm, new_object((Object *)lit));
+            compiler->chunk()->write_const(vm, Value::from_obj((Object *)lit));
             STACK_DIFF(compiler, 1);
             break;
         }
@@ -265,15 +265,15 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 }
 
                 i32 local_slot = base + local_idx;
-                compiler->chunk()->write_const(vm, new_int(local_slot));
+                compiler->chunk()->write_const(vm, Value::from_i64(local_slot));
             } else {
                 i32 upvalue_slot = resolve_upvalue(compiler, ident);
                 if (upvalue_slot == UPVALUE_NOT_FOUND) {
                     compiler->chunk()->write(vm, OpGetGlobal);
-                    compiler->chunk()->write_const(vm, new_object((Object *)ident));
+                    compiler->chunk()->write_const(vm, Value::from_obj((Object *)ident));
                 } else {
                     compiler->chunk()->write(vm, OpGetUpvalue);
-                    compiler->chunk()->write_const(vm, new_int(upvalue_slot));
+                    compiler->chunk()->write_const(vm, Value::from_i64(upvalue_slot));
                 }
             }
 
@@ -281,22 +281,22 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntNilLit: {
-            compiler->chunk()->write_const(vm, new_nil());
+            compiler->chunk()->write_const(vm, Value::nil());
             STACK_DIFF(compiler, 1);
             break;
         }
         case AstntNumLit: {
-            compiler->chunk()->write_const(vm, new_int(node->val.n));
+            compiler->chunk()->write_const(vm, Value::from_i64(node->val.n));
             STACK_DIFF(compiler, 1);
             break;
         }
         case AstntCharLit: {
-            compiler->chunk()->write_const(vm, new_char(node->val.c));
+            compiler->chunk()->write_const(vm, Value::from_char(node->val.c));
             STACK_DIFF(compiler, 1);
             break;
         }
         case AstntBoolLit: {
-            compiler->chunk()->write_const(vm, new_boolean(node->val.b));
+            compiler->chunk()->write_const(vm, Value::from_bool(node->val.b));
             STACK_DIFF(compiler, 1);
             break;
         }
@@ -473,7 +473,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, rhs));
 
             compiler->chunk()->write(vm, OpCall);
-            compiler->chunk()->write_const(vm, new_int(1));
+            compiler->chunk()->write_const(vm, Value::from_i64(1));
             STACK_DIFF(compiler, -1);
             break;
         }
@@ -485,7 +485,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, lhs));
 
             compiler->chunk()->write(vm, OpCall);
-            compiler->chunk()->write_const(vm, new_int(1));
+            compiler->chunk()->write_const(vm, Value::from_i64(1));
             STACK_DIFF(compiler, -1);
             break;
         }
@@ -506,14 +506,14 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             }
 
             compiler->chunk()->write(vm, OpCall);
-            compiler->chunk()->write_const(vm, new_int((i64)arg_count));
+            compiler->chunk()->write_const(vm, Value::from_i64((i64)arg_count));
             STACK_DIFF(compiler, -arg_count);
             break;
         }
         case AstntReturn: {
             AstNode *val = node->kids[0];
             if (val == NULL) {
-                compiler->chunk()->write_const(vm, new_nil());
+                compiler->chunk()->write_const(vm, Value::nil());
             } else {
                 BUBBLE(compile(vm, compiler, val));
             }
@@ -526,7 +526,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             AstNode *prev = NULL;
             AstNode *curr = node->kids[0];
             if (curr == NULL) {
-                compiler->chunk()->write_const(vm, new_int(0));
+                compiler->chunk()->write_const(vm, Value::from_i64(0));
                 compiler->chunk()->write(vm, OpMakeArray);
                 STACK_DIFF(compiler, 1);
                 return CarOk;
@@ -551,7 +551,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
                 BUBBLE(compile(vm, compiler, expr_list->kids[0]));
                 len += 1;
             }
-            compiler->chunk()->write_const(vm, new_int(len));
+            compiler->chunk()->write_const(vm, Value::from_i64(len));
             compiler->chunk()->write(vm, OpMakeArray);
             STACK_DIFF(compiler, -len + 1);
             break;
@@ -585,7 +585,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             if (node->kids[2] != NULL) {
                 BUBBLE(compile(vm, compiler, node->kids[2]));
             } else {
-                compiler->chunk()->write_const(vm, new_nil());
+                compiler->chunk()->write_const(vm, Value::nil());
             }
 
             compiler->chunk()->patch_jump(past_else);
@@ -639,7 +639,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
                 // We can't check for exhaustivity at compile time, so we write
                 // a default nil in the event none of arms matched successfully
-                compiler->chunk()->write_const(vm, new_nil());
+                compiler->chunk()->write_const(vm, Value::nil());
             }
             // If not equal <-------
 
@@ -667,7 +667,7 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
             if (stmt != NULL) {
                 BUBBLE(compile(vm, compiler, stmt));
             } else {
-                compiler->chunk()->write_const(vm, new_nil());
+                compiler->chunk()->write_const(vm, Value::nil());
             }
 
             compiler->end_scope(vm);
@@ -696,10 +696,10 @@ CompileAstResult compile(Vm *vm, Compiler *compiler, AstNode *node) {
 
             if (compiler->block->depth == 0) {
                 compiler->chunk()->write(vm, OpDefineGlobal);
-                compiler->chunk()->write_const(vm, new_object((Object *)ident));
+                compiler->chunk()->write_const(vm, Value::from_obj((Object *)ident));
                 STACK_DIFF(compiler, -1);
             } else {
-                compiler->chunk()->add_const(vm, new_object((Object *)ident));
+                compiler->chunk()->add_const(vm, Value::from_obj((Object *)ident));
                 compiler->add_local(vm, ident->chars);
                 STACK_DIFF(compiler, 0);
             }

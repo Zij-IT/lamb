@@ -6,7 +6,7 @@
 #include <string.h>
 #include <optional>
 
-#define TOMBSTONE new_boolean(true)
+#define TOMBSTONE Value::from_bool(true)
 
 static bool is_tombstone(Entry *entry) { return entry->val.is_bool() && entry->val.as.boolean; }
 
@@ -21,7 +21,7 @@ static void table_adjust_capacity(Vm *vm, Table *table, i32 capacity) {
         entries[i].key = NULL;
         // This is a dummy value and should probably be replaced with something
         // in the future. This is a poor man's Option::None
-        entries[i].val = new_boolean(false);
+        entries[i].val = Value::from_bool(false);
     }
 
     table->len = 0;

@@ -27,6 +27,17 @@ struct Value {
         Object *obj;
     } as;
 
+    static Value from_bool(bool b);
+
+    static Value from_i64(i64 i);
+
+    static Value from_f64(f64 i);
+
+    static Value from_char(char c);
+
+    static Value from_obj(Object* o);
+
+    static Value nil();
     
     bool is_bool();
 
@@ -52,18 +63,6 @@ enum Order {
     OrderEqual = 0,
     OrderGreater = 1,
 };
-
-Value new_nil();
-
-Value new_boolean(bool b);
-
-Value new_int(i64 num);
-
-Value new_double(double num);
-
-Value new_char(char c);
-
-Value new_object(Object *obj);
 
 Order value_compare(Value *lhs, Value *rhs);
 

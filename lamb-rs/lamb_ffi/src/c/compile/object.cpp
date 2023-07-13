@@ -183,8 +183,8 @@ LambString *cstr_to_lambstring(Vm *vm, char const*  cstr) {
     lamb_str->hash = hash;
     lamb_str->len = len;
 
-    vm_push_stack(vm, new_object((Object *)lamb_str));
-    vm->strings.insert(vm, lamb_str, new_boolean(false));
+    vm_push_stack(vm, Value::from_obj((Object *)lamb_str));
+    vm->strings.insert(vm, lamb_str, Value::from_bool(false));
     vm_pop_stack(vm);
 
     return lamb_str;
@@ -210,8 +210,8 @@ LambString *concat(Vm *vm, LambString *lhs, LambString *rhs) {
     ret->len = len;
     ret->hash = hash_string(chars);
 
-    vm_push_stack(vm, new_object((Object *)(ret)));
-    vm->strings.insert(vm, ret, new_boolean(false));
+    vm_push_stack(vm, Value::from_obj((Object *)(ret)));
+    vm->strings.insert(vm, ret, Value::from_bool(false));
     vm_pop_stack(vm);
 
     return ret;
@@ -232,7 +232,7 @@ LambClosure *to_closure(Vm *vm, LambFunc *func) {
 LambUpvalue *to_upvalue(Vm *vm, Value *slot) {
     LambUpvalue *upvalue = (LambUpvalue *)alloc_obj(vm, OtUpvalue);
     upvalue->location = slot;
-    upvalue->closed = new_nil();
+    upvalue->closed = Value::nil();
     return upvalue;
 }
 

@@ -80,7 +80,7 @@ void vm_init(Vm *vm, VmOptions options) {
     vm->open_upvalues = NULL;
     vm->curr_compiler = NULL;
     vm->options = options;
-    vm->saved_value = new_nil();
+    vm->saved_value = Value::nil();
 
     vm->strings = Table();
     vm->globals = Table();
@@ -246,7 +246,7 @@ InterpretResult vm_run(Vm *vm) {
                         concat(vm, (LambString *)lhs->as.obj, (LambString *)rhs->as.obj);
                     DROP();
                     DROP();
-                    PUSH(new_object((Object *)st));
+                    PUSH(Value::from_obj((Object *)st));
                 } else {
                     binary_type_error(*lhs, "+", *rhs);
                 }
@@ -291,7 +291,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(new_boolean(value_compare(&lhs, &rhs) == OrderEqual));
+                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) == OrderEqual));
                     break;
                 } else {
                     binary_type_error(lhs, "=", rhs);
@@ -301,7 +301,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(new_boolean(value_compare(&lhs, &rhs) != OrderEqual));
+                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) != OrderEqual));
                     break;
                 } else {
                     binary_type_error(lhs, "!=", rhs);
@@ -311,7 +311,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(new_boolean(value_compare(&lhs, &rhs) == OrderGreater));
+                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) == OrderGreater));
                     break;
                 } else {
                     binary_type_error(lhs, ">", rhs);
@@ -321,7 +321,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(new_boolean(value_compare(&lhs, &rhs) != OrderLess));
+                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) != OrderLess));
                     break;
                 } else {
                     binary_type_error(lhs, ">=", rhs);
@@ -331,7 +331,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(new_boolean(value_compare(&lhs, &rhs) == OrderLess));
+                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) == OrderLess));
                     break;
                 } else {
                     binary_type_error(lhs, "<", rhs);
@@ -341,7 +341,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(new_boolean(value_compare(&lhs, &rhs) != OrderGreater));
+                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) != OrderGreater));
                     break;
                 } else {
                     binary_type_error(lhs, "<=", rhs);
@@ -358,7 +358,7 @@ InterpretResult vm_run(Vm *vm) {
 
                 LambArray *arr = (LambArray *)alloc_obj(vm, OtArray);
                 arr->items = items;
-                PUSH(new_object((Object *)arr));
+                PUSH(Value::from_obj((Object *)arr));
                 break;
             }
             case OpIndexArray: {
@@ -376,7 +376,7 @@ InterpretResult vm_run(Vm *vm) {
                     case OtString: {
                         LambString *st = (LambString *)arr_val.as.obj;
                         if (idx.as.intn < st->len) {
-                            PUSH(new_char(st->chars[idx.as.intn]));
+                            PUSH(Value::from_char(st->chars[idx.as.intn]));
                         } else {
                             runtime_error(
                                 "Index out of bounds. Desired index: (%ld) | Length: (%d)",
@@ -448,7 +448,7 @@ InterpretResult vm_run(Vm *vm) {
             case OpClosure: {
                 LambFunc *function = (LambFunc *)READ_CONSTANT().as.obj;
                 LambClosure *closure = to_closure(vm, function);
-                PUSH(new_object((Object *)closure));
+                PUSH(Value::from_obj((Object *)closure));
 
                 for (i32 i = 0; i < closure->upvalue_count; i++) {
                     bool is_local = READ_BYTE();

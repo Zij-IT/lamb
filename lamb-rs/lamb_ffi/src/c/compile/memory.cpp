@@ -19,7 +19,7 @@ static void mark_array(Vm *vm, ValueArray *arr) {
 static void blacken_object(Vm *vm, Object *obj) {
 #ifdef DEBUG_LOG_GC
     printf("Blackening %p with value: ", (void *)obj);
-    print_value(new_object(obj));
+    print_value(Value::from_obj(obj));
     printf("\n");
 #endif
 
@@ -157,7 +157,7 @@ void mark_object(Vm *vm, Object *object) {
 
 #ifdef DEBUG_LOG_GC
     printf("Marking %p with value: ", (void *)object);
-    print_value(new_object(object));
+    print_value(Value::from_obj(object));
     printf("\n");
 #endif
 
