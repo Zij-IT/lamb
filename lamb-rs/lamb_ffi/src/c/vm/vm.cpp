@@ -423,7 +423,7 @@ InterpretResult vm_run(Vm *vm) {
 
                         Callframe *new_frame = &vm->frames[vm->frame_count++];
                         new_frame->closure = closure;
-                        new_frame->ip = closure->function->chunk.bytes;
+                        new_frame->ip = closure->function->chunk.bytes.as_raw();
                         new_frame->slots = vm->stack_top - arg_count - 1;
                         frame = new_frame;
                         break;

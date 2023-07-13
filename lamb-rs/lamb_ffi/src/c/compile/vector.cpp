@@ -31,3 +31,4 @@ void GcVec<T>::destroy(Vm* vm) {
 
 template class GcVec<Value>;
 template class GcVec<Local>;
+template class GcVec<u8>;

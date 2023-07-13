@@ -7,30 +7,17 @@
 #include "memory.hpp"
 
 Chunk::Chunk() {
-    this->len = 0;
-    this->capacity = 0;
-    this->bytes = NULL;
+    this->bytes = GcVec<u8>();
     this->constants = GcVec<Value>();
 }
 
 void Chunk::destroy(Vm* vm) {
-    FREE_ARRAY(vm, u8, this->bytes, this->capacity);
+    this->bytes.destroy(vm);
     this->constants.destroy(vm);
-
-    this->len = 0;
-    this->capacity = 0;
-    this->bytes = NULL;
 }
 
 void Chunk::write(Vm* vm, u8 byte) {
-    if (this->capacity < this->len + 1) {
-        i32 old_cap = this->capacity;
-        this->capacity = GROW_CAPACITY(old_cap);
-        this->bytes = GROW_ARRAY(vm, u8, this->bytes, old_cap, this->capacity);
-    }
-
-    this->bytes[this->len] = byte;
-    this->len += 1;
+    this->bytes.push(vm, byte);
 }
 
 i32 Chunk::write_jump(Vm* vm, u8 op) {
@@ -38,11 +25,11 @@ i32 Chunk::write_jump(Vm* vm, u8 op) {
     this->write(vm, 0xff);
     this->write(vm, 0xff);
 
-    return this->len - 2;
+    return this->bytes.len() - 2;
 }
 
 void Chunk::patch_jump(i32 offset) {
-    i32 jump = this->len - offset - 2;
+    i32 jump = this->bytes.len() - offset - 2;
     if (jump > UINT16_MAX) {
         fprintf(stderr, "COMPILE_ERR: jump exceeds maximal bytes of %d", UINT16_MAX);
         exit(1);

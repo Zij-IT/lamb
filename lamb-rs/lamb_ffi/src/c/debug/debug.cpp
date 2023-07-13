@@ -118,7 +118,7 @@ static i32 print_op(Chunk const& chunk, i32 offset) {
 void chunk_debug(Chunk const& chunk, char const* name) {
     printf("====== %s ======\n", name);
     i32 offset = 0;
-    while (offset < chunk.len) {
+    while (offset < chunk.bytes.len()) {
         offset += print_op(chunk, offset);
     }
     printf("====== %s ======\n", name);

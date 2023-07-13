@@ -24,6 +24,8 @@ public:
 
     void push(Vm* vm, T item);
 
+    constexpr T* as_raw() const { return this->values; };
+
     constexpr void truncate(i32 len) { this->_len = std::min(len, this->_len); };
 
     void destroy(Vm* vm);

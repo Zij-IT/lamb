@@ -38,7 +38,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
 
         Callframe *frame = &vm.frames[vm.frame_count++];
         frame->closure = closure;
-        frame->ip = compiler.function->chunk.bytes;
+        frame->ip = compiler.function->chunk.bytes.as_raw();
         frame->slots = vm.stack;
 
         if (options.print_main_chunk) {

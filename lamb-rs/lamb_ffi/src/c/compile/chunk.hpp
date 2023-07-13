@@ -44,12 +44,12 @@ enum OpCode {
 };
 
 struct Chunk {
-    i32 capacity;
-    i32 len;
-    u8 *bytes;
+    GcVec<u8> bytes;
+
     GcVec<Value> constants;
 
     Chunk();
+   
     void destroy(Vm* vm);
 
     void write(Vm* vm, u8 byte);
