@@ -68,12 +68,6 @@ enum FuncType {
     FtNormal,
 };
 
-struct ObjectPtrArray {
-    Object **values;
-    i32 capacity;
-    i32 len;
-};
-
 Object *alloc_obj(Vm *vm, ObjectType type);
 
 bool is_of_type(Object *obj, ObjectType type);
