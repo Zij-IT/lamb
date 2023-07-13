@@ -6,63 +6,6 @@
 #include "./value.hpp"
 #include "memory.hpp"
 
-Value Value::nil() {
-    Value val = {
-        .kind = VkNil,
-        .as = { .boolean = false },
-    };
-    return val;
-}
-
-Value Value::from_bool(bool b) {
-    Value val = {.kind = VkBool, .as = { .boolean = b }};
-    return val;
-}
-
-Value Value::from_i64(i64 num) {
-    Value val = {.kind = VkInt, .as = { .intn = num }};
-    return val;
-}
-
-Value Value::from_f64(f64 num) {
-    Value val = {.kind = VkDouble, .as = { .doubn = num }};
-    return val;
-}
-
-Value Value::from_char(char c) {
-    Value val = {.kind = VkChar, .as = { .ch = c }};
-    return val;
-}
-
-Value Value::from_obj(Object *obj) {
-    Value val = {.kind = VkObj, .as = { .obj = obj }};
-    return val;
-}
-
-bool Value::is_bool() const {
-    return this->kind == VkBool;
-}
-
-bool Value::is_double() const {
-    return this->kind == VkDouble;
-}
-
-bool Value::is_integer() const {
-    return this->kind == VkInt;
-}
-
-bool Value::is_char() const {
-    return this->kind == VkChar;
-}
-
-bool Value::is_object() const {
-    return this->kind == VkObj;
-}
-
-bool Value::is_nil() const {
-    return this->kind == VkNil;
-}
-
 Order Value::cmp(Value const& rhs) const {
     switch (rhs.kind) {
         case VkNil:

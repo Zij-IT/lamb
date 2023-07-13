@@ -27,29 +27,50 @@ struct Value {
         Object *obj;
     } as;
 
-    static Value from_bool(bool b);
+    constexpr static Value from_bool(bool b) {
+        Value val = {.kind = VkBool, .as = {.boolean = b}};
+        return val;
+    }
 
-    static Value from_i64(i64 i);
+    constexpr static Value from_i64(i64 i){
+        Value val = {.kind = VkInt, .as = { .intn = i }};
+        return val;
+    }
 
-    static Value from_f64(f64 i);
+    constexpr static Value from_f64(f64 i) {
+        Value val = {.kind = VkDouble, .as = { .doubn = i }};
+        return val;
+    }
 
-    static Value from_char(char c);
+    constexpr static Value from_char(char c) {
+        Value val = {.kind = VkChar, .as = {.ch = c}};
+        return val;
+    }
 
-    static Value from_obj(Object* o);
+    constexpr static Value from_obj(Object *obj) {
+        Value val = {.kind = VkObj, .as = {.obj = obj}};
+        return val;
+    }
 
-    static Value nil();
-    
-    bool is_bool() const;
+    constexpr static Value nil() {
+        Value val = {
+            .kind = VkNil,
+            .as = {.boolean = false},
+        };
+        return val;
+    }
 
-    bool is_double() const;
+    constexpr bool is_bool() const { return this->kind == VkBool; }
 
-    bool is_integer() const;
+    constexpr bool is_double() const { return this->kind == VkDouble; }
 
-    bool is_char() const;
+    constexpr bool is_integer() const { return this->kind == VkInt; }
 
-    bool is_object() const;
+    constexpr bool is_char() const { return this->kind == VkChar; }
 
-    bool is_nil() const;
+    constexpr bool is_object() const { return this->kind == VkObj; }
+
+    constexpr bool is_nil() const { return this->kind == VkNil; }
 
     Order cmp(Value const& rhs) const;
 };
