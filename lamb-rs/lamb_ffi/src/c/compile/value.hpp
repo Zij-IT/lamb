@@ -75,18 +75,6 @@ struct Value {
     Order cmp(Value const& rhs) const;
 };
 
-struct ValueArray {
-    i32 capacity;
-    i32 len;
-    Value *values;
-};
-
 char const* kind_as_cstr(Value val);
-
-void value_arr_init(ValueArray *arr);
-
-void value_arr_write(Vm& vm, ValueArray *arr, Value val);
-
-void value_arr_free(Vm& vm, ValueArray *arr);
 
 #endif // VALUE_HEADER

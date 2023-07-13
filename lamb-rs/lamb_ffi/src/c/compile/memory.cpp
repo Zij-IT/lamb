@@ -6,16 +6,12 @@
 
 #define GC_HEAP_GROWTH_FACTOR 2
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: mark_array(Vm& vm, ValueArray *arr)
 static void mark_array(Vm& vm, GcVec<Value>& arr) {
     for (i32 i = 0; i < arr.len(); i++) {
         mark_value(vm, &arr[i]);
     }
 }
 
-// NOTE: Function requires access to Vm
-// TODO: Add Vm parameter to function: blacken_object(Vm& vm, Object *obj)
 static void blacken_object(Vm& vm, Object *obj) {
 #ifdef DEBUG_LOG_GC
     printf("Blackening %p with value: ", (void *)obj);
