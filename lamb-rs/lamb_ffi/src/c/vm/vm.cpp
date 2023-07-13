@@ -353,8 +353,7 @@ InterpretResult vm_run(Vm& vm) {
                     items.push(vm, POP());
                 }
 
-                LambArray *arr = (LambArray *)alloc_obj(vm, OtArray);
-                arr->items = items;
+                auto arr = LambArray::alloc(vm, items);
                 PUSH(Value::from_obj((Object *)arr));
                 break;
             }

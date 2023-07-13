@@ -36,6 +36,8 @@ struct LambString {
 struct LambArray {
     Object obj;
     GcVec<Value> items;
+
+    static LambArray* alloc(Vm& vm, GcVec<Value> items);
 };
 
 struct LambFunc {

@@ -19,6 +19,15 @@ LambString* LambString::alloc(Vm& vm, char const* chars, i32 len, u32 hash) {
     return st;
 }
 
+LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
+    LambArray *arr = ALLOCATE(vm, LambArray, 1);
+    arr->obj = { .next = vm.objects, .type = OtArray, .is_marked = false, };
+    arr->items = items;
+
+    vm.objects = (Object *)arr;
+    return arr;
+}
+
 Object *alloc_obj(Vm& vm, ObjectType type) {
     switch (type) {
         case OtString: {
@@ -26,19 +35,8 @@ Object *alloc_obj(Vm& vm, ObjectType type) {
             exit(1);
         }
         case OtArray: {
-            LambArray *arr = ALLOCATE(vm, LambArray, 1);
-#ifdef DEBUG_LOG_GC
-            printf("%p allocating OtArray\n", (void *)arr);
-#endif
-            Object obj = {
-                .next = vm.objects,
-                .type = type,
-                .is_marked = false,
-            };
-            arr->obj = obj;
-            arr->items = GcVec<Value>();
-            vm.objects = (Object *)arr;
-            return vm.objects;
+            printf("Uncaught alloc_obj!?\n");
+            exit(1);
         }
         case OtFunc: {
             LambFunc *func = ALLOCATE(vm, LambFunc, 1);
