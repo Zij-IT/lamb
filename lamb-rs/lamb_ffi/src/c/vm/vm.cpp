@@ -111,7 +111,7 @@ InterpretResult vm_run(Vm *vm) {
 #define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
 #define READ_CONSTANT()                                                                            \
-    (frame->ip += 1, frame->closure->function->chunk.constants.values[READ_SHORT()])
+    (frame->ip += 1, frame->closure->function->chunk.constants[READ_SHORT()])
 
 #define PUSH(val) (*vm->stack_top = val, vm->stack_top += 1)
 
@@ -148,7 +148,7 @@ InterpretResult vm_run(Vm *vm) {
     for (;;) {
         switch (READ_BYTE()) {
             case OpConstant: {
-                PUSH(frame->closure->function->chunk.constants.values[READ_SHORT()]);
+                PUSH(frame->closure->function->chunk.constants[READ_SHORT()]);
                 break;
             }
             case OpDefineGlobal: {
@@ -349,11 +349,9 @@ InterpretResult vm_run(Vm *vm) {
             } break;
             case OpMakeArray: {
                 i32 len = POP().as.intn;
-                ValueArray items;
-                value_arr_init(&items);
-
+                GcVec<Value> items;
                 for (i32 i = 0; i < len; i++) {
-                    value_arr_write(vm, &items, POP());
+                    items.push(vm, POP());
                 }
 
                 LambArray *arr = (LambArray *)alloc_obj(vm, OtArray);
@@ -386,8 +384,8 @@ InterpretResult vm_run(Vm *vm) {
                     }
                     case OtArray: {
                         LambArray *arr = (LambArray *)arr_val.as.obj;
-                        if (idx.as.intn < arr->items.len) {
-                            PUSH(arr->items.values[idx.as.intn]);
+                        if (idx.as.intn < arr->items.len()) {
+                            PUSH(arr->items[idx.as.intn]);
                         } else {
                             runtime_error(
                                 "Index out of bounds. Desired index: (%ld) | Length: (%d)",

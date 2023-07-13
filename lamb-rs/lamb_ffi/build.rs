@@ -6,6 +6,7 @@ const C_FILES: &[&str] = &[
     "./src/c/compile/ast.cpp",
     "./src/c/compile/object.cpp",
     "./src/c/compile/table.cpp",
+    "./src/c/compile/vector.cpp",
     "./src/c/compile/compiler.cpp",
     "./src/c/compile/memory.cpp",
     "./src/c/compile/misc.cpp",
@@ -27,6 +28,7 @@ fn main() {
         .cpp(true)
         .flag("-lfl")
         .flag("-std=c++20")
+        .opt_level(3)
         .warnings(true)
         .compile("lamb_c");
 

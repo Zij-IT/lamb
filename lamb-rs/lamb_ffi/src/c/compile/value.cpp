@@ -105,13 +105,13 @@ Order Value::cmp(Value const& rhs) const {
                     LambArray *larr = (LambArray *)this->as.obj;
                     LambArray *rarr = (LambArray *)rhs.as.obj;
 
-                    i32 llen = larr->items.len;
-                    i32 rlen = rarr->items.len;
+                    i32 llen = larr->items.len();
+                    i32 rlen = rarr->items.len();
                     i32 min_len = llen < rlen ? llen : rlen;
 
                     Order element_order = OrderEqual;
                     for (i32 i = 0; i < min_len; i++) {
-                        if ((element_order = larr->items.values[i].cmp(rarr->items.values[i])) != OrderEqual) {
+                        if ((element_order = larr->items[i].cmp(rarr->items[i])) != OrderEqual) {
                             return element_order;
                         }
                     }

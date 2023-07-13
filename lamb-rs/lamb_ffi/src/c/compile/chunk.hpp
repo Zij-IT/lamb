@@ -2,6 +2,7 @@
 #define CHUNK_HEADER
 
 #include "./value.hpp"
+#include "vector.hpp"
 
 enum OpCode {
     OpConstant,
@@ -46,7 +47,7 @@ struct Chunk {
     i32 capacity;
     i32 len;
     u8 *bytes;
-    ValueArray constants;
+    GcVec<Value> constants;
 
     Chunk();
     void destroy(Vm* vm);

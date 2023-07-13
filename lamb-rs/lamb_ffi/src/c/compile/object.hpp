@@ -33,7 +33,7 @@ struct LambString {
 
 struct LambArray {
     Object obj;
-    ValueArray items;
+    GcVec<Value> items;
 };
 
 struct LambFunc {

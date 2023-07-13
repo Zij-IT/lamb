@@ -102,7 +102,7 @@ static Value lamb_len(i32 arg_count, Value *args) {
     if (arg_count == 1 && args->kind == VkObj) {
         switch (args->as.obj->type) {
             case OtArray:
-                return Value::from_i64(((LambArray *)args->as.obj)->items.len);
+                return Value::from_i64(((LambArray *)args->as.obj)->items.len());
             case OtString:
                 return Value::from_i64(((LambString *)args->as.obj)->len);
             default:

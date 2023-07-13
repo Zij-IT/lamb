@@ -8,9 +8,9 @@
 
 // NOTE: Function requires access to Vm
 // TODO: Add Vm parameter to function: mark_array(Vm *vm, ValueArray *arr)
-static void mark_array(Vm *vm, ValueArray *arr) {
-    for (i32 i = 0; i < arr->len; i++) {
-        mark_value(vm, &arr->values[i]);
+static void mark_array(Vm *vm, GcVec<Value>& arr) {
+    for (i32 i = 0; i < arr.len(); i++) {
+        mark_value(vm, &arr[i]);
     }
 }
 
@@ -29,13 +29,13 @@ static void blacken_object(Vm *vm, Object *obj) {
             break;
         case OtArray: {
             LambArray *arr = (LambArray *)obj;
-            mark_array(vm, &arr->items);
+            mark_array(vm, arr->items);
             break;
         }
         case OtFunc: {
             LambFunc *func = (LambFunc *)obj;
             mark_object(vm, (Object *)func);
-            mark_array(vm, &func->chunk.constants);
+            mark_array(vm, func->chunk.constants);
             break;
         }
         case OtClosure: {

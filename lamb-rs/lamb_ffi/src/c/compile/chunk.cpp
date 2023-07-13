@@ -10,12 +10,12 @@ Chunk::Chunk() {
     this->len = 0;
     this->capacity = 0;
     this->bytes = NULL;
-    value_arr_init(&this->constants);
+    this->constants = GcVec<Value>();
 }
 
 void Chunk::destroy(Vm* vm) {
     FREE_ARRAY(vm, u8, this->bytes, this->capacity);
-    value_arr_free(vm, &this->constants);
+    this->constants.destroy(vm);
 
     this->len = 0;
     this->capacity = 0;
@@ -64,7 +64,7 @@ void Chunk::write_const(Vm* vm, Value val) {
 
 i32 Chunk::add_const(Vm* vm, Value val) {
     vm_push_stack(vm, val);
-    value_arr_write(vm, &this->constants, val);
+    this->constants.push(vm, val);
     vm_pop_stack(vm);
-    return this->constants.len - 1;
+    return this->constants.len() - 1;
 }

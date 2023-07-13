@@ -38,9 +38,7 @@ Object *alloc_obj(Vm *vm, ObjectType type) {
                 .next = vm->objects,
             };
             arr->obj = obj;
-            ValueArray v_arr;
-            value_arr_init(&v_arr);
-            arr->items = v_arr;
+            arr->items = GcVec<Value>();
             vm->objects = (Object *)arr;
             return vm->objects;
         }
@@ -129,7 +127,7 @@ void object_free(Vm *vm, Object *obj) {
             printf("Freeing %p of type OtArray\n", obj);
 #endif
             LambArray *arr = (LambArray *)obj;
-            value_arr_free(vm, &arr->items);
+            arr->items.destroy(vm);
             FREE(vm, LambArray, arr);
             break;
         }
@@ -249,7 +247,7 @@ void objectptr_array_write(__attribute__((unused)) Vm *vm, ObjectPtrArray *arr, 
         arr->values = (Object**)realloc(arr->values, sizeof(Object *) * arr->capacity);
     }
 
-    vm->bytes_allocated = 0;
+    // vm->bytes_allocated = 0;
 
     arr->values[arr->len] = val;
     arr->len += 1;

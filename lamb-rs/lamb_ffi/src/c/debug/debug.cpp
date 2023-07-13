@@ -18,7 +18,7 @@ static i32 print_jump(Chunk *chunk, char const* name, i32 offset, i32 sign) {
 static i32 print_constant(Chunk *chunk, char const* name, i32 offset) {
     u8 hi = chunk->bytes[offset + 1];
     u8 lo = chunk->bytes[offset + 2];
-    Value val = chunk->constants.values[((u16)hi) << 8 | lo];
+    Value val = chunk->constants[((u16)hi) << 8 | lo];
 
     printf("%-16s %4d '", name, ((u16)hi) << 8 | lo);
     print_value(val);
@@ -102,7 +102,7 @@ static i32 print_op(Chunk *chunk, i32 offset) {
             printf("OpClosure\n");
             i32 x = 3;
             i32 idx = (chunk->bytes[offset + 2] << 8) | chunk->bytes[offset + 3];
-            LambFunc *func = (LambFunc *)chunk->constants.values[idx].as.obj;
+            LambFunc *func = (LambFunc *)chunk->constants[idx].as.obj;
 
             // NOTE: x bytes for constant + 2 bytes per upvalue + 1 to jump over
             // OpClosure
@@ -156,9 +156,9 @@ void print_object(Object *obj) {
         case OtArray: {
             LambArray *arr = (LambArray *)obj;
             printf("[");
-            for (i32 i = 0; i < arr->items.len; i++) {
-                print_value(arr->items.values[i]);
-                if (i != arr->items.len - 1) {
+            for (i32 i = 0; i < arr->items.len(); i++) {
+                print_value(arr->items[i]);
+                if (i != arr->items.len() - 1) {
                     printf(", ");
                 }
             }
