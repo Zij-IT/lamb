@@ -22,6 +22,8 @@ struct Object {
     Object *next;
     ObjectType type;
     bool is_marked;
+
+    constexpr bool is(ObjectType type) const { return this->type == type; }
 };
 
 struct LambString {
@@ -83,8 +85,6 @@ enum FuncType {
     FtScript,
     FtNormal,
 };
-
-bool is_of_type(Object *obj, ObjectType type);
 
 void object_free(Vm& vm, Object *obj);
 

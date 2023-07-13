@@ -237,8 +237,8 @@ InterpretResult vm_run(Vm& vm) {
                 } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
                     lhs->as.doubn = lhs->as.doubn + rhs->as.doubn;
                     DROP();
-                } else if (lhs->is_object() && is_of_type(lhs->as.obj, OtString) &&
-                           rhs->is_object() && is_of_type(rhs->as.obj, OtString)) {
+                } else if (lhs->is_object() && lhs->as.obj->is(OtString) &&
+                           rhs->is_object() && rhs->as.obj->is(OtString)) {
                     auto left = (LambString*)lhs->as.obj;
                     auto right = (LambString*)rhs->as.obj;
                     auto result = left->concat(vm, right);
