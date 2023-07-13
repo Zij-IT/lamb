@@ -291,7 +291,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) == OrderEqual));
+                    PUSH(Value::from_bool(lhs.cmp(rhs) == OrderEqual));
                     break;
                 } else {
                     binary_type_error(lhs, "=", rhs);
@@ -301,7 +301,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) != OrderEqual));
+                    PUSH(Value::from_bool(lhs.cmp(rhs) != OrderEqual));
                     break;
                 } else {
                     binary_type_error(lhs, "!=", rhs);
@@ -311,7 +311,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) == OrderGreater));
+                    PUSH(Value::from_bool(lhs.cmp(rhs) == OrderGreater));
                     break;
                 } else {
                     binary_type_error(lhs, ">", rhs);
@@ -321,7 +321,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) != OrderLess));
+                    PUSH(Value::from_bool(lhs.cmp(rhs) != OrderLess));
                     break;
                 } else {
                     binary_type_error(lhs, ">=", rhs);
@@ -331,7 +331,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) == OrderLess));
+                    PUSH(Value::from_bool(lhs.cmp(rhs) == OrderLess));
                     break;
                 } else {
                     binary_type_error(lhs, "<", rhs);
@@ -341,7 +341,7 @@ InterpretResult vm_run(Vm *vm) {
                 Value rhs = POP();
                 Value lhs = POP();
                 if (rhs.kind == lhs.kind) {
-                    PUSH(Value::from_bool(value_compare(&lhs, &rhs) != OrderGreater));
+                    PUSH(Value::from_bool(lhs.cmp(rhs) != OrderGreater));
                     break;
                 } else {
                     binary_type_error(lhs, "<=", rhs);

@@ -50,6 +50,8 @@ struct Value {
     bool is_object() const;
 
     bool is_nil() const;
+
+    Order cmp(Value const& rhs) const;
 };
 
 struct ValueArray {
@@ -57,14 +59,6 @@ struct ValueArray {
     i32 len;
     Value *values;
 };
-
-enum Order {
-    OrderLess = -1,
-    OrderEqual = 0,
-    OrderGreater = 1,
-};
-
-Order value_compare(Value *lhs, Value *rhs);
 
 char const* kind_as_cstr(Value val);
 

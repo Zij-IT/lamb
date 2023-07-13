@@ -63,6 +63,107 @@ bool Value::is_nil() const {
     return this->kind == VkNil;
 }
 
+Order Value::cmp(Value const& rhs) const {
+    switch (rhs.kind) {
+        case VkNil:
+            return OrderEqual;
+        case VkBool:
+            if (this->as.boolean == rhs.as.boolean) {
+                return OrderEqual;
+            } else if (this->as.boolean) {
+                return OrderGreater;
+            } else {
+                return OrderLess;
+            }
+        case VkInt:
+            if (this->as.intn == rhs.as.intn) {
+                return OrderEqual;
+            } else if (this->as.intn > rhs.as.intn) {
+                return OrderGreater;
+            } else {
+                return OrderLess;
+            }
+        case VkDouble:
+            if (this->as.doubn == rhs.as.doubn) {
+                return OrderEqual;
+            } else if (this->as.doubn > rhs.as.doubn) {
+                return OrderGreater;
+            } else {
+                return OrderLess;
+            }
+        case VkChar:
+            if (this->as.ch == rhs.as.ch) {
+                return OrderEqual;
+            } else if (this->as.ch > rhs.as.ch) {
+                return OrderGreater;
+            } else {
+                return OrderLess;
+            }
+        case VkObj:
+            switch (rhs.as.obj->type) {
+                case OtArray: {
+                    LambArray *larr = (LambArray *)this->as.obj;
+                    LambArray *rarr = (LambArray *)rhs.as.obj;
+
+                    i32 llen = larr->items.len;
+                    i32 rlen = rarr->items.len;
+                    i32 min_len = llen < rlen ? llen : rlen;
+
+                    Order element_order = OrderEqual;
+                    for (i32 i = 0; i < min_len; i++) {
+                        if ((element_order = larr->items.values[i].cmp(rarr->items.values[i])) != OrderEqual) {
+                            return element_order;
+                        }
+                    }
+
+                    if (llen == rlen) {
+                        return OrderEqual;
+                    } else if (llen > rlen) {
+                        return OrderGreater;
+                    } else {
+                        return OrderLess;
+                    }
+                }
+                case OtString: {
+                    LambString *larr = (LambString *)this->as.obj;
+                    LambString *rarr = (LambString *)rhs.as.obj;
+
+                    if (larr == rarr) {
+                        return OrderEqual;
+                    }
+
+                    i32 llen = larr->len;
+                    i32 rlen = rarr->len;
+                    i32 min_len = llen < rlen ? llen : rlen;
+
+                    for (i32 i = 0; i < min_len; i++) {
+                        if (larr->chars[i] > rarr->chars[i]) {
+                            return OrderGreater;
+                        } else if (larr->chars[i] < rarr->chars[i]) {
+                            return OrderLess;
+                        }
+                    }
+
+                    return llen < rlen ? OrderLess : OrderGreater;
+                }
+                case OtFunc:
+                case OtNative:
+                case OtClosure:
+                case OtUpvalue:
+                    if (this->as.obj == rhs.as.obj) {
+                        return OrderEqual;
+                    } else if (this->as.obj > rhs.as.obj) {
+                        return OrderGreater;
+                    } else {
+                        return OrderLess;
+                    }
+            }
+    }
+
+    fprintf(stderr, "Fallthrough found in switch in %s at %s", __FILE__, __FUNCTION__);
+    return OrderLess;
+}
+
 char const* kind_as_cstr(Value val) {
     switch (val.kind) {
         case VkNil:
@@ -96,128 +197,4 @@ char const* kind_as_cstr(Value val) {
 
     fprintf(stderr, "Unknown kind value: %d", val.kind);
     return "unknown";
-}
-
-Order value_compare(Value *lhs, Value *rhs) {
-    switch (rhs->kind) {
-        case VkNil:
-            return OrderEqual;
-        case VkBool:
-            if (lhs->as.boolean == rhs->as.boolean) {
-                return OrderEqual;
-            } else if (lhs->as.boolean) {
-                return OrderGreater;
-            } else {
-                return OrderLess;
-            }
-        case VkInt:
-            if (lhs->as.intn == rhs->as.intn) {
-                return OrderEqual;
-            } else if (lhs->as.intn > rhs->as.intn) {
-                return OrderGreater;
-            } else {
-                return OrderLess;
-            }
-        case VkDouble:
-            if (lhs->as.doubn == rhs->as.doubn) {
-                return OrderEqual;
-            } else if (lhs->as.doubn > rhs->as.doubn) {
-                return OrderGreater;
-            } else {
-                return OrderLess;
-            }
-        case VkChar:
-            if (lhs->as.ch == rhs->as.ch) {
-                return OrderEqual;
-            } else if (lhs->as.ch > rhs->as.ch) {
-                return OrderGreater;
-            } else {
-                return OrderLess;
-            }
-        case VkObj:
-            switch (rhs->as.obj->type) {
-                case OtArray: {
-                    LambArray *larr = (LambArray *)lhs->as.obj;
-                    LambArray *rarr = (LambArray *)rhs->as.obj;
-
-                    i32 llen = larr->items.len;
-                    i32 rlen = rarr->items.len;
-                    i32 min_len = llen < rlen ? llen : rlen;
-
-                    Order element_order = OrderEqual;
-                    for (i32 i = 0; i < min_len; i++) {
-                        if ((element_order = value_compare(&larr->items.values[i],
-                                                           &rarr->items.values[i])) != OrderEqual) {
-                            return element_order;
-                        }
-                    }
-
-                    if (llen == rlen) {
-                        return OrderEqual;
-                    } else if (llen > rlen) {
-                        return OrderGreater;
-                    } else {
-                        return OrderLess;
-                    }
-                }
-                case OtString: {
-                    LambString *larr = (LambString *)lhs->as.obj;
-                    LambString *rarr = (LambString *)rhs->as.obj;
-
-                    if (larr == rarr) {
-                        return OrderEqual;
-                    }
-
-                    i32 llen = larr->len;
-                    i32 rlen = rarr->len;
-                    i32 min_len = llen < rlen ? llen : rlen;
-
-                    for (i32 i = 0; i < min_len; i++) {
-                        if (larr->chars[i] > rarr->chars[i]) {
-                            return OrderGreater;
-                        } else if (larr->chars[i] < rarr->chars[i]) {
-                            return OrderLess;
-                        }
-                    }
-
-                    return llen < rlen ? OrderLess : OrderGreater;
-                }
-                case OtFunc:
-                case OtNative:
-                case OtClosure:
-                case OtUpvalue:
-                    if (lhs->as.obj == rhs->as.obj) {
-                        return OrderEqual;
-                    } else if (lhs->as.obj > rhs->as.obj) {
-                        return OrderGreater;
-                    } else {
-                        return OrderLess;
-                    }
-            }
-    }
-
-    fprintf(stderr, "Fallthrough found in switch in %s at %s", __FILE__, __FUNCTION__);
-    return OrderLess;
-}
-
-void value_arr_init(ValueArray *arr) {
-    arr->len = 0;
-    arr->capacity = 0;
-    arr->values = NULL;
-}
-
-void value_arr_write(Vm *vm, ValueArray *arr, Value val) {
-    if (arr->capacity < arr->len + 1) {
-        i32 old_cap = arr->capacity;
-        arr->capacity = GROW_CAPACITY(old_cap);
-        arr->values = GROW_ARRAY(vm, Value, arr->values, old_cap, arr->capacity);
-    }
-
-    arr->values[arr->len] = val;
-    arr->len += 1;
-}
-
-void value_arr_free(Vm *vm, ValueArray *arr) {
-    FREE_ARRAY(vm, Value, arr->values, arr->capacity);
-    value_arr_init(arr);
 }

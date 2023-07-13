@@ -56,7 +56,7 @@ static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
 
 static Value lamb_NATIVE_assert_eq(i32 arg_count, Value *args) {
     if (arg_count == 2) {
-        switch (value_compare(args, args + 1)) {
+        switch (args->cmp(args[1])) {
             case OrderEqual:
                 return Value::nil();
             case OrderGreater:

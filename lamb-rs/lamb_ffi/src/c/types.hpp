@@ -25,4 +25,10 @@ typedef enum ParseResult_E {
     ParseResultReject,
 } ParseResult;
 
+enum Order {
+    OrderLess = -1,
+    OrderEqual = 0,
+    OrderGreater = 1,
+};
+
 #endif // TYPES_H
