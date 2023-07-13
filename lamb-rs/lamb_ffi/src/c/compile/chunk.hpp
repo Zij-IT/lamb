@@ -2,7 +2,7 @@
 #define CHUNK_HEADER
 
 #include "./value.hpp"
-#include "vector.hpp"
+#include "gcvec.hpp"
 
 enum OpCode {
     OpConstant,
