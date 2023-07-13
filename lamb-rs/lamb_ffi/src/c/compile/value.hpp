@@ -39,17 +39,17 @@ struct Value {
 
     static Value nil();
     
-    bool is_bool();
+    bool is_bool() const;
 
-    bool is_double();
+    bool is_double() const;
 
-    bool is_integer();
+    bool is_integer() const;
 
-    bool is_char();
+    bool is_char() const;
 
-    bool is_object();
+    bool is_object() const;
 
-    bool is_nil();
+    bool is_nil() const;
 };
 
 struct ValueArray {

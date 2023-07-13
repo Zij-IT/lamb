@@ -39,27 +39,27 @@ Value Value::from_obj(Object *obj) {
     return val;
 }
 
-bool Value::is_bool() {
+bool Value::is_bool() const {
     return this->kind == VkBool;
 }
 
-bool Value::is_double() {
+bool Value::is_double() const {
     return this->kind == VkDouble;
 }
 
-bool Value::is_integer() {
+bool Value::is_integer() const {
     return this->kind == VkInt;
 }
 
-bool Value::is_char() {
+bool Value::is_char() const {
     return this->kind == VkChar;
 }
 
-bool Value::is_object() {
+bool Value::is_object() const {
     return this->kind == VkObj;
 }
 
-bool Value::is_nil() {
+bool Value::is_nil() const {
     return this->kind == VkNil;
 }
 
