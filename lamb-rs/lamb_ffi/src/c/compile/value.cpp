@@ -4,7 +4,6 @@
 
 #include "./object.hpp"
 #include "./value.hpp"
-#include "memory.hpp"
 
 Order Value::cmp(Value const& rhs) const {
     switch (rhs.kind) {

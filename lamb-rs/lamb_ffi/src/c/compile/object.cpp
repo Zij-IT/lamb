@@ -4,12 +4,11 @@
 
 #include "../debug/debug.hpp"
 #include "../vm/vm.hpp"
-#include "memory.hpp"
 #include "misc.hpp"
 #include "object.hpp"
 
 LambString* LambString::alloc(Vm& vm, char const* chars, i32 len, u32 hash) {
-    LambString *st = ALLOCATE(vm, LambString, 1);
+    auto st = (LambString*)vm.gc.alloc(vm, sizeof(LambString), 1);
     st->obj = { .next = vm.objects, .type = OtString, .is_marked = false, };
     st->chars = chars;
     st->len = len;
@@ -39,7 +38,7 @@ LambString* LambString::from_cstr(Vm&vm, char const* chars) {
 LambString* LambString::concat(Vm& vm, LambString* rhs) {
     i32 len = this->len + rhs->len;
 
-    string chars = ALLOCATE(vm, char, len + 1);
+    char* chars = (char*)vm.gc.alloc(vm, sizeof(char), len + 1);
     strcpy(chars, this->chars);
     strcpy(chars + this->len, rhs->chars);
     chars[len] = '\0';
@@ -60,7 +59,7 @@ LambString* LambString::concat(Vm& vm, LambString* rhs) {
 } 
 
 LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
-    LambArray *arr = ALLOCATE(vm, LambArray, 1);
+    auto arr = (LambArray*)vm.gc.alloc(vm, sizeof(LambArray), 1);
     arr->obj = { .next = vm.objects, .type = OtArray, .is_marked = false, };
     arr->items = items;
 
@@ -69,7 +68,7 @@ LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
 }
 
 LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
-    LambFunc *func = ALLOCATE(vm, LambFunc, 1);
+    auto func = (LambFunc*)vm.gc.alloc(vm, sizeof(LambFunc), 1);
     func->obj = { .next = vm.objects, .type = OtFunc, .is_marked = false, };
     func->name = name;
     func->arity = arity;
@@ -81,7 +80,7 @@ LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
 }
 
 NativeFunc* NativeFunc::alloc(Vm& vm, CFunc func) {
-    NativeFunc *native = ALLOCATE(vm, NativeFunc, 1);
+    auto native = (NativeFunc *)vm.gc.alloc(vm, sizeof(NativeFunc), 1);
     Object obj = { .next = vm.objects, .type = OtNative, .is_marked = false, };
     native->obj = obj;
     native->func = func;
@@ -91,7 +90,7 @@ NativeFunc* NativeFunc::alloc(Vm& vm, CFunc func) {
 }
 
 LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
-    LambUpvalue *upvalue = ALLOCATE(vm, LambUpvalue, 1);
+    auto upvalue = (LambUpvalue *)vm.gc.alloc(vm, sizeof(LambUpvalue), 1);
     upvalue->obj = { .next = vm.objects, .type = OtUpvalue, .is_marked = false, };
     upvalue->location = slot;
     upvalue->next = next;
@@ -102,12 +101,12 @@ LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
 }
 
 LambClosure* LambClosure::alloc(Vm& vm, LambFunc* func) {
-    LambClosure *closure = ALLOCATE(vm, LambClosure, 1);
+    auto closure = (LambClosure *)vm.gc.alloc(vm, sizeof(LambClosure), 1);
     closure->obj = { .next = vm.objects, .type = OtClosure, .is_marked = false, };
     closure->function = func;
     closure->upvalue_count = func->upvalue_count;
 
-    closure->upvalues = ALLOCATE(vm, LambUpvalue *, closure->upvalue_count);
+    closure->upvalues =(LambUpvalue **)vm.gc.alloc(vm, sizeof(LambUpvalue *), closure->upvalue_count);
     for (int i = 0; i < closure->upvalue_count; i++) {
         closure->upvalues[i] = NULL;
     }
@@ -123,8 +122,8 @@ void object_free(Vm& vm, Object *obj) {
             printf("Freeing %p of type OtString [%s]\n", obj, ((LambString *)obj)->chars);
 #endif
             LambString *st = (LambString *)obj;
-            FREE_ARRAY(vm, char, st->chars, st->len + 1);
-            FREE(vm, LambString, st);
+            vm.gc.free_array(vm, (char*)st->chars, sizeof(char), st->len + 1);
+            vm.gc.free(vm, st, sizeof(LambString));
             break;
         }
         case OtArray: {
@@ -133,7 +132,7 @@ void object_free(Vm& vm, Object *obj) {
 #endif
             LambArray *arr = (LambArray *)obj;
             arr->items.destroy(vm);
-            FREE(vm, LambArray, arr);
+            vm.gc.free(vm, arr, sizeof(LambArray));
             break;
         }
         case OtFunc: {
@@ -142,14 +141,14 @@ void object_free(Vm& vm, Object *obj) {
 #endif
             LambFunc *func = (LambFunc *)obj;
             func->chunk.destroy(vm);
-            FREE(vm, LambFunc, func);
+            vm.gc.free(vm, func, sizeof(LambFunc));
             break;
         }
         case OtNative: {
 #ifdef DEBUG_LOG_GC
             printf("Freeing %p of type OtNative\n", obj);
 #endif
-            FREE(vm, NativeFunc, obj);
+            vm.gc.free(vm, (NativeFunc*)obj, sizeof(NativeFunc));
             break;
         }
         case OtClosure: {
@@ -157,15 +156,15 @@ void object_free(Vm& vm, Object *obj) {
             printf("Freeing %p of type OtClosure\n", obj);
 #endif
             LambClosure *closure = (LambClosure *)obj;
-            FREE_ARRAY(vm, LambUpvalue *, closure->upvalues, closure->upvalue_count);
-            FREE(vm, LambClosure, closure);
+            vm.gc.free_array(vm, closure->upvalues, sizeof(LambUpvalue *), closure->upvalue_count);
+            vm.gc.free(vm, closure, sizeof(LambClosure));
             break;
         }
         case OtUpvalue: {
 #ifdef DEBUG_LOG_GC
             printf("Freeing %p of type OtUpvalue\n", obj);
 #endif
-            FREE(vm, LambUpvalue, obj);
+            vm.gc.free(vm, (LambUpvalue*)obj, sizeof(LambUpvalue));
             break;
         }
     }
@@ -176,7 +175,7 @@ bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
 LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     i32 len = lhs->len + rhs->len;
 
-    string chars = ALLOCATE(vm, char, len + 1);
+    char* chars = (char*)vm.gc.alloc(vm, sizeof(char), len + 1);
     strcpy(chars, lhs->chars);
     strcpy(chars + lhs->len, rhs->chars);
     chars[len] = '\0';

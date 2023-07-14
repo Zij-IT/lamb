@@ -1,34 +1,59 @@
 #include "gc.hpp"
 #include "../vm/vm.hpp"
+#include "compiler.hpp"
 #include <iostream>
 
 #define GC_HEAP_GROWTH_FACTOR 2
 #define KB 1024
 
-void* MarkAndSweep::reallocate(Vm& vm, void *ptr, size_t old_size, size_t new_size) {
-    if (new_size > old_size) {
-        vm.bytes_allocated += new_size - old_size;
-    } else {
-        vm.bytes_allocated -= old_size - new_size;
-    }
-
-    if (new_size == 0) {
-        free(ptr);
-        return NULL;
-    }
+void* MarkAndSweep::alloc(Vm& vm, size_t t_size, size_t count) {
+    auto size = count * t_size;
+    vm.bytes_allocated += size;
 
     if (vm.bytes_allocated > vm.next_collection) {
         vm.next_collection = vm.bytes_allocated * GC_HEAP_GROWTH_FACTOR;
         this->collect(vm);
     }
 
-    void *result = realloc(ptr, new_size);
+    auto result = malloc(size);
     if (result == NULL) {
-        fprintf(stderr, "[Lamb]: Gc: Reallocation failed... exiting...");
+        fprintf(stderr, "[Lamb]: Gc: Allocation failed... exiting...");
         exit(1);
     }
 
     return result;
+}
+
+void* MarkAndSweep::grow_array(Vm& vm, void* ptr, size_t t_size, size_t old_count, size_t new_count) {
+    if (new_count < old_count) {
+        return ptr;
+    }
+    
+    auto size = new_count * t_size;
+    vm.bytes_allocated += size - old_count * t_size;
+
+    if (vm.bytes_allocated > vm.next_collection) {
+        vm.next_collection = vm.bytes_allocated * GC_HEAP_GROWTH_FACTOR;
+        this->collect(vm);
+    }
+
+    auto result = realloc(ptr, size);
+    if (result == NULL) {
+        fprintf(stderr, "[Lamb]: Gc: Allocation failed... exiting...");
+        exit(1);
+    }
+
+    return result;
+}
+
+void MarkAndSweep::free(Vm& vm, void* ptr, size_t t_size) {
+    vm.bytes_allocated -= t_size;
+   ::free(ptr);
+}
+
+void MarkAndSweep::free_array(Vm& vm, void* ptr, size_t t_size, size_t len) {
+    vm.bytes_allocated -= t_size * len;
+    ::free(ptr);
 }
 
 void MarkAndSweep::collect(Vm& vm) {
@@ -75,13 +100,6 @@ void MarkAndSweep::mark_table(Vm& vm, Table& table) {
         Entry *entry = &table.entries[i];
         mark_object(vm, (Object *)entry->key);
         mark_value(vm, &entry->val);
-    }
-}
-
-template<typename T>
-void MarkAndSweep::mark_gcvec(Vm& vm, GcVec<T>& vec) {
-    for (i32 i = 0; i < vec.len(); i++) {
-        this->mark_value(vm, vec);
     }
 }
 

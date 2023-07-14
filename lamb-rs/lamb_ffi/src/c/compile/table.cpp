@@ -1,6 +1,5 @@
 #include "table.hpp"
 #include "../debug/debug.hpp"
-#include "memory.hpp"
 #include "../vm/vm.hpp"
 
 #include <stdio.h>
@@ -13,7 +12,7 @@
 static bool is_tombstone(Entry *entry) { return entry->val.is_bool() && entry->val.as.boolean; }
 
 static void table_adjust_capacity(Vm& vm, Table *table, i32 capacity) {
-    Entry *entries = ALLOCATE(vm, Entry, capacity);
+    auto entries = (Entry*)vm.gc.alloc(vm, sizeof(Entry), capacity);
 
     // This table is required due to table_find call below, and has no other
     // function hence the length being set to 0 despite entries being filled
@@ -39,7 +38,7 @@ static void table_adjust_capacity(Vm& vm, Table *table, i32 capacity) {
         table->len++;
     }
 
-    FREE_ARRAY(vm, Entry, table->entries, table->capacity);
+    vm.gc.free_array(vm, table->entries, sizeof(Entry), table->capacity);
     table->entries = entries;
     table->capacity = capacity;
 }
@@ -57,7 +56,7 @@ Table::Table(i32 len, i32 capacity, Entry* entries) {
 }
 
 void Table::destroy(Vm& vm) {
-    FREE_ARRAY(vm, Entry, this->entries, this->capacity);
+    vm.gc.free_array(vm, this->entries, sizeof(Entry), this->capacity);
     this->entries = nullptr;
     this->capacity = 0;
     this->len = 0;

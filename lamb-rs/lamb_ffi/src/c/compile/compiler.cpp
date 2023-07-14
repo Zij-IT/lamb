@@ -1,6 +1,5 @@
 #include "compiler.hpp"
 #include "chunk.hpp"
-#include "memory.hpp"
 #include "table.hpp"
 #include <stdlib.h>
 

@@ -4,7 +4,6 @@
 #include "../vm/vm.hpp"
 #include "./chunk.hpp"
 #include "./value.hpp"
-#include "memory.hpp"
 
 Chunk::Chunk() {
     this->bytes = GcVec<u8>();

@@ -2,7 +2,6 @@
 #define VECTOR_HEADER
 
 #include "../types.hpp"
-#include "memory.hpp"
 #include <optional>
 #include <algorithm>
 

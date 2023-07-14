@@ -1,5 +1,4 @@
 #include "gcvec.hpp"
-#include "memory.hpp"
 #include "compiler.hpp"
 #include "../vm/vm.hpp"
 
@@ -15,7 +14,7 @@ void GcVec<T>::push(Vm& vm, T item) {
     if (this->capacity < this->_len + 1) {
         i32 old_cap = this->capacity;
         this->capacity = GROW_CAPACITY(old_cap);
-        this->values = GROW_ARRAY(vm, T, this->values, old_cap, this->capacity);;
+        this->values = (T*)vm.gc.grow_array(vm, this->values, sizeof(T), old_cap, this->capacity);
     }
 
     this->values[this->_len] = item;
@@ -24,7 +23,7 @@ void GcVec<T>::push(Vm& vm, T item) {
 
 template<typename T>
 void GcVec<T>::destroy(Vm& vm) {
-    FREE_ARRAY(vm, T, this->values, this->capacity);
+    vm.gc.free_array(vm, this->values, sizeof(T), this->capacity);
     this->_len = 0;
     this->capacity = 0;
     this->values = nullptr;
