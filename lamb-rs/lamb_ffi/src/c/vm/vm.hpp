@@ -34,10 +34,7 @@ struct Vm {
     Table globals;
 
     MarkAndSweep gc;
-    std::vector<Object*> gray_stack;
     Compiler *curr_compiler;
-    u64 bytes_allocated;
-    u64 next_collection;
 
     Value *stack_top;
     Value stack[MAX_VALUES];
@@ -47,7 +44,6 @@ struct Vm {
     u16 frame_count;
 
     LambUpvalue *open_upvalues;
-    Object *objects;
 
     VmOptions options;
 };

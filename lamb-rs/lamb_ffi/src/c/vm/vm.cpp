@@ -71,10 +71,7 @@ static Value *vm_peekn_stack(Vm& vm, i32 n) {
 
 void vm_init(Vm& vm, VmOptions options) {
     vm.frame_count = 0;
-    vm.bytes_allocated = 0;
-    vm.next_collection = 1024 * 1024;
     vm.stack_top = vm.stack;
-    vm.objects = NULL;
     vm.open_upvalues = NULL;
     vm.curr_compiler = NULL;
     vm.options = options;
@@ -500,13 +497,7 @@ InterpretResult vm_run(Vm& vm) {
 }
 
 void vm_free(Vm& vm) {
-    Object *obj = vm.objects;
-    while (obj != NULL) {
-        Object *next = obj->next;
-        object_free(vm, obj);
-        obj = next;
-    }
-
+    vm.gc.destroy(vm);
     vm.strings.destroy(vm);
     vm.globals.destroy(vm);
 }

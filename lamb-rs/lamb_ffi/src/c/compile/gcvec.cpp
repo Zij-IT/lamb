@@ -23,7 +23,7 @@ void GcVec<T>::push(Vm& vm, T item) {
 
 template<typename T>
 void GcVec<T>::destroy(Vm& vm) {
-    vm.gc.free_array(vm, this->values, sizeof(T), this->capacity);
+    vm.gc.free_array(this->values, sizeof(T), this->capacity);
     this->_len = 0;
     this->capacity = 0;
     this->values = nullptr;

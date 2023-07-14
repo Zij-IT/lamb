@@ -38,7 +38,7 @@ static void table_adjust_capacity(Vm& vm, Table *table, i32 capacity) {
         table->len++;
     }
 
-    vm.gc.free_array(vm, table->entries, sizeof(Entry), table->capacity);
+    vm.gc.free_array(table->entries, sizeof(Entry), table->capacity);
     table->entries = entries;
     table->capacity = capacity;
 }
@@ -56,7 +56,7 @@ Table::Table(i32 len, i32 capacity, Entry* entries) {
 }
 
 void Table::destroy(Vm& vm) {
-    vm.gc.free_array(vm, this->entries, sizeof(Entry), this->capacity);
+    vm.gc.free_array(this->entries, sizeof(Entry), this->capacity);
     this->entries = nullptr;
     this->capacity = 0;
     this->len = 0;
