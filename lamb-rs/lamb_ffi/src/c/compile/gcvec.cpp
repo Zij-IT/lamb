@@ -1,6 +1,7 @@
 #include "gcvec.hpp"
 #include "memory.hpp"
 #include "compiler.hpp"
+#include "../vm/vm.hpp"
 
 template<typename T> 
 GcVec<T>::GcVec() {

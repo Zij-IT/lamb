@@ -6,6 +6,7 @@
 #include "../compile/chunk.hpp"
 #include "../compile/compiler.hpp"
 #include "../compile/table.hpp"
+#include "../compile/gc.hpp"
 
 #define MAX_FRAMES 1024
 #define MAX_VALUES (MAX_FRAMES * UINT8_MAX)
@@ -32,6 +33,7 @@ struct Vm {
     Table strings;
     Table globals;
 
+    MarkAndSweep gc;
     std::vector<Object*> gray_stack;
     Compiler *curr_compiler;
     u64 bytes_allocated;

@@ -1,6 +1,8 @@
 #include "table.hpp"
 #include "../debug/debug.hpp"
 #include "memory.hpp"
+#include "../vm/vm.hpp"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
