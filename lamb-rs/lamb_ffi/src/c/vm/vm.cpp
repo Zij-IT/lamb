@@ -25,6 +25,20 @@
     runtime_error("Unary '" op_str "' operator is not defined for values of type %s",              \
                   rhs.kind_as_cstr());
 
+// This function is not a member because for whatever reason the compiler can't properly optimize
+// it's use in Vm::run as well as it can when the function is used as a static function. Performance
+// was ~15% worse for calculating the 35th fibonacci number. Consistently 2.6 to 2.3 seconds, with
+// flamegraph showing this function taking up lots of time. I assume that the compiler doesn't inline
+// the method call, as it post move is no longer visible in a flamegraph.
+static void close_upvalues(Vm& vm, Value *last) {
+    while (vm.open_upvalues != NULL && vm.open_upvalues->location >= last) {
+        LambUpvalue *upvalue = vm.open_upvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        vm.open_upvalues = upvalue->next;
+    }
+}
+
 LambUpvalue *Vm::capture_upvalue(Value *local) {
     LambUpvalue *prev_upvalue = NULL;
     LambUpvalue *curr_upvalue = this->open_upvalues;
@@ -48,16 +62,7 @@ LambUpvalue *Vm::capture_upvalue(Value *local) {
     return created_upvalue;
 }
 
-void Vm::close_upvalues(Value *last) {
-    while (this->open_upvalues != NULL && this->open_upvalues->location >= last) {
-        LambUpvalue *upvalue = this->open_upvalues;
-        upvalue->closed = *upvalue->location;
-        upvalue->location = &upvalue->closed;
-        this->open_upvalues = upvalue->next;
-    }
-}
-
-Value *Vm::peek_stack(u8 n) {
+constexpr Value *Vm::peek_stack(u8 n) const {
     vm_assert("Peeking non-stack bytes", this->stack_top != this->stack);
     return this->stack_top - n - 1;
 }
@@ -450,7 +455,7 @@ InterpretResult Vm::run() {
             }
             case OpReturn: {
                 Value ret = POP();
-                this->close_upvalues(frame->slots);
+                close_upvalues(*this, frame->slots);
                 this->stack_top = frame->slots;
                 this->frame_count--;
                 if (this->frame_count == 0) {
@@ -467,7 +472,7 @@ InterpretResult Vm::run() {
                 break;
             }
             case OpCloseValue: {
-                this->close_upvalues(this->stack_top - 1);
+                close_upvalues(*this, this->stack_top - 1);
                 DROP();
                 break;
             }

@@ -58,13 +58,9 @@ struct Vm {
     InterpretResult run();
 
   private:
-    Value* peek_stack(u8 n = 0);
+    constexpr Value* peek_stack(u8 n = 0) const;
     
-    void drop_top_n(u8 n);
-
     LambUpvalue *capture_upvalue(Value *local);
-
-    void close_upvalues(Value *last);
 };
 
 #endif // VM_HEADER
