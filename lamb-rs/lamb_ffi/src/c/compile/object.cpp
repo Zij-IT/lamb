@@ -27,9 +27,9 @@ LambString* LambString::from_cstr(Vm&vm, char const* chars) {
     }
    
     auto lamb_str = LambString::alloc(vm, strdup(chars), len, hash);
-    vm_push_stack(vm, Value::from_obj((Object *)lamb_str));
+    vm.push_stack(Value::from_obj((Object *)lamb_str));
     vm.strings.insert(vm, lamb_str, Value::from_bool(false));
-    vm_pop_stack(vm);
+    vm.pop_stack();
 
     return lamb_str;
 }
@@ -51,9 +51,9 @@ LambString* LambString::concat(Vm& vm, LambString* rhs) {
     }
 
     auto ret = LambString::alloc(vm, chars, len, hash);
-    vm_push_stack(vm, Value::from_obj((Object *)(ret)));
+    vm.push_stack(Value::from_obj((Object *)(ret)));
     vm.strings.insert(vm, ret, Value::from_bool(false));
-    vm_pop_stack(vm);
+    vm.pop_stack();
 
     return ret;
 } 
@@ -188,9 +188,9 @@ LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     }
 
     auto ret = LambString::alloc(vm, chars, len, hash);
-    vm_push_stack(vm, Value::from_obj((Object *)(ret)));
+    vm.push_stack(Value::from_obj((Object *)(ret)));
     vm.strings.insert(vm, ret, Value::from_bool(false));
-    vm_pop_stack(vm);
+    vm.pop_stack();
 
     return ret;
 }

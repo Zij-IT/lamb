@@ -49,8 +49,8 @@ void Chunk::write_const(Vm& vm, Value val) {
 }
 
 i32 Chunk::add_const(Vm& vm, Value val) {
-    vm_push_stack(vm, val);
+    vm.push_stack(val);
     this->constants.push(vm, val);
-    vm_pop_stack(vm);
+    vm.pop_stack();
     return this->constants.len() - 1;
 }

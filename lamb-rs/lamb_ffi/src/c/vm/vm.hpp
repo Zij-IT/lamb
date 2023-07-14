@@ -46,16 +46,25 @@ struct Vm {
     LambUpvalue *open_upvalues;
 
     VmOptions options;
+
+    Vm(VmOptions options);
+
+    void destroy();
+
+    void push_stack(Value val);
+
+    Value pop_stack();
+
+    InterpretResult run();
+
+  private:
+    Value* peek_stack(u8 n = 0);
+    
+    void drop_top_n(u8 n);
+
+    LambUpvalue *capture_upvalue(Value *local);
+
+    void close_upvalues(Value *last);
 };
-
-void vm_init(Vm& vm, VmOptions options);
-
-void vm_free(Vm& vm);
-
-void vm_push_stack(Vm& vm, Value val);
-
-Value vm_pop_stack(Vm& vm);
-
-InterpretResult vm_run(Vm& vm);
 
 #endif // VM_HEADER

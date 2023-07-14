@@ -25,9 +25,9 @@
     runtime_error("Unary '" op_str "' operator is not defined for values of type %s",              \
                   rhs.kind_as_cstr());
 
-static LambUpvalue *capture_upvalue(Vm& vm, Value *local) {
+LambUpvalue *Vm::capture_upvalue(Value *local) {
     LambUpvalue *prev_upvalue = NULL;
-    LambUpvalue *curr_upvalue = vm.open_upvalues;
+    LambUpvalue *curr_upvalue = this->open_upvalues;
 
     while (curr_upvalue != NULL && curr_upvalue->location > local) {
         prev_upvalue = curr_upvalue;
@@ -38,9 +38,9 @@ static LambUpvalue *capture_upvalue(Vm& vm, Value *local) {
         return curr_upvalue;
     }
 
-    auto created_upvalue = LambUpvalue::alloc(vm, local, curr_upvalue);
+    auto created_upvalue = LambUpvalue::alloc(*this, local, curr_upvalue);
     if (prev_upvalue == NULL) {
-        vm.open_upvalues = created_upvalue;
+        this->open_upvalues = created_upvalue;
     } else {
         prev_upvalue->next = created_upvalue;
     }
@@ -48,58 +48,50 @@ static LambUpvalue *capture_upvalue(Vm& vm, Value *local) {
     return created_upvalue;
 }
 
-static void close_upvalues(Vm& vm, Value *last) {
-    while (vm.open_upvalues != NULL && vm.open_upvalues->location >= last) {
-        LambUpvalue *upvalue = vm.open_upvalues;
+void Vm::close_upvalues(Value *last) {
+    while (this->open_upvalues != NULL && this->open_upvalues->location >= last) {
+        LambUpvalue *upvalue = this->open_upvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
-        vm.open_upvalues = upvalue->next;
+        this->open_upvalues = upvalue->next;
     }
 }
 
-static Value *vm_peek_stack(Vm& vm) {
-    vm_assert("Peeking non-stack bytes", vm.stack_top != vm.stack);
-
-    return vm.stack_top - 1;
+Value *Vm::peek_stack(u8 n) {
+    vm_assert("Peeking non-stack bytes", this->stack_top != this->stack);
+    return this->stack_top - n - 1;
 }
 
-static Value *vm_peekn_stack(Vm& vm, i32 n) {
-    vm_assert("Peeking non-stack bytes", vm.stack_top != vm.stack - n);
+Vm::Vm(VmOptions options) {
+    this->frame_count = 0;
+    this->stack_top = this->stack;
+    this->open_upvalues = NULL;
+    this->curr_compiler = NULL;
+    this->options = options;
+    this->saved_value = Value::nil();
 
-    return vm.stack_top - n - 1;
-}
-
-void vm_init(Vm& vm, VmOptions options) {
-    vm.frame_count = 0;
-    vm.stack_top = vm.stack;
-    vm.open_upvalues = NULL;
-    vm.curr_compiler = NULL;
-    vm.options = options;
-    vm.saved_value = Value::nil();
-
-    vm.strings = Table();
-    vm.globals = Table();
+    this->strings = Table();
+    this->globals = Table();
 
     srand(time(NULL));
-    set_natives(vm);
+    set_natives(*this);
 }
 
-void vm_push_stack(Vm& vm, Value val) {
-    vm_assert("Stack overflow", vm.stack_top - vm.stack != MAX_VALUES);
+void Vm::push_stack(Value val) {
+    vm_assert("Stack overflow", this->stack_top - this->stack != MAX_VALUES);
 
-    *vm.stack_top = val;
-    vm.stack_top += 1;
+    *this->stack_top = val;
+    this->stack_top += 1;
 }
 
-Value vm_pop_stack(Vm& vm) {
-    vm_assert("Stack underflow", vm.stack_top != vm.stack);
-
-    vm.stack_top -= 1;
-    return *vm.stack_top;
+Value Vm::pop_stack() {
+    vm_assert("Stack underflow", this->stack_top != this->stack);
+    this->stack_top -= 1;
+    return *this->stack_top;
 }
 
-InterpretResult vm_run(Vm& vm) {
-    Callframe *frame = &vm.frames[vm.frame_count - 1];
+InterpretResult Vm::run() {
+    Callframe *frame = &this->frames[this->frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
@@ -107,16 +99,16 @@ InterpretResult vm_run(Vm& vm) {
 #define READ_CONSTANT()                                                                            \
     (frame->ip += 1, frame->closure->function->chunk.constants[READ_SHORT()])
 
-#define PUSH(val) (*vm.stack_top = val, vm.stack_top += 1)
+#define PUSH(val) (*this->stack_top = val, this->stack_top += 1)
 
-#define POP() (*--vm.stack_top)
+#define POP() (*--this->stack_top)
 
-#define DROP() (vm.stack_top -= 1)
+#define DROP() (this->stack_top -= 1)
 
 #define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
     do {                                                                                           \
         Value rhs = POP();                                                                         \
-        Value *lhs = vm_peek_stack(vm);                                                            \
+        Value *lhs = vm->peek_stack();                                                            \
                                                                                                    \
         if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
             lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
@@ -130,7 +122,7 @@ InterpretResult vm_run(Vm& vm) {
 #define BINARY_INT_OP(vm, op)                                                                      \
     do {                                                                                           \
         Value rhs = POP();                                                                         \
-        Value *lhs = vm_peek_stack(vm);                                                            \
+        Value *lhs = vm->peek_stack();                                                            \
                                                                                                    \
         if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
             lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
@@ -147,9 +139,9 @@ InterpretResult vm_run(Vm& vm) {
             }
             case OpDefineGlobal: {
                 LambString *ident = (LambString *)READ_CONSTANT().as.obj;
-                Value *val = vm_peek_stack(vm);
+                Value *val = this->peek_stack();
 
-                if (!vm.globals.insert(vm, ident, *val)) {
+                if (!this->globals.insert(*this, ident, *val)) {
                     runtime_error("Multiple definitions found for global %s", ident->chars);
                 }
 
@@ -160,7 +152,7 @@ InterpretResult vm_run(Vm& vm) {
                 Value val = READ_CONSTANT();
                 LambString *ident = (LambString *)val.as.obj;
 
-                auto global = vm.globals.get(ident);
+                auto global = this->globals.get(ident);
                 if (!global) {
                     runtime_error("'%s' does not have an associated binding", ident->chars);
                 }
@@ -180,13 +172,13 @@ InterpretResult vm_run(Vm& vm) {
             }
             case OpJumpIfFalse: {
                 u16 offset = READ_SHORT();
-                if (!vm_peek_stack(vm)->is_bool()) {
+                if (!this->peek_stack()->is_bool()) {
                     runtime_error("A branching expression '&&', '||' and 'if' cannot "
                                   "branch with expressions of type %s",
                                   kind_as_cstr(*vm_peek_stack(vm)));
                 }
 
-                if (!vm_peek_stack(vm)->as.boolean) {
+                if (!this->peek_stack()->as.boolean) {
                     frame->ip += offset;
                 }
                 break;
@@ -197,7 +189,7 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpNumNeg: {
-                Value *val = vm_peek_stack(vm);
+                Value *val = this->peek_stack();
                 if (val->kind == VkInt) {
                     val->as.intn = -val->as.intn;
                 } else if (val->kind == VkDouble) {
@@ -208,7 +200,7 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpBinNeg: {
-                Value *val = vm_peek_stack(vm);
+                Value *val = this->peek_stack();
                 if (val->kind == VkInt) {
                     val->as.intn = ~val->as.intn;
                 } else {
@@ -217,7 +209,7 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpLogNeg: {
-                Value *val = vm_peek_stack(vm);
+                Value *val = this->peek_stack();
                 if (val->kind == VkBool) {
                     val->as.boolean = !val->as.boolean;
                 } else {
@@ -226,8 +218,8 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpAdd: {
-                Value *lhs = vm_peekn_stack(vm, 1);
-                Value *rhs = vm_peek_stack(vm);
+                Value *lhs = this->peek_stack(1);
+                Value *rhs = this->peek_stack();
                 if (rhs->kind == lhs->kind && rhs->kind == VkInt) {
                     lhs->as.intn = lhs->as.intn + rhs->as.intn;
                     DROP();
@@ -238,7 +230,7 @@ InterpretResult vm_run(Vm& vm) {
                            rhs->is_object() && rhs->as.obj->is(OtString)) {
                     auto left = (LambString*)lhs->as.obj;
                     auto right = (LambString*)rhs->as.obj;
-                    auto result = left->concat(vm, right);
+                    auto result = left->concat(*this, right);
                     
                     DROP();
                     DROP();
@@ -249,18 +241,18 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpSub:
-                BINARY_INT_DOUBLE_OP(vm, -);
+                BINARY_INT_DOUBLE_OP(this, -);
                 break;
             case OpMul:
-                BINARY_INT_DOUBLE_OP(vm, *);
+                BINARY_INT_DOUBLE_OP(this, *);
                 break;
             case OpDiv:
-                BINARY_INT_DOUBLE_OP(vm, /);
+                BINARY_INT_DOUBLE_OP(this, /);
                 break;
             // This operator must be expanded to escape % in the printf
             case OpMod: {
                 Value rhs = POP();
-                Value *lhs = vm_peek_stack(vm);
+                Value *lhs = this->peek_stack();
                 if (rhs.kind == lhs->kind && rhs.kind == VkInt) {
                     lhs->as.intn = lhs->as.intn % rhs.as.intn;
                 } else {
@@ -269,19 +261,19 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpBinAnd:
-                BINARY_INT_OP(vm, &);
+                BINARY_INT_OP(this, &);
                 break;
             case OpBinOr:
-                BINARY_INT_OP(vm, |);
+                BINARY_INT_OP(this, |);
                 break;
             case OpBinXor:
-                BINARY_INT_OP(vm, ^);
+                BINARY_INT_OP(this, ^);
                 break;
             case OpLShift:
-                BINARY_INT_OP(vm, <<);
+                BINARY_INT_OP(this, <<);
                 break;
             case OpRShift:
-                BINARY_INT_OP(vm, >>);
+                BINARY_INT_OP(this, >>);
                 break;
             case OpEq: {
                 Value rhs = POP();
@@ -347,10 +339,10 @@ InterpretResult vm_run(Vm& vm) {
                 i32 len = POP().as.intn;
                 GcVec<Value> items;
                 for (i32 i = 0; i < len; i++) {
-                    items.push(vm, POP());
+                    items.push(*this, POP());
                 }
 
-                auto arr = LambArray::alloc(vm, items);
+                auto arr = LambArray::alloc(*this, items);
                 PUSH(Value::from_obj((Object *)arr));
                 break;
             }
@@ -399,7 +391,7 @@ InterpretResult vm_run(Vm& vm) {
             }
             case OpCall: {
                 i32 arg_count = READ_CONSTANT().as.intn;
-                Value *callee = vm_peekn_stack(vm, arg_count);
+                Value *callee = this->peek_stack(arg_count);
 
                 if (!callee->is_object()) {
                     runtime_error("Unable to call a value of type %s", kind_as_cstr(*callee));
@@ -413,21 +405,21 @@ InterpretResult vm_run(Vm& vm) {
                                           closure->function->arity, arg_count);
                         }
 
-                        if (vm.frame_count == MAX_FRAMES) {
+                        if (this->frame_count == MAX_FRAMES) {
                             runtime_error("Callstack overflow");
                         }
 
-                        Callframe *new_frame = &vm.frames[vm.frame_count++];
+                        Callframe *new_frame = &this->frames[this->frame_count++];
                         new_frame->closure = closure;
                         new_frame->ip = closure->function->chunk.bytes.as_raw();
-                        new_frame->slots = vm.stack_top - arg_count - 1;
+                        new_frame->slots = this->stack_top - arg_count - 1;
                         frame = new_frame;
                         break;
                     }
                     case OtNative: {
                         NativeFunc *native = (NativeFunc *)callee->as.obj;
-                        Value result = native->func(arg_count, vm.stack_top - arg_count);
-                        vm.stack_top -= arg_count + 1;
+                        Value result = native->func(arg_count, this->stack_top - arg_count);
+                        this->stack_top -= arg_count + 1;
                         PUSH(result);
                         break;
                     }
@@ -440,7 +432,7 @@ InterpretResult vm_run(Vm& vm) {
             }
             case OpClosure: {
                 LambFunc *function = (LambFunc *)READ_CONSTANT().as.obj;
-                auto closure = LambClosure::alloc(vm, function);
+                auto closure = LambClosure::alloc(*this, function);
                 PUSH(Value::from_obj((Object *)closure));
 
                 for (i32 i = 0; i < closure->upvalue_count; i++) {
@@ -448,7 +440,7 @@ InterpretResult vm_run(Vm& vm) {
                     u8 index = READ_BYTE();
 
                     if (is_local) {
-                        closure->upvalues[i] = capture_upvalue(vm, frame->slots + index);
+                        closure->upvalues[i] = this->capture_upvalue(frame->slots + index);
                     } else {
                         closure->upvalues[i] = frame->closure->upvalues[index];
                     }
@@ -458,15 +450,15 @@ InterpretResult vm_run(Vm& vm) {
             }
             case OpReturn: {
                 Value ret = POP();
-                close_upvalues(vm, frame->slots);
-                vm.stack_top = frame->slots;
-                vm.frame_count--;
-                if (vm.frame_count == 0) {
-                    vm_assert("Stack is empty upon ending script", vm.stack_top == vm.stack);
+                this->close_upvalues(frame->slots);
+                this->stack_top = frame->slots;
+                this->frame_count--;
+                if (this->frame_count == 0) {
+                    vm_assert("Stack is empty upon ending script", this->stack_top == this->stack);
                     return InterpretOk;
                 }
 
-                frame = &vm.frames[vm.frame_count - 1];
+                frame = &this->frames[this->frame_count - 1];
                 PUSH(ret);
                 break;
             }
@@ -475,31 +467,31 @@ InterpretResult vm_run(Vm& vm) {
                 break;
             }
             case OpCloseValue: {
-                close_upvalues(vm, vm.stack_top - 1);
+                this->close_upvalues(this->stack_top - 1);
                 DROP();
                 break;
             }
             case OpDup: {
-                Value *ret = vm_peek_stack(vm);
+                Value *ret = this->peek_stack();
                 PUSH(*ret);
                 break;
             }
             case OpSaveValue: {
-                vm.saved_value = POP();
+                this->saved_value = POP();
                 break;
             }
             case OpUnsaveValue: {
-                PUSH(vm.saved_value);
+                PUSH(this->saved_value);
                 break;
             }
         }
     }
 }
 
-void vm_free(Vm& vm) {
-    vm.gc.destroy(vm);
-    vm.strings.destroy(vm);
-    vm.globals.destroy(vm);
+void Vm::destroy() {
+    this->globals.destroy(*this);
+    this->strings.destroy(*this);
+    this->gc.destroy(*this);
 }
 
 #undef BINARY_INT_DOUBLE_OP

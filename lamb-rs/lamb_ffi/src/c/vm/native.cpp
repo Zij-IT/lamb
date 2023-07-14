@@ -8,12 +8,12 @@
 
 static void define_native(Vm& vm, char const* fn_name, CFunc function) {
     auto interned = LambString::from_cstr(vm, fn_name);
-    vm_push_stack(vm, Value::from_obj((Object *)interned));
-    vm_push_stack(vm, Value::from_obj((Object *)NativeFunc::alloc(vm, function)));
+    vm.push_stack(Value::from_obj((Object *)interned));
+    vm.push_stack(Value::from_obj((Object *)NativeFunc::alloc(vm, function)));
     vm.globals.insert(vm, (LambString *)(vm.stack[0].as.obj), vm.stack[1]);
 
-    vm_pop_stack(vm);
-    vm_pop_stack(vm);
+    vm.pop_stack();
+    vm.pop_stack();
 }
 static Value lamb_print(i32 arg_count, Value *args) {
     if (arg_count != 0) {
