@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../debug/debug.hpp"
 #include "ast.hpp"
 #include "chunk.hpp"
 #include "misc.hpp"
@@ -144,7 +143,8 @@ static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *no
     func_comp.chunk().write(vm, OpReturn);
 
     if (vm.options.print_fn_chunks) {
-        chunk_debug(func_comp.chunk(), "Function Chunk");
+        auto st = func_comp.chunk().to_string();
+        printf("%s", st.c_str());
     }
 
     write_as_closure(vm, &func_comp);
@@ -175,8 +175,7 @@ static CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode
     return CarOk;
 }
 
-static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *first, AstNode *second,
-                                        char const* name) {
+static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *first, AstNode *second) {
     // Turns: `f1 .> f2` or `f2 <. f1` into:
     // result := fn(x) -> f2(f1(x));
     Block block = {
@@ -219,7 +218,8 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
     compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp.function));
 
     if (vm.options.print_fn_chunks) {
-        chunk_debug(func_comp.chunk(), name);
+        auto st = func_comp.chunk().to_string();
+        printf("%s", st.c_str());
     }
 
     for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
@@ -454,14 +454,14 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
 
-            compile_compose(vm, compiler, lhs, rhs, "BinaryLCompose");
+            compile_compose(vm, compiler, lhs, rhs);
             STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryRCompose: {
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
-            compile_compose(vm, compiler, rhs, lhs, "BinaryRCompose");
+            compile_compose(vm, compiler, rhs, lhs);
             STACK_DIFF(compiler, -1);
             break;
         }

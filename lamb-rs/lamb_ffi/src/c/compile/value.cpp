@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 
 #include "./object.hpp"
 #include "./value.hpp"
@@ -139,4 +140,18 @@ constexpr char const* Value::kind_as_cstr() const {
 
     fprintf(stderr, "Unknown kind value: %d", this->kind);
     return "unknown";
+}
+
+std::string Value::to_string() const {
+    std::ostringstream out;
+    switch(this->kind) {
+        case VkBool:   out << (this->as.boolean ? "true" : "false"); break;
+        case VkInt:    out << this->as.intn;                         break;
+        case VkDouble: out << this->as.doubn;                        break;
+        case VkChar:   out << this->as.ch;                           break;
+        case VkObj:    out << this->as.obj->to_string();             break;
+        case VkNil:    out << "nil";                                 break;
+    }
+
+    return out.str();
 }

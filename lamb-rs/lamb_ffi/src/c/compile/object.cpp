@@ -1,11 +1,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 
-#include "../debug/debug.hpp"
 #include "../vm/vm.hpp"
 #include "misc.hpp"
 #include "object.hpp"
+
+std::string Object::to_string() const {
+    std::ostringstream out;
+    switch(this->type) {
+        case OtString:
+            out << "\"" << ((LambString*)(this))->chars << "\"";
+            break;
+        case OtArray: {
+            auto arr = (LambArray*)this;
+            out << '[';
+            for (i32 i = 0; i < arr->items.len(); i++) {
+                out << arr->items[i].to_string();
+                if (i != arr->items.len() - 1) {
+                    out << ", ";
+                }
+            }
+            out << ']';
+            break;
+        }
+        case OtFunc: {
+            LambFunc *func = (LambFunc *)this;
+            if (func->name == NULL) {
+                out << "<script>";
+            } else {
+                out << "<fn " << func->name << ">";
+            }
+            break;
+        }
+        case OtNative:
+            out << "<native fn>";
+            break;
+        case OtClosure:
+            out << "<native fn>";
+            break;
+        case OtUpvalue:
+            out << "upvalue";
+            break;
+    }
+
+    return out.str();
+}
 
 LambString* LambString::alloc(Vm& vm, char const* chars, i32 len, u32 hash) {
     auto st = (LambString*)vm.gc.alloc(vm, sizeof(LambString), 1);
@@ -169,8 +210,6 @@ void object_free(Vm& vm, Object *obj) {
         }
     }
 }
-
-bool is_of_type(Object *obj, ObjectType type) { return obj->type == type; }
 
 LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     i32 len = lhs->len + rhs->len;

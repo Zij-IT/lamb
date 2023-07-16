@@ -1,5 +1,4 @@
 #include "table.hpp"
-#include "../debug/debug.hpp"
 #include "../vm/vm.hpp"
 
 #include <stdio.h>

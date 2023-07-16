@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <assert.h>
 
 #include "../compile/value.hpp"
-#include "../debug/debug.hpp"
 #include "native.hpp"
 #include "vm.hpp"
 
+
+#define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 #define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))
 
 #define runtime_error(...)                                                                         \

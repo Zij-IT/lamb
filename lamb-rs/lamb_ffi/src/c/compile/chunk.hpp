@@ -4,6 +4,10 @@
 #include "./value.hpp"
 #include "gcvec.hpp"
 
+#include <string>
+
+typedef std::tuple<std::string, std::optional<std::string>, u32> InstrFormat;
+
 enum OpCode {
     OpConstant,
     OpDefineGlobal,
@@ -58,6 +62,11 @@ struct Chunk {
 
     void write_const(Vm& vm, Value val);
     i32 add_const(Vm& vm, Value val);
+
+    std::string to_string();
+
+  private:
+    std::tuple<std::string, std::optional<std::string>, u32> format_instruction(u32 at);
 };
 
 #endif // CHUNK_HEADER

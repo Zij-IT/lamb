@@ -1,6 +1,8 @@
 #ifndef VALUE_HEADER
 #define VALUE_HEADER
 
+#include <string>
+
 #include "../types.hpp"
 
 // Forward declare from object.h
@@ -75,6 +77,8 @@ struct Value {
     constexpr char const* kind_as_cstr() const;
 
     Order cmp(Value const& rhs) const;
+
+    std::string to_string() const;
 };
 
 #endif // VALUE_HEADER

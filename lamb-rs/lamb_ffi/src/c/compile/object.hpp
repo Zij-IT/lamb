@@ -24,6 +24,8 @@ struct Object {
     bool is_marked;
 
     constexpr bool is(ObjectType type) const { return this->type == type; }
+
+    std::string to_string() const;
 };
 
 struct LambString {

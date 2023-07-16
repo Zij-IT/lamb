@@ -1,7 +1,6 @@
 #include "./ast/ast.hpp"
 #include "./compile/ast.hpp"
 #include "./compile/chunk.hpp"
-#include "./debug/debug.hpp"
 #include "./vm/vm.hpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +40,9 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
         frame->slots = vm.stack;
 
         if (options.print_main_chunk) {
-            chunk_debug(compiler.chunk(), "Script Chunk");
+            printf("\n\n");
+            auto s = compiler.chunk().to_string();
+            printf("%s\n", s.c_str());
         }
 
         vm.run();

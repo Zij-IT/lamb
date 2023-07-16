@@ -1,10 +1,10 @@
 #include "native.hpp"
 #include "../compile/compiler.hpp"
 #include "../compile/misc.hpp"
-#include "../debug/debug.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 static void define_native(Vm& vm, char const* fn_name, CFunc function) {
     auto interned = LambString::from_cstr(vm, fn_name);
@@ -17,7 +17,8 @@ static void define_native(Vm& vm, char const* fn_name, CFunc function) {
 }
 static Value lamb_print(i32 arg_count, Value *args) {
     if (arg_count != 0) {
-        print_value(*args);
+        auto st = args->to_string();
+        printf("%s", st.c_str());
     }
 
     return Value::nil();
@@ -25,7 +26,8 @@ static Value lamb_print(i32 arg_count, Value *args) {
 
 static Value lamb_println(i32 arg_count, Value *args) {
     if (arg_count != 0) {
-        print_value(*args);
+        auto st = args->to_string();
+        printf("%s", st.c_str());
     }
     printf("\n");
     return Value::nil();
@@ -54,13 +56,10 @@ static Value lamb_NATIVE_assert_eq(i32 arg_count, Value *args) {
                 return Value::nil();
             case OrderGreater:
             case OrderLess:
-                // TODO: These should output to stderr
-                printf("Equality assertion failed:");
-                printf("\n * lhs: ");
-                print_value(args[0]);
-                printf("\n * rhs: ");
-                print_value(args[1]);
-                printf("\n");
+                std::cerr << "Equality assertion failed:\n"
+                          << "lhs: " << args[0].to_string()
+                          << "rhs: " << args[1].to_string()
+                          << std::endl;
                 break;
         }
     }

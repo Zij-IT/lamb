@@ -10,7 +10,6 @@ const C_FILES: &[&str] = &[
     "./src/c/compile/gcvec.cpp",
     "./src/c/compile/compiler.cpp",
     "./src/c/compile/misc.cpp",
-    "./src/c/debug/debug.cpp",
     "./src/c/vm/vm.cpp",
     "./src/c/vm/native.cpp",
 ];
