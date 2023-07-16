@@ -1,5 +1,6 @@
+#include <cstdint>
+#include <iostream>
 #include <ostream>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sstream>
 #include <algorithm>
@@ -40,7 +41,7 @@ i32 Chunk::write_jump(Vm& vm, u8 op) {
 void Chunk::patch_jump(i32 offset) {
     i32 jump = this->bytes.len() - offset - 2;
     if (jump > UINT16_MAX) {
-        fprintf(stderr, "COMPILE_ERR: jump exceeds maximal bytes of %d", UINT16_MAX);
+        std::cerr << "COMPILE_ERR: jump exceeds maximal bytes of " << UINT16_MAX << std::endl;
         exit(1);
     }
 
@@ -184,10 +185,10 @@ std::tuple<std::string, std::optional<std::string>, u32> Chunk::format_instructi
         }
     }
 
+    std::cerr << "[Lamb] Internal compilerer error: Missing switch branch for " << offset << std::endl;
+    std::terminate();
+
     #undef JUMP
     #undef CONSTANT
     #undef SIMPLE
-
-    fprintf(stderr, "Missing switch branch for %d\n", offset);
-    std::terminate();
 }

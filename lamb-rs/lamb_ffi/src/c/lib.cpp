@@ -2,7 +2,7 @@
 #include "./compile/ast.hpp"
 #include "./compile/chunk.hpp"
 #include "./vm/vm.hpp"
-#include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 
 extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
@@ -40,16 +40,13 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
         frame->slots = vm.stack;
 
         if (options.print_main_chunk) {
-            printf("\n\n");
-            auto s = compiler.chunk().to_string();
-            printf("%s\n", s.c_str());
+            std::cerr << "\n\n" << compiler.chunk().to_string() << std::endl;
         }
 
         vm.run();
-        printf("\n");
+        std::cout << std::endl;
     } else {
-        printf("Lamb: Your source code contains code that is not able to be "
-               "compiled.\n");
+        std::cerr << "Lamb: Compilation error... no more details :/" << std::endl;
     }
 
     compiler.destroy(vm);

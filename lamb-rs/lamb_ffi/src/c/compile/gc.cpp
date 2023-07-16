@@ -1,7 +1,8 @@
+#include <iostream>
+
 #include "gc.hpp"
 #include "../vm/vm.hpp"
 #include "compiler.hpp"
-#include <iostream>
 
 #define GC_HEAP_GROWTH_FACTOR 2
 #define KB 1024
@@ -17,8 +18,9 @@ void* MarkAndSweep::alloc(Vm& vm, size_t t_size, size_t count) {
 
     auto result = malloc(size);
     if (result == NULL) {
-        fprintf(stderr, "[Lamb]: Gc: Allocation failed... exiting...");
-        exit(1);
+        std::cerr << "[Lamb]: Gc: Attempt to allocate " << size << " bytes failed. Exiting..."
+                  << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     return result;
@@ -44,8 +46,9 @@ void* MarkAndSweep::grow_array(Vm& vm, void* ptr, size_t t_size, size_t old_coun
 
     auto result = realloc(ptr, size);
     if (result == NULL) {
-        fprintf(stderr, "[Lamb]: Gc: Allocation failed... exiting...");
-        exit(1);
+        std::cerr << "[Lamb]: Gc: Attempt to allocate " << size << " bytes failed. Exiting..."
+                  << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     return result;

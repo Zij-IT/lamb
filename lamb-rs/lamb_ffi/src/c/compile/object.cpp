@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstring>
 #include <sstream>
 
 #include "../vm/vm.hpp"
@@ -159,52 +157,34 @@ LambClosure* LambClosure::alloc(Vm& vm, LambFunc* func) {
 void object_free(Vm& vm, Object *obj) {
     switch (obj->type) {
         case OtString: {
-#ifdef DEBUG_LOG_GC
-            printf("Freeing %p of type OtString [%s]\n", obj, ((LambString *)obj)->chars);
-#endif
             LambString *st = (LambString *)obj;
             vm.gc.free_array((char*)st->chars, sizeof(char), st->len + 1);
             vm.gc.free(st, sizeof(LambString));
             break;
         }
         case OtArray: {
-#ifdef DEBUG_LOG_GC
-            printf("Freeing %p of type OtArray\n", obj);
-#endif
             LambArray *arr = (LambArray *)obj;
             arr->items.destroy(vm);
             vm.gc.free(arr, sizeof(LambArray));
             break;
         }
         case OtFunc: {
-#ifdef DEBUG_LOG_GC
-            printf("Freeing %p of type OtFunc\n", obj);
-#endif
             LambFunc *func = (LambFunc *)obj;
             func->chunk.destroy(vm);
             vm.gc.free(func, sizeof(LambFunc));
             break;
         }
         case OtNative: {
-#ifdef DEBUG_LOG_GC
-            printf("Freeing %p of type OtNative\n", obj);
-#endif
             vm.gc.free((NativeFunc*)obj, sizeof(NativeFunc));
             break;
         }
         case OtClosure: {
-#ifdef DEBUG_LOG_GC
-            printf("Freeing %p of type OtClosure\n", obj);
-#endif
             LambClosure *closure = (LambClosure *)obj;
             vm.gc.free_array(closure->upvalues, sizeof(LambUpvalue *), closure->upvalue_count);
             vm.gc.free(closure, sizeof(LambClosure));
             break;
         }
         case OtUpvalue: {
-#ifdef DEBUG_LOG_GC
-            printf("Freeing %p of type OtUpvalue\n", obj);
-#endif
             vm.gc.free((LambUpvalue*)obj, sizeof(LambUpvalue));
             break;
         }

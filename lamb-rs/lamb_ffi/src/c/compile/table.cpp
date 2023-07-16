@@ -1,7 +1,6 @@
 #include "table.hpp"
 #include "../vm/vm.hpp"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <optional>

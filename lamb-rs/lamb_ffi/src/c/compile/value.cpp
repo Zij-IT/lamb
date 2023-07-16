@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <iostream>
 #include <sstream>
 
 #include "./object.hpp"
@@ -103,8 +101,8 @@ Order Value::cmp(Value const& rhs) const {
             }
     }
 
-    fprintf(stderr, "Fallthrough found in switch in %s at %s", __FILE__, __FUNCTION__);
-    return OrderLess;
+    std::cerr << "[Lamb] Internal compiler error: Unknown object type " << this->as.obj->type << std::endl;
+    exit(EXIT_FAILURE);
 }
 
 constexpr char const* Value::kind_as_cstr() const {
@@ -138,8 +136,8 @@ constexpr char const* Value::kind_as_cstr() const {
         }
     }
 
-    fprintf(stderr, "Unknown kind value: %d", this->kind);
-    return "unknown";
+    std::cerr << "[Lamb] Internal compiler error: Unknown kind value: " << this->kind << std::endl;
+    exit(EXIT_FAILURE);
 }
 
 std::string Value::to_string() const {

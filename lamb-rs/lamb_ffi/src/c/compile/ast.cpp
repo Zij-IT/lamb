@@ -1,6 +1,6 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 #include "ast.hpp"
 #include "chunk.hpp"
@@ -31,8 +31,8 @@ static i32 add_upvalue(Compiler *const compiler, i32 index, bool is_local) {
 
     if (index > 255) {
         // TODO: Figure out how to get a dynamic amount of upvalues
-        printf("COMPILER_ERR: Too many upvalues. Max 255...");
-        exit(1);
+        std::cerr << "[Lamb] There exist too many upvalues. Max is 255." << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     for (i32 i = 0; i < count; i++) {
@@ -143,8 +143,7 @@ static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *no
     func_comp.chunk().write(vm, OpReturn);
 
     if (vm.options.print_fn_chunks) {
-        auto st = func_comp.chunk().to_string();
-        printf("%s", st.c_str());
+        std::cerr << func_comp.chunk().to_string() << std::endl;
     }
 
     write_as_closure(vm, &func_comp);
@@ -218,8 +217,7 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
     compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp.function));
 
     if (vm.options.print_fn_chunks) {
-        auto st = func_comp.chunk().to_string();
-        printf("%s", st.c_str());
+        std::cerr << func_comp.chunk().to_string() << std::endl;
     }
 
     for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
@@ -711,8 +709,8 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntNodeList: {
             for (AstNode *stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
                 if (stmt->type != AstntNodeList) {
-                    fprintf(stderr,
-                            "[Lamb] ICE: AstntNodeList->kids[1] is not of type AstntNodeList");
+                    std::cerr << "[Lamb] Internal compiler error: AstNodeList->kids[1] is not of type AstntNodeList"
+                              << std::endl;
                     exit(EXIT_FAILURE);
                 }
 
@@ -721,9 +719,9 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             break;
         }
         default:
-            fprintf(stderr, "Unable to compile AstNode of kind: (%d)", node->type);
-            fprintf(stderr, "Default branch reached while matching on node->type in %s on line %d",
-                    __FILE__, __LINE__);
+            std::cerr << "[Lamb] Internal compiler error: "
+                      << "Unable to compile AstNode of kind: " << node->type
+                      << std::endl;
             return CarUnsupportedAst;
     }
 

@@ -1,7 +1,6 @@
 #include "native.hpp"
 #include "../compile/compiler.hpp"
 #include "../compile/misc.hpp"
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
@@ -17,8 +16,7 @@ static void define_native(Vm& vm, char const* fn_name, CFunc function) {
 }
 static Value lamb_print(i32 arg_count, Value *args) {
     if (arg_count != 0) {
-        auto st = args->to_string();
-        printf("%s", st.c_str());
+        std::cout << args->to_string();
     }
 
     return Value::nil();
@@ -26,10 +24,9 @@ static Value lamb_print(i32 arg_count, Value *args) {
 
 static Value lamb_println(i32 arg_count, Value *args) {
     if (arg_count != 0) {
-        auto st = args->to_string();
-        printf("%s", st.c_str());
+        std::cout << args->to_string() << std::endl;
     }
-    printf("\n");
+
     return Value::nil();
 }
 
@@ -40,9 +37,9 @@ static Value lamb_NATIVE_assert(i32 arg_count, Value *args) {
 
         if (assertion_failed && assertion_explanation) {
             LambString *str = (LambString *)args[1].as.obj;
-            fprintf(stderr, "Assertion failed: %s", str->chars);
+            std::cerr << "Assertion failed: " << str->chars << std::endl;
         } else if (assertion_failed) {
-            fprintf(stderr, "Assertion failed.");
+            std::cerr << "Assertion failed." << std::endl;
         }
     }
 

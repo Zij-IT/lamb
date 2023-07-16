@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -12,6 +11,8 @@
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 #define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))
 
+// TODO: Make these actually useful methods instead of whatever the hell this
+//       is.
 #define runtime_error(...)                                                                         \
     do {                                                                                           \
         return InterpretRuntimeError;                                                              \
@@ -256,7 +257,6 @@ InterpretResult Vm::run() {
             case OpDiv:
                 BINARY_INT_DOUBLE_OP(this, /);
                 break;
-            // This operator must be expanded to escape % in the printf
             case OpMod: {
                 Value rhs = POP();
                 Value *lhs = this->peek_stack();
