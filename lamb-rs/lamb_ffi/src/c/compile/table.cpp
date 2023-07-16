@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 #include <optional>
 
 #define TOMBSTONE Value::from_bool(true)
@@ -161,6 +162,24 @@ void Table::remove_marked() {
             this->remove(entry->key);
         }
     }
+}
+
+std::string Table::to_string() {
+    std::ostringstream out;
+    
+    out << "Table: {\n";
+    for (i32 i = 0; i < this->capacity; i++) {
+        Entry *entry = &this->entries[i];
+        if (entry->key != NULL) {
+            auto key = entry->key->obj.to_string();
+            auto val = entry->val.to_string();
+
+            out << "    " << key << ": " << val << ",\n";
+        }
+    }
+    out << "}";
+
+    return out.str();
 }
 
 #undef TOMBSTONE

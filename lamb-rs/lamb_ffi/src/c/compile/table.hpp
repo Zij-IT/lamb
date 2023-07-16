@@ -34,6 +34,8 @@ struct Table {
     bool remove(LambString* key);
 
     void remove_marked();
+
+    std::string to_string();
 };
 
 #endif // TABLE_HEADER
