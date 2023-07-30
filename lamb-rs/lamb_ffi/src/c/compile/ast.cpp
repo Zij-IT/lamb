@@ -34,7 +34,6 @@ static bool is_stmt(AstNodeType type) {
 static Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *const block, char const* name) {
     Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
     func_comp.new_scope();
-    vm.curr_compiler = &func_comp;
 
     return func_comp;
 }
@@ -74,6 +73,7 @@ static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *no
     };
 
     Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
+    vm.curr_compiler = &func_comp;
 
     // The first local in a function is actually either a nameless value,
     // or the function itself, and in order for it to be accessible the
