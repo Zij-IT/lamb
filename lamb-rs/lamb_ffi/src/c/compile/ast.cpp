@@ -165,13 +165,7 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
         std::cerr << func_comp.chunk().to_string() << std::endl;
     }
 
-    compiler->chunk().write(vm, OpClosure);
-    compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp.function));
-
-    for (i32 i = 0; i < func_comp.function->upvalue_count; i++) {
-       compiler->chunk().write(vm, func_comp.upvalues[i].is_local ? 1 : 0);
-       compiler->chunk().write(vm, func_comp.upvalues[i].index);
-    }
+    write_as_closure(vm, &func_comp);
 
     func_comp.end_scope(vm);
     func_comp.destroy(vm);
