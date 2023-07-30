@@ -494,7 +494,6 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         }
         case AstntBlock: {
             Block *prev = compiler->block;
-            i32 prev_offset = prev->offset;
             Block block = {
                 .prev = prev,
                 .base = prev->base + prev->offset,
@@ -517,7 +516,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             }
 
             compiler->end_scope(vm);
-            compiler->block->offset = prev_offset + 1;
+            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntExprStmt: {
