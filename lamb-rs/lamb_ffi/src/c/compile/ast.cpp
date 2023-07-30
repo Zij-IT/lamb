@@ -7,11 +7,12 @@
 #include "misc.hpp"
 #include "object.hpp"
 
-#define LOCAL_NOT_FOUND -1
-#define UPVALUE_NOT_FOUND -1
 #define ANON_FUNC_NAME "anonymous"
-
 #define STACK_DIFF(compiler, diff) ((compiler)->block->offset += (diff))
+#define BUBBLE(x)                                                                                  \
+    if ((x) == CarUnsupportedAst) {                                                                \
+        return CarUnsupportedAst;                                                                  \
+    }
 
 static bool is_stmt(AstNodeType type) {
     switch (type) {
@@ -25,11 +26,6 @@ static bool is_stmt(AstNodeType type) {
             return false;
     }
 }
-
-#define BUBBLE(x)                                                                                  \
-    if ((x) == CarUnsupportedAst) {                                                                \
-        return CarUnsupportedAst;                                                                  \
-    }
 
 static Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *const block, char const* name) {
     Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
@@ -669,3 +665,4 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
 #undef BUBBLE
 #undef STACK_DIFF
+#undef ANON_FUNC_NAME
