@@ -41,6 +41,10 @@ struct Compiler {
 
     void add_local(Vm& vm, char const* name);
 
+    std::optional<i32> local_idx(LambString *name);
+
+    std::optional<i32> upvalue_idx(LambString *name);
+
     constexpr void new_scope() { this->block->depth++; }
 
     void end_scope(Vm& vm);
@@ -48,6 +52,9 @@ struct Compiler {
     constexpr Chunk& chunk() const { return this->function->chunk; }
 
     void destroy(Vm& vm);
+
+  private:
+    std::optional<i32> add_upvalue(i32 idx, bool is_local);
 };
 
 #endif // BLOCK_HEADER

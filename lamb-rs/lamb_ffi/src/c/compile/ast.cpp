@@ -26,58 +26,6 @@ static bool is_stmt(AstNodeType type) {
     }
 }
 
-static i32 add_upvalue(Compiler *const compiler, i32 index, bool is_local) {
-    int count = compiler->function->upvalue_count;
-
-    if (index > 255) {
-        // TODO: Figure out how to get a dynamic amount of upvalues
-        std::cerr << "[Lamb] There exist too many upvalues. Max is 255." << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    for (i32 i = 0; i < count; i++) {
-        Upvalue *upvalue = &compiler->upvalues[i];
-        if (upvalue->index == index && upvalue->is_local == is_local) {
-            return i;
-        }
-    }
-
-    compiler->upvalues[count].is_local = is_local;
-    compiler->upvalues[count].index = index;
-
-    return compiler->function->upvalue_count++;
-}
-
-static i32 resolve_local(Compiler *const compiler, LambString *const name) {
-    for (i32 i = compiler->locals.len() - 1; i >= 0; i--) {
-        Local *local = &compiler->locals[i];
-        if (local->name == name->chars) {
-            return i;
-        }
-    }
-
-    return LOCAL_NOT_FOUND;
-}
-
-static i32 resolve_upvalue(Compiler *const compiler, LambString *const name) {
-    if (compiler->enclosing == NULL) {
-        return UPVALUE_NOT_FOUND;
-    }
-
-    i32 local = resolve_local(compiler->enclosing, name);
-    if (local != LOCAL_NOT_FOUND) {
-        compiler->enclosing->locals[local].is_captured = true;
-        return add_upvalue(compiler, local, true);
-    }
-
-    i32 upvalue = resolve_upvalue(compiler->enclosing, name);
-    if (upvalue != UPVALUE_NOT_FOUND) {
-        return add_upvalue(compiler, upvalue, false);
-    }
-
-    return UPVALUE_NOT_FOUND;
-}
-
 #define BUBBLE(x)                                                                                  \
     if ((x) == CarUnsupportedAst) {                                                                \
         return CarUnsupportedAst;                                                                  \
@@ -243,11 +191,12 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntIdent: {
             auto ident = LambString::from_cstr(vm, node->val.i);
 
-            i32 local_slot = resolve_local(compiler, ident);
-            if (local_slot != LOCAL_NOT_FOUND) {
+            auto local_slot = compiler->local_idx(ident);
+            if (local_slot) {
+                auto slot = local_slot.value();
                 compiler->chunk().write(vm, OpGetLocal);
 
-                i32 depth = compiler->locals[local_slot].depth;
+                i32 depth = compiler->locals[slot].depth;
                 i32 base = -1;
                 for (Block *bl = compiler->block; bl != NULL; bl = bl->prev) {
                     if (bl->depth == depth) {
@@ -257,7 +206,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
                 }
 
                 i32 local_idx = 0;
-                for (i32 idx = local_slot - 1;
+                for (i32 idx = slot - 1;
                      idx >= 0 && compiler->locals[idx].depth == depth; idx--) {
                     local_idx++;
                 }
@@ -265,13 +214,13 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
                 i32 local_slot = base + local_idx;
                 compiler->chunk().write_const(vm, Value::from_i64(local_slot));
             } else {
-                i32 upvalue_slot = resolve_upvalue(compiler, ident);
-                if (upvalue_slot == UPVALUE_NOT_FOUND) {
+                auto upvalue_slot = compiler->upvalue_idx(ident);
+                if (!upvalue_slot) {
                     compiler->chunk().write(vm, OpGetGlobal);
                     compiler->chunk().write_const(vm, Value::from_obj((Object *)ident));
                 } else {
                     compiler->chunk().write(vm, OpGetUpvalue);
-                    compiler->chunk().write_const(vm, Value::from_i64(upvalue_slot));
+                    compiler->chunk().write_const(vm, Value::from_i64(upvalue_slot.value()));
                 }
             }
 
