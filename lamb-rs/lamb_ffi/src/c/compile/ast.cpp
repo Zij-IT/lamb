@@ -55,6 +55,10 @@ static void write_as_closure(Vm& vm, Compiler *const func_comp) {
          compiler->chunk().write(vm, func_comp->upvalues[i].is_local);
          compiler->chunk().write(vm, func_comp->upvalues[i].index);
     }
+
+    func_comp->end_scope(vm);
+    func_comp->destroy(vm);
+    vm.curr_compiler = func_comp->enclosing;
 }
 
 static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *node, char const* name) {
@@ -95,10 +99,6 @@ static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *no
     }
 
     write_as_closure(vm, &func_comp);
-
-    func_comp.end_scope(vm);
-    func_comp.destroy(vm);
-    vm.curr_compiler = func_comp.enclosing;
 
     return CarOk;
 }
@@ -166,10 +166,6 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
     }
 
     write_as_closure(vm, &func_comp);
-
-    func_comp.end_scope(vm);
-    func_comp.destroy(vm);
-    vm.curr_compiler = func_comp.enclosing;
 
     return CarOk;
 }
