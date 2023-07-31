@@ -3,6 +3,7 @@
 #include "table.hpp"
 #include <stdlib.h>
 #include <iostream>
+#include <algorithm>
 
 Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
     this->block = block;
@@ -22,14 +23,15 @@ void Compiler::add_local(Vm& vm, char const* name) {
 }
 
 std::optional<i32> Compiler::local_idx(LambString *name) {
-    for (i32 i = this->locals.len() - 1; i >= 0; i--) {
-        Local *local = &this->locals[i];
-        if (local->name == name->chars) {
-            return i;
-        }
-    }
+    auto it = std::find_if(
+        this->locals.rbegin(),
+        this->locals.rend(),
+        [name](Local& i){ return i.name == name->chars; }
+    );
 
-    return std::nullopt;
+    // Ends of iterators point 1 past the actual end, and therefore we need `-1`
+    auto dist = std::distance(it, this->locals.rend());
+    return dist == 0 ? std::nullopt : std::optional{ dist - 1 };
 }
 
 std::optional<i32> Compiler::local_slot(Vm& vm, LambString *name) {
