@@ -366,8 +366,10 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             AstNode *curr = node->kids[0];
             if (curr == NULL) {
                 compiler->chunk().write_const(vm, Value::from_i64(0));
-                compiler->chunk().write(vm, OpMakeArray);
                 STACK_DIFF(compiler, 1);
+
+                compiler->chunk().write(vm, OpMakeArray);
+                STACK_DIFF(compiler, 0);
                 return CarOk;
             }
 
@@ -390,9 +392,12 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
                 BUBBLE(compile(vm, compiler, expr_list->kids[0]));
                 len += 1;
             }
+
             compiler->chunk().write_const(vm, Value::from_i64(len));
+            STACK_DIFF(compiler, 1);
+
             compiler->chunk().write(vm, OpMakeArray);
-            STACK_DIFF(compiler, -len + 1);
+            STACK_DIFF(compiler, -len);
             break;
         }
         case AstntArrayIndex: {
