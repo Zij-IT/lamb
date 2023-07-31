@@ -41,7 +41,7 @@ struct Compiler {
 
     void add_local(Vm& vm, char const* name);
 
-    std::optional<i32> local_slot(Vm& vm, LambString *name);
+    std::optional<i32> local_slot(LambString *name);
 
     std::optional<i32> local_idx(LambString *name);
 

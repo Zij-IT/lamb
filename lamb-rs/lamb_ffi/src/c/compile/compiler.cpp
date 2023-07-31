@@ -34,7 +34,7 @@ std::optional<i32> Compiler::local_idx(LambString *name) {
     return dist == 0 ? std::nullopt : std::optional{ dist - 1 };
 }
 
-std::optional<i32> Compiler::local_slot(Vm& vm, LambString *name) {
+std::optional<i32> Compiler::local_slot(LambString *name) {
     auto idx_ = this->local_idx(name);    
     if (!idx_) {
         return std::nullopt;

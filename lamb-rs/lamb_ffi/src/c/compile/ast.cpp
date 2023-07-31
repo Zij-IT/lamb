@@ -202,7 +202,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntIdent: {
             auto ident = LambString::from_cstr(vm, node->val.i);
 
-            auto local_slot = compiler->local_slot(vm, ident);
+            auto local_slot = compiler->local_slot(ident);
             if (local_slot) {
                 auto slot = local_slot.value();
                 compiler->chunk().write(vm, OpGetLocal);
