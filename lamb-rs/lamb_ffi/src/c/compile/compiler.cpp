@@ -1,9 +1,9 @@
 #include "compiler.hpp"
 #include "chunk.hpp"
-#include "table.hpp"
 #include <stdlib.h>
 #include <iostream>
 #include <algorithm>
+#include <ranges>
 
 Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
     this->block = block;
@@ -61,13 +61,12 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
         std::exit(EXIT_FAILURE);
     }
 
-    i32 local_idx = 0;
-    auto& locals = this->locals;
-    for (auto it = locals.rend() - idx; it != locals.rend() && (*it).depth == depth; ++it) {
-        ++local_idx;
-    }
+    auto block_locals = this->locals 
+               | std::views::take(idx) 
+               | std::views::reverse
+               | std::views::take_while([depth](auto const& local){ return local.depth == depth; });
 
-    return base + local_idx;
+    return base + std::ranges::distance(block_locals);
 }
 
 std::optional<i32> Compiler::upvalue_idx(LambString *name) {
@@ -91,18 +90,16 @@ std::optional<i32> Compiler::upvalue_idx(LambString *name) {
 }
 
 std::optional<i32> Compiler::add_upvalue(i32 idx, bool is_local) {
-        int count = this->function->upvalue_count;
-
     if (idx > 255) {
         // TODO: Figure out how to get a dynamic amount of upvalues
         std::cerr << "[Lamb] There exist too many upvalues. Max is 255." << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    for (i32 i = 0; i < count; i++) {
-        Upvalue *upvalue = &this->upvalues[i];
-        if (upvalue->index == idx && upvalue->is_local == is_local) {
-            return i;
+    auto count = this->function->upvalue_count;
+    for (auto const& upvalue : std::views::counted(this->upvalues, count)) {
+        if (upvalue.index == idx && upvalue.is_local == is_local) {
+            return &upvalue - this->upvalues;
         }
     }
 
@@ -118,11 +115,11 @@ void Compiler::end_scope(Vm& vm) {
 
     this->function->chunk.write(vm, OpSaveValue);
 
-    for(auto x = this->locals.len() - 1; x >= 0; x--) {
-        auto local = this->locals[x];
-        if (local.depth <= depth) { 
-            this->locals.truncate(x + 1);
-            break; 
+    for (auto const& local: this->locals | std::views::reverse) {
+        if(local.depth <= depth) {
+            auto dist = &local - this->locals.as_raw();
+            this->locals.truncate(dist + 1);
+            break;
         }
 
         if (local.is_captured) {

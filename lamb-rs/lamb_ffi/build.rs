@@ -27,6 +27,7 @@ fn main() {
         .cpp(true)
         .flag("-lfl")
         .flag("-std=c++20")
+        .flag("-fconcepts-diagnostics-depth=3")
         .opt_level(3)
         .warnings(true)
         .compile("lamb_c");

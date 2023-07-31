@@ -37,12 +37,13 @@ public:
     //   checker... :(
     struct GcVecIter 
     {
-        using iterator_category = std::forward_iterator_tag;
+        using iterator_category = std::contiguous_iterator_tag;
         using difference_type   = std::ptrdiff_t;
         using value_type        = T;
         using pointer           = T*;  // or also value_type*
         using reference         = T&;  // or also value_type&
 
+        GcVecIter(): data(nullptr) {}
         GcVecIter(T* data): data(data) {}
 
         reference operator*() const { return *this->data; }
