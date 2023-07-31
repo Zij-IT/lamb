@@ -54,14 +54,34 @@ x1("don't print me please.");
 y1 := 2 + (fn(x,y,z) -> x + y + case z { 2 -> assert(false), 1 -> 1, })(33,66,1);
 y1 $> println;
 
+fib := rec fn(n) -> if n > 1 {
+  return fib(n - 1) + fib(n - 2);
+} else {
+  return n;
+};
+
 {
+  inc := fn(x) -> x + 1;
+
+  println({ i := (fn(x) -> 2); i }(fib(6)));
+
+  [0,0,9,0,0][{ x := 2; { 1 $> inc $> inc .> { x := inc; x } .> { y := println; y }; }; x }] $> println; 
+  println <$ [0,0,9,0,0][{ x := 2; { { y := println; y } <. { x := inc; x } <. inc <. inc <$ 1 }; x }];
+  { y := 1; x := fn(x) -> 2; x }(1) $> println;
+
+  x := (fn() -> fn(x) -> [9,8,7,6,5,4,3,2,1][x $> inc .> { x := 2; y := inc .> inc; y } .> inc])();
+  ["BAD", "BAD", "BAD", "PRINT_ME", "BAD"][2 $> x] $> println;
+};
+
+{
+  
   fib := rec fn(n) -> if n > 1 {
-    fib(n - 1) + fib(n - 2)
+    return fib(n - 1) + fib(n - 2);
   } else {
-    n
+    return n;
   };
 
-  inc := fn(x) -> x + 1;
+  inc := fn(x) -> { return x + 1; };
 
   println({ fib := (fn(x) -> 2); fib }(fib(6)));
 

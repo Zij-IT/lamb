@@ -107,12 +107,15 @@ static CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode
     compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
 
     BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
+    STACK_DIFF(compiler, 1);
 
     if (compiler->block->depth == 0) {
         compiler->chunk().write(vm, OpDefineGlobal);
         compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
+        STACK_DIFF(compiler, -1);
     } else {
         compiler->add_local(vm, rec_func_ident->chars);
+        STACK_DIFF(compiler, 0);
     }
 
     return CarOk;
@@ -531,7 +534,6 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
             if (value_node->type == AstntFuncDef && value_node->kids[2]->val.b) {
                 BUBBLE(compile_rec_func_def(vm, compiler, node));
-                STACK_DIFF(compiler, 1);
                 break;
             }
 
