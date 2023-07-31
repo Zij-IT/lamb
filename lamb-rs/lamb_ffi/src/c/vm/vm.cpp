@@ -493,6 +493,15 @@ InterpretResult Vm::run() {
             }
         }
     }
+
+    #undef BINARY_INT_OP
+    #undef BINARY_INT_DOUBLE_OP
+    #undef DROP
+    #undef POP
+    #undef PUSH
+    #undef READ_CONSTANT
+    #undef READ_SHORT
+    #undef READ_BYTE
 }
 
 void Vm::destroy() {
@@ -501,8 +510,6 @@ void Vm::destroy() {
     this->gc.destroy(*this);
 }
 
-#undef BINARY_INT_DOUBLE_OP
-#undef BINARY_INT_OP
 #undef unary_type_error
 #undef binary_type_error
 #undef runtime_error

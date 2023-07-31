@@ -22,16 +22,13 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
 
     Block block = {.prev = NULL, .base = 0, .offset = 1, .depth = 0};
     Compiler compiler(vm, nullptr, &block, FtScript, "", 0);
-
     vm.curr_compiler = &compiler;
-    vm.push_stack(Value::from_obj((Object *)compiler.function));
 
     CompileAstResult car = compile(vm, &compiler, root);
 
     if (car == CarOk) {
         compiler.chunk().write(vm, OpReturn);
         auto closure = LambClosure::alloc(vm, compiler.function);
-        vm.pop_stack();
         vm.push_stack(Value::from_obj((Object *)closure));
 
         Callframe *frame = &vm.frames[vm.frame_count++];

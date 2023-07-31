@@ -1,6 +1,4 @@
 #include "native.hpp"
-#include "../compile/compiler.hpp"
-#include "../compile/misc.hpp"
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>

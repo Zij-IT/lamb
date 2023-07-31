@@ -4,7 +4,6 @@
 
 #include "ast.hpp"
 #include "chunk.hpp"
-#include "misc.hpp"
 #include "object.hpp"
 
 #define ANON_FUNC_NAME "anonymous"
