@@ -62,12 +62,9 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
     }
 
     i32 local_idx = 0;
-    for (--idx; idx > 0 && this->locals[idx].depth == depth; --idx) {
-        local_idx++;
-    }
-
-    if (idx == 0 && this->locals[0].depth == depth) {
-        local_idx++;
+    auto& locals = this->locals;
+    for (auto it = locals.rend() - idx; it != locals.rend() && (*it).depth == depth; ++it) {
+        ++local_idx;
     }
 
     return base + local_idx;
