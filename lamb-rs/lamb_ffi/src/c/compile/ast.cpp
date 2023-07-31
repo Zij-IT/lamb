@@ -202,28 +202,11 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntIdent: {
             auto ident = LambString::from_cstr(vm, node->val.i);
 
-            auto local_slot = compiler->local_idx(ident);
+            auto local_slot = compiler->local_slot(vm, ident);
             if (local_slot) {
                 auto slot = local_slot.value();
                 compiler->chunk().write(vm, OpGetLocal);
-
-                i32 depth = compiler->locals[slot].depth;
-                i32 base = -1;
-                for (Block *bl = compiler->block; bl != NULL; bl = bl->prev) {
-                    if (bl->depth == depth) {
-                        base = bl->base;
-                        break;
-                    }
-                }
-
-                i32 local_idx = 0;
-                for (i32 idx = slot - 1;
-                     idx >= 0 && compiler->locals[idx].depth == depth; idx--) {
-                    local_idx++;
-                }
-
-                i32 local_slot = base + local_idx;
-                compiler->chunk().write_const(vm, Value::from_i64(local_slot));
+                compiler->chunk().write_const(vm, Value::from_i64(slot));
             } else {
                 auto upvalue_slot = compiler->upvalue_idx(ident);
                 if (!upvalue_slot) {

@@ -32,6 +32,31 @@ std::optional<i32> Compiler::local_idx(LambString *name) {
     return std::nullopt;
 }
 
+std::optional<i32> Compiler::local_slot(Vm& vm, LambString *name) {
+    auto idx_ = this->local_idx(name);    
+    if (!idx_) {
+        return std::nullopt;
+    }
+
+    auto idx = idx_.value();
+
+    i32 depth = this->locals[idx].depth;
+    i32 base = -1;
+    for (Block *bl = this->block; bl != NULL; bl = bl->prev) {
+        if (bl->depth == depth) {
+            base = bl->base;
+            break;
+        }
+    }
+
+    i32 local_idx = 0;
+    for (i32 idx = idx - 1; idx >= 0 && this->locals[idx].depth == depth; idx--) {
+        local_idx++;
+    }
+
+    return base + local_idx;
+}
+
 std::optional<i32> Compiler::upvalue_idx(LambString *name) {
     if (this->enclosing == NULL) {
         return std::nullopt;
