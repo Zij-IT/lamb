@@ -170,6 +170,19 @@ static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *fir
 }
 
 CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
+    #define CONSTANT(val) \
+        do { \
+            compiler->chunk().write_const(vm, (val)); \
+            STACK_DIFF(compiler, 1); \
+        } while(false)
+    
+    #define UNARY(op) \
+        do { \
+            BUBBLE(compile(vm, compiler, node->kids[0])); \
+            compiler->chunk().write(vm, (op)); \
+            STACK_DIFF(compiler, 0); \
+        } while(false)
+    
     #define BINARY(op) \
         do { \
             BUBBLE(compile(vm, compiler, node->kids[0])); \
@@ -179,12 +192,13 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         } while(false)
     
     switch (node->type) {
-        case AstntStrLit: {
-            auto lit = LambString::from_cstr(vm, node->val.s);
-            compiler->chunk().write_const(vm, Value::from_obj((Object *)lit));
-            STACK_DIFF(compiler, 1);
-            break;
-        }
+        // Simple Constants
+        case AstntNilLit:  CONSTANT(Value::nil());                  break;
+        case AstntNumLit:  CONSTANT(Value::from_i64(node->val.n));  break;
+        case AstntCharLit: CONSTANT(Value::from_char(node->val.c)); break;
+        case AstntBoolLit: CONSTANT(Value::from_bool(node->val.b)); break;
+
+        // Complex Constants
         case AstntIdent: {
             auto ident = LambString::from_cstr(vm, node->val.i);
 
@@ -224,44 +238,21 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             STACK_DIFF(compiler, 1);
             break;
         }
-        case AstntNilLit: {
-            compiler->chunk().write_const(vm, Value::nil());
+
+        // Complex constants
+        case AstntStrLit: {
+            auto lit = LambString::from_cstr(vm, node->val.s);
+            compiler->chunk().write_const(vm, Value::from_obj((Object *)lit));
             STACK_DIFF(compiler, 1);
             break;
         }
-        case AstntNumLit: {
-            compiler->chunk().write_const(vm, Value::from_i64(node->val.n));
-            STACK_DIFF(compiler, 1);
-            break;
-        }
-        case AstntCharLit: {
-            compiler->chunk().write_const(vm, Value::from_char(node->val.c));
-            STACK_DIFF(compiler, 1);
-            break;
-        }
-        case AstntBoolLit: {
-            compiler->chunk().write_const(vm, Value::from_bool(node->val.b));
-            STACK_DIFF(compiler, 1);
-            break;
-        }
-        case AstntUnaryNeg: {
-            BUBBLE(compile(vm, compiler, node->kids[0]));
-            compiler->chunk().write(vm, OpNumNeg);
-            STACK_DIFF(compiler, 0);
-            break;
-        }
-        case AstntUnaryLogNot: {
-            BUBBLE(compile(vm, compiler, node->kids[0]));
-            compiler->chunk().write(vm, OpLogNeg);
-            STACK_DIFF(compiler, 0);
-            break;
-        }
-        case AstntUnaryBitNot: {
-            BUBBLE(compile(vm, compiler, node->kids[0]));
-            compiler->chunk().write(vm, OpBinNeg);
-            STACK_DIFF(compiler, 0);
-            break;
-        }
+
+        // Simple Unary
+        case AstntUnaryNeg:     UNARY(OpNumNeg); break;
+        case AstntUnaryLogNot:  UNARY(OpLogNeg); break;
+        case AstntUnaryBitNot:  UNARY(OpBinNeg); break;
+
+        // Simple Binary
         case AstntBinaryAdd:    BINARY(OpAdd); break;
         case AstntBinarySub:    BINARY(OpSub); break;
         case AstntBinaryMul:    BINARY(OpMul); break;
@@ -278,6 +269,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntBinaryAnd:    BINARY(OpBinAnd); break;
         case AstntBinaryRShift: BINARY(OpRShift); break;
         case AstntBinaryLShift: BINARY(OpLShift); break;
+
         case AstntBinaryLogAnd: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             i32 if_false = compiler->chunk().write_jump(vm, OpJumpIfFalse);
@@ -574,6 +566,8 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
     return CarOk;
     #undef BINARY
+    #undef UNARY
+    #undef CONSTANT
 }
 
 #undef BUBBLE
