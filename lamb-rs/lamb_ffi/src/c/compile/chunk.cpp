@@ -17,6 +17,8 @@
 #include "object.hpp"
 #include "value.hpp"
 
+constexpr u8 byte = 8;
+
 Chunk::Chunk() {
     this->bytes = GcVec<u8>();
     this->constants = GcVec<Value>();
@@ -39,21 +41,21 @@ i32 Chunk::write_jump(Vm &vm, u8 op) {
     return this->bytes.len() - 2;
 }
 
-void Chunk::patch_jump(i32 offset) {
+void Chunk::patch_jump(i32 offset) const {
     i32 jump = this->bytes.len() - offset - 2;
     if (jump > UINT16_MAX) {
         std::cerr << "COMPILE_ERR: jump exceeds maximal bytes of " << UINT16_MAX << '\n';
         exit(1);
     }
 
-    this->bytes[offset] = (jump >> 8) & 0xff;
-    this->bytes[offset + 1] = jump & 0xff;
+    this->bytes[offset] = (jump >> byte);
+    this->bytes[offset + 1] = jump;
 }
 
 void Chunk::write_const(Vm &vm, Value val) {
     i32 idx = this->add_const(vm, val);
-    u8 hi = (idx >> 8) & 0xFF;
-    u8 lo = idx & 0xFF;
+    u8 hi = (idx >> byte);
+    u8 lo = idx;
 
     this->write(vm, OpConstant);
     this->write(vm, hi);
@@ -67,6 +69,7 @@ i32 Chunk::add_const(Vm &vm, Value val) {
     return this->constants.len() - 1;
 }
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 std::string Chunk::to_string() {
     std::vector<std::tuple<std::string, std::string, std::string>> vec;
 
@@ -104,15 +107,18 @@ std::string Chunk::to_string() {
 
     return out.str();
 }
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
-static std::string format_jump(Chunk const &chunk, i32 offset) {
-    u16 jump = (((u16)chunk.bytes[offset + 1]) << 8) | chunk.bytes[offset + 2];
+namespace {
+std::string format_jump(Chunk const &chunk, i32 offset) {
+    u16 jump = (((u16)chunk.bytes[offset + 1]) << byte) | chunk.bytes[offset + 2];
 
     std::ostringstream out;
     out << offset << " -> " << offset + 3 + jump;
 
     return out.str();
 }
+} // namespace
 
 // std::tuple<std::string, std::optional<std::string>, u32>
 // SIMPLE(name) std::make_tuple(name, std::nullopt, 1)
@@ -205,7 +211,7 @@ Chunk::format_instruction(u32 offset) const {
             // * 1 to jump over high byte
             // * 1 to jump over low  byte
             // * 2 to jump over each upvalue (is_local & index)
-            i32 idx = (this->bytes[offset + 2] << 8) | this->bytes[offset + 3];
+            i32 idx = (this->bytes[offset + 2] << byte) | this->bytes[offset + 3];
             auto *func = (LambFunc *)this->constants[idx].as.obj;
 
             std::string lhs = "OpClosure";

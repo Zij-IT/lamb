@@ -34,10 +34,11 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
         auto *closure = LambClosure::alloc(vm, compiler.function);
         vm.push_stack(Value::from_obj((Object *)closure));
 
-        Callframe *frame = &vm.frames[vm.frame_count++];
+        Callframe *frame = &vm.frames[0];
+        vm.frame_count++;
         frame->closure = closure;
         frame->ip = compiler.function->chunk.bytes.as_raw();
-        frame->slots = vm.stack;
+        frame->slots = (Value*)vm.stack;
 
         if (options.print_main_chunk) {
             std::cerr << "\n\n" << compiler.chunk().to_string() << '\n';

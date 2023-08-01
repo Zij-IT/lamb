@@ -61,7 +61,7 @@ struct Chunk {
     void write(Vm &vm, u8 byte);
 
     i32 write_jump(Vm &vm, u8 op);
-    void patch_jump(i32 offset);
+    void patch_jump(i32 offset) const;
 
     void write_const(Vm &vm, Value val);
     i32 add_const(Vm &vm, Value val);

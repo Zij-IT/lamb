@@ -1,8 +1,8 @@
-#include "gcvec.hpp"
 #include "../types.hpp"
 #include "../vm/vm.hpp"
 #include "compiler.hpp"
 #include "gc.hpp"
+#include "gcvec.hpp"
 #include "value.hpp"
 
 template <typename T> GcVec<T>::GcVec() : capacity(0), _len(0), values(nullptr) {}
@@ -14,6 +14,7 @@ template <typename T> void GcVec<T>::push(Vm &vm, T item) {
         this->values = (T *)vm.gc.grow_array(vm, this->values, sizeof(T), old_cap, this->capacity);
     }
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     this->values[this->_len] = item;
     this->_len += 1;
 }

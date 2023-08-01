@@ -7,7 +7,7 @@
 #include "object.hpp"
 #include "value.hpp"
 
-// NOLINTNEXTLINE(misc-no-recursion)
+// NOLINTNEXTLINE(misc-no-recursion, readability-function-cognitive-complexity)
 Order Value::cmp(Value const &rhs) const {
     switch (rhs.kind) {
         case VkNil:
@@ -56,7 +56,8 @@ Order Value::cmp(Value const &rhs) const {
 
                     Order element_order = OrderEqual;
                     for (i32 i = 0; i < min_len; i++) {
-                        if ((element_order = larr->items[i].cmp(rarr->items[i])) != OrderEqual) {
+                        element_order = larr->items[i].cmp(rarr->items[i]);
+                        if (element_order != OrderEqual) {
                             return element_order;
                         }
                     }
@@ -81,6 +82,7 @@ Order Value::cmp(Value const &rhs) const {
                     i32 rlen = rarr->len;
                     i32 min_len = llen < rlen ? llen : rlen;
 
+                    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     for (i32 i = 0; i < min_len; i++) {
                         if (larr->chars[i] > rarr->chars[i]) {
                             return OrderGreater;
@@ -88,6 +90,7 @@ Order Value::cmp(Value const &rhs) const {
                             return OrderLess;
                         }
                     }
+                    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
                     return llen < rlen ? OrderLess : OrderGreater;
                 }

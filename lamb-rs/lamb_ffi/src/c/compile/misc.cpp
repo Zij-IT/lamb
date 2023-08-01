@@ -1,6 +1,7 @@
-#include "misc.hpp"
 #include "../types.hpp"
+#include "misc.hpp"
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,cppcoreguidelines-pro-bounds-pointer-arithmetic)
 u32 hash_string(char const *st) {
     u32 hash = 2166136261;
 
@@ -11,3 +12,4 @@ u32 hash_string(char const *st) {
 
     return hash;
 }
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,cppcoreguidelines-pro-bounds-pointer-arithmetic)

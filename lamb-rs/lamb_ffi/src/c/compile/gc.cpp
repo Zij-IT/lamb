@@ -93,6 +93,7 @@ void MarkAndSweep::collect(Vm &vm) {
 void MarkAndSweep::mark_roots(Vm &vm) {
     this->mark_value(&vm.saved_value);
 
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     for (Value *slot = vm.stack; slot < vm.stack_top; slot++) {
         this->mark_value(slot);
     }
@@ -121,6 +122,7 @@ void MarkAndSweep::mark_compiler(Compiler *compiler) {
 
 void MarkAndSweep::mark_table(Table &table) {
     for (i32 i = 0; i < table.capacity; i++) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         Entry *entry = &table.entries[i];
         mark_object((Object *)entry->key);
         mark_value(&entry->val);

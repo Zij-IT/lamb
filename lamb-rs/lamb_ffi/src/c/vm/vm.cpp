@@ -10,15 +10,18 @@
 #include "native.hpp"
 #include "vm.hpp"
 
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 #define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))
 
 // TODO: Make these actually useful methods instead of whatever the hell this
 //       is.
 #define runtime_error(...)                                                                         \
+    /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         return InterpretRuntimeError;                                                              \
-    } while (0)
+    } while (0) /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
 #define binary_type_error(lhs, op_str, rhs)                                                        \
     runtime_error("Binary '" op_str                                                                \
@@ -72,6 +75,8 @@ LambUpvalue *Vm::capture_upvalue(Value *local) {
 
 constexpr Value *Vm::peek_stack(u8 n) const {
     vm_assert("Peeking non-stack bytes", this->stack_top != this->stack);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     return this->stack_top - n - 1;
 }
 
@@ -96,6 +101,7 @@ Value Vm::pop_stack() {
     return *this->stack_top;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 InterpretResult Vm::run() {
     Callframe *frame = &this->frames[this->frame_count - 1];
 
@@ -112,9 +118,10 @@ InterpretResult Vm::run() {
 #define DROP() (this->stack_top -= 1)
 
 #define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
+    /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         Value rhs = POP();                                                                         \
-        Value *lhs = vm->peek_stack();                                                             \
+        Value *lhs = (vm)->peek_stack();                                                           \
                                                                                                    \
         if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
             lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
@@ -123,22 +130,23 @@ InterpretResult Vm::run() {
         } else {                                                                                   \
             binary_type_error(*lhs, #op, rhs);                                                     \
         }                                                                                          \
-    } while (0)
+    } while (0) /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
 #define BINARY_INT_OP(vm, op)                                                                      \
+    /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         Value rhs = POP();                                                                         \
-        Value *lhs = vm->peek_stack();                                                             \
+        Value *lhs = (vm)->peek_stack();                                                           \
                                                                                                    \
         if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
             lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
         } else {                                                                                   \
             binary_type_error(*lhs, #op, rhs);                                                     \
         }                                                                                          \
-    } while (0)
+    } while (0) /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
     for (;;) {
-        switch (READ_BYTE()) {
+        switch ((OpCode)READ_BYTE()) {
             case OpConstant: {
                 PUSH(frame->closure->function->chunk.constants[READ_SHORT()]);
                 break;
@@ -404,7 +412,7 @@ InterpretResult Vm::run() {
 
                 switch (callee->as.obj->type) {
                     case OtClosure: {
-                        LambClosure *closure = (LambClosure *)callee->as.obj;
+                        auto *closure = (LambClosure *)callee->as.obj;
                         if (arg_count != closure->function->arity) {
                             runtime_error("Expected %d arguments, but received %d instead",
                                           closure->function->arity, arg_count);
@@ -512,3 +520,5 @@ void Vm::destroy() {
 #undef binary_type_error
 #undef runtime_error
 #undef vm_assert
+
+// NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)

@@ -20,9 +20,7 @@ namespace {
 bool is_stmt(AstNodeType type) {
     switch (type) {
         case AstntReturn:
-            return true;
         case AstntExprStmt:
-            return true;
         case AstntAssignStmt:
             return true;
         default:
@@ -50,9 +48,13 @@ void write_as_closure(Vm &vm, Compiler *const func_comp) {
     Compiler *compiler = func_comp->enclosing;
     compiler->chunk().write(vm, OpClosure);
     compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
+
+    // TODO: Can this be turned into a range based loop?
     for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
-        compiler->chunk().write(vm, func_comp->upvalues[i].is_local);
+        //NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+        compiler->chunk().write(vm, static_cast<u8>(func_comp->upvalues[i].is_local));
         compiler->chunk().write(vm, func_comp->upvalues[i].index);
+        //NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
     }
 
     func_comp->end_scope(vm);
@@ -177,28 +179,35 @@ CompileAstResult compile_compose(Vm &vm, Compiler *compiler, AstNode *first, Ast
 }
 } // namespace
 
-// NOLINTNEXTLINE(misc-no-recursion)
+// NOLINTNEXTLINE(misc-no-recursion,readability-function-cognitive-complexity)
 CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
+
 #define CONSTANT(val)                                                                              \
+    /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         compiler->chunk().write_const(vm, (val));                                                  \
         STACK_DIFF(compiler, 1);                                                                   \
-    } while (false)
+    } while (false)                                                                                \
+    /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
 #define UNARY(op)                                                                                  \
+    /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         BUBBLE(compile(vm, compiler, node->kids[0]));                                              \
         compiler->chunk().write(vm, (op));                                                         \
         STACK_DIFF(compiler, 0);                                                                   \
-    } while (false)
+    } while (false)                                                                                \
+    /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
 #define BINARY(op)                                                                                 \
+    /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         BUBBLE(compile(vm, compiler, node->kids[0]));                                              \
         BUBBLE(compile(vm, compiler, node->kids[1]));                                              \
         compiler->chunk().write(vm, op);                                                           \
         STACK_DIFF(compiler, -1);                                                                  \
-    } while (false)
+    } while (false)                                                                                \
+    /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
     switch (node->type) {
         // Simple Constants

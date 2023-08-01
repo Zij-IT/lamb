@@ -31,93 +31,62 @@ void free_ast(AstNode *root) {
     }
 
     switch (root->type) {
+        case AstntBoolLit:
+        case AstntCharLit:
+        case AstntNilLit:
+        case AstntNumLit:
+            break;
         case AstntStrLit:
             free(root->val.s);
             break;
         case AstntIdent:
             free(root->val.i);
             break;
-        case AstntUnaryNeg:
-        case AstntUnaryLogNot:
-        case AstntUnaryBitNot:
-            free_ast(root->kids[0]);
-            break;
-        case AstntBinaryAdd:
-        case AstntBinarySub:
-        case AstntBinaryMul:
-        case AstntBinaryDiv:
-        case AstntBinaryMod:
-        case AstntBinaryLCompose:
-        case AstntBinaryRCompose:
-        case AstntBinaryLApply:
-        case AstntBinaryRApply:
-        case AstntBinaryLogAnd:
-        case AstntBinaryLogOr:
-        case AstntBinaryEq:
-        case AstntBinaryNe:
-        case AstntBinaryGt:
-        case AstntBinaryGe:
-        case AstntBinaryLt:
-        case AstntBinaryLe:
-        case AstntBinaryOr:
-        case AstntBinaryXor:
-        case AstntBinaryAnd:
-        case AstntBinaryRShift:
-        case AstntBinaryLShift:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            break;
-        case AstntIf:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            free_ast(root->kids[2]);
-            break;
-        case AstntCase:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            break;
-        case AstntCaseArm:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            free_ast(root->kids[2]);
-            break;
         case AstntArray:
+        case AstntBlock:
+        case AstntExprStmt:
+        case AstntReturn:
+        case AstntUnaryBitNot:
+        case AstntUnaryLogNot:
+        case AstntUnaryNeg:
             free_ast(root->kids[0]);
-            break;
-        case AstntFuncDef:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            free_ast(root->kids[2]);
-            break;
-        case AstntFuncCall:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
             break;
         case AstntArrayIndex:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            break;
-        case AstntReturn:
-            free_ast(root->kids[0]);
-            break;
-        case AstntExprStmt:
-            free_ast(root->kids[0]);
-            break;
         case AstntAssignStmt:
-            free_ast(root->kids[0]);
-            free_ast(root->kids[1]);
-            break;
+        case AstntBinaryAdd:
+        case AstntBinaryAnd:
+        case AstntBinaryDiv:
+        case AstntBinaryEq:
+        case AstntBinaryGe:
+        case AstntBinaryGt:
+        case AstntBinaryLApply:
+        case AstntBinaryLCompose:
+        case AstntBinaryLShift:
+        case AstntBinaryLe:
+        case AstntBinaryLogAnd:
+        case AstntBinaryLogOr:
+        case AstntBinaryLt:
+        case AstntBinaryMod:
+        case AstntBinaryMul:
+        case AstntBinaryNe:
+        case AstntBinaryOr:
+        case AstntBinaryRApply:
+        case AstntBinaryRCompose:
+        case AstntBinaryRShift:
+        case AstntBinarySub:
+        case AstntBinaryXor:
+        case AstntCase:
+        case AstntFuncCall:
         case AstntNodeList:
             free_ast(root->kids[0]);
             free_ast(root->kids[1]);
             break;
-        case AstntBlock:
+        case AstntCaseArm:
+        case AstntFuncDef:
+        case AstntIf:
             free_ast(root->kids[0]);
-            break;
-        case AstntNumLit:
-        case AstntCharLit:
-        case AstntBoolLit:
-        case AstntNilLit:
+            free_ast(root->kids[1]);
+            free_ast(root->kids[2]);
             break;
     }
 
