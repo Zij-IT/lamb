@@ -4,13 +4,13 @@
 #include <limits>
 #include <optional>
 
+#include "../types.hpp"
 #include "chunk.hpp"
 #include "gcvec.hpp"
 #include "object.hpp"
-#include "../types.hpp"
 
 struct Local {
-    char const* name;
+    char const *name;
     i32 depth;
     bool is_captured;
 };
@@ -43,9 +43,9 @@ struct Compiler {
 
     FuncType type;
 
-    Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity);
+    Compiler(Vm &vm, Compiler *enclosing, Block *block, FuncType type, char const *name, i32 arity);
 
-    void add_local(Vm& vm, char const* name);
+    void add_local(Vm &vm, char const *name);
 
     std::optional<i32> local_slot(LambString *name);
 
@@ -55,11 +55,11 @@ struct Compiler {
 
     constexpr void new_scope() const { this->block->depth++; }
 
-    void end_scope(Vm& vm);
+    void end_scope(Vm &vm);
 
-    [[nodiscard]] constexpr Chunk& chunk() const { return this->function->chunk; }
+    [[nodiscard]] constexpr Chunk &chunk() const { return this->function->chunk; }
 
-    void destroy(Vm& vm);
+    void destroy(Vm &vm);
 
   private:
     std::optional<i32> add_upvalue(i32 idx, bool is_local);

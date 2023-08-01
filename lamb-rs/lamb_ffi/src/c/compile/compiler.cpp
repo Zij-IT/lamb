@@ -1,43 +1,42 @@
 #include <algorithm>
 #include <cstdlib>
-#include <iterator>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <ranges>
 
+#include "../types.hpp"
+#include "../vm/vm.hpp"
 #include "chunk.hpp"
 #include "compiler.hpp"
 #include "gcvec.hpp"
 #include "object.hpp"
 #include "value.hpp"
-#include "../types.hpp"
-#include "../vm/vm.hpp"
 
-Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) : function(LambFunc::alloc(vm, name, arity)), enclosing(enclosing), block(block), type(type) {;
+Compiler::Compiler(Vm &vm, Compiler *enclosing, Block *block, FuncType type, char const *name,
+                   i32 arity)
+    : function(LambFunc::alloc(vm, name, arity)), enclosing(enclosing), block(block), type(type) {
+    ;
     this->locals = GcVec<Local>();
     this->add_local(vm, "");
 }
 
-void Compiler::add_local(Vm& vm, char const* name) {
-    Local loc = {
-        .name = name, .depth = this->block->depth, .is_captured = false};
+void Compiler::add_local(Vm &vm, char const *name) {
+    Local loc = {.name = name, .depth = this->block->depth, .is_captured = false};
     this->locals.push(vm, loc);
 }
 
 std::optional<i32> Compiler::local_idx(LambString *name) {
-    auto it = std::find_if(
-        this->locals.rbegin(),
-        this->locals.rend(),
-        [name](Local& loc){ return loc.name == name->chars; }
-    );
+    auto it = std::find_if(this->locals.rbegin(), this->locals.rend(),
+                           [name](Local &loc) { return loc.name == name->chars; });
 
     // Ends of iterators point 1 past the actual end, and therefore we need `-1`
     auto dist = std::distance(it, this->locals.rend());
-    return dist == 0 ? std::nullopt : std::optional{ dist - 1 };
+    return dist == 0 ? std::nullopt : std::optional{dist - 1};
 }
 
 std::optional<i32> Compiler::local_slot(LambString *name) {
-    auto idx_ = this->local_idx(name);    
+    auto idx_ = this->local_idx(name);
     if (!idx_) {
         return std::nullopt;
     }
@@ -56,17 +55,15 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
     if (base == -1) {
         // TODO: You should probably include more debug info to help yourself in the
         //       future
-        std::cerr << "[Lamb] Internal Compiler Error: No block found for variable '"
-                  << name << "' at depth " << depth
-                  << '\n';
+        std::cerr << "[Lamb] Internal Compiler Error: No block found for variable '" << name
+                  << "' at depth " << depth << '\n';
 
         exit(EXIT_FAILURE);
     }
 
-    auto block_locals = this->locals 
-               | std::views::take(idx) 
-               | std::views::reverse
-               | std::views::take_while([depth](auto const& local){ return local.depth == depth; });
+    auto block_locals =
+        this->locals | std::views::take(idx) | std::views::reverse |
+        std::views::take_while([depth](auto const &local) { return local.depth == depth; });
 
     return base + std::ranges::distance(block_locals);
 }
@@ -100,7 +97,7 @@ std::optional<i32> Compiler::add_upvalue(i32 idx, bool is_local) {
     }
 
     auto count = this->function->upvalue_count;
-    for (auto const& upvalue : std::views::counted(this->upvalues, count)) {
+    for (auto const &upvalue : std::views::counted(this->upvalues, count)) {
         if (upvalue.index == idx && upvalue.is_local == is_local) {
             return &upvalue - this->upvalues;
         }
@@ -112,14 +109,14 @@ std::optional<i32> Compiler::add_upvalue(i32 idx, bool is_local) {
     return this->function->upvalue_count++;
 }
 
-void Compiler::end_scope(Vm& vm) {
+void Compiler::end_scope(Vm &vm) {
     this->block = this->block->prev;
     i32 depth = this->block == nullptr ? -1 : this->block->depth;
 
     this->function->chunk.write(vm, OpSaveValue);
 
-    for (auto const& local: this->locals | std::views::reverse) {
-        if(local.depth <= depth) {
+    for (auto const &local : this->locals | std::views::reverse) {
+        if (local.depth <= depth) {
             auto dist = &local - this->locals.as_raw();
             this->locals.truncate(dist + 1);
             break;
@@ -131,10 +128,8 @@ void Compiler::end_scope(Vm& vm) {
             this->function->chunk.write(vm, OpPop);
         }
     }
-    
+
     this->function->chunk.write(vm, OpUnsaveValue);
 }
 
-void Compiler::destroy(Vm& vm) {
-    this->locals.destroy(vm);
-}
+void Compiler::destroy(Vm &vm) { this->locals.destroy(vm); }

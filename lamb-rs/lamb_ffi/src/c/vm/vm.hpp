@@ -60,8 +60,8 @@ struct Vm {
     InterpretResult run();
 
   private:
-    [[nodiscard]] constexpr Value* peek_stack(u8 n = 0) const;
-    
+    [[nodiscard]] constexpr Value *peek_stack(u8 n = 0) const;
+
     LambUpvalue *capture_upvalue(Value *local);
 };
 

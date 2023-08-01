@@ -1,13 +1,13 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "../ast/ast.hpp"
+#include "../types.hpp"
 #include "ast.hpp"
 #include "chunk.hpp"
 #include "compiler.hpp"
 #include "object.hpp"
 #include "value.hpp"
-#include "../ast/ast.hpp"
-#include "../types.hpp"
 
 #define ANON_FUNC_NAME "anonymous"
 #define STACK_DIFF(compiler, diff) ((compiler)->block->offset += (diff))
@@ -17,194 +17,203 @@
     }
 
 namespace {
-    bool is_stmt(AstNodeType type) {
-        switch (type) {
-            case AstntReturn:
-                return true;
-            case AstntExprStmt:
-                return true;
-            case AstntAssignStmt:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *const block, char const* name) {
-        Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
-        func_comp.new_scope();
-
-        return func_comp;
-    }
-
-    void add_arg_to_compiler(Vm& vm, Compiler *const func_comp, AstNode const *arg) {
-        AstNode *ident_node = arg->kids[0];
-        auto *ident = LambString::from_cstr(vm, ident_node->val.i);
-        func_comp->chunk().add_const(vm, Value::from_obj((Object *)ident));
-        func_comp->add_local(vm, ident->chars);
-        func_comp->function->arity++;
-    }
-
-    void write_as_closure(Vm& vm, Compiler *const func_comp) {
-        Compiler *compiler = func_comp->enclosing;
-        compiler->chunk().write(vm, OpClosure);
-        compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
-        for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
-             compiler->chunk().write(vm, func_comp->upvalues[i].is_local);
-             compiler->chunk().write(vm, func_comp->upvalues[i].index);
-        }
-
-        func_comp->end_scope(vm);
-        func_comp->destroy(vm);
-        vm.curr_compiler = func_comp->enclosing;
-    }
-
-    // NOLINTNEXTLINE(misc-no-recursion)
-    CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *node, char const* name) {
-        AstNode *func_args = node->kids[0];
-        AstNode *func_body = node->kids[1];
-        AstNode *is_recursive = node->kids[2];
-
-        Block block = {
-            .prev = nullptr,
-            .base = 0,
-            .offset = 0,
-            .depth = 0,
-        };
-
-        Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
-        vm.curr_compiler = &func_comp;
-
-        // The first local in a function is actually either a nameless value,
-        // or the function itself, and in order for it to be accessible the
-        // depth must match.
-        func_comp.locals[0].depth = func_comp.block->depth;
-        block.offset += 1;
-
-        // In a recursive function the starting value must be findable via name
-        if (is_recursive->val.b) {
-            func_comp.locals[0].name = name;
-        }
-
-        for (AstNode *arg = func_args; arg != nullptr; arg = arg->kids[1]) {
-            add_arg_to_compiler(vm, &func_comp, arg);
-            block.offset += 1;
-        }
-
-        BUBBLE(compile(vm, &func_comp, func_body));
-        func_comp.chunk().write(vm, OpReturn);
-
-        if (vm.options.print_fn_chunks) {
-            std::cerr << func_comp.chunk().to_string() << '\n';
-        }
-
-        write_as_closure(vm, &func_comp);
-
-        return CarOk;
-    }
-
-    // NOLINTNEXTLINE(misc-no-recursion)
-    CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode *node) {
-        AstNode *ident = node->kids[0];
-        AstNode *func_def = node->kids[1];
-
-        auto *rec_func_ident = LambString::from_cstr(vm, ident->val.i);
-        compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
-
-        BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
-        STACK_DIFF(compiler, 1);
-
-        if (compiler->block->depth == 0) {
-            compiler->chunk().write(vm, OpDefineGlobal);
-            compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
-            STACK_DIFF(compiler, -1);
-        } else {
-            compiler->add_local(vm, rec_func_ident->chars);
-            STACK_DIFF(compiler, 0);
-        }
-
-        return CarOk;
-    }
-
-    // NOLINTNEXTLINE(misc-no-recursion)
-    CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *first, AstNode *second) {
-        // Turns: `f1 .> f2` or `f2 <. f1` into:
-        // result := fn(x) -> f2(f1(x));
-        Block block = {
-            .prev = compiler->block,
-            .base = 1,
-            .offset = 0,
-            .depth = 0,
-        };
-    
-        Compiler func_comp(vm, compiler, &block, FtNormal, ANON_FUNC_NAME, 1);
-
-        // The first local in a function is actually either a nameless value,
-        // or the function itself, and in order for it to be accessible the
-        // depth must match.
-        func_comp.locals[0].depth = 1;
-        block.offset += 1;
-
-        func_comp.new_scope();
-        func_comp.enclosing = compiler;
-        vm.curr_compiler = &func_comp;
-
-        BUBBLE(compile(vm, &func_comp, first));
-        BUBBLE(compile(vm, &func_comp, second));
-
-        // This gets the first variable off of the stack. Remember:
-        // * The variable at position 0 is the function itself
-        // * Position of the first arg is at index 1
-        func_comp.chunk().write(vm, OpGetLocal);
-        func_comp.chunk().write_const(vm,  Value::from_i64(1));
-
-        func_comp.chunk().write(vm, OpCall);
-        func_comp.chunk().write_const(vm,  Value::from_i64(1));
-
-        func_comp.chunk().write(vm, OpCall);
-        func_comp.chunk().write_const(vm,  Value::from_i64(1));
-
-        func_comp.chunk().write(vm, OpReturn);
-
-        if (vm.options.print_fn_chunks) {
-            std::cerr << func_comp.chunk().to_string() << '\n';
-        }
-
-        write_as_closure(vm, &func_comp);
-
-        return CarOk;
+bool is_stmt(AstNodeType type) {
+    switch (type) {
+        case AstntReturn:
+            return true;
+        case AstntExprStmt:
+            return true;
+        case AstntAssignStmt:
+            return true;
+        default:
+            return false;
     }
 }
 
+Compiler new_function_compiler(Vm &vm, Compiler *const compiler, Block *const block,
+                               char const *name) {
+    Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
+    func_comp.new_scope();
+
+    return func_comp;
+}
+
+void add_arg_to_compiler(Vm &vm, Compiler *const func_comp, AstNode const *arg) {
+    AstNode *ident_node = arg->kids[0];
+    auto *ident = LambString::from_cstr(vm, ident_node->val.i);
+    func_comp->chunk().add_const(vm, Value::from_obj((Object *)ident));
+    func_comp->add_local(vm, ident->chars);
+    func_comp->function->arity++;
+}
+
+void write_as_closure(Vm &vm, Compiler *const func_comp) {
+    Compiler *compiler = func_comp->enclosing;
+    compiler->chunk().write(vm, OpClosure);
+    compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
+    for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
+        compiler->chunk().write(vm, func_comp->upvalues[i].is_local);
+        compiler->chunk().write(vm, func_comp->upvalues[i].index);
+    }
+
+    func_comp->end_scope(vm);
+    func_comp->destroy(vm);
+    vm.curr_compiler = func_comp->enclosing;
+}
+
 // NOLINTNEXTLINE(misc-no-recursion)
-CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
-    #define CONSTANT(val) \
-        do { \
-            compiler->chunk().write_const(vm, (val)); \
-            STACK_DIFF(compiler, 1); \
-        } while(false)
-    
-    #define UNARY(op) \
-        do { \
-            BUBBLE(compile(vm, compiler, node->kids[0])); \
-            compiler->chunk().write(vm, (op)); \
-            STACK_DIFF(compiler, 0); \
-        } while(false)
-    
-    #define BINARY(op) \
-        do { \
-            BUBBLE(compile(vm, compiler, node->kids[0])); \
-            BUBBLE(compile(vm, compiler, node->kids[1])); \
-            compiler->chunk().write(vm, op); \
-            STACK_DIFF(compiler, -1); \
-        } while(false)
-    
+CompileAstResult compile_function(Vm &vm, Compiler *compiler, AstNode *node, char const *name) {
+    AstNode *func_args = node->kids[0];
+    AstNode *func_body = node->kids[1];
+    AstNode *is_recursive = node->kids[2];
+
+    Block block = {
+        .prev = nullptr,
+        .base = 0,
+        .offset = 0,
+        .depth = 0,
+    };
+
+    Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
+    vm.curr_compiler = &func_comp;
+
+    // The first local in a function is actually either a nameless value,
+    // or the function itself, and in order for it to be accessible the
+    // depth must match.
+    func_comp.locals[0].depth = func_comp.block->depth;
+    block.offset += 1;
+
+    // In a recursive function the starting value must be findable via name
+    if (is_recursive->val.b) {
+        func_comp.locals[0].name = name;
+    }
+
+    for (AstNode *arg = func_args; arg != nullptr; arg = arg->kids[1]) {
+        add_arg_to_compiler(vm, &func_comp, arg);
+        block.offset += 1;
+    }
+
+    BUBBLE(compile(vm, &func_comp, func_body));
+    func_comp.chunk().write(vm, OpReturn);
+
+    if (vm.options.print_fn_chunks) {
+        std::cerr << func_comp.chunk().to_string() << '\n';
+    }
+
+    write_as_closure(vm, &func_comp);
+
+    return CarOk;
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+CompileAstResult compile_rec_func_def(Vm &vm, Compiler *compiler, AstNode *node) {
+    AstNode *ident = node->kids[0];
+    AstNode *func_def = node->kids[1];
+
+    auto *rec_func_ident = LambString::from_cstr(vm, ident->val.i);
+    compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
+
+    BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
+    STACK_DIFF(compiler, 1);
+
+    if (compiler->block->depth == 0) {
+        compiler->chunk().write(vm, OpDefineGlobal);
+        compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
+        STACK_DIFF(compiler, -1);
+    } else {
+        compiler->add_local(vm, rec_func_ident->chars);
+        STACK_DIFF(compiler, 0);
+    }
+
+    return CarOk;
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+CompileAstResult compile_compose(Vm &vm, Compiler *compiler, AstNode *first, AstNode *second) {
+    // Turns: `f1 .> f2` or `f2 <. f1` into:
+    // result := fn(x) -> f2(f1(x));
+    Block block = {
+        .prev = compiler->block,
+        .base = 1,
+        .offset = 0,
+        .depth = 0,
+    };
+
+    Compiler func_comp(vm, compiler, &block, FtNormal, ANON_FUNC_NAME, 1);
+
+    // The first local in a function is actually either a nameless value,
+    // or the function itself, and in order for it to be accessible the
+    // depth must match.
+    func_comp.locals[0].depth = 1;
+    block.offset += 1;
+
+    func_comp.new_scope();
+    func_comp.enclosing = compiler;
+    vm.curr_compiler = &func_comp;
+
+    BUBBLE(compile(vm, &func_comp, first));
+    BUBBLE(compile(vm, &func_comp, second));
+
+    // This gets the first variable off of the stack. Remember:
+    // * The variable at position 0 is the function itself
+    // * Position of the first arg is at index 1
+    func_comp.chunk().write(vm, OpGetLocal);
+    func_comp.chunk().write_const(vm, Value::from_i64(1));
+
+    func_comp.chunk().write(vm, OpCall);
+    func_comp.chunk().write_const(vm, Value::from_i64(1));
+
+    func_comp.chunk().write(vm, OpCall);
+    func_comp.chunk().write_const(vm, Value::from_i64(1));
+
+    func_comp.chunk().write(vm, OpReturn);
+
+    if (vm.options.print_fn_chunks) {
+        std::cerr << func_comp.chunk().to_string() << '\n';
+    }
+
+    write_as_closure(vm, &func_comp);
+
+    return CarOk;
+}
+} // namespace
+
+// NOLINTNEXTLINE(misc-no-recursion)
+CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
+#define CONSTANT(val)                                                                              \
+    do {                                                                                           \
+        compiler->chunk().write_const(vm, (val));                                                  \
+        STACK_DIFF(compiler, 1);                                                                   \
+    } while (false)
+
+#define UNARY(op)                                                                                  \
+    do {                                                                                           \
+        BUBBLE(compile(vm, compiler, node->kids[0]));                                              \
+        compiler->chunk().write(vm, (op));                                                         \
+        STACK_DIFF(compiler, 0);                                                                   \
+    } while (false)
+
+#define BINARY(op)                                                                                 \
+    do {                                                                                           \
+        BUBBLE(compile(vm, compiler, node->kids[0]));                                              \
+        BUBBLE(compile(vm, compiler, node->kids[1]));                                              \
+        compiler->chunk().write(vm, op);                                                           \
+        STACK_DIFF(compiler, -1);                                                                  \
+    } while (false)
+
     switch (node->type) {
         // Simple Constants
-        case AstntNilLit:  CONSTANT(Value::nil());                  break;
-        case AstntNumLit:  CONSTANT(Value::from_i64(node->val.n));  break;
-        case AstntCharLit: CONSTANT(Value::from_char(node->val.c)); break;
-        case AstntBoolLit: CONSTANT(Value::from_bool(node->val.b)); break;
+        case AstntNilLit:
+            CONSTANT(Value::nil());
+            break;
+        case AstntNumLit:
+            CONSTANT(Value::from_i64(node->val.n));
+            break;
+        case AstntCharLit:
+            CONSTANT(Value::from_char(node->val.c));
+            break;
+        case AstntBoolLit:
+            CONSTANT(Value::from_bool(node->val.b));
+            break;
 
         // Complex Constants
         case AstntIdent: {
@@ -239,27 +248,65 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         }
 
         // Simple Unary
-        case AstntUnaryNeg:     UNARY(OpNumNeg); break;
-        case AstntUnaryLogNot:  UNARY(OpLogNeg); break;
-        case AstntUnaryBitNot:  UNARY(OpBinNeg); break;
+        case AstntUnaryNeg:
+            UNARY(OpNumNeg);
+            break;
+        case AstntUnaryLogNot:
+            UNARY(OpLogNeg);
+            break;
+        case AstntUnaryBitNot:
+            UNARY(OpBinNeg);
+            break;
 
         // Simple Binary
-        case AstntBinaryAdd:    BINARY(OpAdd); break;
-        case AstntBinarySub:    BINARY(OpSub); break;
-        case AstntBinaryMul:    BINARY(OpMul); break;
-        case AstntBinaryDiv:    BINARY(OpDiv); break;
-        case AstntBinaryMod:    BINARY(OpMod); break;
-        case AstntBinaryEq:     BINARY(OpEq);  break;
-        case AstntBinaryNe:     BINARY(OpNe);  break;
-        case AstntBinaryGt:     BINARY(OpGt);  break;
-        case AstntBinaryGe:     BINARY(OpGe);  break;
-        case AstntBinaryLt:     BINARY(OpLt);  break;
-        case AstntBinaryLe:     BINARY(OpLe);  break;
-        case AstntBinaryOr:     BINARY(OpBinOr);  break;
-        case AstntBinaryXor:    BINARY(OpBinXor); break;
-        case AstntBinaryAnd:    BINARY(OpBinAnd); break;
-        case AstntBinaryRShift: BINARY(OpRShift); break;
-        case AstntBinaryLShift: BINARY(OpLShift); break;
+        case AstntBinaryAdd:
+            BINARY(OpAdd);
+            break;
+        case AstntBinarySub:
+            BINARY(OpSub);
+            break;
+        case AstntBinaryMul:
+            BINARY(OpMul);
+            break;
+        case AstntBinaryDiv:
+            BINARY(OpDiv);
+            break;
+        case AstntBinaryMod:
+            BINARY(OpMod);
+            break;
+        case AstntBinaryEq:
+            BINARY(OpEq);
+            break;
+        case AstntBinaryNe:
+            BINARY(OpNe);
+            break;
+        case AstntBinaryGt:
+            BINARY(OpGt);
+            break;
+        case AstntBinaryGe:
+            BINARY(OpGe);
+            break;
+        case AstntBinaryLt:
+            BINARY(OpLt);
+            break;
+        case AstntBinaryLe:
+            BINARY(OpLe);
+            break;
+        case AstntBinaryOr:
+            BINARY(OpBinOr);
+            break;
+        case AstntBinaryXor:
+            BINARY(OpBinXor);
+            break;
+        case AstntBinaryAnd:
+            BINARY(OpBinAnd);
+            break;
+        case AstntBinaryRShift:
+            BINARY(OpRShift);
+            break;
+        case AstntBinaryLShift:
+            BINARY(OpLShift);
+            break;
 
         case AstntBinaryLogAnd: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
@@ -544,7 +591,8 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         case AstntNodeList: {
             for (AstNode *stmt = node; stmt != nullptr; stmt = stmt->kids[1]) {
                 if (stmt->type != AstntNodeList) {
-                    std::cerr << "[Lamb] Internal compiler error: AstNodeList->kids[1] is not of type AstntNodeList"
+                    std::cerr << "[Lamb] Internal compiler error: AstNodeList->kids[1] is not of "
+                                 "type AstntNodeList"
                               << '\n';
                     exit(EXIT_FAILURE);
                 }
@@ -555,15 +603,14 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         }
         default:
             std::cerr << "[Lamb] Internal compiler error: "
-                      << "Unable to compile AstNode of kind: " << node->type
-                      << '\n';
+                      << "Unable to compile AstNode of kind: " << node->type << '\n';
             return CarUnsupportedAst;
     }
 
     return CarOk;
-    #undef BINARY
-    #undef UNARY
-    #undef CONSTANT
+#undef BINARY
+#undef UNARY
+#undef CONSTANT
 }
 
 #undef BUBBLE

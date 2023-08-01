@@ -4,9 +4,9 @@
 #include <optional>
 #include <string>
 
+#include "../types.hpp"
 #include "object.hpp"
 #include "value.hpp"
-#include "../types.hpp"
 
 #define TABLE_MAX_LOAD 0.75
 
@@ -22,19 +22,19 @@ struct Table {
 
     Table();
 
-    Table(i32 len, i32 capacity, Entry* entries);
+    Table(i32 len, i32 capacity, Entry *entries);
 
-    void destroy(Vm& vm);
+    void destroy(Vm &vm);
 
-    Entry *entry(LambString* key) const;
+    Entry *entry(LambString *key) const;
 
-    std::optional<LambString*> find_matching_key(char const* chars, i32 len, u32 hash) const;
+    std::optional<LambString *> find_matching_key(char const *chars, i32 len, u32 hash) const;
 
     std::optional<Value> get(LambString *key) const;
 
-    bool insert(Vm& vm, LambString *key, Value val);
+    bool insert(Vm &vm, LambString *key, Value val);
 
-    bool remove(LambString* key) const;
+    bool remove(LambString *key) const;
 
     void remove_marked() const;
 

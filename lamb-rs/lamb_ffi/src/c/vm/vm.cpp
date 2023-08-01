@@ -2,14 +2,13 @@
 #include <cstdlib>
 #include <ctime>
 
-#include "native.hpp"
-#include "vm.hpp"
 #include "../compile/chunk.hpp"
 #include "../compile/gcvec.hpp"
 #include "../compile/object.hpp"
 #include "../compile/value.hpp"
 #include "../types.hpp"
-
+#include "native.hpp"
+#include "vm.hpp"
 
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
 #define vm_assert(msg, x) lamb_assert("[LambVm] " msg, (x))
@@ -34,19 +33,20 @@
 // This function is not a member because for whatever reason the compiler can't properly optimize
 // it's use in Vm::run as well as it can when the function is used as a static function. Performance
 // was ~15% worse for calculating the 35th fibonacci number. Consistently 2.6 to 2.3 seconds, with
-// flamegraph showing this function taking up lots of time. I assume that the compiler doesn't inline
-// the method call, as it post move is no longer visible in a flamegraph.
+// flamegraph showing this function taking up lots of time. I assume that the compiler doesn't
+// inline the method call, as it post move is no longer visible in a flamegraph.
 
 namespace {
-    void close_upvalues(Vm& vm, Value *last) {
-        while (vm.open_upvalues != nullptr && vm.open_upvalues->location >= last) {
-            LambUpvalue *upvalue = vm.open_upvalues;
-            upvalue->closed = *upvalue->location;
-            upvalue->location = &upvalue->closed;
-            vm.open_upvalues = upvalue->next;
-        }
+void close_upvalues(Vm &vm, Value *last) {
+    while (vm.open_upvalues != nullptr && vm.open_upvalues->location >= last) {
+        LambUpvalue *upvalue = vm.open_upvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        vm.open_upvalues = upvalue->next;
     }
 }
+} // namespace
+
 LambUpvalue *Vm::capture_upvalue(Value *local) {
     LambUpvalue *prev_upvalue = nullptr;
     LambUpvalue *curr_upvalue = this->open_upvalues;
@@ -75,7 +75,9 @@ constexpr Value *Vm::peek_stack(u8 n) const {
     return this->stack_top - n - 1;
 }
 
-Vm::Vm(VmOptions options) : curr_compiler(nullptr), saved_value(Value::nil()), frame_count(0), open_upvalues(nullptr), options(options) {
+Vm::Vm(VmOptions options)
+    : curr_compiler(nullptr), saved_value(Value::nil()), frame_count(0), open_upvalues(nullptr),
+      options(options) {
     this->stack_top = this->stack;
     srand(time(nullptr));
     set_natives(*this);
@@ -98,10 +100,10 @@ InterpretResult Vm::run() {
     Callframe *frame = &this->frames[this->frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
+
 #define READ_SHORT() (frame->ip += 2, (u16)((frame->ip[-2] << 8) | frame->ip[-1]))
 
-#define READ_CONSTANT()                                                                            \
-    (frame->ip += 1, frame->closure->function->chunk.constants[READ_SHORT()])
+#define READ_CONSTANT() (frame->ip += 1, frame->closure->function->chunk.constants[READ_SHORT()])
 
 #define PUSH(val) (*this->stack_top = (val), this->stack_top += 1)
 
@@ -112,7 +114,7 @@ InterpretResult Vm::run() {
 #define BINARY_INT_DOUBLE_OP(vm, op)                                                               \
     do {                                                                                           \
         Value rhs = POP();                                                                         \
-        Value *lhs = vm->peek_stack();                                                            \
+        Value *lhs = vm->peek_stack();                                                             \
                                                                                                    \
         if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
             lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
@@ -126,7 +128,7 @@ InterpretResult Vm::run() {
 #define BINARY_INT_OP(vm, op)                                                                      \
     do {                                                                                           \
         Value rhs = POP();                                                                         \
-        Value *lhs = vm->peek_stack();                                                            \
+        Value *lhs = vm->peek_stack();                                                             \
                                                                                                    \
         if (rhs.kind == lhs->kind && rhs.kind == VkInt) {                                          \
             lhs->as.intn = lhs->as.intn op rhs.as.intn;                                            \
@@ -230,12 +232,12 @@ InterpretResult Vm::run() {
                 } else if (rhs->kind == lhs->kind && rhs->kind == VkDouble) {
                     lhs->as.doubn = lhs->as.doubn + rhs->as.doubn;
                     DROP();
-                } else if (lhs->is_object() && lhs->as.obj->is(OtString) &&
-                           rhs->is_object() && rhs->as.obj->is(OtString)) {
-                    auto *left = (LambString*)lhs->as.obj;
-                    auto *right = (LambString*)rhs->as.obj;
+                } else if (lhs->is_object() && lhs->as.obj->is(OtString) && rhs->is_object() &&
+                           rhs->as.obj->is(OtString)) {
+                    auto *left = (LambString *)lhs->as.obj;
+                    auto *right = (LambString *)rhs->as.obj;
                     auto *result = left->concat(*this, right);
-                    
+
                     DROP();
                     DROP();
                     PUSH(Value::from_obj((Object *)result));
@@ -490,14 +492,14 @@ InterpretResult Vm::run() {
         }
     }
 
-    #undef BINARY_INT_OP
-    #undef BINARY_INT_DOUBLE_OP
-    #undef DROP
-    #undef POP
-    #undef PUSH
-    #undef READ_CONSTANT
-    #undef READ_SHORT
-    #undef READ_BYTE
+#undef BINARY_INT_OP
+#undef BINARY_INT_DOUBLE_OP
+#undef DROP
+#undef POP
+#undef PUSH
+#undef READ_CONSTANT
+#undef READ_SHORT
+#undef READ_BYTE
 }
 
 void Vm::destroy() {

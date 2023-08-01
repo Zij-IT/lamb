@@ -3,12 +3,12 @@
 #include <sstream>
 #include <string>
 
+#include "../types.hpp"
 #include "object.hpp"
 #include "value.hpp"
-#include "../types.hpp"
 
 // NOLINTNEXTLINE(misc-no-recursion)
-Order Value::cmp(Value const& rhs) const {
+Order Value::cmp(Value const &rhs) const {
     switch (rhs.kind) {
         case VkNil:
             return OrderEqual;
@@ -105,11 +105,12 @@ Order Value::cmp(Value const& rhs) const {
             }
     }
 
-    std::cerr << "[Lamb] Internal compiler error: Unknown object type " << this->as.obj->type << '\n';
+    std::cerr << "[Lamb] Internal compiler error: Unknown object type " << this->as.obj->type
+              << '\n';
     exit(EXIT_FAILURE);
 }
 
-constexpr char const* Value::kind_as_cstr() const {
+constexpr char const *Value::kind_as_cstr() const {
     switch (this->kind) {
         case VkNil:
             return "nil";
@@ -146,13 +147,25 @@ constexpr char const* Value::kind_as_cstr() const {
 
 std::string Value::to_string() const {
     std::ostringstream out;
-    switch(this->kind) {
-        case VkBool:   out << (this->as.boolean ? "true" : "false"); break;
-        case VkInt:    out << this->as.intn;                         break;
-        case VkDouble: out << this->as.doubn;                        break;
-        case VkChar:   out << this->as.ch;                           break;
-        case VkObj:    out << this->as.obj->to_string();             break;
-        case VkNil:    out << "nil";                                 break;
+    switch (this->kind) {
+        case VkBool:
+            out << (this->as.boolean ? "true" : "false");
+            break;
+        case VkInt:
+            out << this->as.intn;
+            break;
+        case VkDouble:
+            out << this->as.doubn;
+            break;
+        case VkChar:
+            out << this->as.ch;
+            break;
+        case VkObj:
+            out << this->as.obj->to_string();
+            break;
+        case VkNil:
+            out << "nil";
+            break;
     }
 
     return out.str();

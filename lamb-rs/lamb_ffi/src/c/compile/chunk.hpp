@@ -5,9 +5,9 @@
 #include <string>
 #include <tuple>
 
+#include "../types.hpp"
 #include "gcvec.hpp"
 #include "value.hpp"
-#include "../types.hpp"
 
 using InstrFormat = std::tuple<std::string, std::optional<std::string>, u32>;
 
@@ -55,21 +55,22 @@ struct Chunk {
     GcVec<Value> constants;
 
     Chunk();
-   
-    void destroy(Vm& vm);
 
-    void write(Vm& vm, u8 byte);
+    void destroy(Vm &vm);
 
-    i32 write_jump(Vm& vm, u8 op);
+    void write(Vm &vm, u8 byte);
+
+    i32 write_jump(Vm &vm, u8 op);
     void patch_jump(i32 offset);
 
-    void write_const(Vm& vm, Value val);
-    i32 add_const(Vm& vm, Value val);
+    void write_const(Vm &vm, Value val);
+    i32 add_const(Vm &vm, Value val);
 
     std::string to_string();
 
   private:
-    [[nodiscard]] std::tuple<std::string, std::optional<std::string>, u32> format_instruction(u32 offset) const;
+    [[nodiscard]] std::tuple<std::string, std::optional<std::string>, u32>
+    format_instruction(u32 offset) const;
 };
 
 #endif // CHUNK_HEADER

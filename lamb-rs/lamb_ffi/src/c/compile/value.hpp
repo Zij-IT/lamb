@@ -34,13 +34,13 @@ struct Value {
         return val;
     }
 
-    constexpr static Value from_i64(i64 i){
-        Value val = {.kind = VkInt, .as = { .intn = i }};
+    constexpr static Value from_i64(i64 i) {
+        Value val = {.kind = VkInt, .as = {.intn = i}};
         return val;
     }
 
     constexpr static Value from_f64(f64 i) {
-        Value val = {.kind = VkDouble, .as = { .doubn = i }};
+        Value val = {.kind = VkDouble, .as = {.doubn = i}};
         return val;
     }
 
@@ -74,9 +74,9 @@ struct Value {
 
     [[nodiscard]] constexpr bool is_nil() const { return this->kind == VkNil; }
 
-    [[nodiscard]] constexpr char const* kind_as_cstr() const;
+    [[nodiscard]] constexpr char const *kind_as_cstr() const;
 
-    [[nodiscard]] Order cmp(Value const& rhs) const;
+    [[nodiscard]] Order cmp(Value const &rhs) const;
 
     [[nodiscard]] std::string to_string() const;
 };

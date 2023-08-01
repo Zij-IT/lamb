@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "chunk.hpp"
-#include "value.hpp"
-#include "gcvec.hpp"
 #include "../types.hpp"
+#include "chunk.hpp"
+#include "gcvec.hpp"
+#include "value.hpp"
 
 // Forward declare vm in vm.h
 struct Vm;
@@ -34,15 +34,15 @@ struct Object {
 
 struct LambString {
     Object obj;
-    char const* chars;
+    char const *chars;
     i32 len;
     u32 hash;
 
-    static LambString* alloc(Vm& vm, char const* chars, i32 len, u32 hash);
+    static LambString *alloc(Vm &vm, char const *chars, i32 len, u32 hash);
 
-    static LambString* from_cstr(Vm&vm, char const* chars);
+    static LambString *from_cstr(Vm &vm, char const *chars);
 
-    LambString* concat(Vm& vm, LambString* rhs) const;
+    LambString *concat(Vm &vm, LambString *rhs) const;
 };
 
 struct LambArray {
@@ -50,27 +50,27 @@ struct LambArray {
     GcVec<Value> items;
 
     LambArray(Object obj, GcVec<Value> items) : obj(obj), items(items) {}
-    static LambArray* alloc(Vm& vm, GcVec<Value> items);
+    static LambArray *alloc(Vm &vm, GcVec<Value> items);
 };
 
 struct LambFunc {
     Object obj;
     Chunk chunk;
-    char const* name;
+    char const *name;
     i32 upvalue_count;
     u8 arity;
 
     LambFunc(Object obj, Chunk chunk, const char *name, i32 upvalue_count, u8 arity)
         : obj(obj), chunk(chunk), name(name), upvalue_count(upvalue_count), arity(arity) {}
 
-    static LambFunc* alloc(Vm& vm, char const* name, u8 arity);
+    static LambFunc *alloc(Vm &vm, char const *name, u8 arity);
 };
 
 struct NativeFunc {
     Object obj;
     CFunc func;
 
-    static NativeFunc* alloc(Vm& vm, CFunc func);
+    static NativeFunc *alloc(Vm &vm, CFunc func);
 };
 
 struct LambUpvalue {
@@ -79,7 +79,7 @@ struct LambUpvalue {
     Value *location;
     LambUpvalue *next;
 
-    static LambUpvalue* alloc(Vm& vm, Value* slot, LambUpvalue* next);
+    static LambUpvalue *alloc(Vm &vm, Value *slot, LambUpvalue *next);
 };
 
 struct LambClosure {
@@ -88,7 +88,7 @@ struct LambClosure {
     LambUpvalue **upvalues;
     i32 upvalue_count;
 
-    static LambClosure* alloc(Vm& vm, LambFunc* func);
+    static LambClosure *alloc(Vm &vm, LambFunc *func);
 };
 
 enum FuncType {
@@ -96,6 +96,6 @@ enum FuncType {
     FtNormal,
 };
 
-void object_free(Vm& vm, Object *obj);
+void object_free(Vm &vm, Object *obj);
 
 #endif // OBJECT_HEADER
