@@ -184,6 +184,19 @@ InterpretResult Vm::run() {
                 PUSH(*frame->closure->upvalues[slot]->location);
                 break;
             }
+            case OpJumpIfTrue: {
+                u16 offset = READ_SHORT();
+                if (!this->peek_stack()->is_bool()) {
+                    runtime_error("A branching expression '&&', '||' and 'if' cannot "
+                                  "branch with expressions of type %s",
+                                  kind_as_cstr(*vm_peek_stack(vm)));
+                }
+
+                if (this->peek_stack()->as.boolean) {
+                    frame->ip += offset;
+                }
+                break;
+            }
             case OpJumpIfFalse: {
                 u16 offset = READ_SHORT();
                 if (!this->peek_stack()->is_bool()) {

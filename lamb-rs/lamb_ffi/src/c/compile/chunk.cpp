@@ -145,6 +145,8 @@ Chunk::format_instruction(u32 offset) const {
             return SIMPLE("OpGetLocal");
         case OpJump:
             return JUMP("OpJump");
+        case OpJumpIfTrue:
+            return JUMP("OpJumpIfTrue");
         case OpJumpIfFalse:
             return JUMP("OpJumpIfFalse");
         case OpNumNeg:

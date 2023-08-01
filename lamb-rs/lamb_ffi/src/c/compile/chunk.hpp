@@ -38,6 +38,7 @@ enum OpCode {
     OpLShift,
     OpReturn,
     OpJump,
+    OpJumpIfTrue,
     OpJumpIfFalse,
     OpMakeArray,
     OpIndexArray,
