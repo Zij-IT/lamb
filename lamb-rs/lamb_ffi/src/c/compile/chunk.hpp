@@ -1,12 +1,15 @@
 #ifndef CHUNK_HEADER
 #define CHUNK_HEADER
 
-#include "./value.hpp"
-#include "gcvec.hpp"
-
+#include <optional>
 #include <string>
+#include <tuple>
 
-typedef std::tuple<std::string, std::optional<std::string>, u32> InstrFormat;
+#include "gcvec.hpp"
+#include "value.hpp"
+#include "../types.hpp"
+
+using InstrFormat = std::tuple<std::string, std::optional<std::string>, u32>;
 
 enum OpCode {
     OpConstant,
@@ -66,7 +69,7 @@ struct Chunk {
     std::string to_string();
 
   private:
-    std::tuple<std::string, std::optional<std::string>, u32> format_instruction(u32 at);
+    [[nodiscard]] std::tuple<std::string, std::optional<std::string>, u32> format_instruction(u32 offset) const;
 };
 
 #endif // CHUNK_HEADER

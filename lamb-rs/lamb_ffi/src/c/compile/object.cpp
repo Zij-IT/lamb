@@ -1,9 +1,15 @@
+#include <cstdlib>
 #include <cstring>
 #include <sstream>
+#include <string>
 
-#include "../vm/vm.hpp"
+#include "chunk.hpp"
+#include "gcvec.hpp"
 #include "misc.hpp"
 #include "object.hpp"
+#include "value.hpp"
+#include "../vm/vm.hpp"
+#include "../types.hpp"
 
 std::string Object::to_string() const {
     std::ostringstream out;
@@ -12,7 +18,7 @@ std::string Object::to_string() const {
             out << "\"" << ((LambString*)(this))->chars << "\"";
             break;
         case OtArray: {
-            auto arr = (LambArray*)this;
+            auto *arr = (LambArray*)this;
             out << '[';
             for (i32 i = 0; i < arr->items.len(); i++) {
                 out << arr->items[i].to_string();
@@ -24,8 +30,8 @@ std::string Object::to_string() const {
             break;
         }
         case OtFunc: {
-            LambFunc *func = (LambFunc *)this;
-            if (func->name == NULL) {
+            auto *func = (LambFunc *)this;
+            if (func->name == nullptr) {
                 out << "<script>";
             } else {
                 out << "<fn " << func->name << ">";
@@ -47,7 +53,7 @@ std::string Object::to_string() const {
 }
 
 LambString* LambString::alloc(Vm& vm, char const* chars, i32 len, u32 hash) {
-    auto st = (LambString*)vm.gc.alloc(vm, sizeof(LambString), 1);
+    auto *st = (LambString*)vm.gc.alloc(vm, sizeof(LambString), 1);
     st->obj = { .next = nullptr, .type = OtString, .is_marked = false, };
     st->chars = chars;
     st->len = len;
@@ -65,7 +71,7 @@ LambString* LambString::from_cstr(Vm&vm, char const* chars) {
         return match.value();
     }
    
-    auto lamb_str = LambString::alloc(vm, strdup(chars), len, hash);
+    auto *lamb_str = LambString::alloc(vm, strdup(chars), len, hash);
     vm.push_stack(Value::from_obj((Object *)lamb_str));
     vm.strings.insert(vm, lamb_str, Value::from_bool(false));
     vm.pop_stack();
@@ -74,12 +80,12 @@ LambString* LambString::from_cstr(Vm&vm, char const* chars) {
 }
 
 
-LambString* LambString::concat(Vm& vm, LambString* rhs) {
+LambString* LambString::concat(Vm& vm, LambString* rhs) const {
     i32 len = this->len + rhs->len;
 
     char* chars = (char*)vm.gc.alloc(vm, sizeof(char), len + 1);
-    strcpy(chars, this->chars);
-    strcpy(chars + this->len, rhs->chars);
+    strncpy(chars, this->chars, this->len);
+    strncpy(chars + this->len, rhs->chars, rhs->len);
     chars[len] = '\0';
 
     u32 hash = hash_string(chars);
@@ -89,7 +95,7 @@ LambString* LambString::concat(Vm& vm, LambString* rhs) {
         return interned.value();
     }
 
-    auto ret = LambString::alloc(vm, chars, len, hash);
+    auto *ret = LambString::alloc(vm, chars, len, hash);
     vm.push_stack(Value::from_obj((Object *)(ret)));
     vm.strings.insert(vm, ret, Value::from_bool(false));
     vm.pop_stack();
@@ -98,7 +104,7 @@ LambString* LambString::concat(Vm& vm, LambString* rhs) {
 } 
 
 LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
-    auto arr = (LambArray*)vm.gc.alloc(vm, sizeof(LambArray), 1);
+    auto *arr = (LambArray*)vm.gc.alloc(vm, sizeof(LambArray), 1);
     arr->obj = { .next = nullptr, .type = OtArray, .is_marked = false, };
     arr->items = items;
 
@@ -107,7 +113,7 @@ LambArray* LambArray::alloc(Vm& vm, GcVec<Value> items) {
 }
 
 LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
-    auto func = (LambFunc*)vm.gc.alloc(vm, sizeof(LambFunc), 1);
+    auto *func = (LambFunc*)vm.gc.alloc(vm, sizeof(LambFunc), 1);
     func->obj = { .next = nullptr, .type = OtFunc, .is_marked = false, };
     func->name = name;
     func->arity = arity;
@@ -119,7 +125,7 @@ LambFunc* LambFunc::alloc(Vm& vm, char const* name, u8 arity) {
 }
 
 NativeFunc* NativeFunc::alloc(Vm& vm, CFunc func) {
-    auto native = (NativeFunc *)vm.gc.alloc(vm, sizeof(NativeFunc), 1);
+    auto *native = (NativeFunc *)vm.gc.alloc(vm, sizeof(NativeFunc), 1);
     Object obj = { .next = nullptr, .type = OtNative, .is_marked = false, };
     native->obj = obj;
     native->func = func;
@@ -129,7 +135,7 @@ NativeFunc* NativeFunc::alloc(Vm& vm, CFunc func) {
 }
 
 LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
-    auto upvalue = (LambUpvalue *)vm.gc.alloc(vm, sizeof(LambUpvalue), 1);
+    auto *upvalue = (LambUpvalue *)vm.gc.alloc(vm, sizeof(LambUpvalue), 1);
     upvalue->obj = { .next = nullptr, .type = OtUpvalue, .is_marked = false, };
     upvalue->location = slot;
     upvalue->next = next;
@@ -140,14 +146,14 @@ LambUpvalue* LambUpvalue::alloc(Vm& vm, Value* slot, LambUpvalue* next) {
 }
 
 LambClosure* LambClosure::alloc(Vm& vm, LambFunc* func) {
-    auto closure = (LambClosure *)vm.gc.alloc(vm, sizeof(LambClosure), 1);
+    auto *closure = (LambClosure *)vm.gc.alloc(vm, sizeof(LambClosure), 1);
     closure->obj = { .next = nullptr, .type = OtClosure, .is_marked = false, };
     closure->function = func;
     closure->upvalue_count = func->upvalue_count;
 
     closure->upvalues =(LambUpvalue **)vm.gc.alloc(vm, sizeof(LambUpvalue *), closure->upvalue_count);
     for (int i = 0; i < closure->upvalue_count; i++) {
-        closure->upvalues[i] = NULL;
+        closure->upvalues[i] = nullptr;
     }
 
     vm.gc.add_object(&closure->obj);
@@ -157,19 +163,19 @@ LambClosure* LambClosure::alloc(Vm& vm, LambFunc* func) {
 void object_free(Vm& vm, Object *obj) {
     switch (obj->type) {
         case OtString: {
-            LambString *st = (LambString *)obj;
+            auto *st = (LambString *)obj;
             vm.gc.free_array((char*)st->chars, sizeof(char), st->len + 1);
             vm.gc.free(st, sizeof(LambString));
             break;
         }
         case OtArray: {
-            LambArray *arr = (LambArray *)obj;
+            auto *arr = (LambArray *)obj;
             arr->items.destroy(vm);
             vm.gc.free(arr, sizeof(LambArray));
             break;
         }
         case OtFunc: {
-            LambFunc *func = (LambFunc *)obj;
+            auto *func = (LambFunc *)obj;
             func->chunk.destroy(vm);
             vm.gc.free(func, sizeof(LambFunc));
             break;
@@ -179,7 +185,7 @@ void object_free(Vm& vm, Object *obj) {
             break;
         }
         case OtClosure: {
-            LambClosure *closure = (LambClosure *)obj;
+            auto *closure = (LambClosure *)obj;
             vm.gc.free_array(closure->upvalues, sizeof(LambUpvalue *), closure->upvalue_count);
             vm.gc.free(closure, sizeof(LambClosure));
             break;
@@ -195,8 +201,8 @@ LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
     i32 len = lhs->len + rhs->len;
 
     char* chars = (char*)vm.gc.alloc(vm, sizeof(char), len + 1);
-    strcpy(chars, lhs->chars);
-    strcpy(chars + lhs->len, rhs->chars);
+    strncpy(chars, lhs->chars, lhs->len);
+    strncpy(chars + lhs->len, rhs->chars, rhs->len);
     chars[len] = '\0';
 
     u32 hash = hash_string(chars);
@@ -206,7 +212,7 @@ LambString *concat(Vm& vm, LambString *lhs, LambString *rhs) {
         return interned.value();
     }
 
-    auto ret = LambString::alloc(vm, chars, len, hash);
+    auto *ret = LambString::alloc(vm, chars, len, hash);
     vm.push_stack(Value::from_obj((Object *)(ret)));
     vm.strings.insert(vm, ret, Value::from_bool(false));
     vm.pop_stack();

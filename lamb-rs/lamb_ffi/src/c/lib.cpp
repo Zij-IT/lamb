@@ -1,13 +1,16 @@
-#include "./ast/ast.hpp"
-#include "./compile/ast.hpp"
-#include "./compile/chunk.hpp"
-#include "./vm/vm.hpp"
 #include <iostream>
-#include <stdlib.h>
+
+#include "ast/ast.hpp"
+#include "compile/ast.hpp"
+#include "compile/chunk.hpp"
+#include "compile/compiler.hpp"
+#include "compile/object.hpp"
+#include "compile/value.hpp"
+#include "vm/vm.hpp"
 
 extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
     // Occurs when with an empty script
-    if (root == NULL) {
+    if (root == nullptr) {
         return;
     }
 
@@ -20,7 +23,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
 
     Vm vm(options);
 
-    Block block = {.prev = NULL, .base = 0, .offset = 1, .depth = 0};
+    Block block = {.prev = nullptr, .base = 0, .offset = 1, .depth = 0};
     Compiler compiler(vm, nullptr, &block, FtScript, "", 0);
     vm.curr_compiler = &compiler;
 
@@ -28,7 +31,7 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
 
     if (car == CarOk) {
         compiler.chunk().write(vm, OpReturn);
-        auto closure = LambClosure::alloc(vm, compiler.function);
+        auto *closure = LambClosure::alloc(vm, compiler.function);
         vm.push_stack(Value::from_obj((Object *)closure));
 
         Callframe *frame = &vm.frames[vm.frame_count++];
@@ -37,13 +40,13 @@ extern "C" void run_ast(AstNode *root, bool print_fns, bool print_main) {
         frame->slots = vm.stack;
 
         if (options.print_main_chunk) {
-            std::cerr << "\n\n" << compiler.chunk().to_string() << std::endl;
+            std::cerr << "\n\n" << compiler.chunk().to_string() << '\n';
         }
 
         vm.run();
-        std::cout << std::endl;
+        std::cout << '\n';
     } else {
-        std::cerr << "Lamb: Compilation error... no more details :/" << std::endl;
+        std::cerr << "Lamb: Compilation error... no more details :/" << '\n';
     }
 
     compiler.destroy(vm);

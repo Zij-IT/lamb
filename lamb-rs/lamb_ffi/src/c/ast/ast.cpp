@@ -1,10 +1,9 @@
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
 
 #include "ast.hpp"
 
 AstNode *new_astnode(AstNodeType type) {
-    AstNode *node = (AstNode*)calloc(1, sizeof(AstNode));
+    auto *node = (AstNode *)calloc(1, sizeof(AstNode));
     node->type = type;
 
     return node;
@@ -24,8 +23,10 @@ AstNode *new_binary_astnode(AstNodeType type, AstNode *lhs, AstNode *rhs) {
 
     return node;
 }
+
+// NOLINTNEXTLINE(misc-no-recursion)
 void free_ast(AstNode *root) {
-    if (root == NULL) {
+    if (root == nullptr) {
         return;
     }
 

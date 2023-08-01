@@ -1,13 +1,17 @@
 #ifndef OBJECT_HEADER
 #define OBJECT_HEADER
 
-#include "../types.hpp"
+#include <string>
+
 #include "chunk.hpp"
+#include "value.hpp"
+#include "gcvec.hpp"
+#include "../types.hpp"
 
 // Forward declare vm in vm.h
 struct Vm;
 
-typedef Value (*CFunc)(i32 args_passed, Value *args);
+using CFunc = Value (*)(i32, Value *);
 
 enum ObjectType {
     OtString,
@@ -23,9 +27,9 @@ struct Object {
     ObjectType type;
     bool is_marked;
 
-    constexpr bool is(ObjectType type) const { return this->type == type; }
+    [[nodiscard]] constexpr bool is(ObjectType type) const { return this->type == type; }
 
-    std::string to_string() const;
+    [[nodiscard]] std::string to_string() const;
 };
 
 struct LambString {
@@ -38,13 +42,14 @@ struct LambString {
 
     static LambString* from_cstr(Vm&vm, char const* chars);
 
-    LambString* concat(Vm& vm, LambString* rhs);
+    LambString* concat(Vm& vm, LambString* rhs) const;
 };
 
 struct LambArray {
     Object obj;
     GcVec<Value> items;
 
+    LambArray(Object obj, GcVec<Value> items) : obj(obj), items(items) {}
     static LambArray* alloc(Vm& vm, GcVec<Value> items);
 };
 
@@ -54,6 +59,9 @@ struct LambFunc {
     char const* name;
     i32 upvalue_count;
     u8 arity;
+
+    LambFunc(Object obj, Chunk chunk, const char *name, i32 upvalue_count, u8 arity)
+        : obj(obj), chunk(chunk), name(name), upvalue_count(upvalue_count), arity(arity) {}
 
     static LambFunc* alloc(Vm& vm, char const* name, u8 arity);
 };

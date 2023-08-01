@@ -1,4 +1,5 @@
 #include "misc.hpp"
+#include "../types.hpp"
 
 u32 hash_string(char const* st) {
     u32 hash = 2166136261;

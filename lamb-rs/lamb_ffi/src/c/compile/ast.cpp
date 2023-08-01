@@ -1,10 +1,13 @@
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
 #include <iostream>
 
 #include "ast.hpp"
 #include "chunk.hpp"
+#include "compiler.hpp"
 #include "object.hpp"
+#include "value.hpp"
+#include "../ast/ast.hpp"
+#include "../types.hpp"
 
 #define ANON_FUNC_NAME "anonymous"
 #define STACK_DIFF(compiler, diff) ((compiler)->block->offset += (diff))
@@ -13,161 +16,167 @@
         return CarUnsupportedAst;                                                                  \
     }
 
-static bool is_stmt(AstNodeType type) {
-    switch (type) {
-        case AstntReturn:
-            return true;
-        case AstntExprStmt:
-            return true;
-        case AstntAssignStmt:
-            return true;
-        default:
-            return false;
-    }
-}
-
-static Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *const block, char const* name) {
-    Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
-    func_comp.new_scope();
-
-    return func_comp;
-}
-
-static void add_arg_to_compiler(Vm& vm, Compiler *const func_comp, AstNode const *arg) {
-    AstNode *ident_node = arg->kids[0];
-    auto ident = LambString::from_cstr(vm, ident_node->val.i);
-    func_comp->chunk().add_const(vm, Value::from_obj((Object *)ident));
-    func_comp->add_local(vm, ident->chars);
-    func_comp->function->arity++;
-}
-
-static void write_as_closure(Vm& vm, Compiler *const func_comp) {
-    Compiler *compiler = func_comp->enclosing;
-    compiler->chunk().write(vm, OpClosure);
-    compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
-    for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
-         compiler->chunk().write(vm, func_comp->upvalues[i].is_local);
-         compiler->chunk().write(vm, func_comp->upvalues[i].index);
+namespace {
+    bool is_stmt(AstNodeType type) {
+        switch (type) {
+            case AstntReturn:
+                return true;
+            case AstntExprStmt:
+                return true;
+            case AstntAssignStmt:
+                return true;
+            default:
+                return false;
+        }
     }
 
-    func_comp->end_scope(vm);
-    func_comp->destroy(vm);
-    vm.curr_compiler = func_comp->enclosing;
-}
+    Compiler new_function_compiler(Vm& vm, Compiler *const compiler, Block *const block, char const* name) {
+        Compiler func_comp(vm, compiler, block, FtNormal, name, 0);
+        func_comp.new_scope();
 
-static CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *node, char const* name) {
-    AstNode *func_args = node->kids[0];
-    AstNode *func_body = node->kids[1];
-    AstNode *is_recursive = node->kids[2];
-
-    Block block = {
-        .prev = NULL,
-        .base = 0,
-        .offset = 0,
-        .depth = 0,
-    };
-
-    Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
-    vm.curr_compiler = &func_comp;
-
-    // The first local in a function is actually either a nameless value,
-    // or the function itself, and in order for it to be accessible the
-    // depth must match.
-    func_comp.locals[0].depth = func_comp.block->depth;
-    block.offset += 1;
-
-    // In a recursive function the starting value must be findable via name
-    if (is_recursive->val.b) {
-        func_comp.locals[0].name = name;
+        return func_comp;
     }
 
-    for (AstNode *arg = func_args; arg != NULL; arg = arg->kids[1]) {
-        add_arg_to_compiler(vm, &func_comp, arg);
+    void add_arg_to_compiler(Vm& vm, Compiler *const func_comp, AstNode const *arg) {
+        AstNode *ident_node = arg->kids[0];
+        auto *ident = LambString::from_cstr(vm, ident_node->val.i);
+        func_comp->chunk().add_const(vm, Value::from_obj((Object *)ident));
+        func_comp->add_local(vm, ident->chars);
+        func_comp->function->arity++;
+    }
+
+    void write_as_closure(Vm& vm, Compiler *const func_comp) {
+        Compiler *compiler = func_comp->enclosing;
+        compiler->chunk().write(vm, OpClosure);
+        compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
+        for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
+             compiler->chunk().write(vm, func_comp->upvalues[i].is_local);
+             compiler->chunk().write(vm, func_comp->upvalues[i].index);
+        }
+
+        func_comp->end_scope(vm);
+        func_comp->destroy(vm);
+        vm.curr_compiler = func_comp->enclosing;
+    }
+
+    // NOLINTNEXTLINE(misc-no-recursion)
+    CompileAstResult compile_function(Vm& vm, Compiler *compiler, AstNode *node, char const* name) {
+        AstNode *func_args = node->kids[0];
+        AstNode *func_body = node->kids[1];
+        AstNode *is_recursive = node->kids[2];
+
+        Block block = {
+            .prev = nullptr,
+            .base = 0,
+            .offset = 0,
+            .depth = 0,
+        };
+
+        Compiler func_comp = new_function_compiler(vm, compiler, &block, name);
+        vm.curr_compiler = &func_comp;
+
+        // The first local in a function is actually either a nameless value,
+        // or the function itself, and in order for it to be accessible the
+        // depth must match.
+        func_comp.locals[0].depth = func_comp.block->depth;
         block.offset += 1;
+
+        // In a recursive function the starting value must be findable via name
+        if (is_recursive->val.b) {
+            func_comp.locals[0].name = name;
+        }
+
+        for (AstNode *arg = func_args; arg != nullptr; arg = arg->kids[1]) {
+            add_arg_to_compiler(vm, &func_comp, arg);
+            block.offset += 1;
+        }
+
+        BUBBLE(compile(vm, &func_comp, func_body));
+        func_comp.chunk().write(vm, OpReturn);
+
+        if (vm.options.print_fn_chunks) {
+            std::cerr << func_comp.chunk().to_string() << '\n';
+        }
+
+        write_as_closure(vm, &func_comp);
+
+        return CarOk;
     }
 
-    BUBBLE(compile(vm, &func_comp, func_body));
-    func_comp.chunk().write(vm, OpReturn);
+    // NOLINTNEXTLINE(misc-no-recursion)
+    CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode *node) {
+        AstNode *ident = node->kids[0];
+        AstNode *func_def = node->kids[1];
 
-    if (vm.options.print_fn_chunks) {
-        std::cerr << func_comp.chunk().to_string() << std::endl;
+        auto *rec_func_ident = LambString::from_cstr(vm, ident->val.i);
+        compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
+
+        BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
+        STACK_DIFF(compiler, 1);
+
+        if (compiler->block->depth == 0) {
+            compiler->chunk().write(vm, OpDefineGlobal);
+            compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
+            STACK_DIFF(compiler, -1);
+        } else {
+            compiler->add_local(vm, rec_func_ident->chars);
+            STACK_DIFF(compiler, 0);
+        }
+
+        return CarOk;
     }
 
-    write_as_closure(vm, &func_comp);
-
-    return CarOk;
-}
-
-static CompileAstResult compile_rec_func_def(Vm& vm, Compiler *compiler, AstNode *node) {
-    AstNode *ident = node->kids[0];
-    AstNode *func_def = node->kids[1];
-
-    auto rec_func_ident = LambString::from_cstr(vm, ident->val.i);
-    compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
-
-    BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
-    STACK_DIFF(compiler, 1);
-
-    if (compiler->block->depth == 0) {
-        compiler->chunk().write(vm, OpDefineGlobal);
-        compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
-        STACK_DIFF(compiler, -1);
-    } else {
-        compiler->add_local(vm, rec_func_ident->chars);
-        STACK_DIFF(compiler, 0);
-    }
-
-    return CarOk;
-}
-
-static CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *first, AstNode *second) {
-    // Turns: `f1 .> f2` or `f2 <. f1` into:
-    // result := fn(x) -> f2(f1(x));
-    Block block = {
-        .prev = compiler->block,
-        .base = 1,
-        .offset = 0,
-        .depth = 0,
-    };
+    // NOLINTNEXTLINE(misc-no-recursion)
+    CompileAstResult compile_compose(Vm& vm, Compiler *compiler, AstNode *first, AstNode *second) {
+        // Turns: `f1 .> f2` or `f2 <. f1` into:
+        // result := fn(x) -> f2(f1(x));
+        Block block = {
+            .prev = compiler->block,
+            .base = 1,
+            .offset = 0,
+            .depth = 0,
+        };
     
-    Compiler func_comp(vm, compiler, &block, FtNormal, ANON_FUNC_NAME, 1);
+        Compiler func_comp(vm, compiler, &block, FtNormal, ANON_FUNC_NAME, 1);
 
-    // The first local in a function is actually either a nameless value,
-    // or the function itself, and in order for it to be accessible the
-    // depth must match.
-    func_comp.locals[0].depth = 1;
-    block.offset += 1;
+        // The first local in a function is actually either a nameless value,
+        // or the function itself, and in order for it to be accessible the
+        // depth must match.
+        func_comp.locals[0].depth = 1;
+        block.offset += 1;
 
-    func_comp.new_scope();
-    func_comp.enclosing = compiler;
-    vm.curr_compiler = &func_comp;
+        func_comp.new_scope();
+        func_comp.enclosing = compiler;
+        vm.curr_compiler = &func_comp;
 
-    BUBBLE(compile(vm, &func_comp, first));
-    BUBBLE(compile(vm, &func_comp, second));
+        BUBBLE(compile(vm, &func_comp, first));
+        BUBBLE(compile(vm, &func_comp, second));
 
-    // This gets the first variable off of the stack. Remember:
-    // * The variable at position 0 is the function itself
-    // * Position of the first arg is at index 1
-    func_comp.chunk().write(vm, OpGetLocal);
-    func_comp.chunk().write_const(vm,  Value::from_i64(1));
+        // This gets the first variable off of the stack. Remember:
+        // * The variable at position 0 is the function itself
+        // * Position of the first arg is at index 1
+        func_comp.chunk().write(vm, OpGetLocal);
+        func_comp.chunk().write_const(vm,  Value::from_i64(1));
 
-    func_comp.chunk().write(vm, OpCall);
-    func_comp.chunk().write_const(vm,  Value::from_i64(1));
+        func_comp.chunk().write(vm, OpCall);
+        func_comp.chunk().write_const(vm,  Value::from_i64(1));
 
-    func_comp.chunk().write(vm, OpCall);
-    func_comp.chunk().write_const(vm,  Value::from_i64(1));
+        func_comp.chunk().write(vm, OpCall);
+        func_comp.chunk().write_const(vm,  Value::from_i64(1));
 
-    func_comp.chunk().write(vm, OpReturn);
+        func_comp.chunk().write(vm, OpReturn);
 
-    if (vm.options.print_fn_chunks) {
-        std::cerr << func_comp.chunk().to_string() << std::endl;
+        if (vm.options.print_fn_chunks) {
+            std::cerr << func_comp.chunk().to_string() << '\n';
+        }
+
+        write_as_closure(vm, &func_comp);
+
+        return CarOk;
     }
-
-    write_as_closure(vm, &func_comp);
-
-    return CarOk;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
     #define CONSTANT(val) \
         do { \
@@ -199,7 +208,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
         // Complex Constants
         case AstntIdent: {
-            auto ident = LambString::from_cstr(vm, node->val.i);
+            auto *ident = LambString::from_cstr(vm, node->val.i);
 
             auto local_slot = compiler->local_slot(ident);
             if (local_slot) {
@@ -223,7 +232,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
         // Complex constants
         case AstntStrLit: {
-            auto lit = LambString::from_cstr(vm, node->val.s);
+            auto *lit = LambString::from_cstr(vm, node->val.s);
             compiler->chunk().write_const(vm, Value::from_obj((Object *)lit));
             STACK_DIFF(compiler, 1);
             break;
@@ -320,7 +329,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, callee));
 
             u32 arg_count = 0;
-            for (AstNode *arg_list = node->kids[1]; arg_list != NULL;
+            for (AstNode *arg_list = node->kids[1]; arg_list != nullptr;
                  arg_list = arg_list->kids[1]) {
                 BUBBLE(compile(vm, compiler, arg_list->kids[0]));
                 arg_count += 1;
@@ -333,7 +342,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         }
         case AstntReturn: {
             AstNode *val = node->kids[0];
-            if (val == NULL) {
+            if (val == nullptr) {
                 compiler->chunk().write_const(vm, Value::nil());
             } else {
                 BUBBLE(compile(vm, compiler, val));
@@ -344,9 +353,9 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         }
         case AstntArray: {
             // Reverse the linked list
-            AstNode *prev = NULL;
+            AstNode *prev = nullptr;
             AstNode *curr = node->kids[0];
-            if (curr == NULL) {
+            if (curr == nullptr) {
                 compiler->chunk().write_const(vm, Value::from_i64(0));
                 STACK_DIFF(compiler, 1);
 
@@ -356,12 +365,12 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             }
 
             AstNode *next = curr->kids[1];
-            while (curr != NULL) {
+            while (curr != nullptr) {
                 curr->kids[1] = prev;
                 prev = curr;
                 curr = next;
 
-                if (next != NULL) {
+                if (next != nullptr) {
                     next = next->kids[1];
                 }
             }
@@ -369,7 +378,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             node->kids[0] = prev;
 
             i32 len = 0;
-            for (AstNode *expr_list = node->kids[0]; expr_list != NULL;
+            for (AstNode *expr_list = node->kids[0]; expr_list != nullptr;
                  expr_list = expr_list->kids[1]) {
                 BUBBLE(compile(vm, compiler, expr_list->kids[0]));
                 len += 1;
@@ -408,7 +417,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             compiler->chunk().patch_jump(if_false_jump);
             compiler->chunk().write(vm, OpPop);
 
-            if (node->kids[2] != NULL) {
+            if (node->kids[2] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[2]));
             } else {
                 compiler->chunk().write_const(vm, Value::nil());
@@ -456,7 +465,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             // Pop the 'false' from the previous EQ check off of the stack
             compiler->chunk().write(vm, OpPop);
 
-            if (next_arm != NULL) {
+            if (next_arm != nullptr) {
                 // Attempt the next arm
                 BUBBLE(compile(vm, compiler, next_arm));
             } else {
@@ -486,12 +495,12 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
             compiler->new_scope();
             AstNode *stmt = node->kids[0];
-            for (; stmt != NULL && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type);
+            for (; stmt != nullptr && stmt->type == AstntNodeList && is_stmt(stmt->kids[0]->type);
                  stmt = stmt->kids[1]) {
                 BUBBLE(compile(vm, compiler, stmt->kids[0]));
             }
 
-            if (stmt != NULL) {
+            if (stmt != nullptr) {
                 BUBBLE(compile(vm, compiler, stmt));
             } else {
                 compiler->chunk().write_const(vm, Value::nil());
@@ -518,7 +527,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
 
             BUBBLE(compile(vm, compiler, value_node));
 
-            auto ident = LambString::from_cstr(vm, ident_node->val.i);
+            auto *ident = LambString::from_cstr(vm, ident_node->val.i);
 
             if (compiler->block->depth == 0) {
                 compiler->chunk().write(vm, OpDefineGlobal);
@@ -533,10 +542,10 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntNodeList: {
-            for (AstNode *stmt = node; stmt != NULL; stmt = stmt->kids[1]) {
+            for (AstNode *stmt = node; stmt != nullptr; stmt = stmt->kids[1]) {
                 if (stmt->type != AstntNodeList) {
                     std::cerr << "[Lamb] Internal compiler error: AstNodeList->kids[1] is not of type AstntNodeList"
-                              << std::endl;
+                              << '\n';
                     exit(EXIT_FAILURE);
                 }
 
@@ -547,7 +556,7 @@ CompileAstResult compile(Vm& vm, Compiler *compiler, AstNode *node) {
         default:
             std::cerr << "[Lamb] Internal compiler error: "
                       << "Unable to compile AstNode of kind: " << node->type
-                      << std::endl;
+                      << '\n';
             return CarUnsupportedAst;
     }
 

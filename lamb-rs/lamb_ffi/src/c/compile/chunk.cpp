@@ -1,20 +1,21 @@
-#include <cstdint>
-#include <iostream>
-#include <ostream>
-#include <stdlib.h>
-#include <sstream>
 #include <algorithm>
+#include <cstdint>
+#include <cstdlib>
 #include <iomanip>
+#include <iostream>
+#include <optional>
+#include <ostream>
+#include <sstream>
+#include <string>
 #include <tuple>
+#include <vector>
 
+#include "chunk.hpp"
+#include "gcvec.hpp"
+#include "object.hpp"
+#include "value.hpp"
+#include "../types.hpp"
 #include "../vm/vm.hpp"
-#include "./chunk.hpp"
-#include "./value.hpp"
-
-#define RHS_WIDTH    15
-#define LHS_WIDTH    15
-#define NUMBER_WIDTH  4
-
 
 Chunk::Chunk() {
     this->bytes = GcVec<u8>();
@@ -31,9 +32,11 @@ void Chunk::write(Vm& vm, u8 byte) {
 }
 
 i32 Chunk::write_jump(Vm& vm, u8 op) {
+    constexpr auto dummy = 0;
+
     this->write(vm, op);
-    this->write(vm, 0xff);
-    this->write(vm, 0xff);
+    this->write(vm, dummy);
+    this->write(vm, dummy);
 
     return this->bytes.len() - 2;
 }
@@ -41,7 +44,7 @@ i32 Chunk::write_jump(Vm& vm, u8 op) {
 void Chunk::patch_jump(i32 offset) {
     i32 jump = this->bytes.len() - offset - 2;
     if (jump > UINT16_MAX) {
-        std::cerr << "COMPILE_ERR: jump exceeds maximal bytes of " << UINT16_MAX << std::endl;
+        std::cerr << "COMPILE_ERR: jump exceeds maximal bytes of " << UINT16_MAX << '\n';
         exit(1);
     }
 
@@ -69,15 +72,15 @@ i32 Chunk::add_const(Vm& vm, Value val) {
 std::string Chunk::to_string() {
     std::vector<std::tuple<std::string, std::string, std::string>> vec;
 
-    int offset = 0;
-    int max_left = 10;
-    int max_right = 10;
-    int max_digit = 5;
+    i32 offset = 0;
+    i32 max_left = 10;
+    i32 max_right = 10;
+    i32 max_digit = 5;
     while (offset < this->bytes.len()) {
         auto [left, rhs, inst_off] = this->format_instruction(offset);        
         auto right = rhs.value_or("");
         auto str_offset = std::to_string(offset);
-        vec.push_back(std::make_tuple(left, right, str_offset));
+        vec.emplace_back(left, right, str_offset);
 
         max_left = std::max(max_left, (i32)left.length());
         max_right = std::max(max_right, (i32)right.length());
@@ -128,7 +131,9 @@ static std::string format_jump(Chunk const& chunk, i32 offset) {
 
 // std::tuple<std::string, std::optional<std::string>, u32>
 // SIMPLE(name) std::make_tuple(name, std::nullopt, 1)
-std::tuple<std::string, std::optional<std::string>, u32> Chunk::format_instruction(u32 offset) {
+
+// NOLINTNEXTLINE(misc-no-recursion)
+std::tuple<std::string, std::optional<std::string>, u32> Chunk::format_instruction(u32 offset) const {
     #define SIMPLE(name) (std::make_tuple(name, std::nullopt, 1))
     #define CONSTANT(name) (std::make_tuple((name), this->constants[(this->bytes[(offset) + 1] << 8) | this->bytes[(offset) + 2]].to_string(), 3))
     #define JUMP(name) (std::make_tuple((name), format_jump(*this, offset), 3))
@@ -176,7 +181,7 @@ std::tuple<std::string, std::optional<std::string>, u32> Chunk::format_instructi
             // * 1 to jump over low  byte
             // * 2 to jump over each upvalue (is_local & index)
             i32 idx = (this->bytes[offset + 2] << 8) | this->bytes[offset + 3];
-            LambFunc *func = (LambFunc *)this->constants[idx].as.obj;
+            auto *func = (LambFunc *)this->constants[idx].as.obj;
 
             std::string lhs = "OpClosure";
             i32 offset = 1 + 1 + 2 + 2 * func->upvalue_count;
@@ -185,8 +190,8 @@ std::tuple<std::string, std::optional<std::string>, u32> Chunk::format_instructi
         }
     }
 
-    std::cerr << "[Lamb] Internal compilerer error: Missing switch branch for " << offset << std::endl;
-    std::terminate();
+    std::cerr << "[Lamb] Internal compilerer error: Missing switch branch for " << offset << '\n';
+    exit(EXIT_FAILURE);
 
     #undef JUMP
     #undef CONSTANT

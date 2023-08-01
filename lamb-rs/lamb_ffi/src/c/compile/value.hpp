@@ -62,23 +62,23 @@ struct Value {
         return val;
     }
 
-    constexpr bool is_bool() const { return this->kind == VkBool; }
+    [[nodiscard]] constexpr bool is_bool() const { return this->kind == VkBool; }
 
-    constexpr bool is_double() const { return this->kind == VkDouble; }
+    [[nodiscard]] constexpr bool is_double() const { return this->kind == VkDouble; }
 
-    constexpr bool is_integer() const { return this->kind == VkInt; }
+    [[nodiscard]] constexpr bool is_integer() const { return this->kind == VkInt; }
 
-    constexpr bool is_char() const { return this->kind == VkChar; }
+    [[nodiscard]] constexpr bool is_char() const { return this->kind == VkChar; }
 
-    constexpr bool is_object() const { return this->kind == VkObj; }
+    [[nodiscard]] constexpr bool is_object() const { return this->kind == VkObj; }
 
-    constexpr bool is_nil() const { return this->kind == VkNil; }
+    [[nodiscard]] constexpr bool is_nil() const { return this->kind == VkNil; }
 
-    constexpr char const* kind_as_cstr() const;
+    [[nodiscard]] constexpr char const* kind_as_cstr() const;
 
-    Order cmp(Value const& rhs) const;
+    [[nodiscard]] Order cmp(Value const& rhs) const;
 
-    std::string to_string() const;
+    [[nodiscard]] std::string to_string() const;
 };
 
 #endif // VALUE_HEADER

@@ -1,9 +1,12 @@
 #ifndef TABLE_HEADER
 #define TABLE_HEADER
 
-#include "../types.hpp"
-#include "object.hpp"
 #include <optional>
+#include <string>
+
+#include "object.hpp"
+#include "value.hpp"
+#include "../types.hpp"
 
 #define TABLE_MAX_LOAD 0.75
 
@@ -31,11 +34,11 @@ struct Table {
 
     bool insert(Vm& vm, LambString *key, Value val);
 
-    bool remove(LambString* key);
+    bool remove(LambString* key) const;
 
-    void remove_marked();
+    void remove_marked() const;
 
-    std::string to_string();
+    [[nodiscard]] std::string to_string() const;
 };
 
 #endif // TABLE_HEADER

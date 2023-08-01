@@ -1,13 +1,12 @@
-#include "gcvec.hpp"
 #include "compiler.hpp"
+#include "gc.hpp"
+#include "gcvec.hpp"
+#include "value.hpp"
+#include "../types.hpp"
 #include "../vm/vm.hpp"
 
 template<typename T> 
-GcVec<T>::GcVec() {
-  this->_len = 0;
-  this->capacity = 0;
-  this->values = nullptr;
-}
+GcVec<T>::GcVec(): capacity(0), _len(0), values(nullptr) { }
 
 template<typename T>
 void GcVec<T>::push(Vm& vm, T item) {

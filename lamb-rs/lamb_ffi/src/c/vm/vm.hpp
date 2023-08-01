@@ -1,15 +1,17 @@
 #ifndef VM_HEADER
 #define VM_HEADER
 
-#include <vector>
+#include <limits>
 
-#include "../compile/chunk.hpp"
 #include "../compile/compiler.hpp"
-#include "../compile/table.hpp"
 #include "../compile/gc.hpp"
+#include "../compile/object.hpp"
+#include "../compile/table.hpp"
+#include "../compile/value.hpp"
+#include "../types.hpp"
 
 #define MAX_FRAMES 1024
-#define MAX_VALUES (MAX_FRAMES * UINT8_MAX)
+#define MAX_VALUES (MAX_FRAMES * std::numeric_limits<u8>::max())
 
 enum InterpretResult {
     InterpretOk,
@@ -47,7 +49,7 @@ struct Vm {
 
     VmOptions options;
 
-    Vm(VmOptions options);
+    explicit Vm(VmOptions options);
 
     void destroy();
 
@@ -58,7 +60,7 @@ struct Vm {
     InterpretResult run();
 
   private:
-    constexpr Value* peek_stack(u8 n = 0) const;
+    [[nodiscard]] constexpr Value* peek_stack(u8 n = 0) const;
     
     LambUpvalue *capture_upvalue(Value *local);
 };

@@ -1,11 +1,14 @@
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <assert.h>
+#include <cassert>
+#include <cstdlib>
+#include <ctime>
 
-#include "../compile/value.hpp"
 #include "native.hpp"
 #include "vm.hpp"
+#include "../compile/chunk.hpp"
+#include "../compile/gcvec.hpp"
+#include "../compile/object.hpp"
+#include "../compile/value.hpp"
+#include "../types.hpp"
 
 
 #define lamb_assert(msg, x) assert((((void)(msg)), (x)))
@@ -33,30 +36,32 @@
 // was ~15% worse for calculating the 35th fibonacci number. Consistently 2.6 to 2.3 seconds, with
 // flamegraph showing this function taking up lots of time. I assume that the compiler doesn't inline
 // the method call, as it post move is no longer visible in a flamegraph.
-static void close_upvalues(Vm& vm, Value *last) {
-    while (vm.open_upvalues != NULL && vm.open_upvalues->location >= last) {
-        LambUpvalue *upvalue = vm.open_upvalues;
-        upvalue->closed = *upvalue->location;
-        upvalue->location = &upvalue->closed;
-        vm.open_upvalues = upvalue->next;
+
+namespace {
+    void close_upvalues(Vm& vm, Value *last) {
+        while (vm.open_upvalues != nullptr && vm.open_upvalues->location >= last) {
+            LambUpvalue *upvalue = vm.open_upvalues;
+            upvalue->closed = *upvalue->location;
+            upvalue->location = &upvalue->closed;
+            vm.open_upvalues = upvalue->next;
+        }
     }
 }
-
 LambUpvalue *Vm::capture_upvalue(Value *local) {
-    LambUpvalue *prev_upvalue = NULL;
+    LambUpvalue *prev_upvalue = nullptr;
     LambUpvalue *curr_upvalue = this->open_upvalues;
 
-    while (curr_upvalue != NULL && curr_upvalue->location > local) {
+    while (curr_upvalue != nullptr && curr_upvalue->location > local) {
         prev_upvalue = curr_upvalue;
         curr_upvalue = curr_upvalue->next;
     }
 
-    if (curr_upvalue != NULL && curr_upvalue->location == local) {
+    if (curr_upvalue != nullptr && curr_upvalue->location == local) {
         return curr_upvalue;
     }
 
-    auto created_upvalue = LambUpvalue::alloc(*this, local, curr_upvalue);
-    if (prev_upvalue == NULL) {
+    auto *created_upvalue = LambUpvalue::alloc(*this, local, curr_upvalue);
+    if (prev_upvalue == nullptr) {
         this->open_upvalues = created_upvalue;
     } else {
         prev_upvalue->next = created_upvalue;
@@ -70,18 +75,9 @@ constexpr Value *Vm::peek_stack(u8 n) const {
     return this->stack_top - n - 1;
 }
 
-Vm::Vm(VmOptions options) {
-    this->frame_count = 0;
+Vm::Vm(VmOptions options) : curr_compiler(nullptr), saved_value(Value::nil()), frame_count(0), open_upvalues(nullptr), options(options) {
     this->stack_top = this->stack;
-    this->open_upvalues = NULL;
-    this->curr_compiler = NULL;
-    this->options = options;
-    this->saved_value = Value::nil();
-
-    this->strings = Table();
-    this->globals = Table();
-
-    srand(time(NULL));
+    srand(time(nullptr));
     set_natives(*this);
 }
 
@@ -102,12 +98,12 @@ InterpretResult Vm::run() {
     Callframe *frame = &this->frames[this->frame_count - 1];
 
 #define READ_BYTE() (*frame->ip++)
-#define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+#define READ_SHORT() (frame->ip += 2, (u16)((frame->ip[-2] << 8) | frame->ip[-1]))
 
 #define READ_CONSTANT()                                                                            \
     (frame->ip += 1, frame->closure->function->chunk.constants[READ_SHORT()])
 
-#define PUSH(val) (*this->stack_top = val, this->stack_top += 1)
+#define PUSH(val) (*this->stack_top = (val), this->stack_top += 1)
 
 #define POP() (*--this->stack_top)
 
@@ -146,7 +142,7 @@ InterpretResult Vm::run() {
                 break;
             }
             case OpDefineGlobal: {
-                LambString *ident = (LambString *)READ_CONSTANT().as.obj;
+                auto *ident = (LambString *)READ_CONSTANT().as.obj;
                 Value *val = this->peek_stack();
 
                 if (!this->globals.insert(*this, ident, *val)) {
@@ -158,7 +154,7 @@ InterpretResult Vm::run() {
             }
             case OpGetGlobal: {
                 Value val = READ_CONSTANT();
-                LambString *ident = (LambString *)val.as.obj;
+                auto *ident = (LambString *)val.as.obj;
 
                 auto global = this->globals.get(ident);
                 if (!global) {
@@ -236,9 +232,9 @@ InterpretResult Vm::run() {
                     DROP();
                 } else if (lhs->is_object() && lhs->as.obj->is(OtString) &&
                            rhs->is_object() && rhs->as.obj->is(OtString)) {
-                    auto left = (LambString*)lhs->as.obj;
-                    auto right = (LambString*)rhs->as.obj;
-                    auto result = left->concat(*this, right);
+                    auto *left = (LambString*)lhs->as.obj;
+                    auto *right = (LambString*)rhs->as.obj;
+                    auto *result = left->concat(*this, right);
                     
                     DROP();
                     DROP();
@@ -349,7 +345,7 @@ InterpretResult Vm::run() {
                     items.push(*this, POP());
                 }
 
-                auto arr = LambArray::alloc(*this, items);
+                auto *arr = LambArray::alloc(*this, items);
                 PUSH(Value::from_obj((Object *)arr));
                 break;
             }
@@ -366,7 +362,7 @@ InterpretResult Vm::run() {
 
                 switch (arr_val.as.obj->type) {
                     case OtString: {
-                        LambString *st = (LambString *)arr_val.as.obj;
+                        auto *st = (LambString *)arr_val.as.obj;
                         if (idx.as.intn < st->len && idx.as.intn >= 0) {
                             PUSH(Value::from_char(st->chars[idx.as.intn]));
                         } else {
@@ -377,7 +373,7 @@ InterpretResult Vm::run() {
                         break;
                     }
                     case OtArray: {
-                        LambArray *arr = (LambArray *)arr_val.as.obj;
+                        auto *arr = (LambArray *)arr_val.as.obj;
                         if (idx.as.intn < arr->items.len() && idx.as.intn >= 0) {
                             PUSH(arr->items[idx.as.intn]);
                         } else {
@@ -424,7 +420,7 @@ InterpretResult Vm::run() {
                         break;
                     }
                     case OtNative: {
-                        NativeFunc *native = (NativeFunc *)callee->as.obj;
+                        auto *native = (NativeFunc *)callee->as.obj;
                         Value result = native->func(arg_count, this->stack_top - arg_count);
                         this->stack_top -= arg_count + 1;
                         PUSH(result);
@@ -438,8 +434,8 @@ InterpretResult Vm::run() {
                 break;
             }
             case OpClosure: {
-                LambFunc *function = (LambFunc *)READ_CONSTANT().as.obj;
-                auto closure = LambClosure::alloc(*this, function);
+                auto *function = (LambFunc *)READ_CONSTANT().as.obj;
+                auto *closure = LambClosure::alloc(*this, function);
                 PUSH(Value::from_obj((Object *)closure));
 
                 for (i32 i = 0; i < closure->upvalue_count; i++) {

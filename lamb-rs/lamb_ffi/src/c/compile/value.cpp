@@ -1,9 +1,13 @@
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
+#include <string>
 
-#include "./object.hpp"
-#include "./value.hpp"
+#include "object.hpp"
+#include "value.hpp"
+#include "../types.hpp"
 
+// NOLINTNEXTLINE(misc-no-recursion)
 Order Value::cmp(Value const& rhs) const {
     switch (rhs.kind) {
         case VkNil:
@@ -43,8 +47,8 @@ Order Value::cmp(Value const& rhs) const {
         case VkObj:
             switch (rhs.as.obj->type) {
                 case OtArray: {
-                    LambArray *larr = (LambArray *)this->as.obj;
-                    LambArray *rarr = (LambArray *)rhs.as.obj;
+                    auto *larr = (LambArray *)this->as.obj;
+                    auto *rarr = (LambArray *)rhs.as.obj;
 
                     i32 llen = larr->items.len();
                     i32 rlen = rarr->items.len();
@@ -66,8 +70,8 @@ Order Value::cmp(Value const& rhs) const {
                     }
                 }
                 case OtString: {
-                    LambString *larr = (LambString *)this->as.obj;
-                    LambString *rarr = (LambString *)rhs.as.obj;
+                    auto *larr = (LambString *)this->as.obj;
+                    auto *rarr = (LambString *)rhs.as.obj;
 
                     if (larr == rarr) {
                         return OrderEqual;
@@ -101,7 +105,7 @@ Order Value::cmp(Value const& rhs) const {
             }
     }
 
-    std::cerr << "[Lamb] Internal compiler error: Unknown object type " << this->as.obj->type << std::endl;
+    std::cerr << "[Lamb] Internal compiler error: Unknown object type " << this->as.obj->type << '\n';
     exit(EXIT_FAILURE);
 }
 
@@ -136,7 +140,7 @@ constexpr char const* Value::kind_as_cstr() const {
         }
     }
 
-    std::cerr << "[Lamb] Internal compiler error: Unknown kind value: " << this->kind << std::endl;
+    std::cerr << "[Lamb] Internal compiler error: Unknown kind value: " << this->kind << '\n';
     exit(EXIT_FAILURE);
 }
 

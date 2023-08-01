@@ -1,8 +1,14 @@
+#include <cstddef>
+#include <cstdlib>
 #include <iostream>
 
-#include "gc.hpp"
-#include "../vm/vm.hpp"
 #include "compiler.hpp"
+#include "gc.hpp"
+#include "object.hpp"
+#include "table.hpp"
+#include "value.hpp"
+#include "../types.hpp"
+#include "../vm/vm.hpp"
 
 #define GC_HEAP_GROWTH_FACTOR 2
 #define KB 1024
@@ -16,10 +22,10 @@ void* MarkAndSweep::alloc(Vm& vm, size_t t_size, size_t count) {
         this->collect(vm);
     }
 
-    auto result = malloc(size);
-    if (result == NULL) {
+    auto *result = malloc(size);
+    if (result == nullptr) {
         std::cerr << "[Lamb]: Gc: Attempt to allocate " << size << " bytes failed. Exiting..."
-                  << std::endl;
+                  << '\n';
         exit(EXIT_FAILURE);
     }
 
@@ -44,10 +50,10 @@ void* MarkAndSweep::grow_array(Vm& vm, void* ptr, size_t t_size, size_t old_coun
         this->collect(vm);
     }
 
-    auto result = realloc(ptr, size);
-    if (result == NULL) {
+    auto *result = realloc(ptr, size);
+    if (result == nullptr) {
         std::cerr << "[Lamb]: Gc: Attempt to allocate " << size << " bytes failed. Exiting..."
-                  << std::endl;
+                  << '\n';
         exit(EXIT_FAILURE);
     }
 
@@ -66,7 +72,7 @@ void MarkAndSweep::free_array(void* ptr, size_t t_size, size_t len) {
 
 void MarkAndSweep::destroy(Vm& vm) {
      Object *obj = this->objects;
-     while (obj != NULL) {
+     while (obj != nullptr) {
          Object *next = obj->next;
          object_free(vm, obj);
          obj = next;
@@ -94,7 +100,7 @@ void MarkAndSweep::mark_roots(Vm& vm) {
         this->mark_object((Object *)vm.frames[i].closure);
     }
 
-    for (LambUpvalue *upvalue = vm.open_upvalues; upvalue != NULL; upvalue = upvalue->next) {
+    for (LambUpvalue *upvalue = vm.open_upvalues; upvalue != nullptr; upvalue = upvalue->next) {
         this->mark_object((Object *)upvalue);
     }
 
@@ -106,7 +112,7 @@ void MarkAndSweep::mark_roots(Vm& vm) {
 }
 
 void MarkAndSweep::mark_compiler(Compiler* compiler) {
-    while (compiler != NULL) {
+    while (compiler != nullptr) {
         this->mark_object((Object *)compiler->function);
         compiler = compiler->enclosing;
     }
@@ -121,17 +127,17 @@ void MarkAndSweep::mark_table(Table& table) {
 }
 
 void MarkAndSweep::trace_refs() {
-    while (this->gray_stack.size() > 0) {
+    while (!this->gray_stack.empty()) {
         this->mark_object(this->gray_stack.back());
         this->gray_stack.pop_back();
     }
 }
 
 void MarkAndSweep::sweep_unused(Vm& vm) {
-    Object *prev = NULL;
+    Object *prev = nullptr;
     Object *curr = this->objects;
 
-    while (curr != NULL) {
+    while (curr != nullptr) {
         if (curr->is_marked) {
             curr->is_marked = false;
             prev = curr;
@@ -140,7 +146,7 @@ void MarkAndSweep::sweep_unused(Vm& vm) {
             Object *unreached = curr;
             curr = curr->next;
 
-            if (prev == NULL) {
+            if (prev == nullptr) {
                 this->objects = curr;
             } else {
                 prev->next = curr;
@@ -158,7 +164,7 @@ void MarkAndSweep::mark_value(Value *value) {
 }
 
 void MarkAndSweep::mark_object(Object *object) {
-    if (object == NULL || object->is_marked) {
+    if (object == nullptr || object->is_marked) {
         return;
     }
 

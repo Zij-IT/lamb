@@ -1,11 +1,14 @@
 #ifndef GC_HEADER
 #define GC_HEADER
 
-#include "../types.hpp"
+#include <cstdlib>
+#include <vector>
+
 #include "compiler.hpp"
 #include "object.hpp"
 #include "table.hpp"
-#include <vector>
+#include "value.hpp"
+#include "../types.hpp"
 
 // Must always be in multiples of two due to table :D
 #define GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity)*2)

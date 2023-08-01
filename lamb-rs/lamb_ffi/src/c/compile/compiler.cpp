@@ -1,19 +1,21 @@
-#include "compiler.hpp"
-#include "chunk.hpp"
-#include <stdlib.h>
-#include <iostream>
 #include <algorithm>
+#include <cstdlib>
+#include <iterator>
+#include <iostream>
+#include <optional>
 #include <ranges>
 
-Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) {
-    this->block = block;
-    this->type = type;
-    this->enclosing = enclosing;
-    this->function = LambFunc::alloc(vm, name, arity);
-    this->locals = GcVec<Local>();
+#include "chunk.hpp"
+#include "compiler.hpp"
+#include "gcvec.hpp"
+#include "object.hpp"
+#include "value.hpp"
+#include "../types.hpp"
+#include "../vm/vm.hpp"
 
-    Local loc = {.name = "", .depth = 0, .is_captured = false};
-    this->locals.push(vm, loc);
+Compiler::Compiler(Vm& vm, Compiler* enclosing, Block* block, FuncType type, char const* name, i32 arity) : function(LambFunc::alloc(vm, name, arity)), enclosing(enclosing), block(block), type(type) {;
+    this->locals = GcVec<Local>();
+    this->add_local(vm, "");
 }
 
 void Compiler::add_local(Vm& vm, char const* name) {
@@ -26,7 +28,7 @@ std::optional<i32> Compiler::local_idx(LambString *name) {
     auto it = std::find_if(
         this->locals.rbegin(),
         this->locals.rend(),
-        [name](Local& i){ return i.name == name->chars; }
+        [name](Local& loc){ return loc.name == name->chars; }
     );
 
     // Ends of iterators point 1 past the actual end, and therefore we need `-1`
@@ -44,7 +46,7 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
 
     i32 depth = this->locals[idx].depth;
     i32 base = -1;
-    for (Block *bl = this->block; bl != NULL; bl = bl->prev) {
+    for (Block *bl = this->block; bl != nullptr; bl = bl->prev) {
         if (bl->depth == depth) {
             base = bl->base;
             break;
@@ -56,9 +58,9 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
         //       future
         std::cerr << "[Lamb] Internal Compiler Error: No block found for variable '"
                   << name << "' at depth " << depth
-                  << std::endl;
+                  << '\n';
 
-        std::exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     auto block_locals = this->locals 
@@ -69,8 +71,9 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
     return base + std::ranges::distance(block_locals);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 std::optional<i32> Compiler::upvalue_idx(LambString *name) {
-    if (this->enclosing == NULL) {
+    if (this->enclosing == nullptr) {
         return std::nullopt;
     }
 
@@ -92,7 +95,7 @@ std::optional<i32> Compiler::upvalue_idx(LambString *name) {
 std::optional<i32> Compiler::add_upvalue(i32 idx, bool is_local) {
     if (idx > 255) {
         // TODO: Figure out how to get a dynamic amount of upvalues
-        std::cerr << "[Lamb] There exist too many upvalues. Max is 255." << std::endl;
+        std::cerr << "[Lamb] There exist too many upvalues. Max is 255." << '\n';
         exit(EXIT_FAILURE);
     }
 
@@ -111,7 +114,7 @@ std::optional<i32> Compiler::add_upvalue(i32 idx, bool is_local) {
 
 void Compiler::end_scope(Vm& vm) {
     this->block = this->block->prev;
-    i32 depth = this->block == NULL ? -1 : this->block->depth;
+    i32 depth = this->block == nullptr ? -1 : this->block->depth;
 
     this->function->chunk.write(vm, OpSaveValue);
 

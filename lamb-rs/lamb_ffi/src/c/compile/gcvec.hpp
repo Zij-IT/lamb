@@ -1,10 +1,11 @@
 #ifndef VECTOR_HEADER
 #define VECTOR_HEADER
 
-#include "../types.hpp"
-#include <iterator>
-#include <optional>
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
+
+#include "../types.hpp"
 
 // Forward declaration. See "../vm/vm.hpp"
 struct Vm;
@@ -44,7 +45,7 @@ public:
         using reference         = T&;  // or also value_type&
 
         GcVecIter(): data(nullptr) {}
-        GcVecIter(T* data): data(data) {}
+        explicit GcVecIter(T* data): data(data) {}
 
         reference operator*() const { return *this->data; }
         pointer operator->() { return this->data; }

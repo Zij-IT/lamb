@@ -1,7 +1,13 @@
 #ifndef BLOCK_HEADER
 #define BLOCK_HEADER
 
+#include <limits>
+#include <optional>
+
+#include "chunk.hpp"
+#include "gcvec.hpp"
 #include "object.hpp"
+#include "../types.hpp"
 
 struct Local {
     char const* name;
@@ -28,7 +34,7 @@ struct Block {
 };
 
 struct Compiler {
-    Upvalue upvalues[UINT8_MAX];
+    Upvalue upvalues[std::numeric_limits<u8>::max()];
     GcVec<Local> locals;
 
     LambFunc *function;
@@ -47,11 +53,11 @@ struct Compiler {
 
     std::optional<i32> upvalue_idx(LambString *name);
 
-    constexpr void new_scope() { this->block->depth++; }
+    constexpr void new_scope() const { this->block->depth++; }
 
     void end_scope(Vm& vm);
 
-    constexpr Chunk& chunk() const { return this->function->chunk; }
+    [[nodiscard]] constexpr Chunk& chunk() const { return this->function->chunk; }
 
     void destroy(Vm& vm);
 
