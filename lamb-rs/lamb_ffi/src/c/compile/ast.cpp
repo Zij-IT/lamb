@@ -333,17 +333,23 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntBinaryLCompose: {
+            // The two items are compiled in a separate block and therefor
+            // are not on the stack at this point. The result is that there
+            // are that both components are evaluated only when called.
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
             compile_compose(vm, compiler, lhs, rhs);
-            STACK_DIFF(compiler, -1);
+            STACK_DIFF(compiler, +1);
             break;
         }
         case AstntBinaryRCompose: {
+            // The two items are compiled in a separate block and therefor
+            // are not on the stack at this point. The result is that there
+            // are that both components are evaluated only when called.
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
             compile_compose(vm, compiler, rhs, lhs);
-            STACK_DIFF(compiler, -1);
+            STACK_DIFF(compiler, +1);
             break;
         }
         case AstntBinaryLApply: {
@@ -408,7 +414,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *curr = node->kids[0];
             if (curr == nullptr) {
                 compiler->chunk().write_const(vm, Value::from_i64(0));
-                STACK_DIFF(compiler, 1);
+                STACK_DIFF(compiler, 0);
 
                 compiler->chunk().write(vm, OpMakeArray);
                 STACK_DIFF(compiler, 0);
@@ -445,6 +451,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
         case AstntArrayIndex: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
+
             compiler->chunk().write(vm, OpIndexArray);
             STACK_DIFF(compiler, -1);
             break;
@@ -476,7 +483,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             compiler->chunk().patch_jump(past_else);
 
-            STACK_DIFF(compiler, 0);
+            // -1 per if && -1 for else if present
+            STACK_DIFF(compiler, -3);
             break;
         }
         case AstntCase: {
