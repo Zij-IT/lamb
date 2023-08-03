@@ -308,18 +308,18 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
         case AstntBinaryLogAnd: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
-            i32 if_false = compiler->chunk().write_jump(vm, OpJumpIfFalse);
+            i32 if_false = compiler->write_jump(vm, OpJumpIfFalse);
             compiler->write_op(vm, OpPop);
             BUBBLE(compile(vm, compiler, node->kids[1]));
-            compiler->chunk().patch_jump(if_false);
+            compiler->patch_jump(if_false);
             break;
         }
         case AstntBinaryLogOr: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
-            i32 if_true = compiler->chunk().write_jump(vm, OpJumpIfTrue);
+            i32 if_true = compiler->write_jump(vm, OpJumpIfTrue);
             compiler->write_op(vm, OpPop);
             BUBBLE(compile(vm, compiler, node->kids[1]));
-            compiler->chunk().patch_jump(if_true);
+            compiler->patch_jump(if_true);
             break;
         }
         case AstntBinaryLCompose: {
@@ -384,7 +384,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
         case AstntReturn: {
             AstNode *val = node->kids[0];
             if (val == nullptr) {
-                compiler->chunk().write_const(vm, Value::nil());
+                compiler->write_const(vm, Value::nil());
             } else {
                 BUBBLE(compile(vm, compiler, val));
             }
@@ -473,13 +473,13 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             i32 offset_before_branch = STACK_DIFF(compiler, 0);
             BUBBLE(compile(vm, compiler, node->kids[0]));
 
-            i32 if_false_jump = compiler->chunk().write_jump(vm, OpJumpIfFalse);
+            i32 if_false_jump = compiler->write_jump(vm, OpJumpIfFalse);
             compiler->write_op(vm, OpPop);
 
             BUBBLE(compile(vm, compiler, node->kids[1]));
 
-            i32 past_else = compiler->chunk().write_jump(vm, OpJump);
-            compiler->chunk().patch_jump(if_false_jump);
+            i32 past_else = compiler->write_jump(vm, OpJump);
+            compiler->patch_jump(if_false_jump);
             compiler->write_op(vm, OpPop);
 
             compiler->block->offset = offset_before_branch;
@@ -489,7 +489,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 compiler->write_const(vm, Value::nil());
             }
 
-            compiler->chunk().patch_jump(past_else);
+            compiler->patch_jump(past_else);
             break;
         }
         case AstntCase: {
@@ -513,7 +513,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, value));
             compiler->write_op(vm, OpEq);
 
-            i32 if_neq = compiler->chunk().write_jump(vm, OpJumpIfFalse);
+            i32 if_neq = compiler->write_jump(vm, OpJumpIfFalse);
 
             // If equal -------->
             // Pop the case 'true' off of the stack
@@ -527,11 +527,11 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, branch));
 
             // Jump over the other arms of the case expression
-            i32 past_else = compiler->chunk().write_jump(vm, OpJump);
+            i32 past_else = compiler->write_jump(vm, OpJump);
             // If equal <-------
 
             // If not equal -------->
-            compiler->chunk().patch_jump(if_neq);
+            compiler->patch_jump(if_neq);
             // Pop the 'false' from the previous EQ check off of the stack
             compiler->write_op(vm, OpPop);
 
@@ -555,7 +555,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             // If successfull, we can jump over all of the arms thanks to the
             // recursive nature of the case arms representation
-            compiler->chunk().patch_jump(past_else);
+            compiler->patch_jump(past_else);
             break;
         }
         case AstntBlock: {

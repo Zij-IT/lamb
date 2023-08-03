@@ -71,6 +71,10 @@ struct Compiler {
 
     void write_const(Vm &vm, Value val) const;
 
+    i32 write_jump(Vm &vm, OpCode op);
+
+    void patch_jump(i32 jump_marker);
+
   private:
     std::optional<i32> add_upvalue(i32 idx, bool is_local);
 };

@@ -254,4 +254,8 @@ void Compiler::write_const(Vm &vm, Value val) const {
 
 void Compiler::write_byte(Vm &vm, u8 byte) { this->chunk().write(vm, byte); }
 
+i32 Compiler::write_jump(Vm &vm, OpCode op) { return this->chunk().write_jump(vm, op); }
+
+void Compiler::patch_jump(i32 jump_marker) { this->chunk().patch_jump(jump_marker); }
+
 #undef STACK_DIFF
