@@ -435,8 +435,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->chunk().write(vm, OpMakeArray);
             STACK_DIFF(compiler, -len);
 
-            compiler->chunk().write_const(vm, Value::from_i64(len));
-            STACK_DIFF(compiler, 1);
+            compiler->write_const(vm, Value::from_i64(len));
             break;
         }
         case AstntArrayIndex: {
@@ -488,15 +487,13 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, node->kids[0]));
 
             i32 if_false_jump = compiler->chunk().write_jump(vm, OpJumpIfFalse);
-            compiler->chunk().write(vm, OpPop);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpPop);
 
             BUBBLE(compile(vm, compiler, node->kids[1]));
 
             i32 past_else = compiler->chunk().write_jump(vm, OpJump);
             compiler->chunk().patch_jump(if_false_jump);
-            compiler->chunk().write(vm, OpPop);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpPop);
 
             if (node->kids[2] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[2]));
