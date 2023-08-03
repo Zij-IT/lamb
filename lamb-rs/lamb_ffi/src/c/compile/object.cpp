@@ -15,7 +15,7 @@ std::string Object::to_string() const {
     std::ostringstream out;
     switch (this->type) {
         case OtString:
-            out << "\"" << ((LambString *)(this))->chars << "\"";
+            out << ((LambString *)(this))->chars;
             break;
         case OtArray: {
             auto *arr = (LambArray *)this;
