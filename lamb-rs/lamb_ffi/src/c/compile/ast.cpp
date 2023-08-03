@@ -118,12 +118,10 @@ CompileAstResult compile_rec_func_def(Vm &vm, Compiler *compiler, AstNode *node)
     STACK_DIFF(compiler, 1);
 
     if (compiler->block->depth == 0) {
-        compiler->chunk().write(vm, OpDefineGlobal);
+        compiler->write_op(vm, OpDefineGlobal);
         compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
-        STACK_DIFF(compiler, -1);
     } else {
         compiler->add_local(vm, rec_func_ident->chars);
-        STACK_DIFF(compiler, 0);
     }
 
     return CarOk;
@@ -185,16 +183,14 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 #define CONSTANT(val)                                                                              \
     /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
-        compiler->chunk().write_const(vm, (val));                                                  \
-        STACK_DIFF(compiler, 1);                                                                   \
+        compiler->write_const(vm, (val));                                                          \
     } while (false) /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
 #define UNARY(op)                                                                                  \
     /* NOLINTBEGIN(cppcoreguidelines-avoid-do-while) */                                            \
     do {                                                                                           \
         BUBBLE(compile(vm, compiler, node->kids[0]));                                              \
-        compiler->chunk().write(vm, (op));                                                         \
-        STACK_DIFF(compiler, 0);                                                                   \
+        compiler->write_op(vm, (op));                                                              \
     } while (false) /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
 #define BINARY(op)                                                                                 \
@@ -202,8 +198,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
     do {                                                                                           \
         BUBBLE(compile(vm, compiler, node->kids[0]));                                              \
         BUBBLE(compile(vm, compiler, node->kids[1]));                                              \
-        compiler->chunk().write(vm, op);                                                           \
-        STACK_DIFF(compiler, -1);                                                                  \
+        compiler->write_op(vm, op);                                                                \
     } while (false) /* NOLINTEND(cppcoreguidelines-avoid-do-while) */
 
     switch (node->type) {

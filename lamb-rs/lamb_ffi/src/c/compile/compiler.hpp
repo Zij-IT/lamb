@@ -61,6 +61,10 @@ struct Compiler {
 
     void destroy(Vm &vm);
 
+    void write_op(Vm &vm, OpCode op) const;
+
+    void write_const(Vm &vm, Value val) const;
+
   private:
     std::optional<i32> add_upvalue(i32 idx, bool is_local);
 };

@@ -133,3 +133,69 @@ void Compiler::end_scope(Vm &vm) {
 }
 
 void Compiler::destroy(Vm &vm) { this->locals.destroy(vm); }
+
+#define STACK_DIFF(diff) (this->block->offset += (diff))
+void Compiler::write_op(Vm &vm, OpCode op) {
+    switch (op) {
+        case OpAdd:
+        case OpBinAnd:
+        case OpBinOr:
+        case OpBinXor:
+        case OpCloseValue:
+        case OpDefineGlobal:
+        case OpDiv:
+        case OpEq:
+        case OpGe:
+        case OpGt:
+        case OpIndexArray:
+        case OpLShift:
+        case OpLe:
+        case OpLt:
+        case OpMod:
+        case OpMul:
+        case OpNe:
+        case OpPop:
+        case OpRShift:
+        case OpSaveValue:
+        case OpSub:
+            STACK_DIFF(-1);
+            break;
+        case OpBinNeg:
+        case OpLogNeg:
+        case OpNumNeg:
+            STACK_DIFF(0);
+            break;
+        case OpClosure:
+        case OpConstant:
+        case OpDup:
+        case OpGetGlobal:
+        case OpGetLocal:
+        case OpGetUpvalue:
+        case OpUnsaveValue:
+            STACK_DIFF(1);
+            break;
+        case OpReturn:
+            // Nothing after this is actually run, so techincally it doesn't
+            // matter, but still I should fix this.
+            STACK_DIFF(0);
+            break;
+        case OpCall:
+        case OpJump:
+        case OpJumpIfFalse:
+        case OpJumpIfTrue:
+        case OpMakeArray:
+            // Invalid op... err and terminate
+            std::cerr << "Invalid Op for Compiler::wirte_op: " << op << "\n";
+            exit(EXIT_FAILURE);
+            break;
+    }
+
+    this->chunk().write(vm, op);
+}
+
+void Compiler::write_const(Vm &vm, Value val) {
+    this->chunk().write_const(vm, val);
+    STACK_DIFF(1);
+}
+
+#undef STACK_DIFF
