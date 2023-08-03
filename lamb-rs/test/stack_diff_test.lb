@@ -6,7 +6,7 @@
 { x := 2; y := "fail"; assert(x = 2); };
 
 -- FuncCall
-println("28 Tests:n-------");
+println("30 Tests:n-------");
 { x := "pass 1"; y := "fail"; println(x); };
 
 -- Define global
@@ -117,3 +117,9 @@ true  && { x := "pass 28"; y := "fail"; println(x); true };
 
 -- Block expression in RHS of LogOr
 false || { x := "pass 29"; y := "fail"; println(x); true };
+
+-- Array followed by block expression
+{ z := ["pass 30", "fail"][[0][{ x := 0; y := 1; x }]]; println(z); };
+
+-- Empty array followed by block expression (this can't be run)
+-- [][{ x := "fail"; y := "pass 31"; println(y) }];
