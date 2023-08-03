@@ -465,32 +465,67 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             //
             // All nodes in this chain know where the else ends, and can thus jump past
             // it
+            //
+            //
+            // Asm-Lite:
+            //
+            //  if:
+            //    <expr>
+            //    jumpiffalse .next_branch_1
+            //    <body>
+            //    jump .end_of_if
+            //  next_branch_1:
+            //    <expr_elif_1>
+            //    jumpiffalse .next_branch_2
+            //    <body_elif_1>
+            //
+            //  ; repeat elifs
+            //
+            //  next_branch_n:
+            //    <expr_elif_n>
+            //    jumpiffalse .else
+            //    <body_elif_n>
+            //  else:
+            //    <body>
+            //  end_of_if:
+            //    <rest>
+
+            // <expr>
+            // jumpiffalse .next_branch_1
+            // <body>
+            // jump .end_of_if
             BUBBLE(compile(vm, compiler, node->kids[0]));
+
             i32 if_false_jump = compiler->chunk().write_jump(vm, OpJumpIfFalse);
-
             compiler->chunk().write(vm, OpPop);
-            BUBBLE(compile(vm, compiler, node->kids[1]));
-            i32 past_else = compiler->chunk().write_jump(vm, OpJump);
+            STACK_DIFF(compiler, -1);
 
+            BUBBLE(compile(vm, compiler, node->kids[1]));
+
+            i32 past_else = compiler->chunk().write_jump(vm, OpJump);
             compiler->chunk().patch_jump(if_false_jump);
             compiler->chunk().write(vm, OpPop);
+            STACK_DIFF(compiler, -1);
 
             if (node->kids[2] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[2]));
+                STACK_DIFF(compiler, -1);
             } else {
                 compiler->chunk().write_const(vm, Value::nil());
             }
 
+            STACK_DIFF(compiler, +1);
             compiler->chunk().patch_jump(past_else);
-
-            // -1 per if && -1 for else if present
-            STACK_DIFF(compiler, -3);
             break;
         }
         case AstntCase: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
-            BUBBLE(compile(vm, compiler, node->kids[1]));
-            STACK_DIFF(compiler, 0);
+            if (node->kids[1] != nullptr) {
+                BUBBLE(compile(vm, compiler, node->kids[1]));
+            } else {
+                compiler->chunk().write(vm, OpPop);
+                compiler->chunk().write_const(vm, Value::nil());
+            }
             break;
         }
         case AstntCaseArm: {
@@ -500,6 +535,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             // Compare the value of the arm with a duplicate of the case value
             compiler->chunk().write(vm, OpDup);
+            STACK_DIFF(compiler, +1);
             BUBBLE(compile(vm, compiler, value));
             compiler->chunk().write(vm, OpEq);
 
@@ -508,9 +544,11 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // If equal -------->
             // Pop the case 'true' off of the stack
             compiler->chunk().write(vm, OpPop);
+            STACK_DIFF(compiler, -1);
 
             // Pop the case value off of the stack
             compiler->chunk().write(vm, OpPop);
+            STACK_DIFF(compiler, -1);
 
             // Run through the body of the arm
             BUBBLE(compile(vm, compiler, branch));
@@ -523,13 +561,16 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->chunk().patch_jump(if_neq);
             // Pop the 'false' from the previous EQ check off of the stack
             compiler->chunk().write(vm, OpPop);
+            STACK_DIFF(compiler, -1);
 
             if (next_arm != nullptr) {
                 // Attempt the next arm
                 BUBBLE(compile(vm, compiler, next_arm));
+                STACK_DIFF(compiler, -1);
             } else {
                 // Pop the compare value off of the stack
                 compiler->chunk().write(vm, OpPop);
+                STACK_DIFF(compiler, -1);
 
                 // We can't check for exhaustivity at compile time, so we write
                 // a default nil in the event none of arms matched successfully
@@ -539,6 +580,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             // If successfull, we can jump over all of the arms thanks to the
             // recursive nature of the case arms representation
+            STACK_DIFF(compiler, +1);
             compiler->chunk().patch_jump(past_else);
             break;
         }
