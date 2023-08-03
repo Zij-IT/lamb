@@ -52,8 +52,8 @@ void write_as_closure(Vm &vm, Compiler *const func_comp) {
     // TODO: Can this be turned into a range based loop?
     for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
         // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-        compiler->chunk().write(vm, static_cast<u8>(func_comp->upvalues[i].is_local));
-        compiler->chunk().write(vm, func_comp->upvalues[i].index);
+        compiler->write_byte(vm, static_cast<u8>(func_comp->upvalues[i].is_local));
+        compiler->write_byte(vm, func_comp->upvalues[i].index);
         // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
     }
 
@@ -502,8 +502,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             if (node->kids[1] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[1]));
             } else {
-                compiler->chunk().write(vm, OpPop);
-                compiler->chunk().write_const(vm, Value::nil());
+                compiler->write_op(vm, OpPop);
+                compiler->write_const(vm, Value::nil());
             }
             break;
         }

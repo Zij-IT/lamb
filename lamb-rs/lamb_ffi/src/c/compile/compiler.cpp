@@ -199,4 +199,6 @@ void Compiler::write_const(Vm &vm, Value val) const {
     STACK_DIFF(1);
 }
 
+void Compiler::write_byte(Vm &vm, u8 byte) { this->chunk().write(vm, byte); }
+
 #undef STACK_DIFF
