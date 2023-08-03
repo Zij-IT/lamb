@@ -155,16 +155,16 @@ CompileAstResult compile_compose(Vm &vm, Compiler *compiler, AstNode *first, Ast
     // This gets the first variable off of the stack. Remember:
     // * The variable at position 0 is the function itself
     // * Position of the first arg is at index 1
-    func_comp.chunk().write(vm, OpGetLocal);
-    func_comp.chunk().write_const(vm, Value::from_i64(1));
+    func_comp.write_op(vm, OpGetLocal);
+    func_comp.write_const(vm, Value::from_i64(1));
 
-    func_comp.chunk().write(vm, OpCall);
-    func_comp.chunk().write_const(vm, Value::from_i64(1));
+    func_comp.write_vop(vm, OpCall, 1);
+    func_comp.write_const(vm, Value::from_i64(1));
 
-    func_comp.chunk().write(vm, OpCall);
-    func_comp.chunk().write_const(vm, Value::from_i64(1));
+    func_comp.write_vop(vm, OpCall, 1);
+    func_comp.write_const(vm, Value::from_i64(1));
 
-    func_comp.chunk().write(vm, OpReturn);
+    func_comp.write_op(vm, OpReturn);
 
     if (vm.options.print_fn_chunks) {
         std::cerr << func_comp.chunk().to_string() << '\n';
