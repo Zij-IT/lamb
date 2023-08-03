@@ -1,0 +1,114 @@
+-- Some items are must be working for these tests to be working.
+-- + ExprStatement
+-- + AssignStatement
+-- + Block
+{};
+{ x := 2; y := "fail"; assert(x = 2); };
+
+-- FuncCall
+println("26 Tests:n-------");
+{ x := "pass 1"; y := "fail"; println(x); };
+
+-- Define global
+x := 1;
+{ x := "pass 2"; y := "fail"; println(x); };
+
+-- Define local
+{ x := 1; };
+{ x := "pass 3"; y := "fail"; println(x); };
+
+-- Constants
+nil; 0; 'c'; "hi"; true;
+{ x := "pass 4"; y := "fail"; println(x); };
+
+
+-1; !true; ~1;
+{ x := "pass 5"; y := "fail"; println(x); };
+
+-- OpAdd / OpDiv / OpSub / OpMul / OpMod
+1 + 2 * 3 / 2 - 1 % 1;
+{ x := "pass 6"; y := "fail"; println(x); };
+
+-- OpBinAnd / OpBinOr / OpBinXor / OpBinShiftR / OpBinShiftL
+1 & 2 | 3 ^ 2 << 1 >> 2;
+{ x := "pass 7"; y := "fail"; println(x); };
+
+-- OpGt / OpLt
+1 > 1; 2 < 2; 
+{ x := "pass 8"; y := "fail"; println(x); };
+
+-- OpGe / OpLe
+1 >= 1; 2 <= 2; 
+{ x := "pass 9"; y := "fail"; println(x); };
+
+-- OpEq / OpNe
+1 = 1; 2 != 2; 
+{ x := "pass 10"; y := "fail"; println(x); };
+
+-- LogAnd / LogOr
+true || false && true;
+{ x := "pass 11"; y := "fail"; println(x); };
+
+-- Function Definition
+dud := fn(n) -> {};
+{ x := "pass 12"; y := "fail"; println(x); };
+
+-- OpBinaryLApply / OpBinaryRApply
+1 $> dud; dud <$ 1;
+{ x := "pass 13"; y := "fail"; println(x); };
+
+-- OpBinaryLCompose / OpBinaryRCompose
+print .> print; print <. print;
+{ x := "pass 14"; y := "fail"; println(x); };
+
+-- Array
+[1,2,3];
+{ x := "pass 15"; y := "fail"; println(x); };-- Array
+
+-- Array Index
+[1,2,3][[1][0]];
+{ x := "pass 16"; y := "fail"; println(x); };
+
+-- If without elif & else
+if true { };
+{ x := "pass 17"; y := "fail"; println(x); };
+
+-- If without elif & with else
+if true { } else { };
+{ x := "pass 18"; y := "fail"; println(x); };
+
+-- If with 1x elif & without else
+if true { } elif true { };
+{ x := "pass 19"; y := "fail"; println(x); };
+
+-- If with 2x elif & without else
+if true { } elif true { } elif true { };
+{ x := "pass 20"; y := "fail"; println(x); };
+
+-- If with 2x elif & with else
+if true { } elif true { } elif true { } else { };
+{ x := "pass 21"; y := "fail"; println(x); };
+
+-- Case without arms
+case false {};
+{ x := "pass 22"; y := "fail"; println(x); };
+
+-- Case with 1 arm
+case false { true -> 1, };
+{ x := "pass 23"; y := "fail"; println(x); };
+
+-- Case with 2 arm, no match
+case false { true -> 1, false -> 2, };
+{ x := "pass 24"; y := "fail"; println(x); };
+
+-- Case with 2 arms, last match
+case false { true -> 1, false -> 2, };
+{ x := "pass 24"; y := "fail"; println(x); };
+
+-- Case with 3 arms, no match
+case 1 { 2 -> 1, 3 -> 2, 5 -> 2, };
+{ x := "pass 25"; y := "fail"; println(x); };
+
+-- Case with 3 arms, last match
+case 1 { 2 -> 1, 3 -> 2, 1 -> 2, };
+{ x := "pass 26"; y := "fail"; println(x); };
