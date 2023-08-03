@@ -362,7 +362,7 @@ InterpretResult Vm::run() {
                 }
             } break;
             case OpMakeArray: {
-                i32 len = POP().as.intn;
+                i32 len = READ_CONSTANT().as.intn;
                 GcVec<Value> items;
                 for (i32 i = 0; i < len; i++) {
                     items.push(*this, POP());
