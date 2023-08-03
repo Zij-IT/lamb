@@ -525,8 +525,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *next_arm = node->kids[2];
 
             // Compare the value of the arm with a duplicate of the case value
-            compiler->chunk().write(vm, OpDup);
-            STACK_DIFF(compiler, +1);
+            compiler->write_op(vm, OpDup);
             BUBBLE(compile(vm, compiler, value));
             compiler->chunk().write(vm, OpEq);
 
@@ -534,12 +533,10 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             // If equal -------->
             // Pop the case 'true' off of the stack
-            compiler->chunk().write(vm, OpPop);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpPop);
 
             // Pop the case value off of the stack
-            compiler->chunk().write(vm, OpPop);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpPop);
 
             // Run through the body of the arm
             BUBBLE(compile(vm, compiler, branch));
@@ -551,8 +548,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // If not equal -------->
             compiler->chunk().patch_jump(if_neq);
             // Pop the 'false' from the previous EQ check off of the stack
-            compiler->chunk().write(vm, OpPop);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpPop);
 
             if (next_arm != nullptr) {
                 // Attempt the next arm
@@ -560,8 +556,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 STACK_DIFF(compiler, -1);
             } else {
                 // Pop the compare value off of the stack
-                compiler->chunk().write(vm, OpPop);
-                STACK_DIFF(compiler, -1);
+                compiler->write_op(vm, OpPop);
 
                 // We can't check for exhaustivity at compile time, so we write
                 // a default nil in the event none of arms matched successfully
@@ -595,17 +590,21 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             if (stmt != nullptr) {
                 BUBBLE(compile(vm, compiler, stmt));
             } else {
-                compiler->chunk().write_const(vm, Value::nil());
+                compiler->write_const(vm, Value::nil());
             }
 
             compiler->end_scope(vm);
+
+            // This is needed so that the block, in which this block resides
+            // get's it's stack difference updated. The final expression of
+            // the block means the block itself adds 1 to the outer block's
+            // offset
             STACK_DIFF(compiler, 1);
             break;
         }
         case AstntExprStmt: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
-            compiler->chunk().write(vm, OpPop);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpPop);
             break;
         }
         case AstntAssignStmt: {
@@ -622,13 +621,11 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             auto *ident = LambString::from_cstr(vm, ident_node->val.i);
 
             if (compiler->block->depth == 0) {
-                compiler->chunk().write(vm, OpDefineGlobal);
+                compiler->write_op(vm, OpDefineGlobal);
                 compiler->chunk().write_const(vm, Value::from_obj((Object *)ident));
-                STACK_DIFF(compiler, -1);
             } else {
                 compiler->chunk().add_const(vm, Value::from_obj((Object *)ident));
                 compiler->add_local(vm, ident->chars);
-                STACK_DIFF(compiler, 0);
             }
 
             break;
