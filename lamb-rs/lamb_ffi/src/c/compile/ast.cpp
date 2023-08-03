@@ -347,9 +347,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, lhs));
             BUBBLE(compile(vm, compiler, rhs));
 
-            compiler->chunk().write(vm, OpCall);
+            compiler->write_vop(vm, OpCall, 1);
             compiler->chunk().write_const(vm, Value::from_i64(1));
-            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryRApply: {
@@ -359,9 +358,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, rhs));
             BUBBLE(compile(vm, compiler, lhs));
 
-            compiler->chunk().write(vm, OpCall);
+            compiler->write_vop(vm, OpCall, 1);
             compiler->chunk().write_const(vm, Value::from_i64(1));
-            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntFuncDef: {
@@ -372,16 +370,15 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *callee = node->kids[0];
             BUBBLE(compile(vm, compiler, callee));
 
-            u32 arg_count = 0;
+            i32 arg_count = 0;
             for (AstNode *arg_list = node->kids[1]; arg_list != nullptr;
                  arg_list = arg_list->kids[1]) {
                 BUBBLE(compile(vm, compiler, arg_list->kids[0]));
                 arg_count += 1;
             }
 
-            compiler->chunk().write(vm, OpCall);
+            compiler->write_vop(vm, OpCall, arg_count);
             compiler->chunk().write_const(vm, Value::from_i64((i64)arg_count));
-            STACK_DIFF(compiler, -arg_count);
             break;
         }
         case AstntReturn: {
@@ -400,7 +397,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *prev = nullptr;
             AstNode *curr = node->kids[0];
             if (curr == nullptr) {
-                compiler->chunk().write(vm, OpMakeArray);
+                compiler->write_vop(vm, OpMakeArray, 0);
                 compiler->write_const(vm, Value::from_i64(0));
                 return CarOk;
             }
@@ -425,9 +422,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 len += 1;
             }
 
-            compiler->chunk().write(vm, OpMakeArray);
+            compiler->write_vop(vm, OpMakeArray, len);
             compiler->write_const(vm, Value::from_i64(len));
-            STACK_DIFF(compiler, -len);
             break;
         }
         case AstntArrayIndex: {

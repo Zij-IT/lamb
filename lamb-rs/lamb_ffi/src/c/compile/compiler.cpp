@@ -194,6 +194,57 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
     this->chunk().write(vm, op);
 }
 
+void Compiler::write_vop(Vm &vm, OpCode op, i32 args) const {
+    switch (op) {
+        case OpAdd:
+        case OpBinAnd:
+        case OpBinNeg:
+        case OpBinOr:
+        case OpBinXor:
+        case OpCloseValue:
+        case OpClosure:
+        case OpConstant:
+        case OpDefineGlobal:
+        case OpDiv:
+        case OpDup:
+        case OpEq:
+        case OpGe:
+        case OpGetGlobal:
+        case OpGetLocal:
+        case OpGetUpvalue:
+        case OpGt:
+        case OpIndexArray:
+        case OpJump:
+        case OpJumpIfFalse:
+        case OpJumpIfTrue:
+        case OpLShift:
+        case OpLe:
+        case OpLogNeg:
+        case OpLt:
+        case OpMod:
+        case OpMul:
+        case OpNe:
+        case OpNumNeg:
+        case OpPop:
+        case OpRShift:
+        case OpReturn:
+        case OpSaveValue:
+        case OpSub:
+        case OpUnsaveValue:
+            // Invalid op... err and terminate
+            std::cerr << "Invalid Op for Compiler::wirte_vop: " << op << "\n";
+            exit(EXIT_FAILURE);
+            break;
+        case OpCall:
+        case OpMakeArray:
+            // Invalid op... err and terminate
+            STACK_DIFF(-args);
+            break;
+    }
+
+    this->chunk().write(vm, op);
+}
+
 void Compiler::write_const(Vm &vm, Value val) const {
     this->chunk().write_const(vm, val);
     STACK_DIFF(1);

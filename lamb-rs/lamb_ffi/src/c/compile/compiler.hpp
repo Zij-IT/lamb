@@ -63,6 +63,8 @@ struct Compiler {
 
     void write_op(Vm &vm, OpCode op) const;
 
+    void write_vop(Vm &vm, OpCode op, i32 args) const;
+
     void write_byte(Vm &vm, u8 byte);
 
     void write_const(Vm &vm, Value val) const;
