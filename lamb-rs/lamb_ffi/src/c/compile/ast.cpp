@@ -46,7 +46,7 @@ void add_arg_to_compiler(Vm &vm, Compiler *const func_comp, AstNode const *arg) 
 
 void write_as_closure(Vm &vm, Compiler *const func_comp) {
     Compiler *compiler = func_comp->enclosing;
-    compiler->chunk().write(vm, OpClosure);
+    compiler->write_op(vm, OpClosure);
     compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
 
     // TODO: Can this be turned into a range based loop?
@@ -115,7 +115,6 @@ CompileAstResult compile_rec_func_def(Vm &vm, Compiler *compiler, AstNode *node)
     compiler->chunk().add_const(vm, Value::from_obj((Object *)rec_func_ident));
 
     BUBBLE(compile_function(vm, compiler, func_def, rec_func_ident->chars));
-    STACK_DIFF(compiler, 1);
 
     if (compiler->block->depth == 0) {
         compiler->write_op(vm, OpDefineGlobal);
@@ -330,7 +329,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
             compile_compose(vm, compiler, lhs, rhs);
-            STACK_DIFF(compiler, +1);
             break;
         }
         case AstntBinaryRCompose: {
@@ -340,7 +338,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *lhs = node->kids[0];
             AstNode *rhs = node->kids[1];
             compile_compose(vm, compiler, rhs, lhs);
-            STACK_DIFF(compiler, +1);
             break;
         }
         case AstntBinaryLApply: {
@@ -369,7 +366,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
         }
         case AstntFuncDef: {
             BUBBLE(compile_function(vm, compiler, node, ANON_FUNC_NAME));
-            STACK_DIFF(compiler, 1);
             break;
         }
         case AstntFuncCall: {
