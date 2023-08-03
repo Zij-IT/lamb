@@ -135,7 +135,8 @@ void Compiler::end_scope(Vm &vm) {
 void Compiler::destroy(Vm &vm) { this->locals.destroy(vm); }
 
 #define STACK_DIFF(diff) (this->block->offset += (diff))
-void Compiler::write_op(Vm &vm, OpCode op) {
+
+void Compiler::write_op(Vm &vm, OpCode op) const {
     switch (op) {
         case OpAdd:
         case OpBinAnd:
@@ -193,7 +194,7 @@ void Compiler::write_op(Vm &vm, OpCode op) {
     this->chunk().write(vm, op);
 }
 
-void Compiler::write_const(Vm &vm, Value val) {
+void Compiler::write_const(Vm &vm, Value val) const {
     this->chunk().write_const(vm, val);
     STACK_DIFF(1);
 }
