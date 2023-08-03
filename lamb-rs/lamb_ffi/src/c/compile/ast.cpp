@@ -224,27 +224,25 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             if (local_slot) {
                 auto slot = local_slot.value();
                 compiler->chunk().write(vm, OpGetLocal);
-                compiler->chunk().write_const(vm, Value::from_i64(slot));
+                compiler->write_const(vm, Value::from_i64(slot));
             } else {
                 auto upvalue_slot = compiler->upvalue_idx(ident);
                 if (!upvalue_slot) {
                     compiler->chunk().write(vm, OpGetGlobal);
-                    compiler->chunk().write_const(vm, Value::from_obj((Object *)ident));
+                    compiler->write_const(vm, Value::from_obj((Object *)ident));
                 } else {
                     compiler->chunk().write(vm, OpGetUpvalue);
-                    compiler->chunk().write_const(vm, Value::from_i64(upvalue_slot.value()));
+                    compiler->write_const(vm, Value::from_i64(upvalue_slot.value()));
                 }
             }
 
-            STACK_DIFF(compiler, 1);
             break;
         }
 
         // Complex constants
         case AstntStrLit: {
             auto *lit = LambString::from_cstr(vm, node->val.s);
-            compiler->chunk().write_const(vm, Value::from_obj((Object *)lit));
-            STACK_DIFF(compiler, 1);
+            compiler->write_const(vm, Value::from_obj((Object *)lit));
             break;
         }
 
