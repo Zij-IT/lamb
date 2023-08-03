@@ -109,11 +109,11 @@ case 1 { 2 -> 1, 3 -> 2, 5 -> 2, };
 { x := "pass 25"; y := "fail"; println(x); };
 
 -- Case with 3 arms, last match
-case 1 { 2 -> 1, 3 -> 2, 1 -> 2, };
-{ x := "pass 26"; y := "fail"; println(x); };
+case 1 { 2 -> 1, 3 -> 2, 1 -> { x := "pass 26"; y := "fail"; println(x); }, };
+{ x := "pass 27"; y := "fail"; println(x); };
 
 -- Block expression in RHS of LogAnd
-true  && { x := "pass 27"; y := "fail"; println(x); true };
+true  && { x := "pass 28"; y := "fail"; println(x); true };
 
 -- Block expression in RHS of LogOr
-false || { x := "pass 28"; y := "fail"; println(x); true };
+false || { x := "pass 29"; y := "fail"; println(x); true };
