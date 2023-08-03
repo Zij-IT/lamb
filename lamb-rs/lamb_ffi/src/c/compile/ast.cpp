@@ -95,7 +95,7 @@ CompileAstResult compile_function(Vm &vm, Compiler *compiler, AstNode *node, cha
     }
 
     BUBBLE(compile(vm, &func_comp, func_body));
-    func_comp.chunk().write(vm, OpReturn);
+    func_comp.write_op(vm, OpReturn);
 
     if (vm.options.print_fn_chunks) {
         std::cerr << func_comp.chunk().to_string() << '\n';
@@ -222,16 +222,19 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             auto local_slot = compiler->local_slot(ident);
             if (local_slot) {
                 auto slot = local_slot.value();
-                compiler->chunk().write(vm, OpGetLocal);
+                compiler->write_op(vm, OpGetLocal);
                 compiler->write_const(vm, Value::from_i64(slot));
+                STACK_DIFF(compiler, -1);
             } else {
                 auto upvalue_slot = compiler->upvalue_idx(ident);
                 if (!upvalue_slot) {
-                    compiler->chunk().write(vm, OpGetGlobal);
+                    compiler->write_op(vm, OpGetGlobal);
                     compiler->write_const(vm, Value::from_obj((Object *)ident));
+                    STACK_DIFF(compiler, -1);
                 } else {
-                    compiler->chunk().write(vm, OpGetUpvalue);
+                    compiler->write_op(vm, OpGetUpvalue);
                     compiler->write_const(vm, Value::from_i64(upvalue_slot.value()));
+                    STACK_DIFF(compiler, -1);
                 }
             }
 
@@ -388,8 +391,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             } else {
                 BUBBLE(compile(vm, compiler, val));
             }
-            compiler->chunk().write(vm, OpReturn);
-            STACK_DIFF(compiler, -1);
+            compiler->write_op(vm, OpReturn);
             break;
         }
         case AstntArray: {
