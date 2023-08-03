@@ -474,6 +474,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // jumpiffalse .next_branch_1
             // <body>
             // jump .end_of_if
+
+            i32 offset_before_branch = STACK_DIFF(compiler, 0);
             BUBBLE(compile(vm, compiler, node->kids[0]));
 
             i32 if_false_jump = compiler->chunk().write_jump(vm, OpJumpIfFalse);
@@ -485,14 +487,13 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->chunk().patch_jump(if_false_jump);
             compiler->write_op(vm, OpPop);
 
+            compiler->block->offset = offset_before_branch;
             if (node->kids[2] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[2]));
-                STACK_DIFF(compiler, -1);
             } else {
-                compiler->chunk().write_const(vm, Value::nil());
+                compiler->write_const(vm, Value::nil());
             }
 
-            STACK_DIFF(compiler, +1);
             compiler->chunk().patch_jump(past_else);
             break;
         }
