@@ -310,19 +310,17 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
         case AstntBinaryLogAnd: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             i32 if_false = compiler->chunk().write_jump(vm, OpJumpIfFalse);
-            compiler->chunk().write(vm, OpPop);
+            compiler->write_op(vm, OpPop);
             BUBBLE(compile(vm, compiler, node->kids[1]));
             compiler->chunk().patch_jump(if_false);
-            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLogOr: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             i32 if_true = compiler->chunk().write_jump(vm, OpJumpIfTrue);
-            compiler->chunk().write(vm, OpPop);
+            compiler->write_op(vm, OpPop);
             BUBBLE(compile(vm, compiler, node->kids[1]));
             compiler->chunk().patch_jump(if_true);
-            STACK_DIFF(compiler, -1);
             break;
         }
         case AstntBinaryLCompose: {

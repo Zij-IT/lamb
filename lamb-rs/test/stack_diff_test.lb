@@ -6,7 +6,7 @@
 { x := 2; y := "fail"; assert(x = 2); };
 
 -- FuncCall
-println("26 Tests:n-------");
+println("28 Tests:n-------");
 { x := "pass 1"; y := "fail"; println(x); };
 
 -- Define global
@@ -20,7 +20,6 @@ x := 1;
 -- Constants
 nil; 0; 'c'; "hi"; true;
 { x := "pass 4"; y := "fail"; println(x); };
-
 
 -1; !true; ~1;
 { x := "pass 5"; y := "fail"; println(x); };
@@ -112,3 +111,9 @@ case 1 { 2 -> 1, 3 -> 2, 5 -> 2, };
 -- Case with 3 arms, last match
 case 1 { 2 -> 1, 3 -> 2, 1 -> 2, };
 { x := "pass 26"; y := "fail"; println(x); };
+
+-- Block expression in RHS of LogAnd
+true  && { x := "pass 27"; y := "fail"; println(x); true };
+
+-- Block expression in RHS of LogOr
+false || { x := "pass 28"; y := "fail"; println(x); true };
