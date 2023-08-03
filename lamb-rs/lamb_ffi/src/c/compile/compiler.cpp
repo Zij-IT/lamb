@@ -194,6 +194,8 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
     this->chunk().write(vm, op);
 }
 
+void Compiler::write_op_arg(Vm &vm, Value val) const { this->chunk().write_const(vm, val); }
+
 void Compiler::write_vop(Vm &vm, OpCode op, i32 args) const {
     switch (op) {
         case OpAdd:

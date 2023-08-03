@@ -47,7 +47,7 @@ void add_arg_to_compiler(Vm &vm, Compiler *const func_comp, AstNode const *arg) 
 void write_as_closure(Vm &vm, Compiler *const func_comp) {
     Compiler *compiler = func_comp->enclosing;
     compiler->write_op(vm, OpClosure);
-    compiler->chunk().write_const(vm, Value::from_obj((Object *)func_comp->function));
+    compiler->write_op_arg(vm, Value::from_obj((Object *)func_comp->function));
 
     // TODO: Can this be turned into a range based loop?
     for (i32 i = 0; i < func_comp->function->upvalue_count; i++) {
@@ -118,7 +118,7 @@ CompileAstResult compile_rec_func_def(Vm &vm, Compiler *compiler, AstNode *node)
 
     if (compiler->block->depth == 0) {
         compiler->write_op(vm, OpDefineGlobal);
-        compiler->chunk().write_const(vm, Value::from_obj((Object *)rec_func_ident));
+        compiler->write_op_arg(vm, Value::from_obj((Object *)rec_func_ident));
     } else {
         compiler->add_local(vm, rec_func_ident->chars);
     }
@@ -159,10 +159,10 @@ CompileAstResult compile_compose(Vm &vm, Compiler *compiler, AstNode *first, Ast
     func_comp.write_const(vm, Value::from_i64(1));
 
     func_comp.write_vop(vm, OpCall, 1);
-    func_comp.write_const(vm, Value::from_i64(1));
+    func_comp.write_op_arg(vm, Value::from_i64(1));
 
     func_comp.write_vop(vm, OpCall, 1);
-    func_comp.write_const(vm, Value::from_i64(1));
+    func_comp.write_op_arg(vm, Value::from_i64(1));
 
     func_comp.write_op(vm, OpReturn);
 
@@ -223,18 +223,15 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             if (local_slot) {
                 auto slot = local_slot.value();
                 compiler->write_op(vm, OpGetLocal);
-                compiler->write_const(vm, Value::from_i64(slot));
-                STACK_DIFF(compiler, -1);
+                compiler->write_op_arg(vm, Value::from_i64(slot));
             } else {
                 auto upvalue_slot = compiler->upvalue_idx(ident);
                 if (!upvalue_slot) {
                     compiler->write_op(vm, OpGetGlobal);
-                    compiler->write_const(vm, Value::from_obj((Object *)ident));
-                    STACK_DIFF(compiler, -1);
+                    compiler->write_op_arg(vm, Value::from_obj((Object *)ident));
                 } else {
                     compiler->write_op(vm, OpGetUpvalue);
-                    compiler->write_const(vm, Value::from_i64(upvalue_slot.value()));
-                    STACK_DIFF(compiler, -1);
+                    compiler->write_op_arg(vm, Value::from_i64(upvalue_slot.value()));
                 }
             }
 
@@ -351,7 +348,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, rhs));
 
             compiler->write_vop(vm, OpCall, 1);
-            compiler->chunk().write_const(vm, Value::from_i64(1));
+            compiler->write_op_arg(vm, Value::from_i64(1));
             break;
         }
         case AstntBinaryRApply: {
@@ -362,7 +359,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             BUBBLE(compile(vm, compiler, lhs));
 
             compiler->write_vop(vm, OpCall, 1);
-            compiler->chunk().write_const(vm, Value::from_i64(1));
+            compiler->write_op_arg(vm, Value::from_i64(1));
             break;
         }
         case AstntFuncDef: {
@@ -381,7 +378,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             }
 
             compiler->write_vop(vm, OpCall, arg_count);
-            compiler->chunk().write_const(vm, Value::from_i64((i64)arg_count));
+            compiler->write_op_arg(vm, Value::from_i64((i64)arg_count));
             break;
         }
         case AstntReturn: {
@@ -613,7 +610,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             if (compiler->block->depth == 0) {
                 compiler->write_op(vm, OpDefineGlobal);
-                compiler->chunk().write_const(vm, Value::from_obj((Object *)ident));
+                compiler->write_op_arg(vm, Value::from_obj((Object *)ident));
             } else {
                 compiler->chunk().add_const(vm, Value::from_obj((Object *)ident));
                 compiler->add_local(vm, ident->chars);
