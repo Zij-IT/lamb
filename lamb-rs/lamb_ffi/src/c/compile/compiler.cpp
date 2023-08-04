@@ -149,6 +149,7 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
         case OpGe:
         case OpGt:
         case OpIndex:
+        case OpIndexRev:
         case OpLShift:
         case OpLe:
         case OpLt:
@@ -172,6 +173,7 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
         case OpGetGlobal:
         case OpGetLocal:
         case OpGetUpvalue:
+        case OpLen:
         case OpUnsaveValue:
             STACK_DIFF(1);
             break;
@@ -216,11 +218,13 @@ void Compiler::write_vop(Vm &vm, OpCode op, i32 args) const {
         case OpGetUpvalue:
         case OpGt:
         case OpIndex:
+        case OpIndexRev:
         case OpJump:
         case OpJumpIfFalse:
         case OpJumpIfTrue:
         case OpLShift:
         case OpLe:
+        case OpLen:
         case OpLogNeg:
         case OpLt:
         case OpMod:

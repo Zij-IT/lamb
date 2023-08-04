@@ -361,6 +361,33 @@ InterpretResult Vm::run() {
                     binary_type_error(lhs, "<=", rhs);
                 }
             } break;
+            case OpLen: {
+                auto *val = this->peek_stack();
+                if (!val->is_object()) {
+                    runtime_error("Unable to use array patterns on a value of type: %s",
+                                  kind_as_cstr(arr_val));
+                }
+
+                switch (val->as.obj->type) {
+                    case OtString: {
+                        auto *st = (LambString *)val->as.obj;
+                        PUSH(Value::from_i64(st->len));
+                        break;
+                    }
+                    case OtArray: {
+                        auto *arr = (LambArray *)val->as.obj;
+                        PUSH(Value::from_i64(arr->items.len()));
+                        break;
+                    }
+                    case OtFunc:
+                    case OtNative:
+                    case OtClosure:
+                    case OtUpvalue:
+                        runtime_error("Unable to use array patterns on a value of type: %s",
+                                      kind_as_cstr(arr_val));
+                }
+                break;
+            }
             case OpMakeArray: {
                 i32 len = READ_CONSTANT().as.intn;
                 GcVec<Value> items;
@@ -399,6 +426,49 @@ InterpretResult Vm::run() {
                         auto *arr = (LambArray *)arr_val.as.obj;
                         if (idx.as.intn < arr->items.len() && idx.as.intn >= 0) {
                             PUSH(arr->items[idx.as.intn]);
+                        } else {
+                            runtime_error(
+                                "Index out of bounds. Desired index: (%ld) | Length: (%d)",
+                                idx.as.intn, arr->items.len);
+                        }
+                        break;
+                    }
+                    case OtFunc:
+                    case OtNative:
+                    case OtClosure:
+                    case OtUpvalue:
+                        runtime_error("Unable to index into value of type %s",
+                                      kind_as_cstr(arr_val));
+                }
+                break;
+            }
+            case OpIndexRev: {
+                Value idx = POP();
+                Value arr_val = POP();
+
+                if (!idx.is_integer()) {
+                    runtime_error("Unable to index into an array with a value of type %s",
+                                  kind_as_cstr(idx));
+                } else if (!arr_val.is_object()) {
+                    runtime_error("Unable to index into an item of type %s", kind_as_cstr(arr_val));
+                }
+
+                switch (arr_val.as.obj->type) {
+                    case OtString: {
+                        auto *st = (LambString *)arr_val.as.obj;
+                        if (idx.as.intn < st->len && idx.as.intn >= 0) {
+                            PUSH(Value::from_char(st->chars[st->len - 1 - idx.as.intn]));
+                        } else {
+                            runtime_error(
+                                "Index out of bounds. Desired index: (%ld) | Length: (%d)",
+                                idx.as.intn, st->len);
+                        }
+                        break;
+                    }
+                    case OtArray: {
+                        auto *arr = (LambArray *)arr_val.as.obj;
+                        if (idx.as.intn < arr->items.len() && idx.as.intn >= 0) {
+                            PUSH(arr->items[arr->items.len() - 1 - idx.as.intn]);
                         } else {
                             runtime_error(
                                 "Index out of bounds. Desired index: (%ld) | Length: (%d)",

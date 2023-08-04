@@ -629,9 +629,63 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntPatternTopIdent:
-        case AstntPatternTopArray:
             return CarUnsupportedAst;
             break;
+        case AstntPatternTopArray: {
+            // Note:
+            //
+            //     The scrutinee is assumed to be sitting on the top off the stack
+            //     and is *NOT* to be consumed by this pattern.
+            //
+            //     This pattern is also usable for strings because it doesn't type-check
+            //     the value itself, but only the inner elements. This does mean that
+            //     doing a nested array check will fail because `OpLen` checks that the
+            //     value is either an array or a string.
+            //
+            // ASM-lite:
+            //   arr_start:
+            //     len                          ; push length of arr onto stack
+            //     push min_len
+            //     if has_dots { OpGe } else { OpEq }
+            //
+            //     jumpiffalse .cleanup
+            //     pop                          ; pop `false` off the stack
+            //     test <left_0> <arr_0>
+            //     ..
+            //     jumpiffalse .cleanup
+            //     pop                          ; pop `false` off the stack
+            //     test <left_n> <arr_n>
+            //
+            //     jumpiffalse .cleanup
+            //     pop                          ; pop `false` off the stack
+            //     test <right_0> <arr_(len - 1)>
+            //     ..
+            //     jumpiffalse .cleanup
+            //     pop                         ; pop `false` off the stack
+            //     test <right_0 + r_len> <arr_(len - 1 - r_len)>
+            //
+            //     jumpiftrue .arr_end
+            //
+            //   cleanup:
+            //     save                        ; save result
+            //     pop                         ; pop scrutinee off the stack
+            //     unsave                      ; unsave result
+            //
+            //   arr_end:
+            //     <rest_of_program>
+            auto *head_list = node->kids[0];
+            auto *tail_list = node->kids[1];
+
+            auto *ext = node->kids[2];
+            auto head_len = ext->kids[0]->val.n;
+            auto tail_len = ext->kids[1]->val.n;
+            auto has_dots = ext->kids[2]->val.b;
+
+            auto min_len = head_len + tail_len;
+
+            return CarUnsupportedAst;
+            break;
+        }
         case AstntBlock: {
             Block *prev = compiler->block;
             Block block = {

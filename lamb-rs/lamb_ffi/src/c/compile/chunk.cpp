@@ -189,10 +189,14 @@ Chunk::format_instruction(u32 offset) const {
             return SIMPLE("OpLShift");
         case OpReturn:
             return SIMPLE("OpReturn");
+        case OpLen:
+            return SIMPLE("OpLen");
         case OpMakeArray:
             return SIMPLE("OpMakeArray");
         case OpIndex:
             return SIMPLE("OpIndex");
+        case OpIndexRev:
+            return SIMPLE("OpIndexRev");
         case OpPop:
             return SIMPLE("OpPop");
         case OpDup:
