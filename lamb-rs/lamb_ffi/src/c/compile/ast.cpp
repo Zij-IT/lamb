@@ -503,60 +503,60 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntCaseArm: {
-            return CarUnsupportedAst;
-            // AstNode *value = node->kids[0];
-            // AstNode *branch = node->kids[1];
-            // AstNode *next_arm = node->kids[2];
+            AstNode *value = node->kids[0];
+            AstNode *branch = node->kids[1];
+            AstNode *next_arm = node->kids[2];
 
-            // i32 offset_before_arm = STACK_DIFF(compiler, 0);
-            // // Compare the value of the arm with a duplicate of the case value
-            // compiler->write_op(vm, OpDup);
-            // BUBBLE(compile(vm, compiler, value));
-            // compiler->write_op(vm, OpEq);
+            i32 offset_before_arm = STACK_DIFF(compiler, 0);
+            // Compare the value of the arm with a duplicate of the case value
+            BUBBLE(compile(vm, compiler, value));
 
-            // i32 if_neq = compiler->write_jump(vm, OpJumpIfFalse);
+            i32 if_neq = compiler->write_jump(vm, OpJumpIfFalse);
 
-            // // If equal -------->
-            // // Pop the case 'true' off of the stack
-            // compiler->write_op(vm, OpPop);
+            // If equal -------->
+            // Pop the case 'true' off of the stack
+            compiler->write_op(vm, OpPop);
 
-            // // Pop the case value off of the stack
-            // // This sets the offset to `-1` from the perspective of the arm
-            // compiler->write_op(vm, OpPop);
+            // Pop the case value off of the stack
+            // This sets the offset to `-1` from the perspective of the arm
+            compiler->write_op(vm, OpPop);
 
-            // // Run through the body of the arm
-            // BUBBLE(compile(vm, compiler, branch));
+            // Run through the body of the arm
+            BUBBLE(compile(vm, compiler, branch));
 
-            // // Jump over the other arms of the case expression
-            // i32 past_else = compiler->write_jump(vm, OpJump);
-            // // If equal <-------
+            // Jump over the other arms of the case expression
+            i32 past_else = compiler->write_jump(vm, OpJump);
+            // If equal <-------
 
-            // // If not equal -------->
-            // compiler->patch_jump(if_neq);
-            // // Pop the 'false' from the previous EQ check off of the stack
-            // compiler->write_op(vm, OpPop);
+            // If not equal -------->
+            compiler->patch_jump(if_neq);
+            // Pop the 'false' from the previous EQ check off of the stack
+            compiler->write_op(vm, OpPop);
 
-            // // When attempting another arm, the offset for this arm should
-            // // be the same as the offset for the arm before, as testing an
-            // // arm shouldn't effect the stack difference.
-            // compiler->block->offset = offset_before_arm;
+            // When attempting another arm, the offset for this arm should
+            // be the same as the offset for the arm before, as testing an
+            // arm shouldn't effect the stack difference.
+            compiler->block->offset = offset_before_arm;
 
-            // if (next_arm != nullptr) {
-            //     // Attempt the next arm
-            //     BUBBLE(compile(vm, compiler, next_arm));
-            // } else {
-            //     // Pop the compare value off of the stack
-            //     compiler->write_op(vm, OpPop);
+            if (next_arm != nullptr) {
+                // Attempt the next arm
+                BUBBLE(compile(vm, compiler, next_arm));
+            } else {
+                // Pop the compare value off of the stack
+                compiler->write_op(vm, OpPop);
 
-            //     // We can't check for exhaustivity at compile time, so we write
-            //     // a default nil in the event none of arms matched successfully
-            //     compiler->write_const(vm, Value::nil());
-            // }
-            // // If not equal <-------
+                // We can't check for exhaustivity at compile time, so we write
+                // a default nil in the event none of arms matched successfully
+                compiler->write_const(vm, Value::nil());
+            }
+            // If not equal <-------
 
-            // // If successfull, we can jump over all of the arms thanks to the
-            // // recursive nature of the case arms representation
-            // compiler->patch_jump(past_else);
+            // If successfull, we can jump over all of the arms thanks to the
+            // recursive nature of the case arms representation
+            compiler->patch_jump(past_else);
+            break;
+        }
+        case AstntPattern: {
             break;
         }
         case AstntPattern:
