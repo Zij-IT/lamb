@@ -557,10 +557,77 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntPattern: {
+            // Note:
+            //
+            //     The scrutinee is assumed to be sitting on the top off the stack
+            //     and is *only* to be removed after the case arm is complete.
+            //
+            //     This means that any sub-patterns must duplicate it.
+            //
+            // ASM-lite:
+            //
+            //     pattern:
+            //        test <sub_pat_0> <scrutinee>
+
+            //        jumpiftrue .end_of_pattern
+            //        pop                         ; pops false off the stack
+            //        test <sub_pat_1> <scrutinee>
+            //        ..
+            //        jumpiftrue .end_of_pattern
+            //        pop                         ; pops false off the stack
+            //        test <sub_pat_N> <scrutinee>
+            //
+            //    end_of_pattern:
+            //        ; Nothing
+            //
+            auto *pattern_list = node->kids[0];
+            auto *next = pattern_list->kids[1];
+
+            i32 offset_before_pattern = STACK_DIFF(compiler, 0);
+            BUBBLE(compile(vm, compiler, pattern_list->kids[0]));
+
+            std::vector<i32> jmps{};
+
+            while (next != nullptr && next->kids[0] != nullptr) {
+                i32 eop = compiler->write_jump(vm, OpJumpIfTrue);
+                jmps.push_back(eop);
+
+                // pop `false` off the stack
+                compiler->write_op(vm, OpPop);
+
+                // Just like `if` and `case` all patterns must start at the
+                // same stack offset and will leave one expression on the stack
+                // which will result in either `true` or `false`
+                compiler->block->offset = offset_before_pattern;
+                BUBBLE(compile(vm, compiler, next->kids[0]));
+
+                next = next->kids[1];
+            }
+
+            for (auto j : jmps) {
+                compiler->patch_jump(j);
+            }
+
             break;
         }
-        case AstntPattern:
-        case AstntPatternTopLit:
+        case AstntPatternTopLit: {
+            // Note:
+            //
+            //     The scrutinee is assumed to be sitting on the top off the stack
+            //     and is *only* to be removed after the case arm is complete.
+            //
+            // ASM-lite:
+            //
+            //     dup       ; Duplicates top of stack
+            //     <lit>
+            //     eq
+            //
+            auto *lit = node->kids[0];
+            compiler->chunk().write(vm, OpDup);
+            BUBBLE(compile(vm, compiler, lit));
+            compiler->chunk().write(vm, OpEq);
+            break;
+        }
         case AstntPatternTopIdent:
         case AstntPatternTopArray:
             return CarUnsupportedAst;
