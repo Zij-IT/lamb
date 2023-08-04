@@ -13,8 +13,8 @@ use chumsky::{
 };
 
 use lamb_ast::{
-    Assign, Atom, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident, If,
-    Index, Literal, Script, Statement, UnaryOp,
+    ArrayPattern, Assign, Atom, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef,
+    Ident, If, Index, Literal, Pattern, PatternTop, Script, Statement, UnaryOp,
 };
 
 macro_rules! bin {
@@ -232,9 +232,7 @@ where
     just(Token::Case)
         .ignore_then(expr.clone().map(Box::new))
         .then({
-            let arm = literal()
-                .map(Either::Left)
-                .or(ident().map(Either::Right))
+            let arm = pattern()
                 .then_ignore(just(Token::Arrow))
                 .then(
                     block(stat, expr.clone())
@@ -462,4 +460,96 @@ where
     })
     .delimited_by(just(start), just(end))
     .map_with_span(move |_, span| fallback(span))
+}
+
+fn pattern<'a, I, S>() -> impl Parser<'a, I, Pattern, E<'a, S>> + Clone
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    recursive(|pat| {
+        pattern_top(pat)
+            .separated_by(just(Token::Op(Op::BinOr)))
+            .allow_leading()
+            .at_least(1)
+            .collect()
+            .map(|pattern| Pattern { pattern })
+    })
+}
+
+fn pattern_top<'a, I, S>(
+    pat: impl Parser<'a, I, Pattern, E<'a, S>> + Clone,
+) -> impl Parser<'a, I, PatternTop, E<'a, S>> + Clone
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    let lit_pat = literal().map(PatternTop::Literal);
+    let id_pat = ident()
+        .then(just(Token::PatBind).ignore_then(pat.clone().or_not()))
+        .map(|(id, pat)| PatternTop::Ident(id, pat.map(Box::new)));
+    let arr_pat = array_pattern(pat.clone()).map(PatternTop::Array);
+
+    choice((lit_pat, id_pat, arr_pat))
+}
+
+fn array_pattern<'a, I, S>(
+    pattern: impl Parser<'a, I, Pattern, E<'a, S>> + Clone,
+) -> impl Parser<'a, I, ArrayPattern, E<'a, S>> + Clone
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    // Possible Array Patterns:
+    //   [1, 2, .., 8]: lhs, dots, rhs
+    //   [.., 8, 9]:    ___, dots, rhs
+    //   [1, 2, ..]:    lhs, dots, ___
+    //   [1, 2]:        lhs, ____, ___
+    //   [..]:          ___, dots, ___
+    //
+    //   [1, 2, .., 8]: lhs, dots, rhs
+    //   [1, 2, ..]:    lhs, dots, ___
+    //   [1, 2]:        lhs, ____, ___
+    //  pattern (comma dots (comma pattern)?)?
+    //
+    //   [.., 8, 9]:    ___, dots, rhs
+    //   [..]:          ___, dots, ___
+    //  dots (comma pattern)?
+
+    let dots = || just(Token::DotDot);
+    let comma = || just(Token::Comma);
+    let pats = || {
+        pattern
+            .clone()
+            .separated_by(just(Token::Comma))
+            .at_least(1)
+            .collect::<Vec<_>>()
+    };
+
+    let arr_pattern = choice((
+        pats()
+            .then(
+                comma()
+                    .then(dots())
+                    .ignore_then(comma().ignore_then(pats()).or_not())
+                    .or_not(),
+            )
+            .map(|(lhs, dots)| match dots {
+                Some(Some(rhs)) => (lhs, true, rhs),
+                Some(None) => (lhs, true, Vec::new()),
+                None => (lhs, false, Vec::new()),
+            }),
+        dots()
+            .ignore_then(comma().ignore_then(pats()).or_not())
+            .map(|rhs| match rhs {
+                Some(rhs) => (Vec::new(), true, rhs),
+                None => (Vec::new(), true, Vec::new()),
+            }),
+    ));
+
+    safe_delimited(
+        arr_pattern.map(|(head, dots, tail)| ArrayPattern::Elements { head, tail, dots }),
+        Delim::Brack,
+        |_| ArrayPattern::Err,
+    )
 }

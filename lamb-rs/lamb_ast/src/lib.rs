@@ -172,8 +172,30 @@ pub struct Case {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CaseArm {
-    pub pattern: Either<Literal, Ident>,
+    pub pattern: Pattern,
     pub on_match: Either<Block, Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pattern {
+    pub pattern: Vec<PatternTop>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ArrayPattern {
+    Err,
+    Elements {
+        head: Vec<Pattern>,
+        tail: Vec<Pattern>,
+        dots: bool,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PatternTop {
+    Literal(Literal),
+    Ident(Ident, Option<Box<Pattern>>),
+    Array(ArrayPattern),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

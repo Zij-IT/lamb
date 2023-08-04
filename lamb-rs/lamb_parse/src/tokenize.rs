@@ -123,6 +123,8 @@ pub enum Token {
     Comma,
     Colon,
     Semi,
+    PatBind,
+    DotDot,
 
     // Error Handling
     Error(Error),
@@ -158,6 +160,8 @@ impl std::fmt::Display for Token {
             Token::Comma => &",",
             Token::Colon => &":",
             Token::Semi => &";",
+            Token::PatBind => &"@",
+            Token::DotDot => &"..",
             Token::Error(e) => {
                 write!(f, "{e:?}")?;
                 return Ok(());
@@ -320,11 +324,13 @@ fn delimeters<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
 
 fn syntax<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
     choice((
+        just("..").to(Token::DotDot),
         just("->").to(Token::Arrow),
         just(":=").to(Token::Define),
         just(',').to(Token::Comma),
         just(';').to(Token::Semi),
         just(':').to(Token::Colon),
+        just('@').to(Token::PatBind),
     ))
 }
 
