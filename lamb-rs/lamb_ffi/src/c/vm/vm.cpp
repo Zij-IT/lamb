@@ -372,7 +372,7 @@ InterpretResult Vm::run() {
                 PUSH(Value::from_obj((Object *)arr));
                 break;
             }
-            case OpIndexArray: {
+            case OpIndex: {
                 Value idx = POP();
                 Value arr_val = POP();
 

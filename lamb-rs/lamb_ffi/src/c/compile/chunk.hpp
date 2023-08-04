@@ -41,7 +41,7 @@ enum OpCode {
     OpJumpIfTrue,
     OpJumpIfFalse,
     OpMakeArray,
-    OpIndexArray,
+    OpIndex,
     OpPop,
     OpDup,
     OpCall,

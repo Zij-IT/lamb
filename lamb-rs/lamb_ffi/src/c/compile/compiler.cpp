@@ -148,7 +148,7 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
         case OpEq:
         case OpGe:
         case OpGt:
-        case OpIndexArray:
+        case OpIndex:
         case OpLShift:
         case OpLe:
         case OpLt:
@@ -215,7 +215,7 @@ void Compiler::write_vop(Vm &vm, OpCode op, i32 args) const {
         case OpGetLocal:
         case OpGetUpvalue:
         case OpGt:
-        case OpIndexArray:
+        case OpIndex:
         case OpJump:
         case OpJumpIfFalse:
         case OpJumpIfTrue:

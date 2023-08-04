@@ -428,7 +428,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
         case AstntArrayIndex: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
             BUBBLE(compile(vm, compiler, node->kids[1]));
-            compiler->write_op(vm, OpIndexArray);
+            compiler->write_op(vm, OpIndex);
             break;
         }
         case AstntIf: {
