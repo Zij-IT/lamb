@@ -2,7 +2,7 @@
 
 use lamb_ast::{
     Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
-    If, Index, Literal, Script, Statement, Unary,
+    If, Index, Literal, Pattern, PatternTop, Script, Statement, Unary,
 };
 
 use self::extra_impls::{BinaryExt, UnaryExt};
@@ -182,6 +182,18 @@ impl Optimize for Atom {
             Atom::Array(a) => a.optimize(),
             Atom::Literal(_) | Atom::Ident(_) => false,
         }
+    }
+}
+
+impl Optimize for Pattern {
+    fn optimize(&mut self) -> bool {
+        false
+    }
+}
+
+impl Optimize for PatternTop {
+    fn optimize(&mut self) -> bool {
+        false
     }
 }
 

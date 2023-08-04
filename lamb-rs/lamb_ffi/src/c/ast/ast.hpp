@@ -58,6 +58,13 @@ enum AstNodeType {
     AstntAssignStmt,
     AstntBlock,
 
+    // Pattern Nodes
+    AstntPattern,
+    AstntPatternTopLit,
+    AstntPatternTopIdent,
+    AstntPatternTopArray,
+    AstntPatternArrayExt,
+
     // Meta
     AstntNodeList,
 

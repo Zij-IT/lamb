@@ -1,8 +1,13 @@
 use std::ffi::{CStr, CString};
 
 use lamb_ast::{
-    Assign, Atom, Binary, BinaryOp, Block, Case, Either, Else, Expr, FuncCall, FuncDef, Ident, If,
-    Index, Literal, Script, Statement, Unary, UnaryOp,
+    ArrayPattern, Assign, Atom, Binary, BinaryOp, Block, Case, Either, Else, Expr, FuncCall,
+    FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script, Statement, Unary, UnaryOp,
+};
+
+use crate::bindings::{
+    AstNodeType_AstntPattern, AstNodeType_AstntPatternArrayExt, AstNodeType_AstntPatternTopArray,
+    AstNodeType_AstntPatternTopIdent, AstNodeType_AstntPatternTopLit,
 };
 
 use super::{
@@ -232,6 +237,58 @@ impl Convert for Case {
     }
 }
 
+impl Convert for Pattern {
+    fn convert(&self) -> *mut AstNode {
+        let node_list = self.pattern.convert();
+        unsafe {
+            let node = new_node(NodeKind::Pattern);
+            (*node).kids[0] = node_list;
+            node
+        }
+    }
+}
+
+impl Convert for PatternTop {
+    fn convert(&self) -> *mut AstNode {
+        match self {
+            PatternTop::Literal(lit) => unsafe {
+                let node = new_node(NodeKind::PatternLit);
+                (*node).kids[0] = lit.convert();
+                node
+            },
+            PatternTop::Ident(_, _) => {
+                let _node = new_node(NodeKind::PatternIdent);
+                todo!()
+            }
+            PatternTop::Array(ArrayPattern::Elements { head, tail, dots }) => unsafe {
+                let head_len = new_node(NodeKind::NumLit);
+                (*head_len).val.n = i64::try_from(head.len()).unwrap();
+
+                let tail_len = new_node(NodeKind::NumLit);
+                (*tail_len).val.n = i64::try_from(tail.len()).unwrap();
+
+                let has_dots = new_node(NodeKind::BoolLit);
+                (*has_dots).val.b = *dots;
+
+                let ext = new_node(NodeKind::PatternExt);
+                (*ext).kids[0] = head_len;
+                (*ext).kids[1] = tail_len;
+                (*ext).kids[2] = has_dots;
+
+                let node = new_node(NodeKind::PatternArray);
+                (*node).kids[0] = head.convert();
+                (*node).kids[1] = tail.convert();
+                (*node).kids[2] = ext;
+
+                node
+            },
+            PatternTop::Array(ArrayPattern::Err) => {
+                panic!("A faulty ArrayPattern should not have made it here");
+            }
+        }
+    }
+}
+
 impl Convert for Literal {
     fn convert(&self) -> *mut AstNode {
         match self {
@@ -455,6 +512,11 @@ enum NodeKind {
     ExprStmt,
     AssignStmt,
     Block,
+    Pattern,
+    PatternLit,
+    PatternIdent,
+    PatternArray,
+    PatternExt,
     NodeList,
 }
 
@@ -504,6 +566,11 @@ impl NodeKind {
             NodeKind::AssignStmt => AstNodeType_AstntAssignStmt,
             NodeKind::Block => AstNodeType_AstntBlock,
             NodeKind::NodeList => AstNodeType_AstntNodeList,
+            NodeKind::Pattern => AstNodeType_AstntPattern,
+            NodeKind::PatternLit => AstNodeType_AstntPatternTopLit,
+            NodeKind::PatternIdent => AstNodeType_AstntPatternTopIdent,
+            NodeKind::PatternArray => AstNodeType_AstntPatternTopArray,
+            NodeKind::PatternExt => AstNodeType_AstntPatternArrayExt,
         }
     }
 }
