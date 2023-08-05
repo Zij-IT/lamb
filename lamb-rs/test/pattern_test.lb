@@ -30,8 +30,11 @@ case 1 { 1 | 0 -> { x := "pass 13"; y := "fail"; println(x); }, 10 | 100 -> 300,
 case 1 { 5 | 10 -> 100, 0 | 1 -> { x := "pass 15"; y := "fail"; println(x); },};
 { x := "pass 16"; y := "fail"; println(x); };
 
--- case [0] { [0] -> { x := "pass 6"; y := "fail"; println(x); }, [0, 1] -> { x := "pass 6"; y := "fail"; println(x); }, };
--- { x := "pass 6"; y := "fail"; println(x); };
+case [0] { [0] -> { x := "pass 17"; y := "fail b1y"; println(x); }, [0, 1] -> { x := "fail b2x"; y := "fail b2y"; println(x); }, };
+{ x := "pass 18"; y := "fail"; println(x); };
+
+case [0] { [0, 2] -> { x := "fail b1x"; y := "fail b1y"; println(x); }, [0] -> { x := "pass 19"; y := "fail b2y"; println(x); }, };
+{ x := "pass 20"; y := "fail"; println(x); };
 
 -- case [0] { [0, 1] -> { x := "pass 6"; y := "fail"; println(x); }, [0, 1] -> { x := "pass 6"; y := "fail"; println(x); }, };
 -- { x := "pass 7"; y := "fail"; println(x); };
