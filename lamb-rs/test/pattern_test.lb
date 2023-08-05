@@ -1,4 +1,4 @@
-println("25 Tests:n--------");
+println("27 Tests:n--------");
 
 case 1 { 0 -> 100, };
 { x := "pass 1"; y := "fail"; println(x); };
@@ -53,3 +53,9 @@ case "deadbeefz" {
   ['d', ..] -> { x := "fail b2x"; y := "fail b2y"; println(x); },
 };
 { x := "pass 25"; y := "fail"; println(x); };
+
+case "parses empty pattern" {
+  [] | [.., 'n'] -> { x := "pass 26"; y := "fail b1y"; println(x); },
+  ['d', ..] -> { x := "fail b2x"; y := "fail b2y"; println(x); },
+};
+{ x := "pass 27"; y := "fail"; println(x); };

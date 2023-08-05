@@ -3,7 +3,7 @@ use crate::tokenize::{Delim, Op, Token};
 use chumsky::{
     extra,
     input::ValueInput,
-    prelude::{Input, Rich},
+    prelude::{empty, Input, Rich},
     primitive::{any, choice, just, none_of},
     recovery::{via_parser, ViaParser},
     recursive::recursive,
@@ -545,6 +545,7 @@ where
                 Some(rhs) => (Vec::new(), true, rhs),
                 None => (Vec::new(), true, Vec::new()),
             }),
+        empty().map(|()| (Vec::new(), false, Vec::new())),
     ));
 
     safe_delimited(
