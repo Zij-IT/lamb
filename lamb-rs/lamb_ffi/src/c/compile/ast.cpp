@@ -688,6 +688,58 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->write_const(vm, Value::from_i64(min_len));
             compiler->write_op(vm, has_dots ? OpGe : OpEq);
 
+            std::vector<i32> ends{};
+
+            for (i32 i = 0; i < head_len; ++i) {
+                // Get the next head pattern
+                ends.push_back(compiler->write_jump(vm, OpJumpIfFalse));
+                compiler->write_op(vm, OpPop);
+
+                // Index into scrutinee at position `i`
+                compiler->write_op(vm, OpDup);
+                compiler->write_const(vm, Value::from_i64(i));
+                compiler->write_op(vm, OpIndex);
+
+                auto *pattern = head_list->kids[0];
+                head_list = head_list->kids[1];
+
+                // Test pattern against item at position `i`
+                BUBBLE(compile(vm, compiler, pattern));
+
+                // Currently we have:
+                // <scrutinee> <item i> <is_match> and we need <scutinee> <is_match>
+                compiler->write_op(vm, OpSaveValue);
+                compiler->write_op(vm, OpPop);
+                compiler->write_op(vm, OpUnsaveValue);
+            }
+
+            for (i32 i = 0; i < tail_len; ++i) {
+                // Get the next tail pattern
+                ends.push_back(compiler->write_jump(vm, OpJumpIfFalse));
+                compiler->write_op(vm, OpPop);
+
+                // Index into scrutinee at position `length - 1 - i`
+                compiler->write_op(vm, OpDup);
+                compiler->write_const(vm, Value::from_i64(i));
+                compiler->write_op(vm, OpIndexRev);
+
+                auto *pattern = tail_list->kids[0];
+                tail_list = tail_list->kids[1];
+
+                // Test pattern against item at position `length - 1 - i`
+                BUBBLE(compile(vm, compiler, pattern));
+
+                // Currently we have:
+                // <scrutinee> <item i> <is_match> and we need <scutinee> <is_match>
+                compiler->write_op(vm, OpSaveValue);
+                compiler->write_op(vm, OpPop);
+                compiler->write_op(vm, OpUnsaveValue);
+            }
+
+            for (auto jmp : ends) {
+                compiler->patch_jump(jmp);
+            }
+
             break;
         }
         case AstntBlock: {

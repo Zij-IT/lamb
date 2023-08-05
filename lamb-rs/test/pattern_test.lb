@@ -1,4 +1,4 @@
-println("16 Tests:n--------");
+println("25 Tests:n--------");
 
 case 1 { 0 -> 100, };
 { x := "pass 1"; y := "fail"; println(x); };
@@ -36,17 +36,20 @@ case [0] { [0] -> { x := "pass 17"; y := "fail b1y"; println(x); }, [0, 1] -> { 
 case [0] { [0, 2] -> { x := "fail b1x"; y := "fail b1y"; println(x); }, [0] -> { x := "pass 19"; y := "fail b2y"; println(x); }, };
 { x := "pass 20"; y := "fail"; println(x); };
 
--- case [0] { [0, 1] -> { x := "pass 6"; y := "fail"; println(x); }, [0, 1] -> { x := "pass 6"; y := "fail"; println(x); }, };
--- { x := "pass 7"; y := "fail"; println(x); };
+case [5] {
+  [5, ..] | [.., 10] -> { x := "pass 21"; y := "fail b1y"; println(x); },
+  [8 | 6] -> { x := "fail b2x"; y := "fail b2y"; println(x); },
+};
+{ x := "pass 22"; y := "fail"; println(x); };
 
--- case [0] { [5] -> 100, [8] -> 30, };
--- { x := "pass 7"; y := "fail"; println(x); };
+case "dolphins" { 
+  ['a', 'b'] | ['e'] -> { x := "fail b1x"; y := "fail b1y"; println(x); },
+  ['d', ..] -> { x := "pass 23"; y := "fail b1y"; println(x); },
+};
+{ x := "pass 24"; y := "fail"; println(x); };
 
--- case [0] { [5, ..] | [.., 10] -> 100, [8 | 6] -> 30, };
--- { x := "pass 8"; y := "fail"; println(x); };
-
--- case "" { ['a', 'b'] | ['e'] -> 100, ['d', ..] -> 30, };
--- { x := "pass 9"; y := "fail"; println(x); };
-
--- case "" { [.., 'z'] | ['h', 'i'] -> 100, ['d', ..] -> 30, };
--- { x := "pass 10"; y := "fail"; println(x); };
+case "deadbeefz" {
+  [.., 'z'] | ['h', 'i'] -> { x := "pass 25"; y := "fail b1y"; println(x); },
+  ['d', ..] -> { x := "fail b2x"; y := "fail b2y"; println(x); },
+};
+{ x := "pass 25"; y := "fail"; println(x); };
