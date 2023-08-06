@@ -397,7 +397,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntArray: {
-            // Reverse the linked list
             AstNode *prev = nullptr;
             AstNode *curr = node->kids[0];
             if (curr == nullptr) {
@@ -406,6 +405,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 return CarOk;
             }
 
+            // Items in an array are passed reversed, so now we have to unreverse
+            // it.
             AstNode *next = curr->kids[1];
             while (curr != nullptr) {
                 curr->kids[1] = prev;
@@ -417,8 +418,10 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 }
             }
 
+            // Assign back the reversed list... for some reason
             node->kids[0] = prev;
 
+            // Compile all elements of the arrays and determine the array length
             i32 len = 0;
             for (AstNode *expr_list = node->kids[0]; expr_list != nullptr;
                  expr_list = expr_list->kids[1]) {
@@ -446,48 +449,26 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // All nodes in this chain know where the else ends, and can thus jump past
             // it
             //
-            //
-            // Asm-Lite:
-            //
-            //  if:
-            //    <expr>
-            //    jumpiffalse .next_branch_1
-            //    <body>
-            //    jump .end_of_if
-            //  next_branch_1:
-            //    <expr_elif_1>
-            //    jumpiffalse .next_branch_2
-            //    <body_elif_1>
-            //
-            //  ; repeat elifs
-            //
-            //  next_branch_n:
-            //    <expr_elif_n>
-            //    jumpiffalse .else
-            //    <body_elif_n>
-            //  else:
-            //    <body>
-            //  end_of_if:
-            //    <rest>
-
-            // <expr>
-            // jumpiffalse .next_branch_1
-            // <body>
-            // jump .end_of_if
-
             i32 offset_before_branch = STACK_DIFF(compiler, 0);
+
             BUBBLE(compile(vm, compiler, node->kids[0]));
-
             i32 if_false_jump = compiler->write_jump(vm, OpJumpIfFalse);
+
+            // Execute the body of the executed `if` expression
             compiler->write_op(vm, OpPop);
-
             BUBBLE(compile(vm, compiler, node->kids[1]));
-
             i32 past_else = compiler->write_jump(vm, OpJump);
+
+            // Jump over the other branches of the `if` expression
             compiler->patch_jump(if_false_jump);
             compiler->write_op(vm, OpPop);
 
+            // When attempting another arm, the offset for this arm should
+            // be the same as the offset for the arm before, as testing an
+            // arm shouldn't effect the stack difference.
             compiler->block->offset = offset_before_branch;
+
+            // Compile the next
             if (node->kids[2] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[2]));
             } else {
@@ -516,7 +497,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 compiler->write_const(vm, Value::nil());
             }
 
-            // Very complicated way off poppping " scrutinee"
+            // Very complicated way off popping " scrutinee"
             compiler->locals.truncate(pre_case_local_count);
             break;
         }
@@ -559,13 +540,21 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // Run through the body of the arm
             BUBBLE(compile(vm, compiler, body));
 
-            // Pop off `scrutinee` after going through the branch
+            // Save the value from the body
             compiler->write_op(vm, OpSaveValue);
+
+            // Remove duplicate scrutinee from the stack
             compiler->write_op(vm, OpPop);
+
             for (int i = 0; i < binding_count; ++i) {
+                // Remove all bindings from the stack
                 compiler->write_op(vm, OpPop);
             }
+
+            // Remove actual scrutinee from the stack
             compiler->write_op(vm, OpPop);
+
+            // Put the value from the binding on top of the stack
             compiler->write_op(vm, OpUnsaveValue);
 
             // Jump over the other arms of the case expression
@@ -574,12 +563,14 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             // If not equal -------->
             compiler->patch_jump(if_neq);
+
             // Pop the 'false' from the previous EQ check off of the stack
             compiler->write_op(vm, OpPop);
 
             // Pop duplicated compare off of the stack
             compiler->write_op(vm, OpPop);
 
+            // Pop each binding off of the stack
             for (int i = 0; i < binding_count; ++i) {
                 compiler->write_op(vm, OpPop);
             }
@@ -589,7 +580,9 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // arm shouldn't effect the stack difference.
             compiler->block->offset = offset_before_arm;
 
+            // Now remove all locals from the compiler
             compiler->locals.truncate(local_count_pre_pattern);
+
             if (next_arm != nullptr) {
                 // Attempt the next arm
                 BUBBLE(compile(vm, compiler, next_arm));
@@ -616,22 +609,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             //
             //     This means that any sub-patterns must duplicate it.
             //
-            // ASM-lite:
-            //
-            //     pattern:
-            //        test <sub_pat_0> <scrutinee>
-
-            //        jumpiftrue .end_of_pattern
-            //        pop                         ; pops false off the stack
-            //        test <sub_pat_1> <scrutinee>
-            //        ..
-            //        jumpiftrue .end_of_pattern
-            //        pop                         ; pops false off the stack
-            //        test <sub_pat_N> <scrutinee>
-            //
-            //    end_of_pattern:
-            //        ; Nothing
-            //
             auto *pattern_list = node->kids[0];
             auto *next = pattern_list->kids[1];
 
@@ -644,7 +621,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 i32 eop = compiler->write_jump(vm, OpJumpIfTrue);
                 jmps.push_back(eop);
 
-                // pop `false` off the stack
+                // Pop `false` off the stack
                 compiler->write_op(vm, OpPop);
 
                 // Just like `if` and `case` all patterns must start at the
@@ -668,12 +645,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             //     The scrutinee is assumed to be sitting on the top off the stack
             //     and is *only* to be removed after the case arm is complete.
             //
-            // ASM-lite:
-            //
-            //     dup       ; Duplicates top of stack
-            //     <lit>
-            //     eq
-            //
             auto *lit = node->kids[0];
             compiler->write_op(vm, OpDup);
             BUBBLE(compile(vm, compiler, lit));
@@ -685,10 +656,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             auto *ident = LambString::from_cstr(vm, ident_);
             auto *pattern = node->kids[1];
 
-            // Set the pattern value
             i32 slot = compiler->local_slot(ident).value();
-
-            // +1 is because there is a
             compiler->write_op(vm, OpSetSlot);
             compiler->write_op_arg(vm, Value::from_i64(slot));
 
@@ -711,37 +679,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             //     doing a nested array check will fail because `OpLen` checks that the
             //     value is either an array or a string.
             //
-            // ASM-lite:
-            //   arr_start:
-            //     len                          ; push length of arr onto stack
-            //     push min_len
-            //     if has_dots { OpGe } else { OpEq }
-            //
-            //     jumpiffalse .cleanup
-            //     pop                          ; pop `false` off the stack
-            //     test <left_0> <arr_0>
-            //     ..
-            //     jumpiffalse .cleanup
-            //     pop                          ; pop `false` off the stack
-            //     test <left_n> <arr_n>
-            //
-            //     jumpiffalse .cleanup
-            //     pop                          ; pop `false` off the stack
-            //     test <right_0> <arr_(len - 1)>
-            //     ..
-            //     jumpiffalse .cleanup
-            //     pop                         ; pop `false` off the stack
-            //     test <right_0 + r_len> <arr_(len - 1 - r_len)>
-            //
-            //     jumpiftrue .arr_end
-            //
-            //   cleanup:
-            //     save                        ; save result
-            //     pop                         ; pop scrutinee off the stack
-            //     unsave                      ; unsave result
-            //
-            //   arr_end:
-            //     <rest_of_program>
             auto *head_list = node->kids[0];
             auto *tail_list = node->kids[1];
 
@@ -752,7 +689,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
             auto min_len = head_len + tail_len;
 
-            // Verify the length matches:
+            // Compare the lengths. Array patterns can only be properly be
+            // tested if the lengths proper.
             compiler->write_op(vm, OpLen);
             compiler->write_const(vm, Value::from_i64(min_len));
             compiler->write_op(vm, has_dots ? OpGe : OpEq);
@@ -760,7 +698,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             std::vector<i32> ends{};
 
             for (i32 i = 0; i < head_len; ++i) {
-                // Get the next head pattern
                 ends.push_back(compiler->write_jump(vm, OpJumpIfFalse));
                 compiler->write_op(vm, OpPop);
 
@@ -769,6 +706,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 compiler->write_const(vm, Value::from_i64(i));
                 compiler->write_op(vm, OpIndex);
 
+                // Get the next head pattern
                 auto *pattern = head_list->kids[0];
                 head_list = head_list->kids[1];
 
@@ -783,7 +721,6 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             }
 
             for (i32 i = 0; i < tail_len; ++i) {
-                // Get the next tail pattern
                 ends.push_back(compiler->write_jump(vm, OpJumpIfFalse));
                 compiler->write_op(vm, OpPop);
 
@@ -792,6 +729,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 compiler->write_const(vm, Value::from_i64(tail_len - 1 - i));
                 compiler->write_op(vm, OpIndexRev);
 
+                // Get the next tail pattern
                 auto *pattern = tail_list->kids[0];
                 tail_list = tail_list->kids[1];
 
