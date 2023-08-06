@@ -17,6 +17,11 @@
     }
 
 namespace {
+
+// The whitespace is important here as it prevents the user from being able to
+// use the name
+constexpr auto SCRUTINEE_NAME = " scrutinee";
+
 bool is_stmt(AstNodeType type) {
     switch (type) {
         case AstntReturn:
@@ -501,8 +506,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // whitespace, but we can ;)
             i32 pre_case_local_count = compiler->locals.len();
 
-            const auto *ident_ = " scrutinee";
-            auto *ident = LambString::from_cstr(vm, ident_);
+            auto *ident = LambString::from_cstr(vm, SCRUTINEE_NAME);
             compiler->add_local(vm, ident->chars);
 
             if (node->kids[1] != nullptr) {
@@ -538,8 +542,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 binding_count++;
             }
 
-            auto scrutinee_slot =
-                compiler->block->base + compiler->block->offset - binding_count - 1;
+            const auto *scrutinee = LambString::from_cstr(vm, SCRUTINEE_NAME);
+            auto scrutinee_slot = compiler->local_slot(scrutinee).value();
             compiler->write_op(vm, OpGetLocal);
             compiler->write_op_arg(vm, Value::from_i64(scrutinee_slot));
 
