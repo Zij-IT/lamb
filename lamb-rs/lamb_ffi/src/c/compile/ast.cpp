@@ -640,9 +640,9 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             //     eq
             //
             auto *lit = node->kids[0];
-            compiler->chunk().write(vm, OpDup);
+            compiler->write_op(vm, OpDup);
             BUBBLE(compile(vm, compiler, lit));
-            compiler->chunk().write(vm, OpEq);
+            compiler->write_op(vm, OpEq);
             break;
         }
         case AstntPatternTopIdent: {
