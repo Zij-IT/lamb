@@ -181,6 +181,16 @@ pub struct Pattern {
     pub pattern: Vec<PatternTop>,
 }
 
+impl Pattern {
+    pub fn binding_names(&self) -> Vec<&Ident> {
+        self.pattern
+            .iter()
+            .map(PatternTop::binding_names)
+            .flatten()
+            .collect()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArrayPattern {
     Err,
@@ -196,6 +206,30 @@ pub enum PatternTop {
     Literal(Literal),
     Ident(Ident, Option<Box<Pattern>>),
     Array(ArrayPattern),
+}
+
+impl PatternTop {
+    pub fn binding_names(&self) -> Vec<&Ident> {
+        match self {
+            PatternTop::Literal(_) => vec![],
+            PatternTop::Ident(i, pat) => std::iter::once(i)
+                .chain(pat.as_ref().map_or(Vec::new(), |b| b.binding_names()))
+                .collect(),
+            PatternTop::Array(ArrayPattern::Elements {
+                head,
+                tail,
+                dots: _dots,
+            }) => head
+                .iter()
+                .chain(tail.iter())
+                .map(Pattern::binding_names)
+                .flatten()
+                .collect(),
+            PatternTop::Array(ArrayPattern::Err) => {
+                unimplemented!("ArrayPattern::Err is not convertable")
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

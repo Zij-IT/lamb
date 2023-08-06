@@ -45,7 +45,6 @@ void free_ast(AstNode *root) {
         case AstntArray:
         case AstntBlock:
         case AstntExprStmt:
-        case AstntPattern:
         case AstntPatternTopLit:
         case AstntReturn:
         case AstntUnaryBitNot:
@@ -80,6 +79,7 @@ void free_ast(AstNode *root) {
         case AstntCase:
         case AstntFuncCall:
         case AstntNodeList:
+        case AstntPattern:
         case AstntPatternTopIdent:
             free_ast(root->kids[0]);
             free_ast(root->kids[1]);

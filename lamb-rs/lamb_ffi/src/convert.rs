@@ -35,6 +35,12 @@ pub(super) trait Convert {
     fn convert(&self) -> *mut AstNode;
 }
 
+impl<T: Convert> Convert for &T {
+    fn convert(&self) -> *mut AstNode {
+        T::convert(self)
+    }
+}
+
 impl<L, R> Convert for Either<L, R>
 where
     L: Convert,
@@ -243,6 +249,17 @@ impl Convert for Pattern {
         unsafe {
             let node = new_node(NodeKind::Pattern);
             (*node).kids[0] = node_list;
+            (*node).kids[1] = self
+                .binding_names()
+                .iter()
+                .map(Convert::convert)
+                .rev()
+                .fold(std::ptr::null_mut(), |acc, i| unsafe {
+                    let node = new_node(NodeKind::NodeList);
+                    (*node).kids[1] = acc;
+                    (*node).kids[0] = i;
+                    node
+                });
             node
         }
     }
@@ -256,10 +273,12 @@ impl Convert for PatternTop {
                 (*node).kids[0] = lit.convert();
                 node
             },
-            PatternTop::Ident(_, _) => {
-                let _node = new_node(NodeKind::PatternIdent);
-                todo!()
-            }
+            PatternTop::Ident(i, pat) => unsafe {
+                let node = new_node(NodeKind::PatternIdent);
+                (*node).kids[0] = i.convert();
+                (*node).kids[1] = pat.as_ref().map_or(std::ptr::null_mut(), |b| b.convert());
+                node
+            },
             PatternTop::Array(ArrayPattern::Elements { head, tail, dots }) => unsafe {
                 let head_len = new_node(NodeKind::NumLit);
                 (*head_len).val.n = i64::try_from(head.len()).unwrap();
