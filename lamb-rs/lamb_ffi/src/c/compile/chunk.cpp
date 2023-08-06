@@ -207,6 +207,8 @@ Chunk::format_instruction(u32 offset) const {
             return SIMPLE("OpSaveValue");
         case OpUnsaveValue:
             return SIMPLE("OpUnsaveValue");
+        case OpSetSlot:
+            return CONSTANT("OpSetSlot");
         case OpCloseValue:
             return SIMPLE("OpCloseValue");
         case OpGetUpvalue:

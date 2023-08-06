@@ -165,6 +165,7 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
         case OpBinNeg:
         case OpLogNeg:
         case OpNumNeg:
+        case OpSetSlot:
             STACK_DIFF(0);
             break;
         case OpClosure:
@@ -235,6 +236,7 @@ void Compiler::write_vop(Vm &vm, OpCode op, i32 args) const {
         case OpRShift:
         case OpReturn:
         case OpSaveValue:
+        case OpSetSlot:
         case OpSub:
         case OpUnsaveValue:
             // Invalid op... err and terminate

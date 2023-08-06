@@ -580,6 +580,11 @@ InterpretResult Vm::run() {
                 PUSH(this->saved_value);
                 break;
             }
+            case OpSetSlot: {
+                auto slot = READ_CONSTANT().as.intn;
+                frame->slots[slot] = *this->peek_stack();
+                break;
+            }
         }
     }
 

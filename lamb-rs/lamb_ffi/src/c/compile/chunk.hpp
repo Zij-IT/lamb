@@ -51,6 +51,7 @@ enum OpCode {
     OpCloseValue,
     OpSaveValue,
     OpUnsaveValue,
+    OpSetSlot,
 };
 
 struct Chunk {
