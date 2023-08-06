@@ -508,6 +508,15 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *next_arm = node->kids[2];
 
             i32 offset_before_arm = STACK_DIFF(compiler, 0);
+
+            // TODO(When ident patterns supported): ADD PATTERN LOCALS HERE
+
+            // base + offset points to where the next item on the stack
+            // is to be put. -1 required to look at the one before
+            auto scrutinee_slot = compiler->block->base + compiler->block->offset - 1;
+            compiler->write_op(vm, OpGetLocal);
+            compiler->write_op_arg(vm, Value::from_i64(scrutinee_slot));
+
             // Compare the value of the arm with a duplicate of the case value
             BUBBLE(compile(vm, compiler, value));
 
@@ -523,6 +532,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // Pop off `scrutinee` after going through the branch
             compiler->write_op(vm, OpSaveValue);
             compiler->write_op(vm, OpPop);
+            // TODO(When ident patterns supported): POP PATTERN LOCALS FROM STACK HERE
+            compiler->write_op(vm, OpPop);
             compiler->write_op(vm, OpUnsaveValue);
 
             // Jump over the other arms of the case expression
@@ -533,6 +544,11 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->patch_jump(if_neq);
             // Pop the 'false' from the previous EQ check off of the stack
             compiler->write_op(vm, OpPop);
+
+            // Pop duplicated compare off of the stack
+            compiler->write_op(vm, OpPop);
+
+            // TODO(When ident patterns supported): POP PATTERN LOCALS FROM STACK HERE
 
             // When attempting another arm, the offset for this arm should
             // be the same as the offset for the arm before, as testing an
