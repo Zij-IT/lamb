@@ -1,0 +1,40 @@
+println("14 Tests:n--------");
+
+case 1 {
+  1 -> { x := "pass 1"; y := "fail"; println(x); },
+};
+{ x := "pass 2"; y := "fail"; println(x); };
+
+case 1 {
+  x -> { x := "pass 3"; y := "fail"; println(x); },
+};
+{ x := "pass 4"; y := "fail"; println(x); };
+
+case 1 {
+  x @ 1 -> { x := "pass 5"; y := "fail"; println(x); },
+};
+{ x := "pass 6"; y := "fail"; println(x); };
+
+case 1 {
+  x @ 2 -> println("fail"),
+  x @ 1 -> println("pass 7"),
+};
+{ x := "pass 8"; y := "fail"; println(x); };
+
+case [1] {
+  x @ [0] -> println("fail"),
+  x @ [1] -> println("pass 9"),
+};
+{ x := "pass 10"; y := "fail"; println(x); };
+
+case [1] {
+  [x @ 1] -> { x := "pass 11"; y := "fail"; println(x); },
+  [y @ 0, z @ 2] -> { x := "fail"; y := "fail"; println(x); },
+};
+{ x := "pass 12"; y := "fail"; println(x); };
+
+case [1] {
+  [y @ 0, z @ 2] -> { x := "fail"; y := "fail"; println(x); },
+  [x @ 1] -> { x := "pass 13"; y := "fail"; println(x); },
+};
+{ x := "pass 14"; y := "fail"; println(x); };
