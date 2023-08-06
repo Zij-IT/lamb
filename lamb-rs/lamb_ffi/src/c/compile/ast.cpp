@@ -503,8 +503,8 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntCaseArm: {
-            AstNode *value = node->kids[0];
-            AstNode *branch = node->kids[1];
+            AstNode *pattern = node->kids[0];
+            AstNode *body = node->kids[1];
             AstNode *next_arm = node->kids[2];
 
             i32 offset_before_arm = STACK_DIFF(compiler, 0);
@@ -518,7 +518,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->write_op_arg(vm, Value::from_i64(scrutinee_slot));
 
             // Compare the value of the arm with a duplicate of the case value
-            BUBBLE(compile(vm, compiler, value));
+            BUBBLE(compile(vm, compiler, pattern));
 
             i32 if_neq = compiler->write_jump(vm, OpJumpIfFalse);
 
@@ -527,7 +527,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->write_op(vm, OpPop);
 
             // Run through the body of the arm
-            BUBBLE(compile(vm, compiler, branch));
+            BUBBLE(compile(vm, compiler, body));
 
             // Pop off `scrutinee` after going through the branch
             compiler->write_op(vm, OpSaveValue);
@@ -645,9 +645,14 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             compiler->chunk().write(vm, OpEq);
             break;
         }
-        case AstntPatternTopIdent:
+        case AstntPatternTopIdent: {
+            // i32 imm_slot = compiler->get_imm_local(vm, "<local_name>");
+            // compiler->write_op(vm, SetSlot);
+            // compiler->write_op_arg(vm, imm_slot);
+            // compiler->write_const(vm, Value::from_bool());
             return CarUnsupportedAst;
             break;
+        }
         case AstntPatternTopArray: {
             // Note:
             //
@@ -724,7 +729,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 BUBBLE(compile(vm, compiler, pattern));
 
                 // Currently we have:
-                // <scrutinee> <item i> <is_match> and we need <scutinee> <is_match>
+                // <scrutinee> <local> <is_match> and we need <scutinee> <is_match>
                 compiler->write_op(vm, OpSaveValue);
                 compiler->write_op(vm, OpPop);
                 compiler->write_op(vm, OpUnsaveValue);
