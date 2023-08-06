@@ -494,12 +494,26 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
         }
         case AstntCase: {
             BUBBLE(compile(vm, compiler, node->kids[0]));
+
+            // Add case scrutinee as a local in the compiler so that all locals
+            // created by patterns are correctly offset.
+            // Whitespace is important because users can't have identifiers with
+            // whitespace, but we can ;)
+            i32 pre_case_local_count = compiler->locals.len();
+
+            const auto *ident_ = " scrutinee";
+            auto *ident = LambString::from_cstr(vm, ident_);
+            compiler->add_local(vm, ident->chars);
+
             if (node->kids[1] != nullptr) {
                 BUBBLE(compile(vm, compiler, node->kids[1]));
             } else {
                 compiler->write_op(vm, OpPop);
                 compiler->write_const(vm, Value::nil());
             }
+
+            // Very complicated way off poppping " scrutinee"
+            compiler->locals.truncate(pre_case_local_count);
             break;
         }
         case AstntCaseArm: {
@@ -508,12 +522,24 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             AstNode *next_arm = node->kids[2];
 
             i32 offset_before_arm = STACK_DIFF(compiler, 0);
+            i32 local_count_pre_pattern = compiler->locals.len();
 
-            // TODO(When ident patterns supported): ADD PATTERN LOCALS HERE
+            i32 binding_count = 0;
+            for (auto *names = pattern->kids[1]; names != nullptr; names = names->kids[1]) {
+                auto *ident_ = names->kids[0]->val.i;
+                auto *ident = LambString::from_cstr(vm, ident_);
 
-            // base + offset points to where the next item on the stack
-            // is to be put. -1 required to look at the one before
-            auto scrutinee_slot = compiler->block->base + compiler->block->offset - 1;
+                // Provide a default Value nil, which will be overriden by binding
+                // patterns
+                compiler->write_const(vm, Value::nil());
+                compiler->chunk().add_const(vm, Value::from_obj((Object *)ident));
+                compiler->add_local(vm, ident->chars);
+
+                binding_count++;
+            }
+
+            auto scrutinee_slot =
+                compiler->block->base + compiler->block->offset - binding_count - 1;
             compiler->write_op(vm, OpGetLocal);
             compiler->write_op_arg(vm, Value::from_i64(scrutinee_slot));
 
@@ -532,7 +558,9 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // Pop off `scrutinee` after going through the branch
             compiler->write_op(vm, OpSaveValue);
             compiler->write_op(vm, OpPop);
-            // TODO(When ident patterns supported): POP PATTERN LOCALS FROM STACK HERE
+            for (int i = 0; i < binding_count; ++i) {
+                compiler->write_op(vm, OpPop);
+            }
             compiler->write_op(vm, OpPop);
             compiler->write_op(vm, OpUnsaveValue);
 
@@ -548,13 +576,16 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // Pop duplicated compare off of the stack
             compiler->write_op(vm, OpPop);
 
-            // TODO(When ident patterns supported): POP PATTERN LOCALS FROM STACK HERE
+            for (int i = 0; i < binding_count; ++i) {
+                compiler->write_op(vm, OpPop);
+            }
 
             // When attempting another arm, the offset for this arm should
             // be the same as the offset for the arm before, as testing an
             // arm shouldn't effect the stack difference.
             compiler->block->offset = offset_before_arm;
 
+            compiler->locals.truncate(local_count_pre_pattern);
             if (next_arm != nullptr) {
                 // Attempt the next arm
                 BUBBLE(compile(vm, compiler, next_arm));
@@ -646,11 +677,23 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             break;
         }
         case AstntPatternTopIdent: {
-            // i32 imm_slot = compiler->get_imm_local(vm, "<local_name>");
-            // compiler->write_op(vm, SetSlot);
-            // compiler->write_op_arg(vm, imm_slot);
-            // compiler->write_const(vm, Value::from_bool());
-            return CarUnsupportedAst;
+            auto *ident_ = node->kids[0]->val.i;
+            auto *ident = LambString::from_cstr(vm, ident_);
+            auto *pattern = node->kids[1];
+
+            // Set the pattern value
+            i32 slot = compiler->local_slot(ident).value();
+
+            // +1 is because there is a
+            compiler->write_op(vm, OpSetSlot);
+            compiler->write_op_arg(vm, Value::from_i64(slot));
+
+            if (pattern == nullptr) {
+                compiler->write_const(vm, Value::from_bool(true));
+            } else {
+                BUBBLE(compile(vm, compiler, pattern));
+            }
+
             break;
         }
         case AstntPatternTopArray: {
