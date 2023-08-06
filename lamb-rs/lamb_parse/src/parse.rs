@@ -486,7 +486,7 @@ where
 {
     let lit_pat = literal().map(PatternTop::Literal);
     let id_pat = ident()
-        .then(just(Token::PatBind).ignore_then(pat.clone().or_not()))
+        .then(just(Token::PatBind).ignore_then(pat.clone()).or_not())
         .map(|(id, pat)| PatternTop::Ident(id, pat.map(Box::new)));
     let arr_pat = array_pattern(pat.clone()).map(PatternTop::Array);
 
