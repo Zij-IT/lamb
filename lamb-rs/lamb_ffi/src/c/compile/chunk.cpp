@@ -17,6 +17,51 @@
 #include "object.hpp"
 #include "value.hpp"
 
+std::string unescape(std::string const &data) {
+    std::ostringstream os;
+    for (const auto c : data) {
+        switch (c) {
+            case '\a':
+                os << "\\a";
+                break;
+            case '\b':
+                os << "\\b";
+                break;
+            case '\f':
+                os << "\\f";
+                break;
+            case '\n':
+                os << "\\n";
+                break;
+            case '\r':
+                os << "\\r";
+                break;
+            case '\t':
+                os << "\\t";
+                break;
+            case '\v':
+                os << "\\v";
+                break;
+            case '\\':
+                os << "\\\\";
+                break;
+            case '\'':
+                os << "\\'";
+                break;
+            case '\"':
+                os << "\\\"";
+                break;
+            case '\?':
+                os << "\\\?";
+                break;
+            default:
+                os << c;
+        }
+    }
+
+    return os.str();
+}
+
 constexpr u8 byte = 8;
 
 Chunk::Chunk() {
@@ -102,7 +147,8 @@ std::string Chunk::to_string() {
 
     for (auto const &[left, right, offset] : vec) {
         out << std::setw(max_digit) << std::left << offset << " | " << std::setw(max_left)
-            << std::left << left << " | " << std::setw(max_right) << std::left << right << '\n';
+            << std::left << unescape(left) << " | " << std::setw(max_right) << std::left
+            << unescape(right) << '\n';
     }
 
     return out.str();
@@ -132,17 +178,24 @@ Chunk::format_instruction(u32 offset) const {
         (name),                                                                                    \
         this->constants[(this->bytes[(offset) + 1] << 8) | this->bytes[(offset) + 2]].to_string(), \
         3))
+#define WITH_ARG(name, label)                                                                      \
+    (std::make_tuple(                                                                              \
+        (std::string(name)),                                                                       \
+        (std::string(label)) + ": " +                                                              \
+            (this->constants[(this->bytes[(offset) + 2] << 8) | this->bytes[(offset) + 3]])        \
+                .to_string(),                                                                      \
+        4))
 #define JUMP(name) (std::make_tuple((name), format_jump(*this, offset), 3))
 
     switch ((OpCode)this->bytes[offset]) {
         case OpConstant:
             return CONSTANT("OpConstant");
         case OpDefineGlobal:
-            return SIMPLE("OpDefineGlobal");
+            return WITH_ARG("OpDefineGlobal", "Name");
         case OpGetGlobal:
-            return SIMPLE("OpGetGlobal");
+            return WITH_ARG("OpGetGlobal", "Name");
         case OpGetLocal:
-            return SIMPLE("OpGetLocal");
+            return WITH_ARG("OpGetLocal", "Slot");
         case OpJump:
             return JUMP("OpJump");
         case OpJumpIfTrue:
@@ -192,7 +245,7 @@ Chunk::format_instruction(u32 offset) const {
         case OpLen:
             return SIMPLE("OpLen");
         case OpMakeArray:
-            return SIMPLE("OpMakeArray");
+            return WITH_ARG("OpMakeArray", "Length");
         case OpIndex:
             return SIMPLE("OpIndex");
         case OpIndexRev:
@@ -202,13 +255,13 @@ Chunk::format_instruction(u32 offset) const {
         case OpDup:
             return SIMPLE("OpDup");
         case OpCall:
-            return SIMPLE("OpCall");
+            return WITH_ARG("OpCall", "Arg Count");
         case OpSaveValue:
             return SIMPLE("OpSaveValue");
         case OpUnsaveValue:
             return SIMPLE("OpUnsaveValue");
         case OpSetSlot:
-            return CONSTANT("OpSetSlot");
+            return WITH_ARG("OpSetSlot", "Slot");
         case OpCloseValue:
             return SIMPLE("OpCloseValue");
         case OpGetUpvalue:
