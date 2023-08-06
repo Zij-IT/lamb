@@ -26,7 +26,7 @@ void Compiler::add_local(Vm &vm, char const *name) {
     this->locals.push(vm, loc);
 }
 
-std::optional<i32> Compiler::local_idx(LambString *name) {
+std::optional<i32> Compiler::local_idx(LambString const *name) {
     auto it = std::find_if(this->locals.rbegin(), this->locals.rend(),
                            [name](Local &loc) { return loc.name == name->chars; });
 
@@ -35,7 +35,7 @@ std::optional<i32> Compiler::local_idx(LambString *name) {
     return dist == 0 ? std::nullopt : std::optional{dist - 1};
 }
 
-std::optional<i32> Compiler::local_slot(LambString *name) {
+std::optional<i32> Compiler::local_slot(LambString const *name) {
     auto idx_ = this->local_idx(name);
     if (!idx_) {
         return std::nullopt;
@@ -69,7 +69,7 @@ std::optional<i32> Compiler::local_slot(LambString *name) {
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-std::optional<i32> Compiler::upvalue_idx(LambString *name) {
+std::optional<i32> Compiler::upvalue_idx(LambString const *name) {
     if (this->enclosing == nullptr) {
         return std::nullopt;
     }

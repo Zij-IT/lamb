@@ -47,11 +47,11 @@ struct Compiler {
 
     void add_local(Vm &vm, char const *name);
 
-    std::optional<i32> local_slot(LambString *name);
+    std::optional<i32> local_slot(LambString const *name);
 
-    std::optional<i32> local_idx(LambString *name);
+    std::optional<i32> local_idx(LambString const *name);
 
-    std::optional<i32> upvalue_idx(LambString *name);
+    std::optional<i32> upvalue_idx(LambString const *name);
 
     constexpr void new_scope() const { this->block->depth++; }
 
