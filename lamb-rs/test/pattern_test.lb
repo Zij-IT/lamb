@@ -1,4 +1,4 @@
-println("27 Tests:n--------");
+println("29 Tests:n--------");
 
 case 1 { 0 -> 100, };
 { x := "pass 1"; y := "fail"; println(x); };
