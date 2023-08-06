@@ -682,7 +682,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             auto has_dots = ext->kids[2]->val.b;
 
             auto min_len = head_len + tail_len;
-           
+
             // Verify the length matches:
             compiler->write_op(vm, OpLen);
             compiler->write_const(vm, Value::from_i64(min_len));
@@ -720,7 +720,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
 
                 // Index into scrutinee at position `length - 1 - i`
                 compiler->write_op(vm, OpDup);
-                compiler->write_const(vm, Value::from_i64(i));
+                compiler->write_const(vm, Value::from_i64(tail_len - 1 - i));
                 compiler->write_op(vm, OpIndexRev);
 
                 auto *pattern = tail_list->kids[0];

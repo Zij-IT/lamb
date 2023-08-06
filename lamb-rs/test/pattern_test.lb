@@ -59,3 +59,8 @@ case "parses empty pattern" {
   ['d', ..] -> { x := "fail b2x"; y := "fail b2y"; println(x); },
 };
 { x := "pass 27"; y := "fail"; println(x); };
+
+case "hello" {
+  [.., 'e', 'l', 'l', 'o'] -> { x := "pass 28"; y := "fail b1y"; println(x); },
+};
+{ x := "pass 29"; y := "fail"; println(x); };
