@@ -517,12 +517,13 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             // Pop the case 'true' off of the stack
             compiler->write_op(vm, OpPop);
 
-            // Pop the case value off of the stack
-            // This sets the offset to `-1` from the perspective of the arm
-            compiler->write_op(vm, OpPop);
-
             // Run through the body of the arm
             BUBBLE(compile(vm, compiler, branch));
+
+            // Pop off `scrutinee` after going through the branch
+            compiler->write_op(vm, OpSaveValue);
+            compiler->write_op(vm, OpPop);
+            compiler->write_op(vm, OpUnsaveValue);
 
             // Jump over the other arms of the case expression
             i32 past_else = compiler->write_jump(vm, OpJump);
