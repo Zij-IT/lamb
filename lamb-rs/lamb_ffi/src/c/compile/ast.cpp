@@ -523,10 +523,10 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
                 binding_count++;
             }
 
-            const auto *scrutinee = LambString::from_cstr(vm, SCRUTINEE_NAME);
-            auto scrutinee_slot = compiler->local_slot(scrutinee).value();
+            // Scrutinee sits above the arm, and therefor based on the offset
+            // we can easily snag the scrutinee
             compiler->write_op(vm, OpGetLocal);
-            compiler->write_op_arg(vm, Value::from_i64(scrutinee_slot));
+            compiler->write_op_arg(vm, Value::from_i64(offset_before_arm - 1));
 
             // Compare the value of the arm with a duplicate of the case value
             BUBBLE(compile(vm, compiler, pattern));
