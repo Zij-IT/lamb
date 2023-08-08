@@ -478,19 +478,25 @@ where
 }
 
 fn pattern_top<'a, I, S>(
-    pat: impl Parser<'a, I, Pattern, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, PatternTop, E<'a, S>> + Clone
+    pat: impl Parser<'a, I, Pattern, E<'a, S>> + Clone + 'a,
+) -> impl Parser<'a, I, PatternTop, E<'a, S>> + Clone + 'a
 where
     S: 'a,
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
 {
-    let lit_pat = literal().map(PatternTop::Literal);
-    let id_pat = ident()
-        .then(just(Token::PatBind).ignore_then(pat.clone()).or_not())
-        .map(|(id, pat)| PatternTop::Ident(id, pat.map(Box::new)));
-    let arr_pat = array_pattern(pat.clone()).map(PatternTop::Array);
+    recursive(|top| {
+        let lit_pat = literal().map(PatternTop::Literal);
+        let arr_pat = array_pattern(pat.clone()).map(PatternTop::Array);
+        let id_pat = ident()
+            .then(
+                just(Token::PatBind)
+                    .ignore_then(top.map(|p| Pattern { pattern: vec![p] }))
+                    .or_not(),
+            )
+            .map(|(id, pat)| PatternTop::Ident(id, pat.map(Box::new)));
 
-    choice((lit_pat, id_pat, arr_pat))
+        choice((lit_pat, id_pat, arr_pat))
+    })
 }
 
 fn array_pattern<'a, I, S>(
