@@ -247,19 +247,21 @@ impl Convert for Pattern {
     fn convert(&self) -> *mut AstNode {
         let node_list = self.pattern.convert();
         unsafe {
+            let mut bindings = self.binding_names();
+            bindings.sort();
+            bindings.dedup();
+
             let node = new_node(NodeKind::Pattern);
             (*node).kids[0] = node_list;
-            (*node).kids[1] = self
-                .binding_names()
-                .iter()
-                .map(Convert::convert)
-                .rev()
-                .fold(std::ptr::null_mut(), |acc, i| unsafe {
+            (*node).kids[1] = bindings.iter().map(Convert::convert).rev().fold(
+                std::ptr::null_mut(),
+                |acc, i| unsafe {
                     let node = new_node(NodeKind::NodeList);
                     (*node).kids[1] = acc;
                     (*node).kids[0] = i;
                     node
-                });
+                },
+            );
             node
         }
     }
