@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <cstring>
+#include <ranges>
 #include <sstream>
 #include <string>
 
@@ -65,6 +66,11 @@ LambString *LambString::alloc(Vm &vm, char const *chars, i32 len, u32 hash) {
 
     vm.gc.add_object(&st->obj);
     return st;
+}
+
+LambString *LambString::slice(Vm &vm, char const *chars, u32 start, u32 end) {
+    char *chs = strndup(chars + start, end - start);
+    return LambString::from_cstr(vm, chs);
 }
 
 LambString *LambString::from_cstr(Vm &vm, char const *chars) {

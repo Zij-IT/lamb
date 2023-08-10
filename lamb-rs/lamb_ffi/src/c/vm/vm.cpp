@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
+#include <limits>
 
 #include "../compile/chunk.hpp"
 #include "../compile/gcvec.hpp"
@@ -397,6 +398,65 @@ InterpretResult Vm::run() {
 
                 auto *arr = LambArray::alloc(*this, items);
                 PUSH(Value::from_obj((Object *)arr));
+                break;
+            }
+            case OpSlice: {
+                u64 arg = READ_CONSTANT().as.intn;
+                u32 head_len = arg >> std::numeric_limits<u32>::digits;
+                u32 tail_len = arg & std::numeric_limits<u32>::digits;
+
+                // Don't pop this because `T::slice` may cause a collection
+                auto *arr_val = this->peek_stack();
+
+                if (!arr_val->is_object()) {
+                    runtime_error("Unable to index into an item of type %s", kind_as_cstr(arr_val));
+                }
+
+                switch (arr_val->as.obj->type) {
+                    case OtString: {
+                        auto *st = (LambString *)arr_val->as.obj;
+                        auto start = head_len;
+                        auto end = st->len - tail_len;
+                        if (start >= st->len || tail_len >= st->len) {
+                            runtime_error("Slicing has gone horribly wrong. Desired start: (%ld) | "
+                                          "Desired end: (%ld) | Length: (%d)",
+                                          start, end, st->len);
+                        }
+
+                        auto *slice = LambString::slice(*this, st->chars, start, end);
+
+                        DROP();
+                        PUSH(Value::from_obj((Object *)slice));
+                        break;
+                    }
+                    case OtArray: {
+                        auto *arr = (LambArray *)arr_val->as.obj;
+                        auto start = head_len;
+                        auto end = arr->items.len() - tail_len;
+                        if (start >= arr->items.len() || tail_len >= arr->items.len()) {
+                            runtime_error("Slicing has gone horribly wrong. Desired start: (%ld) | "
+                                          "Desired end: (%ld) | Length: (%d)",
+                                          start, end, arr->items.len());
+                        }
+
+                        GcVec<Value> items;
+                        for (u32 i = start; i < end; i++) {
+                            items.push(*this, arr->items[i]);
+                        }
+
+                        auto *slice = LambArray::alloc(*this, items);
+
+                        DROP();
+                        PUSH(Value::from_obj((Object *)slice));
+                        break;
+                    }
+                    case OtFunc:
+                    case OtNative:
+                    case OtClosure:
+                    case OtUpvalue:
+                        runtime_error("This should really not happen. OpLen should throw first",
+                                      kind_as_cstr(arr_val));
+                }
                 break;
             }
             case OpIndex: {

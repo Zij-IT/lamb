@@ -46,6 +46,7 @@ enum OpCode {
     OpIndexRev,
     OpPop,
     OpDup,
+    OpSlice,
     OpCall,
     OpClosure,
     OpCloseValue,

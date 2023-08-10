@@ -40,6 +40,8 @@ struct LambString {
 
     static LambString *alloc(Vm &vm, char const *chars, i32 len, u32 hash);
 
+    static LambString *slice(Vm &vm, char const *chars, u32 start, u32 end);
+
     static LambString *from_cstr(Vm &vm, char const *chars);
 
     LambString *concat(Vm &vm, LambString *rhs) const;
@@ -50,6 +52,7 @@ struct LambArray {
     GcVec<Value> items;
 
     LambArray(Object obj, GcVec<Value> items) : obj(obj), items(items) {}
+
     static LambArray *alloc(Vm &vm, GcVec<Value> items);
 };
 
