@@ -250,6 +250,8 @@ Chunk::format_instruction(u32 offset) const {
             return SIMPLE("OpIndex");
         case OpIndexRev:
             return SIMPLE("OpIndexRev");
+        case OpSlice:
+            return WITH_ARG("OpSlice", "Range");
         case OpPop:
             return SIMPLE("OpPop");
         case OpDup:

@@ -166,6 +166,7 @@ void Compiler::write_op(Vm &vm, OpCode op) const {
         case OpLogNeg:
         case OpNumNeg:
         case OpSetSlot:
+        case OpSlice:
             STACK_DIFF(0);
             break;
         case OpClosure:
@@ -238,6 +239,7 @@ void Compiler::write_vop(Vm &vm, OpCode op, i32 args) const {
         case OpSaveValue:
         case OpSetSlot:
         case OpSub:
+        case OpSlice:
         case OpUnsaveValue:
             // Invalid op... err and terminate
             std::cerr << "Invalid Op for Compiler::wirte_vop: " << op << "\n";
