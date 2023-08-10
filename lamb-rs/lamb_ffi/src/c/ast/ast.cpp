@@ -50,6 +50,7 @@ void free_ast(AstNode *root) {
         case AstntUnaryBitNot:
         case AstntUnaryLogNot:
         case AstntUnaryNeg:
+        case AstntOptional:
             free_ast(root->kids[0]);
             break;
         case AstntArrayIndex:

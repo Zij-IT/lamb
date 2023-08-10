@@ -51,6 +51,7 @@ pub const AstNodeType_AstntPatternTopIdent: AstNodeType = 44;
 pub const AstNodeType_AstntPatternTopArray: AstNodeType = 45;
 pub const AstNodeType_AstntPatternArrayExt: AstNodeType = 46;
 pub const AstNodeType_AstntNodeList: AstNodeType = 47;
+pub const AstNodeType_AstntOptional: AstNodeType = 48;
 pub type AstNodeType = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Copy, Clone)]

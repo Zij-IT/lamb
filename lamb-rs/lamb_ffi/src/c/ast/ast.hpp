@@ -67,6 +67,7 @@ enum AstNodeType {
 
     // Meta
     AstntNodeList,
+    AstntOptional,
 
 };
 

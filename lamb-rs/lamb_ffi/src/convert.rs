@@ -6,7 +6,8 @@ use lamb_ast::{
 };
 
 use crate::bindings::{
-    AstNodeType_AstntPattern, AstNodeType_AstntPatternArrayExt, AstNodeType_AstntPatternTopArray,
+    AstNodeType, AstNodeType_AstntOptional, AstNodeType_AstntPattern,
+    AstNodeType_AstntPatternArrayExt, AstNodeType_AstntPatternTopArray,
     AstNodeType_AstntPatternTopIdent, AstNodeType_AstntPatternTopLit,
 };
 
@@ -33,6 +34,18 @@ use super::{
 
 pub(super) trait Convert {
     fn convert(&self) -> *mut AstNode;
+}
+
+impl<T: Convert> Convert for Option<T> {
+    fn convert(&self) -> *mut AstNode {
+        let node = new_node(NodeKind::Optional);
+        let ptr = self.as_ref().map_or(std::ptr::null_mut(), T::convert);
+        unsafe {
+            (*node).kids[0] = ptr;
+        }
+
+        node
+    }
 }
 
 impl<T: Convert> Convert for &T {
@@ -539,6 +552,7 @@ enum NodeKind {
     PatternArray,
     PatternExt,
     NodeList,
+    Optional,
 }
 
 impl NodeKind {
@@ -592,6 +606,7 @@ impl NodeKind {
             NodeKind::PatternIdent => AstNodeType_AstntPatternTopIdent,
             NodeKind::PatternArray => AstNodeType_AstntPatternTopArray,
             NodeKind::PatternExt => AstNodeType_AstntPatternArrayExt,
+            NodeKind::Optional => AstNodeType_AstntOptional,
         }
     }
 }

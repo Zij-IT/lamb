@@ -822,6 +822,7 @@ CompileAstResult compile(Vm &vm, Compiler *compiler, AstNode *node) {
             }
             break;
         }
+        case AstntOptional:
         case AstntPatternArrayExt:
         default:
             std::cerr << "[Lamb] Internal compiler error: "
