@@ -1,12 +1,63 @@
-#[derive(Debug, Clone)]
-pub enum Value {}
+use boa_gc::{custom_trace, Finalize, Trace};
 
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        todo!()
-    }
+use crate::object::{LambArray, LambClosure, LambNative, LambString};
+
+// #=========================================#
+//                  Lamb Value
+// #=========================================#
+
+/// A Lamb `Value`
+#[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    /// `nil` - A nil value, for when a value doesn't exist
+    Nil,
+
+    /// `int` - A 64 bit signed integer value
+    I64(i64),
+
+    /// `float` - A 64 bit floating point number
+    F64(f64),
+
+    /// `char` - A unicode scalar value. See Rust [`char`]
+    Char(char),
+
+    /// `bool` - A `true` / `false` value
+    Bool(bool),
+
+    /// `array` - A heterogeneous contiguous container of `Value`
+    Array(LambArray),
+
+    /// `closure` - A compiled Lamb function
+    Closure(LambClosure),
+
+    /// `string` - A UTF-8-encoded immutable String
+    String(LambString),
+
+    /// `native` - A native Rust function
+    Native(LambNative),
 }
 
+impl Finalize for Value {}
+
+unsafe impl Trace for Value {
+    custom_trace!(this, {
+        match this {
+            Value::Nil
+            | Value::I64(_)
+            | Value::F64(_)
+            | Value::Char(_)
+            | Value::Bool(_)
+            | Value::Native(_) => (),
+            Value::Array(a) => mark(a),
+            Value::Closure(c) => mark(c),
+            Value::String(s) => mark(s),
+        }
+    });
+}
+
+// #=========================================#
+//         Lamb "Bytecode" Instructions
+// #=========================================#
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Instr {
@@ -116,6 +167,13 @@ pub(crate) struct Chunk {
 
 impl Chunk {
     const REQ_PATCH: u8 = 0xff;
+
+    pub fn new() -> Self {
+        Self {
+            bytes: vec![],
+            constants: vec![],
+        }
+    }
 
     pub fn write(&mut self, byte: u8) {
         debug_assert!(!Instr::from_byte(byte).map_or(false, Instr::is_jump));
