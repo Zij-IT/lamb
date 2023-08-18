@@ -1,4 +1,5 @@
 use boa_gc::{custom_trace, Finalize, Trace};
+use ordered_float::OrderedFloat;
 
 use crate::object::{LambArray, LambClosure, LambNative, LambString};
 
@@ -7,7 +8,7 @@ use crate::object::{LambArray, LambClosure, LambNative, LambString};
 // #=========================================#
 
 /// A Lamb `Value`
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Value {
     /// `nil` - A nil value, for when a value doesn't exist
     Nil,
@@ -15,8 +16,8 @@ pub enum Value {
     /// `int` - A 64 bit signed integer value
     I64(i64),
 
-    /// `float` - A 64 bit floating point number
-    F64(f64),
+    /// `float` - A 64 bit non-IEEE conformant floating point number
+    F64(OrderedFloat<f64>),
 
     /// `char` - A unicode scalar value. See Rust [`char`]
     Char(char),
@@ -159,7 +160,7 @@ impl Instr {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Chunk {
     pub(crate) bytes: Vec<u8>,
     pub(crate) constants: Vec<Value>,

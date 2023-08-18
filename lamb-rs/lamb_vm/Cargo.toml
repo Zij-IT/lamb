@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 boa_gc = "0.17.0"
+ordered-float = "3.9.0"

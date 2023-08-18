@@ -14,7 +14,7 @@ use boa_gc::{custom_trace, empty_trace, Finalize, Gc, Trace};
 
 /// A `LambString` represents a garbage-collected String value with a
 /// precomputed hash value.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambString {
     st: Gc<String>,
     hash: usize,
@@ -117,7 +117,7 @@ impl AsRef<str> for LambString {
 ///
 /// assert_eq!(vec, [Value::Nil, Value::Num(1), Value::Num(2), Value::Num(3)]);
 /// ```
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambArray {
     inner: Vec<Value>,
 }
@@ -145,7 +145,7 @@ impl std::ops::DerefMut for LambArray {
 }
 
 /// A `LambFunc` is the internal representation of a compiled Lamb function.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambFunc {
     pub name: Gc<LambString>,
     pub chunk: Chunk,
@@ -167,14 +167,14 @@ impl LambFunc {
 
 /// A `LambUpvalue` contains either a location on the stack, or the value that
 /// it closed over.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum LambUpvalue {
     Stack(usize),
     Closed(Value),
 }
 
 /// A `LambClosure` is the combination of a `LambFunc` and all of it's upvalues
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambClosure {
     pub function: Gc<LambFunc>,
     pub upvalues: Vec<Gc<LambUpvalue>>,
@@ -190,7 +190,7 @@ impl LambClosure {
 /// A `LambNative` represents a wrapped Rust function that accepts a mutable
 /// reference to the vm, as well as a slice of arguments. All `LambNative`s
 /// must return a [`Value`]
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambNative(fn(&mut Vm, &mut [Value]) -> Value);
 
 // #=========================================#
