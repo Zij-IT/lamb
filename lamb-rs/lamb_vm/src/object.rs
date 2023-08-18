@@ -147,10 +147,10 @@ impl std::ops::DerefMut for LambArray {
 /// A `LambFunc` is the internal representation of a compiled Lamb function.
 #[derive(Clone, PartialEq, Debug)]
 pub struct LambFunc {
-    name: Gc<LambString>,
-    chunk: Chunk,
-    arity: usize,
-    upvalue_count: usize,
+    pub name: Gc<LambString>,
+    pub chunk: Chunk,
+    pub arity: usize,
+    pub upvalue_count: usize,
 }
 
 impl LambFunc {
@@ -176,8 +176,8 @@ pub enum LambUpvalue {
 /// A `LambClosure` is the combination of a `LambFunc` and all of it's upvalues
 #[derive(Clone, PartialEq, Debug)]
 pub struct LambClosure {
-    function: Gc<LambFunc>,
-    upvalues: Vec<Gc<LambUpvalue>>,
+    pub function: Gc<LambFunc>,
+    pub upvalues: Vec<Gc<LambUpvalue>>,
 }
 
 impl LambClosure {

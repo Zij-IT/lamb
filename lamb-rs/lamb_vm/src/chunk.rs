@@ -160,7 +160,7 @@ impl Instr {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) struct Chunk {
+pub struct Chunk {
     pub(crate) bytes: Vec<u8>,
     pub(crate) constants: Vec<Value>,
 }
