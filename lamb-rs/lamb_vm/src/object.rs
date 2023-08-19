@@ -22,7 +22,7 @@ pub struct LambString {
 
 impl LambString {
     /// Creates a new `LambString` with the value `st`.
-    fn new<S: Into<String>>(st: S) -> Self {
+    pub fn new<S: Into<String>>(st: S) -> Self {
         // TODO: Intern the string created via `into` to keep behaviour
         //       similar to that of the C++ implementation (and mostly
         //       for perf).

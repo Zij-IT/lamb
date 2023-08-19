@@ -7,12 +7,14 @@ use object::{LambClosure, LambString, LambUpvalue};
 mod chunk;
 mod object;
 
+#[derive(Debug, PartialEq, Clone)]
 struct CallFrame {
     closure: Gc<LambClosure>,
     slots: usize,
     ip: usize,
 }
 
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Vm {
     strings: HashSet<LambString>,
     globals: HashMap<LambString, Value>,
@@ -87,6 +89,7 @@ impl Vm {
 
     fn read_byte(&mut self) -> u8 {
         let frame = self.frames.last_mut().unwrap();
+
         frame.ip += 1;
         frame.closure.function.chunk.bytes[frame.ip - 1]
     }
