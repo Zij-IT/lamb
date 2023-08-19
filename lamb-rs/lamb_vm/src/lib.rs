@@ -40,15 +40,15 @@ impl Vm {
 
     pub fn step(&mut self) {
         let frame = self.frames.last_mut().unwrap();
-        let byte = frame.closure.function.chunk.bytes[frame.ip];
+        let instr = frame.closure.function.chunk.instrs[frame.ip];
         frame.ip += 1;
 
-        match Instr::from_byte(byte).expect("Grabbing non-instruction") {
-            Instr::Constant => todo!(),
-            Instr::DefineGlobal => todo!(),
-            Instr::GetGlobal => todo!(),
-            Instr::GetLocal => todo!(),
-            Instr::GetUpvalue => todo!(),
+        match instr {
+            Instr::Constant(_idx) => todo!(),
+            Instr::DefineGlobal(_idx) => todo!(),
+            Instr::GetGlobal(_idx) => todo!(),
+            Instr::GetLocal(_idx) => todo!(),
+            Instr::GetUpvalue(_idx) => todo!(),
             Instr::NumNeg => todo!(),
             Instr::BinNeg => todo!(),
             Instr::LogNeg => todo!(),
@@ -69,46 +69,31 @@ impl Vm {
             Instr::RShift => todo!(),
             Instr::LShift => todo!(),
             Instr::Return => todo!(),
-            Instr::Jump => todo!(),
-            Instr::JumpIfTrue => todo!(),
-            Instr::JumpIfFalse => todo!(),
-            Instr::MakeArray => todo!(),
+            Instr::Jump(_to) => todo!(),
+            Instr::JumpIfTrue(_to) => todo!(),
+            Instr::JumpIfFalse(_to) => todo!(),
+            Instr::MakeArray(_len) => todo!(),
             Instr::Len => todo!(),
             Instr::Index => todo!(),
             Instr::IndexRev => todo!(),
             Instr::Pop => todo!(),
             Instr::Dup => todo!(),
-            Instr::Call => todo!(),
-            Instr::Closure => todo!(),
+            Instr::Call(_argc) => todo!(),
+            Instr::Closure(_idx) => todo!(),
             Instr::CloseValue => todo!(),
             Instr::SaveValue => todo!(),
             Instr::UnsaveValue => todo!(),
-            Instr::SetSlot => todo!(),
+            Instr::SetSlot(_idx) => todo!(),
         }
     }
 
-    fn read_byte(&mut self) -> u8 {
-        let frame = self.frames.last_mut().unwrap();
-
-        frame.ip += 1;
-        frame.closure.function.chunk.bytes[frame.ip - 1]
-    }
-
-    fn read_short(&mut self) -> u16 {
-        let frame = self.frames.last_mut().unwrap();
-
-        frame.ip += 1;
-        let hi = frame.closure.function.chunk.bytes[frame.ip - 1];
-
-        frame.ip += 1;
-        let lo = frame.closure.function.chunk.bytes[frame.ip - 1];
-
-        u16::from_ne_bytes([hi, lo])
-    }
-
     fn read_constant(&mut self) -> Value {
-        let idx = self.read_short();
         let frame = self.frames.last_mut().unwrap();
+        frame.ip += 1;
+
+        let Instr::Constant(idx) = frame.closure.function.chunk.instrs[frame.ip - 1] else {
+            panic!("Read a non-value constant with Vm::read_constant");
+        };
         frame.closure.function.chunk.constants[idx as usize].clone()
     }
 
