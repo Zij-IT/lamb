@@ -169,8 +169,8 @@ impl LambFunc {
 /// it closed over.
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum LambUpvalue {
-    Stack(usize),
-    Closed(Value),
+    Stack { location: usize },
+    Closed { value: Value, location: usize },
 }
 
 /// A `LambClosure` is the combination of a `LambFunc` and all of it's upvalues
