@@ -21,6 +21,7 @@ pub struct Vm {
     stack: Vec<Value>,
     frames: Vec<CallFrame>,
     open_upvalues: Vec<Gc<LambUpvalue>>,
+    saved_value: Option<Value>,
 }
 
 impl Vm {
@@ -35,6 +36,7 @@ impl Vm {
             stack: Vec::with_capacity(Self::STACK_SIZE),
             frames: Vec::with_capacity(Self::MAX_FRAMES),
             open_upvalues: Vec::with_capacity(Self::MAX_UPVALUES),
+            saved_value: None,
         }
     }
 
