@@ -191,7 +191,7 @@ impl LambClosure {
 /// reference to the vm, as well as a slice of arguments. All `LambNative`s
 /// must return a [`Value`]
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub struct LambNative(fn(&mut Vm, &mut [Value]) -> Value);
+pub struct LambNative(pub fn(usize, &mut [Value]) -> Value);
 
 // #=========================================#
 //         GC Finalize and Trace impls
