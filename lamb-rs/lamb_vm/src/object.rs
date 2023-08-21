@@ -6,7 +6,7 @@ use crate::{
     chunk::{Chunk, Value},
     Vm,
 };
-use boa_gc::{custom_trace, empty_trace, Finalize, Gc, Trace};
+use boa_gc::{custom_trace, empty_trace, Finalize, Gc, GcRefCell, Trace};
 
 // #=========================================#
 //         all Lamb objects available
@@ -174,16 +174,23 @@ pub enum LambUpvalue {
 }
 
 /// A `LambClosure` is the combination of a `LambFunc` and all of it's upvalues
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct LambClosure {
     pub function: Gc<LambFunc>,
-    pub upvalues: Vec<Gc<LambUpvalue>>,
+    pub upvalues: Vec<Gc<GcRefCell<LambUpvalue>>>,
 }
 
 impl LambClosure {
     /// Returns the total number of upvalues that this closure contains.
     pub fn upvalue_count(&self) -> usize {
         self.upvalues.len()
+    }
+}
+
+impl std::hash::Hash for LambClosure {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.function.hash(state);
+        self.upvalues.len().hash(state);
     }
 }
 

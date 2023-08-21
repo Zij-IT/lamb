@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use boa_gc::Gc;
+use boa_gc::{Gc, GcRefCell};
 use chunk::{Instr, Value};
 use object::{LambClosure, LambString, LambUpvalue};
 
@@ -20,7 +20,7 @@ pub struct Vm {
     globals: HashMap<LambString, Value>,
     stack: Vec<Value>,
     frames: Vec<CallFrame>,
-    open_upvalues: Vec<Gc<LambUpvalue>>,
+    open_upvalues: Vec<Gc<GcRefCell<LambUpvalue>>>,
     saved_value: Option<Value>,
 }
 
