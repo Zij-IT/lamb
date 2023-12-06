@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use boa_gc::{custom_trace, Finalize, Trace};
 use ordered_float::OrderedFloat;
 
@@ -36,6 +38,39 @@ pub enum Value {
 
     /// `native` - A native Rust function
     Native(LambNative),
+}
+
+impl Value {
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Value::Nil => "nil",
+            Value::I64(_) => "i64",
+            Value::F64(_) => "f64",
+            Value::Char(_) => "char",
+            Value::Bool(_) => "bool",
+            Value::Array(_) => "array",
+            Value::Closure(_) => "<closure fn>",
+            Value::String(_) => "string",
+            Value::Native(_) => "<native fn>",
+        }
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Value::Nil, Value::Nil) => Some(Ordering::Equal),
+            (Value::I64(left), Value::I64(right)) => left.partial_cmp(right),
+            (Value::F64(left), Value::F64(right)) => left.partial_cmp(right),
+            (Value::Char(left), Value::Char(right)) => left.partial_cmp(right),
+            (Value::Bool(left), Value::Bool(right)) => left.partial_cmp(right),
+            (Value::Array(left), Value::Array(right)) => (&*left).partial_cmp(&*right),
+            (Value::String(left), Value::String(right)) => {
+                left.as_ref().partial_cmp(right.as_ref())
+            }
+            _ => None,
+        }
+    }
 }
 
 impl Finalize for Value {}
