@@ -18,10 +18,10 @@ use lamb_ast::{
 };
 
 macro_rules! bin {
-    ($tok:ident, $str:expr) => {{
-        ::chumsky::pratt::left_infix(
+    ($tok:ident, $assoc:literal) => {{
+        ::chumsky::pratt::infix(
+            ::chumsky::pratt::Associativity::Left($assoc),
             ::chumsky::primitive::just(crate::tokenize::Token::Op(crate::tokenize::Op::$tok)),
-            $str,
             |lhs, rhs| {
                 ::lamb_ast::Expr::Binary(::lamb_ast::Binary::new(
                     lhs,
@@ -34,10 +34,10 @@ macro_rules! bin {
 }
 
 macro_rules! unary {
-    ($op:expr, $uop:expr, $str:expr) => {{
+    ($op:expr, $uop:expr, $assoc:literal) => {{
         ::chumsky::pratt::prefix(
+            $assoc,
             ::chumsky::primitive::just(crate::tokenize::Token::Op($op)),
-            $str,
             |rhs| ::lamb_ast::Expr::Unary(::lamb_ast::Unary::new(rhs, $uop)),
         )
     }};
@@ -128,7 +128,7 @@ where
             },
         );
 
-        let binaries = choice((
+        chain.pratt((
             bin!(LApply, 1),
             bin!(RApply, 1),
             bin!(LCompose, 2),
@@ -151,17 +151,10 @@ where
             bin!(Div, 11),
             bin!(Mul, 11),
             bin!(Mod, 11),
-        ))
-        .labelled("a binary operator");
-
-        let prefixes = choice((
             unary!(Op::Sub, UnaryOp::NumNeg, 12),
             unary!(Op::LogNot, UnaryOp::LogNot, 12),
             unary!(Op::BinComp, UnaryOp::BinNot, 12),
         ))
-        .labelled("a unary operator");
-
-        chain.pratt(binaries).with_prefix_ops(prefixes)
     })
 }
 
@@ -420,8 +413,6 @@ where
     ))
 }
 
-// This was copied from the original `chumsky` implementation that is currently
-// not available in 1.0.0.alpha-4.
 fn nested_delimiters<'a, I, O, E, F, const N: usize>(
     start: I::Token,
     end: I::Token,
@@ -459,7 +450,7 @@ where
         }
     })
     .delimited_by(just(start), just(end))
-    .map_with_span(move |_, span| fallback(span))
+    .map_with(move |_, ex| fallback(ex.span()))
 }
 
 fn pattern<'a, I, S>() -> impl Parser<'a, I, Pattern, E<'a, S>> + Clone
