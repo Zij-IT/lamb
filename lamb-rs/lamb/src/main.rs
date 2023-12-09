@@ -33,11 +33,5 @@ fn main() -> std::io::Result<()> {
         }
     };
 
-    lamb_ffi::run_script(
-        &script,
-        debug_level == DebugLevel::Full,
-        debug_level != DebugLevel::None,
-    );
-
     Ok(())
 }
