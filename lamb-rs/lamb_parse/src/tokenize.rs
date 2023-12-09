@@ -7,10 +7,10 @@ use chumsky::{
 macro_rules! parse_num {
     ($prefix:literal, $filter:expr, $radix:literal, $on_fail:literal $(,)?) => {
         just($prefix)
-            .ignore_then(digits($radix).repeated().at_least(1).slice())
-            .validate(|num: &str, span, emitter| {
+            .ignore_then(digits($radix).repeated().at_least(1).to_slice())
+            .validate(|num: &str, ex, emitter| {
                 if !num.chars().all(|c| c.is_digit($radix) || c == '_') {
-                    emitter.emit(Rich::custom(span, $on_fail));
+                    emitter.emit(Rich::custom(ex.span(), $on_fail));
                     return Token::Error(Error::InvalidNumLit);
                 }
 
@@ -210,11 +210,11 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
         numbers(),
         word,
     ))
-    .or(any().validate(|t: char, span, emitter| {
+    .or(any().validate(|t: char, ex, emitter| {
         emitter.emit(<Rich<_> as error::Error<I<'a>>>::expected_found(
             None,
             Some(t.into()),
-            span,
+            ex.span(),
         ));
         Token::Error(Error::InvalidChar(t))
     }));
@@ -222,7 +222,7 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
     let comment = just("--").ignore_then(none_of('\n').repeated()).padded();
 
     lang_element
-        .map_with_span(|tok, sp| (tok, sp))
+        .map_with(|tok, ex| (tok, ex.span()))
         .padded_by(comment.repeated())
         .padded()
         .repeated()
@@ -238,15 +238,15 @@ fn chars<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
                 .filter(|c| *c != ':' && *c != '\'')
                 .or(escape_chars())
                 .repeated()
-                .slice(),
+                .to_slice(),
         )
         .then_ignore(just('\''))
-        .validate(|ch, span, emitter| {
+        .validate(|ch, ex, emitter| {
             if ch.len() == 1 {
                 Token::Char(ch.chars().next().expect("ch should have length 1"))
             } else {
                 emitter.emit(Rich::custom(
-                    span,
+                    ex.span(),
                     format!(
                         "Char literal should contain {} 1 character",
                         if ch.len() > 1 { "at most" } else { "at least" }
@@ -294,14 +294,14 @@ fn numbers<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
 
     let decimal = just("0d")
         .or_not()
-        .ignore_then(digits(10).separated_by(just('_')).at_least(1).slice())
+        .ignore_then(digits(10).separated_by(just('_')).at_least(1).to_slice())
         .map(|s: I<'a>| s.chars().filter(|&c| c != '_').collect::<String>())
         .from_str()
         .unwrapped()
         .map(Token::Num);
 
     choice((binary, hex, octal, decimal))
-        .then(ascii::ident().or_not().map_with_span(|t, s| (t, s)))
+        .then(ascii::ident().or_not().map_with(|t, ex| (t, ex.span())))
         .validate(|(num, (t, s)), _, emitter| {
             if !t.map_or(true, str::is_empty) {
                 emitter.emit(Rich::custom(s, "Invalid suffix for number literal"));
