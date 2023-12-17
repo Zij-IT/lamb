@@ -50,7 +50,7 @@ impl LambFunc {
 
 #[derive(Debug)]
 pub struct FuncUpvalue {
-    pub index: u8,
+    pub index: usize,
     pub is_local: bool,
 }
 
