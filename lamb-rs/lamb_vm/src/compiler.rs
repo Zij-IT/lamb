@@ -1,4 +1,5 @@
 use crate::{
+    chunk::Op,
     gc::GcRef,
     value::{FuncUpvalue, LambFunc, LambString},
 };
@@ -116,6 +117,44 @@ impl Compiler {
                 self.func.upvalues.len() - 1
             }
         }
+    }
+
+    fn begin_scope(&mut self) {
+        self.block.depth += 1;
+    }
+
+    fn end_scope(&mut self) {
+        let parent = self.block.enclosing.take().map(|b| *b);
+        self.func.chunk.write_op(Op::SaveValue);
+        if let Some(parent) = parent {
+            self.block = parent;
+            for (idx, loc) in self.locals.iter().enumerate().rev() {
+                if loc.depth <= self.block.depth {
+                    self.locals.truncate(idx);
+                    break;
+                }
+
+                if loc.is_captured {
+                    self.func.chunk.write_op(Op::CloseValue);
+                } else {
+                    self.func.chunk.write_op(Op::Pop);
+                }
+            }
+        } else {
+            // "Popping" global scope
+            self.block = Block::new(None);
+
+            // Doing all pops and closing of upvalues
+            let Self { locals, func, .. } = self;
+            for loc in locals.iter().rev() {
+                if loc.is_captured {
+                    func.chunk.write_op(Op::CloseValue);
+                } else {
+                    func.chunk.write_op(Op::Pop);
+                }
+            }
+        }
+        self.func.chunk.write_op(Op::UnsaveValue);
     }
 }
 
