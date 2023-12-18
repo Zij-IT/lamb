@@ -93,7 +93,7 @@ impl Compiler {
         self.locals.iter().rev().position(|l| l.name == name)
     }
 
-    fn upvalue_idx(&mut self, name: &str) -> Option<usize> {
+    pub fn upvalue_idx(&mut self, name: &str) -> Option<usize> {
         let parent = self.enclosing.as_deref_mut()?;
         if let Some(idx) = parent.local_idx(name) {
             parent.locals[idx].mark_captured();
@@ -119,11 +119,11 @@ impl Compiler {
         }
     }
 
-    fn begin_scope(&mut self) {
+    pub fn begin_scope(&mut self) {
         self.block.depth += 1;
     }
 
-    fn end_scope(&mut self) {
+    pub fn end_scope(&mut self) {
         let parent = self.block.enclosing.take().map(|b| *b);
         self.func.chunk.write_op(Op::SaveValue);
         if let Some(parent) = parent {
