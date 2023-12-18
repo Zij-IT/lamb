@@ -1,3 +1,5 @@
+use lamb_ast::{BinaryOp, UnaryOp};
+
 use crate::value::Value;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -43,6 +45,42 @@ pub enum Op {
     Slice(u16),
     Sub,
     UnsaveValue,
+}
+
+impl From<UnaryOp> for Op {
+    fn from(value: UnaryOp) -> Self {
+        match value {
+            UnaryOp::NumNeg => Op::NumNeg,
+            UnaryOp::LogNot => Op::LogNeg,
+            UnaryOp::BinNot => Op::BinNeg,
+        }
+    }
+}
+
+impl TryFrom<BinaryOp> for Op {
+    type Error = BinaryOp;
+
+    fn try_from(value: BinaryOp) -> Result<Op, BinaryOp> {
+        Ok(match value {
+            BinaryOp::Add => Op::Add,
+            BinaryOp::Sub => Op::Sub,
+            BinaryOp::Div => Op::Div,
+            BinaryOp::Mul => Op::Mul,
+            BinaryOp::Mod => Op::Mod,
+            BinaryOp::Gt => Op::Gt,
+            BinaryOp::Ge => Op::Ge,
+            BinaryOp::Lt => Op::Lt,
+            BinaryOp::Le => Op::Le,
+            BinaryOp::Eq => Op::Eq,
+            BinaryOp::Ne => Op::Ne,
+            BinaryOp::BinOr => Op::BinOr,
+            BinaryOp::BinAnd => Op::BinAnd,
+            BinaryOp::BinXor => Op::BinXor,
+            BinaryOp::RShift => Op::RShift,
+            BinaryOp::LShift => Op::LShift,
+            _ => return Err(value),
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

@@ -5,6 +5,15 @@ pub struct GcRef<T> {
     _type: PhantomData<T>,
 }
 
+impl<T> GcRef<T> {
+    pub fn new() -> Self {
+        Self {
+            idx: 0,
+            _type: PhantomData,
+        }
+    }
+}
+
 impl<T> Copy for GcRef<T> {}
 
 impl<T> Clone for GcRef<T> {
