@@ -1,7 +1,7 @@
 use crate::{
-    chunk::Op,
+    chunk::{Jump, JumpIdx, Op},
     gc::GcRef,
-    value::{FuncUpvalue, LambFunc, LambString},
+    value::{FuncUpvalue, LambFunc, LambString, Value},
 };
 
 #[derive(Default)]
@@ -155,6 +155,65 @@ impl Compiler {
             }
         }
         self.func.chunk.write_op(Op::UnsaveValue);
+    }
+
+    pub fn write_op(&mut self, op: Op) {
+        match op {
+            Op::Add
+            | Op::BinAnd
+            | Op::BinOr
+            | Op::BinXor
+            | Op::CloseValue
+            | Op::DefineGlobal(_)
+            | Op::Div
+            | Op::Eq
+            | Op::Ge
+            | Op::Gt
+            | Op::Index
+            | Op::IndexRev
+            | Op::LShift
+            | Op::Le
+            | Op::Lt
+            | Op::Mod
+            | Op::Mul
+            | Op::Ne
+            | Op::Pop
+            | Op::RShift
+            | Op::SaveValue
+            | Op::Sub => self.block.offset -= 1,
+            Op::Closure(_)
+            | Op::Constant(_)
+            | Op::Dup
+            | Op::GetGlobal(_)
+            | Op::GetLocal(_)
+            | Op::GetUpvalue(_)
+            | Op::Len
+            | Op::UnsaveValue => self.block.offset += 1,
+            Op::Call(off) | Op::MakeArray(off) => self.block.offset -= usize::from(off),
+            Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
+                panic!("Jump operators must be written with Compiler::write_jump")
+            }
+            Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) | Op::Slice(_) => {
+                self.block.offset += 0
+            }
+        }
+    }
+
+    pub fn write_op_arg(&mut self, val: Value) {
+        self.func.chunk.write_val(val);
+    }
+
+    pub fn write_val(&mut self, val: Value) {
+        self.func.chunk.write_val(val);
+        self.block.offset += 1;
+    }
+
+    pub fn write_jump(&mut self, jmp: Jump) -> JumpIdx {
+        self.func.chunk.write_jmp(jmp)
+    }
+
+    pub fn patch_jump(&mut self, jmp: JumpIdx) {
+        self.func.chunk.patch_jmp(jmp)
     }
 }
 
