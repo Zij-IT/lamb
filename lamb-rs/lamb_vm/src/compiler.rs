@@ -1,6 +1,6 @@
 use lamb_ast::{
-    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Expr, FuncDef, Ident, Index, Script,
-    Statement, Unary,
+    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Elif, Else, Expr, FuncCall, FuncDef, Ident,
+    If, Index, Script, Statement, Unary,
 };
 
 use crate::{
@@ -250,11 +250,11 @@ impl Compiler {
             | Op::Len
             | Op::UnsaveValue => self.block.offset += 1,
             Op::Call(off) | Op::MakeArray(off) => self.block.offset -= usize::from(off),
-            Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
-                panic!("Jump operators must be written with Compiler::write_jump")
-            }
             Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) | Op::Slice(_) => {
                 self.block.offset += 0
+            }
+            Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
+                panic!("Jump operators must be written with Compiler::write_jump")
             }
         }
 
@@ -357,8 +357,70 @@ impl Compiler {
                 self.compile_expr(index);
                 self.write_op(Op::Index);
             }
-            Expr::FuncCall(_) => todo!(),
-            Expr::If(_) => todo!(),
+            Expr::FuncCall(FuncCall { callee, args }) => {
+                self.compile_expr(callee);
+                for arg in args {
+                    self.compile_expr(arg);
+                }
+                self.write_op(Op::Call(args.len().try_into().unwrap()))
+            }
+            Expr::If(If {
+                cond,
+                block,
+                elifs,
+                els,
+            }) => {
+                let offset = self.block.offset;
+
+                // <cond>
+                // jmpfalse .cond_false1
+                // <block>
+                // jmp .past_else
+                // .cond_false1:
+                // --------- Either Elif
+                // <cond>
+                // jmpfalse .cond_false2
+                // <block>
+                // jmp .past_else
+                // .cond_false2
+                // ---------
+                //
+
+                self.compile_expr(cond);
+                let cond_false = self.write_jump(Jump::IfFalse);
+                self.write_op(Op::Pop);
+                self.compile_block(block);
+                let past_else = self.write_jump(Jump::Always);
+                self.patch_jump(cond_false);
+                self.write_op(Op::Pop);
+
+                assert_eq!(self.block.offset, offset);
+
+                let mut to_elses = Vec::with_capacity(1 + elifs.len());
+                to_elses.push(past_else);
+
+                // compile elifs
+                for Elif { cond, block } in elifs {
+                    self.compile_expr(cond);
+                    let cond_false = self.write_jump(Jump::IfFalse);
+                    self.compile_block(block);
+                    let past_else = self.write_jump(Jump::Always);
+                    self.patch_jump(cond_false);
+                    self.write_op(Op::Pop);
+                    to_elses.push(past_else);
+                }
+
+                // compile else
+                if let Some(Else { block }) = els.as_deref() {
+                    self.compile_block(block);
+                } else {
+                    self.write_val(Value::Nil);
+                }
+
+                for jmp in to_elses {
+                    self.patch_jump(jmp);
+                }
+            }
             Expr::Case(_) => todo!(),
             Expr::FuncDef(_) => todo!(),
             Expr::Block(block) => self.compile_block(block),
@@ -372,7 +434,9 @@ impl Compiler {
     }
 
     fn compile_apply<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
-        todo!()
+        self.compile_expr(lhs);
+        self.compile_expr(rhs);
+        self.write_op(Op::Call(1));
     }
 
     fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
