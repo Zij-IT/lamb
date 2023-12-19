@@ -363,10 +363,7 @@ impl Compiler {
     }
 
     fn compile_rec_func_def<'ast>(&mut self, Ident(inner): &'ast Ident, def: &'ast FuncDef) {
-        let ident = LambString {
-            inner: inner.clone(),
-            hash: 0,
-        };
+        let ident = LambString::new(inner.clone());
 
         self.func.chunk.write_val(Value::String(GcRef::new(ident)));
         let idx = self.func.chunk.constants.len() - 1;

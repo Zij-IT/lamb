@@ -13,9 +13,12 @@ pub enum Value {
 }
 
 #[derive(Debug)]
-pub struct LambString {
-    pub inner: String,
-    pub hash: usize,
+pub struct LambString(pub String);
+
+impl LambString {
+    pub fn new<S: Into<String>>(s: S) -> Self {
+        LambString(s.into())
+    }
 }
 
 #[derive(Debug)]
