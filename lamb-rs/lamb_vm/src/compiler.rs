@@ -57,16 +57,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn for_script(name: GcRef<LambString>) -> Self {
-        Self {
-            enclosing: None,
-            func: LambFunc::new(name),
-            block: Block::new(None),
-            locals: vec![Local::new("".into(), 0)],
-        }
-    }
-
-    pub fn for_func(name: GcRef<LambString>) -> Self {
+    pub fn new(name: GcRef<LambString>) -> Self {
         Self {
             enclosing: None,
             func: LambFunc::new(name),
@@ -88,12 +79,6 @@ impl Compiler {
         };
 
         GcRef::new(closure)
-    }
-
-    fn new_enclosed(self, name: GcRef<LambString>) -> Self {
-        let mut other = Self::for_func(name);
-        other.enclosing = Some(Box::new(self));
-        other
     }
 
     fn add_local(&mut self, name: String) {
@@ -402,7 +387,7 @@ impl Compiler {
     }
 
     fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
-        let mut compiler = Compiler::for_func(GcRef::new("Anon Func"));
+        let mut compiler = Compiler::new(GcRef::new("Anon Func"));
         compiler
             .locals
             .get_mut(0)
