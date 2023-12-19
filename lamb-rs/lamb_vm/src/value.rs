@@ -14,8 +14,8 @@ pub enum Value {
 
 #[derive(Debug)]
 pub struct LambString {
-    inner: String,
-    hash: usize,
+    pub inner: String,
+    pub hash: usize,
 }
 
 #[derive(Debug)]
