@@ -19,6 +19,10 @@ impl LambString {
     pub fn new<S: Into<String>>(s: S) -> Self {
         LambString(s.into())
     }
+
+    pub fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
 }
 
 #[derive(Debug)]
@@ -29,6 +33,10 @@ pub struct LambArray {
 impl LambArray {
     pub fn new() -> Self {
         Self { items: Vec::new() }
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.items.capacity()
     }
 }
 
