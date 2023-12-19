@@ -62,6 +62,9 @@ impl Compiler {
             enclosing: None,
             func: LambFunc::new(name),
             block: Block::new(None),
+            // This local refers to the function that is currently being compiled.
+            // By setting its depth to zero, we make sure it is unaccessible to
+            // the user
             locals: vec![Local::new("".into(), 0)],
         }
     }
