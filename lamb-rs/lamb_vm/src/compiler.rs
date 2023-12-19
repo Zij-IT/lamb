@@ -80,15 +80,14 @@ impl Compiler {
         self.compile_block(block);
     }
 
-    // TODO: Add arguments to GcRef
     pub fn finish(mut self) -> GcRef<LambClosure> {
         self.func.chunk.write_op(Op::Return);
         let closure = LambClosure {
-            func: GcRef::new(/* self.func */),
+            func: GcRef::new(self.func),
             upvalues: Vec::new(),
         };
 
-        GcRef::new(/* closure */)
+        GcRef::new(closure)
     }
 
     fn new_enclosed(self, name: GcRef<LambString>) -> Self {
