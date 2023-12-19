@@ -1,6 +1,6 @@
 use lamb_ast::{
-    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Elif, Else, Expr, FuncCall, FuncDef, Ident,
-    If, Index, Script, Statement, Unary,
+    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, Elif, Else, Expr, FuncCall, FuncDef,
+    Ident, If, Index, Literal, Script, Statement, Unary,
 };
 
 use crate::{
@@ -62,7 +62,7 @@ impl Compiler {
             enclosing: None,
             func: LambFunc::new(name),
             block: Block::new(None),
-            locals: Vec::new(),
+            locals: vec![Local::new("".into(), 0)],
         }
     }
 
@@ -71,7 +71,7 @@ impl Compiler {
             enclosing: None,
             func: LambFunc::new(name),
             block: Block::new(None),
-            locals: Vec::new(),
+            locals: vec![Local::new("".into(), 0)],
         }
     }
 
@@ -81,7 +81,7 @@ impl Compiler {
     }
 
     pub fn finish(mut self) -> GcRef<LambClosure> {
-        self.func.chunk.write_op(Op::Return);
+        self.write_op(Op::Return);
         let closure = LambClosure {
             func: GcRef::new(self.func),
             upvalues: Vec::new(),
@@ -241,7 +241,7 @@ impl Compiler {
             | Op::UnsaveValue => self.block.offset += 1,
             Op::Call(off) | Op::MakeArray(off) => self.block.offset -= usize::from(off),
             Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) | Op::Slice(_) => {
-                self.block.offset += 0
+                self.block.offset += 0;
             }
             Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
                 panic!("Jump operators must be written with Compiler::write_jump")
@@ -249,6 +249,12 @@ impl Compiler {
         }
 
         self.func.chunk.write_op(op);
+    }
+
+    fn write_const_op(&mut self, val: Value) {
+        self.func.chunk.constants.push(val);
+        let idx = self.func.chunk.constants.len() - 1;
+        self.write_op(Op::Constant(idx.try_into().unwrap()));
     }
 
     fn write_val(&mut self, val: Value) {
@@ -261,7 +267,7 @@ impl Compiler {
     }
 
     fn patch_jump(&mut self, jmp: JumpIdx) {
-        self.func.chunk.patch_jmp(jmp)
+        self.func.chunk.patch_jmp(jmp);
     }
 
     fn compile_block<'ast>(&mut self, block: &'ast LambBlock) {
@@ -290,21 +296,29 @@ impl Compiler {
         match stat {
             Statement::Assign(assign) => {
                 let Assign {
-                    assignee: Ident(ident),
+                    assignee: i @ Ident(ident),
                     value,
                 } = assign;
 
-                if let Expr::FuncDef(f) = value {
-                    self.compile_rec_func_def(f);
-                } else {
-                    self.compile_expr(value);
+                if let Expr::FuncDef(
+                    f @ FuncDef {
+                        is_recursive: true, ..
+                    },
+                ) = value
+                {
+                    self.compile_rec_func_def(i, f);
+                    return;
                 }
 
-                let ident: GcRef<LambString> = GcRef::new(/* ident */);
+                self.compile_expr(value);
+
+                let ident_obj = GcRef::new(ident.clone());
+                self.func.chunk.write_val(Value::String(ident_obj));
                 if self.block.depth == 0 {
-                    todo!("Define Global")
+                    let idx = self.func.chunk.constants.len() - 1;
+                    self.write_op(Op::DefineGlobal(idx.try_into().unwrap()));
                 } else {
-                    todo!("Define Local")
+                    self.add_local(ident.clone());
                 }
             }
             Statement::Expr(e) => {
@@ -354,73 +368,31 @@ impl Compiler {
                 }
                 self.write_op(Op::Call(args.len().try_into().unwrap()))
             }
-            Expr::If(If {
-                cond,
-                block,
-                elifs,
-                els,
-            }) => {
-                let offset = self.block.offset;
-
-                // <cond>
-                // jmpfalse .cond_false1
-                // <block>
-                // jmp .past_else
-                // .cond_false1:
-                // --------- Either Elif
-                // <cond>
-                // jmpfalse .cond_false2
-                // <block>
-                // jmp .past_else
-                // .cond_false2
-                // ---------
-                //
-
-                self.compile_expr(cond);
-                let cond_false = self.write_jump(Jump::IfFalse);
-                self.write_op(Op::Pop);
-                self.compile_block(block);
-                let past_else = self.write_jump(Jump::Always);
-                self.patch_jump(cond_false);
-                self.write_op(Op::Pop);
-
-                assert_eq!(self.block.offset, offset);
-
-                let mut to_elses = Vec::with_capacity(1 + elifs.len());
-                to_elses.push(past_else);
-
-                // compile elifs
-                for Elif { cond, block } in elifs {
-                    self.compile_expr(cond);
-                    let cond_false = self.write_jump(Jump::IfFalse);
-                    self.compile_block(block);
-                    let past_else = self.write_jump(Jump::Always);
-                    self.patch_jump(cond_false);
-                    self.write_op(Op::Pop);
-                    to_elses.push(past_else);
-                }
-
-                // compile else
-                if let Some(Else { block }) = els.as_deref() {
-                    self.compile_block(block);
-                } else {
-                    self.write_val(Value::Nil);
-                }
-
-                for jmp in to_elses {
-                    self.patch_jump(jmp);
-                }
-            }
-            Expr::Case(_) => todo!(),
-            Expr::FuncDef(_) => todo!(),
+            Expr::If(if_) => self.compile_if_expr(if_),
+            Expr::Case(c) => self.compile_case(c),
+            Expr::FuncDef(f) => self.compile_func(f),
             Expr::Block(block) => self.compile_block(block),
             Expr::Atom(atom) => self.compile_atom(atom),
             Expr::Error => unimplemented!("Attempt to compile Expr::Error"),
         }
     }
 
-    fn compile_rec_func_def<'ast>(&self, def: &'ast FuncDef) {
-        todo!()
+    fn compile_rec_func_def<'ast>(&mut self, Ident(inner): &'ast Ident, def: &'ast FuncDef) {
+        let ident = LambString {
+            inner: inner.clone(),
+            hash: 0,
+        };
+
+        self.func.chunk.write_val(Value::String(GcRef::new(ident)));
+        let idx = self.func.chunk.constants.len() - 1;
+
+        self.compile_func(def);
+
+        if self.block.depth == 0 {
+            self.write_op(Op::DefineGlobal(idx.try_into().unwrap()))
+        } else {
+            self.add_local(inner.clone());
+        }
     }
 
     fn compile_apply<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
@@ -430,7 +402,25 @@ impl Compiler {
     }
 
     fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
-        todo!()
+        let mut compiler = Compiler::for_func(GcRef::new("Anon Func"));
+        compiler
+            .locals
+            .get_mut(0)
+            .expect("The first arg is always a nameless local (or rec function name)")
+            .depth = 1;
+
+        compiler.block.offset += 1;
+        compiler.begin_scope();
+
+        compiler.compile_expr(lhs);
+        compiler.compile_expr(rhs);
+
+        compiler.write_op(Op::GetLocal(1));
+        compiler.write_op(Op::Call(1));
+        compiler.write_op(Op::Call(1));
+        compiler.write_op(Op::Return);
+
+        todo!("Set up `compiler` to have `self` as enclosing. Transfer `write_as_closure`");
     }
 
     fn compile_sc_op<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, jump: Jump) {
@@ -453,6 +443,103 @@ impl Compiler {
 
                 self.write_op(Op::MakeArray(len.try_into().unwrap()));
             }
+        }
+    }
+
+    fn compile_if_expr(&mut self, if_: &If) {
+        let If {
+            cond,
+            block,
+            elifs,
+            els,
+        } = if_;
+
+        let offset = self.block.offset;
+
+        // <cond>
+        // jmpfalse .cond_false1
+        // <block>
+        // jmp .past_else
+        // .cond_false1:
+        // --------- Either Elif
+        // <cond>
+        // jmpfalse .cond_false2
+        // <block>
+        // jmp .past_else
+        // .cond_false2
+        // ---------
+        //
+
+        self.compile_expr(cond);
+        let cond_false = self.write_jump(Jump::IfFalse);
+        self.write_op(Op::Pop);
+        self.compile_block(block);
+        let past_else = self.write_jump(Jump::Always);
+        self.patch_jump(cond_false);
+        self.write_op(Op::Pop);
+
+        assert_eq!(self.block.offset, offset);
+
+        let mut to_elses = Vec::with_capacity(1 + elifs.len());
+        to_elses.push(past_else);
+
+        // compile elifs
+        for Elif { cond, block } in elifs {
+            self.compile_expr(cond);
+            let cond_false = self.write_jump(Jump::IfFalse);
+            self.compile_block(block);
+            let past_else = self.write_jump(Jump::Always);
+            self.patch_jump(cond_false);
+            self.write_op(Op::Pop);
+            to_elses.push(past_else);
+        }
+
+        // compile else
+        if let Some(Else { block }) = els.as_deref() {
+            self.compile_block(block);
+        } else {
+            self.write_val(Value::Nil);
+        }
+
+        for jmp in to_elses {
+            self.patch_jump(jmp);
+        }
+    }
+
+    fn compile_case<'ast>(&mut self, c: &'ast Case) {
+        let Case { value, arms } = c;
+        todo!("Compile Case: {value:?} {arms:?}");
+    }
+
+    fn compile_func<'ast>(&mut self, f: &'ast FuncDef) {
+        let FuncDef {
+            args,
+            body,
+            is_recursive: _,
+        } = f;
+
+        todo!("Compile FuncDef: {args:?} {body:?}");
+    }
+
+    fn compile_literal<'ast>(&mut self, l: &'ast Literal) {
+        match l {
+            Literal::Str(s) => self.write_const_op(Value::String(GcRef::new(s))),
+            Literal::Num(i) => self.write_const_op(Value::Int(*i)),
+            Literal::Char(c) => self.write_const_op(Value::Char(*c)),
+            Literal::Bool(b) => self.write_const_op(Value::Bool(*b)),
+            Literal::Nil => self.write_const_op(Value::Nil),
+        }
+    }
+
+    fn compile_ident<'ast>(&mut self, Ident(i): &'ast Ident) {
+        if let Some(slot) = self.local_slot(i) {
+            self.write_op(Op::GetLocal(slot.try_into().unwrap()))
+        } else if let Some(slot) = self.upvalue_idx(i) {
+            self.write_op(Op::GetUpvalue(slot.try_into().unwrap()))
+        } else {
+            self.func.chunk.constants.push(Value::String(GcRef::new(i)));
+            let idx = self.func.chunk.constants.len() - 1;
+            self.write_op(Op::GetGlobal(idx.try_into().unwrap()))
         }
     }
 }
