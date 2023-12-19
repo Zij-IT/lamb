@@ -28,12 +28,6 @@ impl Block {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum CompilerType {
-    Script,
-    Function,
-}
-
 #[derive(Clone, PartialEq, Eq)]
 pub struct Local {
     name: String,
@@ -59,7 +53,6 @@ pub struct Compiler {
     block: Block,
     locals: Vec<Local>,
     func: LambFunc,
-    type_: CompilerType,
     enclosing: Option<Box<Compiler>>,
 }
 
@@ -67,7 +60,6 @@ impl Compiler {
     pub fn for_script(name: GcRef<LambString>) -> Self {
         Self {
             enclosing: None,
-            type_: CompilerType::Script,
             func: LambFunc::new(name),
             block: Block::new(None),
             locals: Vec::new(),
@@ -77,7 +69,6 @@ impl Compiler {
     pub fn for_func(name: GcRef<LambString>) -> Self {
         Self {
             enclosing: None,
-            type_: CompilerType::Function,
             func: LambFunc::new(name),
             block: Block::new(None),
             locals: Vec::new(),
