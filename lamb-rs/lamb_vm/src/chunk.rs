@@ -1,8 +1,12 @@
+mod format;
+
 use lamb_ast::{BinaryOp, UnaryOp};
 
-use crate::value::Value;
+use crate::{gc::LambGc, value::Value};
 
-#[derive(Debug, Eq, PartialEq)]
+use self::format::ChunkFormatter;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Op {
     Add,
     BinAnd,
@@ -105,6 +109,10 @@ impl Chunk {
             code: Vec::new(),
             constants: Vec::new(),
         }
+    }
+
+    pub fn display<'b, 'c>(&self, gc: &'b LambGc, name: &'c str) -> ChunkFormatter<'_, 'b, 'c> {
+        ChunkFormatter::new(self, gc, name)
     }
 
     pub fn write_op(&mut self, op: Op) {
