@@ -43,17 +43,19 @@ impl LambGc {
             _type: PhantomData,
         }
     }
+
+    pub fn deref<T: Allocable>(&self, gcref: GcRef<T>) -> &T {
+        self.objects[gcref.idx].as_ref().unwrap().obj.as_inner()
+    }
+
+    pub fn deref_mut<T: Allocable>(&mut self, gcref: GcRef<T>) -> &mut T {
+        self.objects[gcref.idx].as_mut().unwrap().obj.as_inner_mut()
+    }
 }
 
 pub struct GcRef<T> {
     idx: usize,
     _type: PhantomData<T>,
-}
-
-impl<T> GcRef<T> {
-    pub fn new<A>(_: A) -> Self {
-        todo!()
-    }
 }
 
 impl<T> Copy for GcRef<T> {}
@@ -104,6 +106,14 @@ impl GcItemRaw {
             }
         }
     }
+
+    fn as_inner<T: Allocable>(&self) -> &T {
+        <T as Allocable>::from_raw(self)
+    }
+
+    fn as_inner_mut<T: Allocable>(&mut self) -> &mut T {
+        <T as Allocable>::from_raw_mut(self)
+    }
 }
 
 struct GcItem {
@@ -114,11 +124,29 @@ struct GcItem {
 
 trait Allocable {
     fn into_raw(self) -> GcItemRaw;
+
+    fn from_raw(item: &GcItemRaw) -> &Self;
+
+    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self;
 }
 
 impl Allocable for LambString {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::String(self)
+    }
+
+    fn from_raw(item: &GcItemRaw) -> &Self {
+        match item {
+            GcItemRaw::String(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
+
+    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+        match item {
+            GcItemRaw::String(s) => s,
+            _ => panic!("Bad type!"),
+        }
     }
 }
 
@@ -126,11 +154,39 @@ impl Allocable for LambFunc {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Func(self)
     }
+
+    fn from_raw(item: &GcItemRaw) -> &Self {
+        match item {
+            GcItemRaw::Func(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
+
+    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+        match item {
+            GcItemRaw::Func(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
 }
 
 impl Allocable for LambClosure {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Closure(self)
+    }
+
+    fn from_raw(item: &GcItemRaw) -> &Self {
+        match item {
+            GcItemRaw::Closure(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
+
+    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+        match item {
+            GcItemRaw::Closure(s) => s,
+            _ => panic!("Bad type!"),
+        }
     }
 }
 
@@ -138,10 +194,38 @@ impl Allocable for LambArray {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Array(self)
     }
+
+    fn from_raw(item: &GcItemRaw) -> &Self {
+        match item {
+            GcItemRaw::Array(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
+
+    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+        match item {
+            GcItemRaw::Array(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
 }
 
 impl Allocable for Upvalue {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Upvalue(self)
+    }
+
+    fn from_raw(item: &GcItemRaw) -> &Self {
+        match item {
+            GcItemRaw::Upvalue(s) => s,
+            _ => panic!("Bad type!"),
+        }
+    }
+
+    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+        match item {
+            GcItemRaw::Upvalue(s) => s,
+            _ => panic!("Bad type!"),
+        }
     }
 }
