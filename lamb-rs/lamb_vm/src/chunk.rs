@@ -139,8 +139,8 @@ impl Chunk {
 
         let fix = match self.code.get(idx) {
             Some(Op::Jump(0)) => Op::Jump(patch),
-            Some(Op::JumpIfTrue(0)) => Op::Jump(patch),
-            Some(Op::JumpIfFalse(0)) => Op::Jump(patch),
+            Some(Op::JumpIfTrue(0)) => Op::JumpIfTrue(patch),
+            Some(Op::JumpIfFalse(0)) => Op::JumpIfFalse(patch),
             _ => panic!("Chunk attempting to patch invalid JumpIdx"),
         };
 
