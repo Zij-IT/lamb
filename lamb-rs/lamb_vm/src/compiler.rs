@@ -72,6 +72,7 @@ impl Compiler {
     pub fn compile_script<'ast>(&mut self, script: &'ast Script, gc: &mut LambGc) {
         let Script { block } = script;
         self.compile_block(block, gc);
+        println!("{}", self.func.chunk.display(gc, "Script"));
     }
 
     pub fn finish(mut self, gc: &mut LambGc) -> GcRef<LambClosure> {

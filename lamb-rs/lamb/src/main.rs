@@ -1,7 +1,5 @@
 #![warn(clippy::pedantic)]
 
-use crate::cli::DebugLevel;
-
 mod cli;
 mod optimization;
 mod repl;
@@ -11,7 +9,7 @@ fn main() -> std::io::Result<()> {
     human_panic::setup_panic!();
 
     let cli::LambOptions {
-        debug_level,
+        debug_level: _,
         gc_debug_level: _,
         optimization_level: _,
         path,
@@ -33,11 +31,7 @@ fn main() -> std::io::Result<()> {
         }
     };
 
-    lamb_ffi::run_script(
-        &script,
-        debug_level == DebugLevel::Full,
-        debug_level != DebugLevel::None,
-    );
+    lamb_vm::run_script(&script);
 
     Ok(())
 }
