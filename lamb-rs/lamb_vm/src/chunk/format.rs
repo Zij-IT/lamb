@@ -57,9 +57,9 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
             Op::Return => writeln!(f, "Return"),
             Op::SaveValue => writeln!(f, "SaveValue"),
             Op::UnsaveValue => writeln!(f, "UnsaveValue"),
-            Op::Jump(j) => self.jump_op("Jump", j, f),
-            Op::JumpIfFalse(j) => self.jump_op("JumpIfFalse", j, f),
-            Op::JumpIfTrue(j) => self.jump_op("JumpIfTrue", j, f),
+            Op::Jump(j) => self.jump_op("Jump", offset, j, f),
+            Op::JumpIfFalse(j) => self.jump_op("JumpIfFalse", offset, j, f),
+            Op::JumpIfTrue(j) => self.jump_op("JumpIfTrue", offset, j, f),
             Op::Closure(c) => self.const_op("Closure", c, f),
             Op::Constant(c) => self.const_op("Constant", c, f),
             Op::DefineGlobal(c) => self.const_op("DefineGlobal", c, f),
@@ -104,8 +104,16 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
         writeln!(f, "{name:<16} {slot:4}")
     }
 
-    fn jump_op(&self, name: &str, to: u16, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{name:<16} {to:4}")
+    fn jump_op(
+        &self,
+        name: &str,
+        offset: usize,
+        to: u16,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
+        // The `+ 1` is because the ip will be incremented after reading a jump off
+        // meaning that after a jump, the ip is ip + offset + 1
+        writeln!(f, "{name:<16} {:4}", offset + usize::from(to) + 1)
     }
 }
 
