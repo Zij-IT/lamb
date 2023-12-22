@@ -4,9 +4,11 @@ mod chunk;
 mod compiler;
 mod gc;
 mod value;
+mod vm;
 
 use compiler::Compiler;
 use value::LambString;
+use vm::Vm;
 
 pub fn run_script(script: &Script) {
     let mut gc = gc::LambGc::new();
@@ -15,5 +17,7 @@ pub fn run_script(script: &Script) {
     let mut compiler = Compiler::new(gc.alloc(name));
 
     compiler.compile(&mut gc, script);
-    let _ = compiler.finish(&mut gc);
+    let closure = compiler.finish(&mut gc);
+    let vm = Vm::new(gc);
+    vm.exec(closure);
 }
