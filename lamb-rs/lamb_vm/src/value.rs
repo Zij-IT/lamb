@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::{
     chunk::Chunk,
     gc::{GcRef, LambGc},
@@ -49,6 +51,27 @@ impl Value {
             }
         }
     }
+
+    pub fn compare(&self, other: &Self, gc: &LambGc) -> Option<Ordering> {
+        match (self, other) {
+            (Value::Nil, Value::Nil) => Some(Ordering::Equal),
+            (Value::Int(l), Value::Int(r)) => l.partial_cmp(r),
+            (Value::Bool(l), Value::Bool(r)) => l.partial_cmp(r),
+            (Value::Char(l), Value::Char(r)) => l.partial_cmp(r),
+            (Value::Double(l), Value::Double(r)) => l.partial_cmp(r),
+            (Value::Array(l), Value::Array(r)) => {
+                let l = gc.deref(*l);
+                let r = gc.deref(*r);
+                l.compare(r, gc)
+            }
+            (Value::String(l), Value::String(r)) => {
+                let l = gc.deref(*l);
+                let r = gc.deref(*r);
+                Some(l.0.cmp(&r.0))
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -56,6 +79,9 @@ pub struct LambString(pub String);
 
 impl LambString {
     pub fn new<S: Into<String>>(s: S) -> Self {
+        // CAUTION: If you change this so that the original `S` is handled by
+        // the GC, then you have to make sure that any strings used are still
+        // rooted.
         LambString(s.into())
     }
 
@@ -76,6 +102,29 @@ impl LambArray {
 
     pub fn capacity(&self) -> usize {
         self.items.capacity()
+    }
+
+    pub fn compare(&self, other: &Self, gc: &LambGc) -> Option<Ordering> {
+        match self.items.len().cmp(&other.items.len()) {
+            Ordering::Less => return Some(Ordering::Less),
+            Ordering::Greater => return Some(Ordering::Greater),
+            Ordering::Equal => self
+                .items
+                .iter()
+                .zip(other.items.iter())
+                .find_map(|(s, o)| match s.compare(o, gc) {
+                    Some(Ordering::Equal) => None,
+                    Some(other) => Some(Some(other)),
+                    None => Some(None),
+                })
+                .unwrap_or(Some(Ordering::Equal)),
+        }
+    }
+}
+
+impl From<Vec<Value>> for LambArray {
+    fn from(value: Vec<Value>) -> Self {
+        Self { items: value }
     }
 }
 

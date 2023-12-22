@@ -441,7 +441,7 @@ impl Compiler {
             Atom::Ident(i) => self.compile_ident(i, gc),
             Atom::Array(arr) => {
                 let len = arr.len();
-                for e in arr.iter().rev() {
+                for e in arr.iter() {
                     self.compile_expr(e, gc);
                 }
 
