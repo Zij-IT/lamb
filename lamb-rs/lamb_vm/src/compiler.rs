@@ -9,7 +9,7 @@ use crate::{
     value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
 };
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Block {
     pub enclosing: Option<Box<Block>>,
     pub base: usize,
@@ -150,23 +150,25 @@ impl Compiler {
         }
     }
 
-    fn start_new_block(&mut self) {
+    fn write_closure(&mut self, gc: &mut LambGc, func: LambFunc) {
+        println!("{}", func.chunk.display(gc, "Composition"));
+        let closure = LambClosure::new(gc.alloc(func));
+        self.write_const_op(Value::Closure(gc.alloc(closure)));
+    }
+
+    fn start_block(&mut self) {
         let mut block = Block {
             enclosing: None,
             base: self.block.base + self.block.offset,
             offset: 0,
-            depth: self.block.depth,
+            depth: self.block.depth + 1,
         };
 
         std::mem::swap(&mut self.block, &mut block);
         self.block.enclosing = Some(Box::new(block));
     }
 
-    fn begin_scope(&mut self) {
-        self.block.depth += 1;
-    }
-
-    fn end_scope(&mut self) {
+    fn end_block(&mut self) {
         let parent = self
             .block
             .enclosing
@@ -251,8 +253,7 @@ impl Compiler {
 
     fn compile_block<'ast>(&mut self, block: &'ast LambBlock, gc: &mut LambGc) {
         let LambBlock { stats, value } = block;
-        self.start_new_block();
-        self.begin_scope();
+        self.start_block();
 
         for stat in stats {
             self.compile_stmt(stat, gc);
@@ -264,10 +265,11 @@ impl Compiler {
             self.write_const_op(Value::Nil);
         }
 
-        self.end_scope();
+        self.end_block();
 
-        // This increases the offset of the previous block, so that this block
-        // can be placed on the stack
+        // Every block leaves 1 extra value on the stack for the block above it.
+        // Thus, a value is left on the stack for this block, which increases its
+        // offset
         self.block.offset += 1;
     }
 
@@ -349,7 +351,7 @@ impl Compiler {
             }
             Expr::If(if_) => self.compile_if_expr(if_, gc),
             Expr::Case(c) => self.compile_case(c, gc),
-            Expr::FuncDef(f) => self.compile_func(f, gc),
+            Expr::FuncDef(f) => self.compile_func(f, gc, "Anon Func".into()),
             Expr::Block(block) => self.compile_block(block, gc),
             Expr::Atom(atom) => self.compile_atom(atom, gc),
             Expr::Error => unimplemented!("Attempt to compile Expr::Error"),
@@ -366,7 +368,7 @@ impl Compiler {
         self.func.chunk.write_val(Value::String(gc.alloc(ident)));
         let idx = self.func.chunk.constants.len() - 1;
 
-        self.compile_func(def, gc);
+        self.compile_func(def, gc, inner.clone());
 
         if self.block.depth == 0 {
             self.write_op(Op::DefineGlobal(idx.try_into().unwrap()))
@@ -383,25 +385,28 @@ impl Compiler {
 
     fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
         let ident = LambString::new("Anon Func");
-        let mut compiler = Compiler::new(gc.alloc(ident));
-        compiler
-            .locals
-            .get_mut(0)
-            .expect("The first arg is always a nameless local (or rec function name)")
-            .depth = 1;
+        let mut composition = Compiler::new(gc.alloc(ident));
+        composition.locals[0].depth = 1;
 
-        compiler.block.offset += 1;
-        compiler.begin_scope();
+        // `self` now refers to `composition`. This is done because I
+        // can't figure out how to make composition have a reference to self :D
+        let orig_self = std::mem::replace(self, composition);
 
-        compiler.compile_expr(lhs, gc);
-        compiler.compile_expr(rhs, gc);
+        self.enclosing = Some(Box::new(orig_self));
+        self.start_block();
+        self.compile_expr(lhs, gc);
+        self.compile_expr(rhs, gc);
+        self.write_op(Op::GetLocal(1));
+        self.write_op(Op::Call(1));
+        self.write_op(Op::Call(1));
+        self.write_op(Op::Return);
+        self.end_block();
 
-        compiler.write_op(Op::GetLocal(1));
-        compiler.write_op(Op::Call(1));
-        compiler.write_op(Op::Call(1));
-        compiler.write_op(Op::Return);
+        // `self` now refers to the original `self`.
+        let this = *self.enclosing.take().unwrap();
+        let composition = std::mem::replace(self, this);
 
-        todo!("Set up `compiler` to have `self` as enclosing. Transfer `write_as_closure`");
+        self.write_closure(gc, composition.func);
     }
 
     fn compile_sc_op<'ast>(
@@ -498,14 +503,33 @@ impl Compiler {
         todo!("Compile Case: {value:?} {arms:?}");
     }
 
-    fn compile_func<'ast>(&mut self, f: &'ast FuncDef, _gc: &mut LambGc) {
+    fn compile_func<'ast>(&mut self, f: &'ast FuncDef, gc: &mut LambGc, name: String) {
         let FuncDef {
             args,
             body,
-            is_recursive: _,
+            is_recursive,
         } = f;
 
-        todo!("Compile FuncDef: {args:?} {body:?}");
+        let func_name = gc.alloc(LambString::new(name.clone()));
+        let mut func_comp = Compiler::new(func_name);
+        if *is_recursive {
+            func_comp.locals[0].name = name;
+        }
+
+        let orig_self = std::mem::replace(self, func_comp);
+        self.enclosing = Some(Box::new(orig_self));
+
+        for arg in args {
+            self.add_arg(gc, arg);
+        }
+
+        self.compile_expr(body, gc);
+        self.write_op(Op::Return);
+
+        let this = *self.enclosing.take().unwrap();
+        let composition = std::mem::replace(self, this);
+
+        self.write_closure(gc, composition.func);
     }
 
     fn compile_literal<'ast>(&mut self, l: &'ast Literal, gc: &mut LambGc) {
@@ -529,5 +553,13 @@ impl Compiler {
             let idx = self.func.chunk.constants.len() - 1;
             self.write_op(Op::GetGlobal(idx.try_into().unwrap()))
         }
+    }
+
+    fn add_arg(&mut self, gc: &mut LambGc, Ident(arg): &Ident) {
+        let ls = LambString::new(arg.clone());
+        let rf = gc.alloc(ls);
+        self.func.chunk.constants.push(Value::String(rf));
+        self.add_local(arg.clone());
+        self.func.arity += 1;
     }
 }
