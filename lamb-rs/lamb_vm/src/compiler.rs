@@ -117,7 +117,11 @@ impl Compiler {
     }
 
     fn local_idx(&self, name: &str) -> Option<usize> {
-        self.locals.iter().rev().position(|l| l.name == name)
+        self.locals
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(i, l)| if l.name == name { Some(i) } else { None })
     }
 
     fn upvalue_idx(&mut self, name: &str) -> Option<usize> {
@@ -246,11 +250,6 @@ impl Compiler {
         self.write_op(Op::Constant(idx.try_into().unwrap()));
     }
 
-    fn write_val(&mut self, val: Value) {
-        self.func.chunk.write_val(val);
-        self.block.offset += 1;
-    }
-
     fn write_jump(&mut self, jmp: Jump) -> JumpIdx {
         self.func.chunk.write_jmp(jmp)
     }
@@ -271,7 +270,7 @@ impl Compiler {
         if let Some(value) = value {
             self.compile_expr(value, gc);
         } else {
-            self.write_val(Value::Nil);
+            self.write_const_op(Value::Nil);
         }
 
         self.end_scope();
@@ -319,7 +318,7 @@ impl Compiler {
                 self.write_op(Op::Return);
             }
             Statement::Return(None) => {
-                self.write_val(Value::Nil);
+                self.write_const_op(Value::Nil);
                 self.write_op(Op::Return);
             }
         }
@@ -495,7 +494,7 @@ impl Compiler {
         if let Some(Else { block }) = els.as_deref() {
             self.compile_block(block, gc);
         } else {
-            self.write_val(Value::Nil);
+            self.write_const_op(Value::Nil);
         }
 
         for jmp in to_elses {
