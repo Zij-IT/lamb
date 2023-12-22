@@ -49,6 +49,7 @@ impl Local {
     }
 }
 
+#[derive(Debug)]
 pub struct Compiler {
     block: Block,
     locals: Vec<Local>,
@@ -230,7 +231,8 @@ impl Compiler {
             | Op::GetUpvalue(_)
             | Op::Len
             | Op::UnsaveValue => self.block.offset += 1,
-            Op::Call(off) | Op::MakeArray(off) => self.block.offset -= usize::from(off),
+            Op::MakeArray(off) => self.block.offset -= usize::from(off) - 1,
+            Op::Call(off) => self.block.offset -= usize::from(off),
             Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) | Op::Slice(_) => {
                 self.block.offset += 0;
             }
