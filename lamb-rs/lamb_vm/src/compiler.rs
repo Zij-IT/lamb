@@ -194,7 +194,6 @@ impl Compiler {
     }
 
     fn write_closure(&mut self, gc: &mut LambGc, func: LambFunc) {
-        println!("{}", func.chunk.display(gc, "Composition"));
         let closure = LambClosure::new(gc.alloc(func));
         self.write_const_op(Value::Closure(gc.alloc(closure)));
     }
@@ -260,7 +259,6 @@ impl Compiler {
     fn compile_script<'ast>(&mut self, script: &'ast Script, gc: &mut LambGc) {
         let Script { block } = script;
         self.compile_block(block, gc);
-        println!("{}", self.func.chunk.display(gc, "Script"));
     }
 
     fn compile_block<'ast>(&mut self, block: &'ast LambBlock, gc: &mut LambGc) {
