@@ -18,17 +18,17 @@ struct Block {
 }
 
 impl Block {
-    fn new(enclosing: Option<Box<Block>>) -> Self {
+    fn new_for_func(enclosing: Option<Box<Block>>) -> Self {
         Self {
             enclosing,
             base: 0,
-            offset: 0,
+            offset: 1,
             depth: 0,
         }
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Local {
     name: String,
     depth: usize,
@@ -61,7 +61,7 @@ impl Compiler {
         Self {
             enclosing: None,
             func: LambFunc::new(name),
-            block: Block::new(None),
+            block: Block::new_for_func(None),
             // This local refers to the function that is currently being compiled.
             // By setting its depth to zero, we make sure it is unaccessible to
             // the user
@@ -105,7 +105,7 @@ impl Compiler {
         }
 
         let base = base.expect("Block depths are strictly increasing by 1");
-        let predecessors = self
+        let predecessors = &self
             .locals
             .iter()
             .take(idx)
@@ -167,34 +167,25 @@ impl Compiler {
     }
 
     fn end_scope(&mut self) {
-        let parent = self.block.enclosing.take().map(|b| *b);
+        let parent = self
+            .block
+            .enclosing
+            .take()
+            .map(|b| *b)
+            .expect("Compiler starts with a block that should never be popped");
+
         self.func.chunk.write_op(Op::SaveValue);
-        if let Some(parent) = parent {
-            self.block = parent;
-            for (idx, loc) in self.locals.iter().enumerate().rev() {
-                if loc.depth <= self.block.depth {
-                    self.locals.truncate(idx);
-                    break;
-                }
-
-                if loc.is_captured {
-                    self.func.chunk.write_op(Op::CloseValue);
-                } else {
-                    self.func.chunk.write_op(Op::Pop);
-                }
+        self.block = parent;
+        for (idx, loc) in self.locals.iter().enumerate().rev() {
+            if loc.depth <= self.block.depth {
+                self.locals.truncate(idx);
+                break;
             }
-        } else {
-            // "Popping" global scope
-            self.block = Block::new(None);
 
-            // Doing all pops and closing of upvalues
-            let Self { locals, func, .. } = self;
-            for loc in locals.iter().rev() {
-                if loc.is_captured {
-                    func.chunk.write_op(Op::CloseValue);
-                } else {
-                    func.chunk.write_op(Op::Pop);
-                }
+            if loc.is_captured {
+                self.func.chunk.write_op(Op::CloseValue);
+            } else {
+                self.func.chunk.write_op(Op::Pop);
             }
         }
         self.func.chunk.write_op(Op::UnsaveValue);
