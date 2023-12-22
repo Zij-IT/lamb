@@ -69,10 +69,8 @@ impl Compiler {
         }
     }
 
-    pub fn compile_script<'ast>(&mut self, script: &'ast Script, gc: &mut LambGc) {
-        let Script { block } = script;
-        self.compile_block(block, gc);
-        println!("{}", self.func.chunk.display(gc, "Script"));
+    pub fn compile<'ast>(&mut self, gc: &mut LambGc, script: &'ast Script) {
+        self.compile_script(script, gc);
     }
 
     pub fn finish(mut self, gc: &mut LambGc) -> GcRef<LambClosure> {
@@ -83,6 +81,51 @@ impl Compiler {
         };
 
         gc.alloc(closure)
+    }
+
+    fn start_block(&mut self) {
+        let mut block = Block {
+            enclosing: None,
+            base: self.block.base + self.block.offset,
+            offset: 0,
+            depth: self.block.depth + 1,
+        };
+
+        std::mem::swap(&mut self.block, &mut block);
+        self.block.enclosing = Some(Box::new(block));
+    }
+
+    fn end_block(&mut self) {
+        let parent = self
+            .block
+            .enclosing
+            .take()
+            .map(|b| *b)
+            .expect("Compiler starts with a block that should never be popped");
+
+        self.func.chunk.write_op(Op::SaveValue);
+        self.block = parent;
+        for (idx, loc) in self.locals.iter().enumerate().rev() {
+            if loc.depth <= self.block.depth {
+                self.locals.truncate(idx);
+                break;
+            }
+
+            if loc.is_captured {
+                self.func.chunk.write_op(Op::CloseValue);
+            } else {
+                self.func.chunk.write_op(Op::Pop);
+            }
+        }
+        self.func.chunk.write_op(Op::UnsaveValue);
+    }
+
+    fn add_arg(&mut self, gc: &mut LambGc, Ident(arg): &Ident) {
+        let ls = LambString::new(arg.clone());
+        let rf = gc.alloc(ls);
+        self.func.chunk.constants.push(Value::String(rf));
+        self.add_local(arg.clone());
+        self.func.arity += 1;
     }
 
     fn add_local(&mut self, name: String) {
@@ -156,43 +199,6 @@ impl Compiler {
         self.write_const_op(Value::Closure(gc.alloc(closure)));
     }
 
-    fn start_block(&mut self) {
-        let mut block = Block {
-            enclosing: None,
-            base: self.block.base + self.block.offset,
-            offset: 0,
-            depth: self.block.depth + 1,
-        };
-
-        std::mem::swap(&mut self.block, &mut block);
-        self.block.enclosing = Some(Box::new(block));
-    }
-
-    fn end_block(&mut self) {
-        let parent = self
-            .block
-            .enclosing
-            .take()
-            .map(|b| *b)
-            .expect("Compiler starts with a block that should never be popped");
-
-        self.func.chunk.write_op(Op::SaveValue);
-        self.block = parent;
-        for (idx, loc) in self.locals.iter().enumerate().rev() {
-            if loc.depth <= self.block.depth {
-                self.locals.truncate(idx);
-                break;
-            }
-
-            if loc.is_captured {
-                self.func.chunk.write_op(Op::CloseValue);
-            } else {
-                self.func.chunk.write_op(Op::Pop);
-            }
-        }
-        self.func.chunk.write_op(Op::UnsaveValue);
-    }
-
     fn write_op(&mut self, op: Op) {
         match op {
             Op::Add
@@ -249,6 +255,12 @@ impl Compiler {
 
     fn patch_jump(&mut self, jmp: JumpIdx) {
         self.func.chunk.patch_jmp(jmp);
+    }
+
+    fn compile_script<'ast>(&mut self, script: &'ast Script, gc: &mut LambGc) {
+        let Script { block } = script;
+        self.compile_block(block, gc);
+        println!("{}", self.func.chunk.display(gc, "Script"));
     }
 
     fn compile_block<'ast>(&mut self, block: &'ast LambBlock, gc: &mut LambGc) {
@@ -446,8 +458,6 @@ impl Compiler {
             els,
         } = if_;
 
-        let offset = self.block.offset;
-
         // <cond>
         // jmpfalse .cond_false1
         // <block>
@@ -462,28 +472,12 @@ impl Compiler {
         // ---------
         //
 
-        self.compile_expr(cond, gc);
-        let cond_false = self.write_jump(Jump::IfFalse);
-        self.write_op(Op::Pop);
-        self.compile_block(block, gc);
-        let past_else = self.write_jump(Jump::Always);
-        self.patch_jump(cond_false);
-        self.write_op(Op::Pop);
-
-        assert_eq!(self.block.offset, offset);
-
         let mut to_elses = Vec::with_capacity(1 + elifs.len());
-        to_elses.push(past_else);
+        to_elses.push(self.compile_conditional(cond, block, gc));
 
         // compile elifs
         for Elif { cond, block } in elifs {
-            self.compile_expr(cond, gc);
-            let cond_false = self.write_jump(Jump::IfFalse);
-            self.compile_block(block, gc);
-            let past_else = self.write_jump(Jump::Always);
-            self.patch_jump(cond_false);
-            self.write_op(Op::Pop);
-            to_elses.push(past_else);
+            to_elses.push(self.compile_conditional(cond, block, gc));
         }
 
         // compile else
@@ -496,6 +490,21 @@ impl Compiler {
         for jmp in to_elses {
             self.patch_jump(jmp);
         }
+    }
+
+    fn compile_conditional<'ast>(
+        &mut self,
+        cond: &'ast Expr,
+        block: &'ast LambBlock,
+        gc: &mut LambGc,
+    ) -> JumpIdx {
+        self.compile_expr(cond, gc);
+        let cond_false = self.write_jump(Jump::IfFalse);
+        self.compile_block(block, gc);
+        let past_else = self.write_jump(Jump::Always);
+        self.patch_jump(cond_false);
+        self.write_op(Op::Pop);
+        past_else
     }
 
     fn compile_case<'ast>(&mut self, c: &'ast Case, _gc: &mut LambGc) {
@@ -553,13 +562,5 @@ impl Compiler {
             let idx = self.func.chunk.constants.len() - 1;
             self.write_op(Op::GetGlobal(idx.try_into().unwrap()))
         }
-    }
-
-    fn add_arg(&mut self, gc: &mut LambGc, Ident(arg): &Ident) {
-        let ls = LambString::new(arg.clone());
-        let rf = gc.alloc(ls);
-        self.func.chunk.constants.push(Value::String(rf));
-        self.add_local(arg.clone());
-        self.func.arity += 1;
     }
 }

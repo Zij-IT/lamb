@@ -14,6 +14,6 @@ pub fn run_script(script: &Script) {
     let name = LambString::new("__LAMB__SCRIPT__");
     let mut compiler = Compiler::new(gc.alloc(name));
 
-    compiler.compile_script(script, &mut gc);
+    compiler.compile(&mut gc, script);
     let _ = compiler.finish(&mut gc);
 }
