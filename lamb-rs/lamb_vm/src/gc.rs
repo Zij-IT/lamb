@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     chunk::Op,
@@ -8,11 +8,13 @@ use crate::{
 pub struct LambGc {
     free_slots: Vec<usize>,
     objects: Vec<Option<GcItem>>,
+    strings: HashMap<String, GcRef<LambString>>,
 }
 
 impl LambGc {
     pub fn new() -> Self {
         Self {
+            strings: Default::default(),
             free_slots: Default::default(),
             objects: Default::default(),
         }
@@ -41,6 +43,18 @@ impl LambGc {
         GcRef {
             idx,
             _type: PhantomData,
+        }
+    }
+
+    pub fn intern(&mut self, s: impl Into<String>) -> GcRef<LambString> {
+        let s = s.into();
+        if let Some(s) = self.strings.get(&s) {
+            return *s;
+        } else {
+            let str = LambString::new(s.clone());
+            let str_ref = self.alloc(str);
+            self.strings.insert(s, str_ref);
+            str_ref
         }
     }
 

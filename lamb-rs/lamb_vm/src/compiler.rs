@@ -122,8 +122,7 @@ impl Compiler {
     }
 
     fn add_arg(&mut self, gc: &mut LambGc, Ident(arg): &Ident) {
-        let ls = LambString::new(arg.clone());
-        let rf = gc.alloc(ls);
+        let rf = gc.intern(arg);
         self.func.chunk.constants.push(Value::String(rf));
         self.add_local(arg.clone());
         self.func.arity += 1;
@@ -311,7 +310,7 @@ impl Compiler {
 
                 self.compile_expr(value, gc);
 
-                let ident_obj = gc.alloc(LambString::new(ident.clone()));
+                let ident_obj = gc.intern(ident);
                 self.func.chunk.write_val(Value::String(ident_obj));
                 if self.block.depth == 0 {
                     let idx = self.func.chunk.constants.len() - 1;
@@ -382,8 +381,8 @@ impl Compiler {
         def: &'ast FuncDef,
         gc: &mut LambGc,
     ) {
-        let ident = LambString::new(inner.clone());
-        self.func.chunk.write_val(Value::String(gc.alloc(ident)));
+        let ident = gc.intern(inner);
+        self.func.chunk.write_val(Value::String(ident));
         let idx = self.func.chunk.constants.len() - 1;
 
         self.compile_func(def, gc, inner.clone());
@@ -402,8 +401,8 @@ impl Compiler {
     }
 
     fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
-        let ident = LambString::new("Anon Func");
-        let mut composition = Compiler::new(gc.alloc(ident));
+        let ident = gc.intern("Anon Func");
+        let mut composition = Compiler::new(ident);
         composition.locals[0].depth = 1;
 
         // `self` now refers to `composition`. This is done because I
@@ -525,7 +524,7 @@ impl Compiler {
             is_recursive,
         } = f;
 
-        let func_name = gc.alloc(LambString::new(name.clone()));
+        let func_name = gc.intern(name.clone());
         let mut func_comp = Compiler::new(func_name);
         if *is_recursive {
             func_comp.locals[0].name = name;
@@ -549,7 +548,7 @@ impl Compiler {
 
     fn compile_literal<'ast>(&mut self, l: &'ast Literal, gc: &mut LambGc) {
         match l {
-            Literal::Str(s) => self.write_const_op(Value::String(gc.alloc(LambString::new(s)))),
+            Literal::Str(s) => self.write_const_op(Value::String(gc.intern(s))),
             Literal::Num(i) => self.write_const_op(Value::Int(*i)),
             Literal::Char(c) => self.write_const_op(Value::Char(*c)),
             Literal::Bool(b) => self.write_const_op(Value::Bool(*b)),
@@ -563,7 +562,7 @@ impl Compiler {
         } else if let Some(slot) = self.upvalue_idx(i) {
             self.write_op(Op::GetUpvalue(slot.try_into().unwrap()))
         } else {
-            let str = gc.alloc(LambString::new(i));
+            let str = gc.intern(i);
             self.func.chunk.constants.push(Value::String(str));
             let idx = self.func.chunk.constants.len() - 1;
             self.write_op(Op::GetGlobal(idx.try_into().unwrap()))

@@ -353,9 +353,8 @@ impl Vm {
             (Value::String(l), Value::String(r)) => {
                 let l = &self.gc.deref(l).0;
                 let r = &self.gc.deref(r).0;
-                let s = LambString::new(format!("{l}{r}"));
-                let new = self.gc.alloc(s);
-                self.push(Value::String(new));
+                let s = self.gc.intern(format!("{l}{r}"));
+                self.push(Value::String(s));
             }
             _ => panic!("type error!"),
         }
@@ -453,7 +452,7 @@ impl Vm {
     }
 
     fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Value) {
-        let name = self.gc.alloc(LambString::new(name));
+        let name = self.gc.intern(name);
         self.globals.insert(name, Value::Native(NativeFunc::new(f)));
     }
 
