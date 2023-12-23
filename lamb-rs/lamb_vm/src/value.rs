@@ -3,6 +3,7 @@ use std::{cmp::Ordering, ops::Range};
 use crate::{
     chunk::Chunk,
     gc::{GcRef, LambGc},
+    vm::Vm,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -15,6 +16,7 @@ pub enum Value {
     Array(GcRef<LambArray>),
     String(GcRef<LambString>),
     Closure(GcRef<LambClosure>),
+    Native(NativeFunc),
 }
 
 impl Value {
@@ -49,6 +51,7 @@ impl Value {
                 let s = gc.deref(f).name;
                 gc.deref(s).0.to_string()
             }
+            Value::Native(_) => "<native fn>".into(),
         }
     }
 
@@ -234,5 +237,20 @@ impl Upvalue {
             index,
             closed: None,
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct NativeFunc {
+    raw: fn(&Vm, &[Value]) -> Value,
+}
+
+impl NativeFunc {
+    pub fn new(f: fn(&Vm, &[Value]) -> Value) -> Self {
+        Self { raw: f }
+    }
+
+    pub fn call(&self, vm: &Vm, args: &[Value]) -> Value {
+        (self.raw)(vm, args)
     }
 }

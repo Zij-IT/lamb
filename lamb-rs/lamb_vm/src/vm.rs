@@ -3,7 +3,7 @@ use std::{cmp::Ordering, collections::HashMap, ops};
 use crate::{
     chunk::{Chunk, Op},
     gc::{GcRef, LambGc},
-    value::{FuncUpvalue, LambArray, LambClosure, LambString, Upvalue, Value},
+    value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
 pub struct Vm {
@@ -17,14 +17,18 @@ pub struct Vm {
 
 impl Vm {
     pub fn new(gc: LambGc) -> Self {
-        Self {
+        let mut this = Self {
             gc,
             globals: Default::default(),
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(u8::MAX as usize * 64),
             saved: None,
             open_upvalues: Vec::with_capacity(64),
-        }
+        };
+
+        this.define_native("print", Self::native_print);
+        this.define_native("println", Self::native_println);
+        this
     }
 
     pub fn exec(mut self, rf: GcRef<LambClosure>) {
@@ -36,6 +40,8 @@ impl Vm {
     fn run(&mut self) {
         loop {
             let op = self.chunk().code[self.frame().ip];
+            self.frame_mut().ip += 1;
+
             match op {
                 Op::Constant(i) => {
                     let value = self.chunk().constants[usize::from(i)];
@@ -59,6 +65,8 @@ impl Vm {
                         panic!("type error");
                     };
 
+                    dbg!(&self.globals);
+                    dbg!(&name);
                     let global = self.globals.get(&name).copied().unwrap();
                     self.push(global);
                 }
@@ -88,6 +96,12 @@ impl Vm {
                                 let frame = CallFrame::new(cl, self.stack.len() - 1 - args);
                                 self.frames.push(frame);
                             }
+                        }
+                        Value::Native(native) => {
+                            let args = self.stack.len() - args;
+                            let result = native.call(self, &self.stack[args..]);
+                            self.stack.truncate(args - 1);
+                            self.push(result);
                         }
                         _ => panic!("type error!"),
                     }
@@ -436,6 +450,28 @@ impl Vm {
                 up_ref
             }
         }
+    }
+
+    fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Value) {
+        let name = self.gc.alloc(LambString::new(name));
+        self.globals.insert(name, Value::Native(NativeFunc::new(f)));
+    }
+
+    fn native_print(vm: &Self, args: &[Value]) -> Value {
+        for arg in args {
+            print!("{}", arg.format(&vm.gc));
+        }
+
+        Value::Nil
+    }
+
+    fn native_println(vm: &Self, args: &[Value]) -> Value {
+        for arg in args {
+            print!("{}", arg.format(&vm.gc));
+        }
+
+        println!();
+        Value::Nil
     }
 }
 
