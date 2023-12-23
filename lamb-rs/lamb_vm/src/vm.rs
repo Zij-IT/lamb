@@ -161,7 +161,7 @@ impl Vm {
                     self.frame_mut().ip += usize::from(off);
                 }
                 Op::JumpIfFalse(off) => {
-                    let Value::Bool(is_true) = self.pop() else {
+                    let Value::Bool(is_true) = self.peek(0) else {
                         panic!("type error!");
                     };
 
@@ -170,7 +170,7 @@ impl Vm {
                     }
                 }
                 Op::JumpIfTrue(off) => {
-                    let Value::Bool(is_true) = self.pop() else {
+                    let Value::Bool(is_true) = self.peek(0) else {
                         panic!("type error!");
                     };
 
