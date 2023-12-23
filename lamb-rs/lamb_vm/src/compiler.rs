@@ -1,6 +1,6 @@
 use lamb_ast::{
-    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, Elif, Else, Expr, FuncCall, FuncDef,
-    Ident, If, Index, Literal, Script, Statement, Unary,
+    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Elif, Else, Expr, FuncCall,
+    FuncDef, Ident, If, Index, Literal, Script, Statement, Unary,
 };
 
 use crate::{
@@ -8,6 +8,10 @@ use crate::{
     gc::{GcRef, LambGc},
     value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
 };
+
+// This is safe because it contains whitespace, which user identifiers
+// cannot have.
+const SCRUTINEE: &str = " SCRUTINEE";
 
 #[derive(Debug, Default)]
 struct Block {
@@ -518,9 +522,33 @@ impl Compiler {
         past_else
     }
 
-    fn compile_case<'ast>(&mut self, c: &'ast Case, _gc: &mut LambGc) {
+    fn compile_case<'ast>(&mut self, c: &'ast Case, gc: &mut LambGc) {
         let Case { value, arms } = c;
-        todo!("Compile Case: {value:?} {arms:?}");
+
+        self.compile_expr(value, gc);
+
+        gc.intern(SCRUTINEE);
+        self.add_local(SCRUTINEE.to_string());
+
+        let offset = self.block.offset;
+        let mut to_elses = Vec::with_capacity(arms.len());
+        for arm in arms {
+            self.block.offset = offset;
+            let to_else = self.compile_case_arm(arm, gc);
+            to_elses.push(to_else);
+        }
+
+        for jmp in to_elses {
+            self.patch_jump(jmp);
+        }
+
+        self.write_op(Op::Pop);
+        self.write_const_op(Value::Nil);
+    }
+
+    fn compile_case_arm<'ast>(&mut self, c: &'ast CaseArm, gc: &mut LambGc) -> JumpIdx {
+        let CaseArm { pattern, on_match } = c;
+        todo!()
     }
 
     fn compile_func<'ast>(&mut self, f: &'ast FuncDef, gc: &mut LambGc, name: String) {
