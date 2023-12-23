@@ -474,8 +474,9 @@ impl Compiler {
         // <block>
         // jmp .past_else
         // .cond_false2
-        // ---------
-        //
+        // --------- Or Else
+        // <block>
+        // .past_else
 
         // Each `compile_conditional` puts the offset at +1 item however
         // if the previous condition wasn't true, it isn't executed. This
