@@ -108,7 +108,7 @@ impl Compiler {
         self.block = parent;
         for (idx, loc) in self.locals.iter().enumerate().rev() {
             if loc.depth <= self.block.depth {
-                self.locals.truncate(idx);
+                self.locals.truncate(idx + 1);
                 break;
             }
 
