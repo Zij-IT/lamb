@@ -477,11 +477,16 @@ impl Compiler {
         // ---------
         //
 
+        // Each `compile_conditional` puts the offset at +1 item however
+        // if the previous condition wasn't true, it isn't executed. This
+        // means that the next if will run as if it was the first.
+        let offset = self.block.offset;
         let mut to_elses = Vec::with_capacity(1 + elifs.len());
         to_elses.push(self.compile_conditional(cond, block, gc));
 
         // compile elifs
         for Elif { cond, block } in elifs {
+            self.block.offset = offset;
             to_elses.push(self.compile_conditional(cond, block, gc));
         }
 
