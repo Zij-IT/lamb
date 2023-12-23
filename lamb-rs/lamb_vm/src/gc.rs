@@ -80,6 +80,12 @@ impl<T> PartialEq for GcRef<T> {
 
 impl<T> Eq for GcRef<T> {}
 
+impl<T> std::hash::Hash for GcRef<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.idx.hash(state);
+    }
+}
+
 enum GcItemRaw {
     Array(LambArray),
     Closure(LambClosure),

@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ops};
+use std::{cmp::Ordering, collections::HashMap, ops};
 
 use crate::{
     chunk::{Chunk, Op},
@@ -8,6 +8,7 @@ use crate::{
 
 pub struct Vm {
     gc: LambGc,
+    globals: HashMap<GcRef<LambString>, Value>,
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
     saved: Option<Value>,
@@ -18,6 +19,7 @@ impl Vm {
     pub fn new(gc: LambGc) -> Self {
         Self {
             gc,
+            globals: Default::default(),
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(u8::MAX as usize * 64),
             saved: None,
@@ -44,8 +46,22 @@ impl Vm {
                     let value = self.stack[idx];
                     self.push(value);
                 }
-                Op::DefineGlobal(_) => todo!(),
-                Op::GetGlobal(_) => todo!(),
+                Op::DefineGlobal(i) => {
+                    let Value::String(name) = self.chunk().constants[usize::from(i)] else {
+                        panic!("type error");
+                    };
+
+                    let value = self.pop();
+                    self.globals.insert(name, value);
+                }
+                Op::GetGlobal(i) => {
+                    let Value::String(name) = self.chunk().constants[usize::from(i)] else {
+                        panic!("type error");
+                    };
+
+                    let global = self.globals.get(&name).copied().unwrap();
+                    self.push(global);
+                }
                 Op::GetUpvalue(i) => {
                     let clo_ref = self.frame().closure;
                     let closure = self.gc.deref(clo_ref);
