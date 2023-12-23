@@ -3,7 +3,7 @@ use std::{cmp::Ordering, ops};
 use crate::{
     chunk::{Chunk, Op},
     gc::{GcRef, LambGc},
-    value::{LambArray, LambClosure, LambString, Upvalue, Value},
+    value::{FuncUpvalue, LambArray, LambClosure, LambString, Upvalue, Value},
 };
 
 pub struct Vm {
@@ -46,13 +46,80 @@ impl Vm {
                 }
                 Op::DefineGlobal(_) => todo!(),
                 Op::GetGlobal(_) => todo!(),
-                Op::GetUpvalue(_) => todo!(),
+                Op::GetUpvalue(i) => {
+                    let clo_ref = self.frame().closure;
+                    let closure = self.gc.deref(clo_ref);
+                    let up = closure.upvalues[usize::from(i)];
+                    let up = self.gc.deref(up);
+                    let val = if let Some(value) = up.closed {
+                        value
+                    } else {
+                        self.stack[up.index]
+                    };
 
-                Op::Call(_) => todo!(),
-                Op::Return => todo!(),
+                    self.push(val);
+                }
+                Op::Call(args) => {
+                    let args = usize::from(args);
+                    let callee = self.peek(args);
+                    match callee {
+                        Value::Closure(cl) => {
+                            let closure = self.gc.deref(cl);
+                            let func = self.gc.deref(closure.func);
+                            if args != func.arity {
+                                panic!("too many args!");
+                            } else {
+                                let frame = CallFrame::new(cl, self.stack.len() - 1 - args);
+                                self.frames.push(frame);
+                            }
+                        }
+                        _ => panic!("type error!"),
+                    }
+                }
+                Op::Return => {
+                    let frame = self.frames.pop().unwrap();
+                    let ret_value = self.pop();
+                    self.close_upvalues(frame.slot);
 
-                Op::Closure(_) => todo!(),
-                Op::CloseValue => todo!(),
+                    if self.frames.is_empty() {
+                        return;
+                    } else {
+                        self.stack.truncate(frame.slot);
+                        self.push(ret_value);
+                    }
+                }
+
+                Op::CloseValue => {
+                    let top = self.stack.len() - 1;
+                    self.close_upvalues(top);
+                    self.pop();
+                }
+                Op::Closure(i) => {
+                    let Value::Closure(clo_ref) = self.chunk().constants[usize::from(i)] else {
+                        panic!("type error!");
+                    };
+
+                    let func = self.gc.deref(clo_ref).func;
+                    let len = self.gc.deref(func).upvalues.len();
+
+                    for i in 0..len {
+                        let FuncUpvalue { index, is_local } = self.gc.deref(func).upvalues[i];
+                        if is_local {
+                            let up = self.capture_upvalue(self.frame().slot + index);
+                            let closure = self.gc.deref_mut(clo_ref);
+                            closure.upvalues.push(up);
+                        } else {
+                            let curr_closure = self.frame().closure;
+                            let curr_closure = self.gc.deref(curr_closure);
+                            let up = curr_closure.upvalues[index];
+
+                            let closure = self.gc.deref_mut(clo_ref);
+                            closure.upvalues.push(up);
+                        }
+                    }
+
+                    self.stack.push(Value::Closure(clo_ref));
+                }
 
                 Op::Dup => {
                     let item = self.stack.last().copied().unwrap();
@@ -86,7 +153,6 @@ impl Vm {
 
                 Op::SetSlot(i) => {
                     let idx = self.frame().slot + usize::from(i);
-                    let value = self.stack[idx];
                     self.stack[idx] = self.stack.last().copied().unwrap();
                 }
                 Op::SaveValue => {
@@ -97,10 +163,91 @@ impl Vm {
                     self.push(saved);
                 }
 
-                Op::Len => todo!(),
-                Op::Index => todo!(),
-                Op::IndexRev => todo!(),
-                Op::Slice(_) => todo!(),
+                Op::Len => {
+                    let Value::Array(arr) = self.pop() else {
+                        panic!("type error!");
+                    };
+
+                    let len = self.gc.deref(arr).len();
+                    self.push(Value::Int(i64::try_from(len).unwrap()))
+                }
+                Op::Index => {
+                    let Value::Int(idx) = self.pop() else {
+                        panic!("type error!");
+                    };
+
+                    let idx = usize::try_from(idx).unwrap();
+
+                    match self.pop() {
+                        Value::String(str) => {
+                            let val = self.gc.deref(str).get(idx);
+                            self.push(Value::Char(val));
+                        }
+                        Value::Array(arr) => {
+                            let val = self.gc.deref(arr).get(idx);
+                            self.push(val);
+                        }
+                        _ => panic!("type error!"),
+                    }
+                }
+                Op::IndexRev => {
+                    let Value::Int(idx) = self.pop() else {
+                        panic!("type error!");
+                    };
+
+                    let idx = usize::try_from(idx).unwrap();
+
+                    match self.pop() {
+                        Value::String(str) => {
+                            let str = self.gc.deref(str);
+                            if idx >= str.len() {
+                                panic!("Index out of bounds!");
+                            }
+
+                            let idx = str.len() - idx - 1;
+                            let val = str.get(idx);
+                            self.push(Value::Char(val));
+                        }
+                        Value::Array(arr) => {
+                            let arr = self.gc.deref(arr);
+                            if idx >= arr.len() {
+                                panic!("Index out of bounds!");
+                            }
+
+                            let idx = arr.len() - idx - 1;
+                            let val = arr.get(idx);
+                            self.push(val);
+                        }
+                        _ => panic!("type error!"),
+                    }
+                }
+                Op::Slice(idx) => {
+                    let Value::Int(i) = self.chunk().constants[usize::from(idx)] else {
+                        panic!("type error!");
+                    };
+
+                    let start = ((i as u64 >> u32::BITS) as u32) as usize;
+                    let dist_from_end = ((i as u64 as u32) & u32::MAX) as usize;
+
+                    let val = self.pop();
+                    match val {
+                        Value::Array(arr) => {
+                            let arr = self.gc.deref(arr);
+                            let end = arr.len() - dist_from_end;
+                            let new = arr.slice(start..end);
+                            let new = self.gc.alloc(new);
+                            self.push(Value::Array(new));
+                        }
+                        Value::String(str) => {
+                            let str = self.gc.deref(str);
+                            let end = str.len() - dist_from_end;
+                            let new = str.slice(start..end);
+                            let new = self.gc.alloc(new);
+                            self.push(Value::String(new));
+                        }
+                        _ => panic!("type error!"),
+                    }
+                }
                 Op::MakeArray(n) => {
                     let mut v = Vec::with_capacity(usize::from(n));
                     for _ in 0..n {
@@ -145,18 +292,16 @@ impl Vm {
         &self.gc.deref(func).chunk
     }
 
-    fn chunk_mut(&mut self) -> &mut Chunk {
-        let cls = self.frame().closure;
-        let func = self.gc.deref_mut(cls).func;
-        &mut self.gc.deref_mut(func).chunk
-    }
-
     fn frame(&self) -> &CallFrame {
         self.frames.last().unwrap()
     }
 
     fn frame_mut(&mut self) -> &mut CallFrame {
         self.frames.last_mut().unwrap()
+    }
+
+    fn peek(&self, offset: usize) -> Value {
+        self.stack.iter().rev().nth(offset).copied().unwrap()
     }
 
     fn pop(&mut self) -> Value {
@@ -238,6 +383,43 @@ impl Vm {
         };
 
         self.push(Value::Bool(f(ord)))
+    }
+
+    fn close_upvalues(&mut self, slot: usize) {
+        let Self {
+            gc,
+            open_upvalues,
+            stack,
+            ..
+        } = self;
+
+        open_upvalues.retain(|up| {
+            let up = gc.deref_mut(*up);
+            if up.index >= slot {
+                let loc = up.index;
+                up.closed = Some(stack[loc]);
+                true
+            } else {
+                false
+            }
+        });
+    }
+
+    fn capture_upvalue(&mut self, index: usize) -> GcRef<Upvalue> {
+        let up_ref = self
+            .open_upvalues
+            .iter()
+            .find(|&&up| self.gc.deref(up).index == index)
+            .copied();
+
+        match up_ref {
+            Some(up_ref) => up_ref,
+            None => {
+                let up_ref = self.gc.alloc(Upvalue::new(index));
+                self.open_upvalues.push(up_ref);
+                up_ref
+            }
+        }
     }
 }
 

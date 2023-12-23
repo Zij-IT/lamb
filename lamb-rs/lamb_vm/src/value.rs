@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, ops::Range};
 
 use crate::{
     chunk::Chunk,
@@ -85,8 +85,20 @@ impl LambString {
         LambString(s.into())
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn capacity(&self) -> usize {
         self.0.capacity()
+    }
+
+    pub fn get(&self, idx: usize) -> char {
+        self.0.chars().nth(idx).unwrap()
+    }
+
+    pub fn slice(&self, range: Range<usize>) -> Self {
+        Self(self.0.get(range).unwrap().into())
     }
 }
 
@@ -98,6 +110,18 @@ pub struct LambArray {
 impl LambArray {
     pub fn new() -> Self {
         Self { items: Vec::new() }
+    }
+
+    pub fn get(&self, idx: usize) -> Value {
+        self.items.get(idx).copied().unwrap()
+    }
+
+    pub fn slice(&self, range: Range<usize>) -> Self {
+        Self::from(self.items[range].to_vec())
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 
     pub fn capacity(&self) -> usize {
@@ -177,7 +201,7 @@ impl LambFunc {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FuncUpvalue {
     pub index: usize,
     pub is_local: bool,
@@ -202,4 +226,13 @@ impl LambClosure {
 pub struct Upvalue {
     pub index: usize,
     pub closed: Option<Value>,
+}
+
+impl Upvalue {
+    pub fn new(index: usize) -> Self {
+        Self {
+            index,
+            closed: None,
+        }
+    }
 }
