@@ -65,8 +65,6 @@ impl Vm {
                         panic!("type error");
                     };
 
-                    dbg!(&self.globals);
-                    dbg!(&name);
                     let global = self.globals.get(&name).copied().unwrap();
                     self.push(global);
                 }
