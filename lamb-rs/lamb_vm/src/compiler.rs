@@ -1,6 +1,7 @@
 use lamb_ast::{
-    Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Elif, Else, Expr, FuncCall,
-    FuncDef, Ident, If, Index, Literal, Script, Statement, Unary,
+    ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Elif, Else,
+    Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script, Statement,
+    Unary,
 };
 
 use crate::{
@@ -548,7 +549,111 @@ impl Compiler {
 
     fn compile_case_arm<'ast>(&mut self, c: &'ast CaseArm, gc: &mut LambGc) -> JumpIdx {
         let CaseArm { pattern, on_match } = c;
+        self.compile_pattern(pattern, gc);
         todo!()
+    }
+
+    // Note:
+    //
+    //     The scrutinee is assumed to be sitting on the top off the stack
+    //     and is *only* to be removed after the case arm is complete.
+    //
+    //     This means that any sub-patterns must duplicate it.
+    fn compile_pattern<'ast>(&mut self, c: &'ast Pattern, gc: &mut LambGc) {
+        let Pattern { pattern } = c;
+
+        let offset = self.block.offset;
+        let (first, rest) = pattern.split_first().unwrap();
+
+        let mut jumps = Vec::with_capacity(rest.len() + 1);
+
+        self.compile_pattern_top(first, gc);
+        for pat in rest {
+            let eop = self.write_jump(Jump::IfTrue);
+            jumps.push(eop);
+            self.write_op(Op::Pop);
+
+            // Just like `if` and `case` all patterns must start at the
+            // same stack offset and will leave one expression on the stack
+            // which will result in either `true` or `false`
+            self.block.offset = offset;
+            self.compile_pattern_top(pat, gc);
+        }
+
+        for j in jumps {
+            self.patch_jump(j);
+        }
+    }
+
+    fn compile_pattern_top<'ast>(&mut self, c: &'ast PatternTop, gc: &mut LambGc) {
+        match c {
+            PatternTop::Literal(lit) => {
+                self.write_op(Op::Dup);
+                self.compile_literal(lit, gc);
+                self.write_op(Op::Eq);
+            }
+            PatternTop::Ident(Ident(i), pat) => {
+                // The ident must have been declared by `compile_case`.
+                let slot = self.local_slot(i.as_str()).unwrap();
+                let _ = gc.intern(i);
+                self.write_op(Op::SetSlot(slot.try_into().unwrap()));
+
+                if let Some(pat) = pat.as_deref() {
+                    self.compile_pattern(pat, gc);
+                } else {
+                    self.write_const_op(Value::Bool(true));
+                }
+            }
+            PatternTop::Array(ArrayPattern::Err) => {
+                panic!("Error in Array Pattern");
+            }
+            PatternTop::Array(ArrayPattern::Elements { head, tail, dots }) => {
+                // Compare the lengths. Array patterns can only be properly be
+                // tested if the lengths proper.
+                let min_len = head.len() + tail.len();
+                self.write_op(Op::Len);
+                self.write_const_op(Value::Int(min_len.try_into().unwrap()));
+                self.write_op(if *dots { Op::Ge } else { Op::Eq });
+
+                let mut ends = Vec::with_capacity(min_len);
+                for (idx, pat) in head.iter().enumerate() {
+                    ends.push(self.write_jump(Jump::IfFalse));
+
+                    self.write_op(Op::Dup);
+                    self.write_const_op(Value::Int(idx.try_into().unwrap()));
+                    self.write_op(Op::Index);
+
+                    self.compile_pattern(pat, gc);
+
+                    // Stack is:
+                    //   <is_match>
+                    //   <local>       <---- Need to remove
+                    //   <scrutinee>
+                    self.write_op(Op::SaveValue);
+                    self.write_op(Op::Pop);
+                    self.write_op(Op::UnsaveValue);
+                }
+
+                let mut ends = Vec::with_capacity(min_len);
+                for (idx, pat) in tail.iter().enumerate() {
+                    ends.push(self.write_jump(Jump::IfFalse));
+
+                    self.write_op(Op::Dup);
+                    self.write_const_op(Value::Int((tail.len() - 1 - idx).try_into().unwrap()));
+                    self.write_op(Op::Index);
+
+                    self.compile_pattern(pat, gc);
+
+                    // Stack is:
+                    //   <is_match>
+                    //   <local>       <---- Need to remove
+                    //   <scrutinee>
+                    self.write_op(Op::SaveValue);
+                    self.write_op(Op::Pop);
+                    self.write_op(Op::UnsaveValue);
+                }
+            }
+        }
     }
 
     fn compile_func<'ast>(&mut self, f: &'ast FuncDef, gc: &mut LambGc, name: String) {
