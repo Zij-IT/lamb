@@ -197,12 +197,13 @@ pub enum ArrayPattern {
     Elements {
         head: Vec<Pattern>,
         tail: Vec<Pattern>,
-        dots: bool,
+        dots: Option<Box<PatternTop>>,
     },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternTop {
+    Rest,
     Literal(Literal),
     Ident(Ident, Option<Box<Pattern>>),
     Array(ArrayPattern),
@@ -211,6 +212,7 @@ pub enum PatternTop {
 impl PatternTop {
     pub fn binding_names(&self) -> Vec<&Ident> {
         match self {
+            PatternTop::Rest => vec![],
             PatternTop::Literal(_) => vec![],
             PatternTop::Ident(i, pat) => std::iter::once(i)
                 .chain(pat.as_ref().map_or(Vec::new(), |b| b.binding_names()))
@@ -228,6 +230,20 @@ impl PatternTop {
             PatternTop::Array(ArrayPattern::Err) => {
                 unimplemented!("ArrayPattern::Err is not convertable")
             }
+        }
+    }
+
+    pub fn is_rest(&self) -> bool {
+        match self {
+            Self::Rest => true,
+            Self::Ident(_, Some(pat)) => {
+                let Pattern { pattern } = pat.as_ref();
+                match pattern.as_slice() {
+                    [i] => i.is_rest(),
+                    _ => false,
+                }
+            }
+            _ => false,
         }
     }
 }

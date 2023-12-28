@@ -659,6 +659,7 @@ impl Compiler {
 
     fn compile_pattern_top<'ast>(&mut self, c: &'ast PatternTop, gc: &mut LambGc) {
         match c {
+            PatternTop::Rest => unimplemented!("This must be handled by the parent pattern"),
             PatternTop::Literal(lit) => {
                 self.write_op(Op::Dup);
                 self.compile_literal(lit, gc);
@@ -685,7 +686,7 @@ impl Compiler {
                 let min_len = head.len() + tail.len();
                 self.write_op(Op::Len);
                 self.write_const_op(Value::Int(min_len.try_into().unwrap()));
-                self.write_op(if *dots { Op::Ge } else { Op::Eq });
+                self.write_op(if dots.is_some() { Op::Ge } else { Op::Eq });
 
                 let mut ends = Vec::with_capacity(min_len);
                 for (idx, pat) in head.iter().enumerate() {

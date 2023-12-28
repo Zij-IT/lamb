@@ -478,6 +478,7 @@ where
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
 {
     recursive(|top| {
+        let rest_pat = just(Token::DotDot).to(PatternTop::Rest);
         let lit_pat = literal().map(PatternTop::Literal);
         let arr_pat = array_pattern(pat.clone()).map(PatternTop::Array);
         let id_pat = ident()
@@ -488,7 +489,7 @@ where
             )
             .map(|(id, pat)| PatternTop::Ident(id, pat.map(Box::new)));
 
-        choice((lit_pat, id_pat, arr_pat))
+        choice((rest_pat, lit_pat, id_pat, arr_pat))
     })
 }
 
@@ -515,37 +516,31 @@ where
     //   [..]:          ___, dots, ___
     //  dots (comma pattern)?
 
-    let dots = || just(Token::DotDot);
-    let comma = || just(Token::Comma);
-    let pats = || {
-        pattern
-            .clone()
-            .separated_by(just(Token::Comma))
-            .at_least(1)
-            .collect::<Vec<_>>()
-    };
+    let arr_pattern = pattern
+        .clone()
+        .separated_by(just(Token::Comma))
+        .collect::<Vec<_>>()
+        .validate(|mut pats, _, _| {
+            let indices = pats
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, pat)| match pat.pattern.as_slice() {
+                    [p] if p.is_rest() => Some(idx),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
 
-    let arr_pattern = choice((
-        pats()
-            .then(
-                comma()
-                    .then(dots())
-                    .ignore_then(comma().ignore_then(pats()).or_not())
-                    .or_not(),
-            )
-            .map(|(lhs, dots)| match dots {
-                Some(Some(rhs)) => (lhs, true, rhs),
-                Some(None) => (lhs, true, Vec::new()),
-                None => (lhs, false, Vec::new()),
-            }),
-        dots()
-            .ignore_then(comma().ignore_then(pats()).or_not())
-            .map(|rhs| match rhs {
-                Some(rhs) => (Vec::new(), true, rhs),
-                None => (Vec::new(), true, Vec::new()),
-            }),
-        empty().map(|()| (Vec::new(), false, Vec::new())),
-    ));
+            match indices.as_slice() {
+                [i] => {
+                    let head = pats[..*i].to_vec();
+                    let tail = pats.get(i + 1..).map_or(Vec::new(), Vec::from);
+                    let dots = pats.swap_remove(*i).pattern.swap_remove(0);
+                    (head, Some(Box::new(dots)), tail)
+                }
+                [] => (pats, None, vec![]),
+                _ => panic!("BAD PATTERN"),
+            }
+        });
 
     safe_delimited(
         arr_pattern.map(|(head, dots, tail)| ArrayPattern::Elements { head, tail, dots }),
