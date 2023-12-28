@@ -150,7 +150,7 @@ impl Vm {
                 }
 
                 Op::Dup => {
-                    let item = self.stack.last().copied().unwrap();
+                    let item = self.peek(0);
                     self.push(item);
                 }
                 Op::Pop => {
@@ -192,11 +192,12 @@ impl Vm {
                 }
 
                 Op::Len => {
-                    let Value::Array(arr) = self.pop() else {
-                        panic!("type error!");
+                    let len = match self.peek(0) {
+                        Value::Array(arr) => self.gc.deref(arr).len(),
+                        Value::String(str) => self.gc.deref(str).len(),
+                        _ => panic!("type error!"),
                     };
 
-                    let len = self.gc.deref(arr).len();
                     self.push(Value::Int(i64::try_from(len).unwrap()))
                 }
                 Op::Index => {
@@ -257,7 +258,7 @@ impl Vm {
                     let start = ((i as u64 >> u32::BITS) as u32) as usize;
                     let dist_from_end = ((i as u64 as u32) & u32::MAX) as usize;
 
-                    let val = self.pop();
+                    let val = self.peek(0);
                     match val {
                         Value::Array(arr) => {
                             let arr = self.gc.deref(arr);
