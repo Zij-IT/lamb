@@ -1,7 +1,7 @@
 use lamb_ast::{
-    ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Elif, Else,
-    Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script, Statement,
-    Unary,
+    ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Either, Elif,
+    Else, Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script,
+    Statement, Unary,
 };
 
 use crate::{
@@ -531,26 +531,94 @@ impl Compiler {
         gc.intern(SCRUTINEE);
         self.add_local(SCRUTINEE.to_string());
 
-        let offset = self.block.offset;
         let mut to_elses = Vec::with_capacity(arms.len());
         for arm in arms {
-            self.block.offset = offset;
             let to_else = self.compile_case_arm(arm, gc);
             to_elses.push(to_else);
         }
 
+        // If no match arms are taken, use `Op::Pop`
+        self.write_op(Op::Pop);
+        self.write_const_op(Value::Nil);
+
         for jmp in to_elses {
             self.patch_jump(jmp);
         }
-
-        self.write_op(Op::Pop);
-        self.write_const_op(Value::Nil);
     }
 
     fn compile_case_arm<'ast>(&mut self, c: &'ast CaseArm, gc: &mut LambGc) -> JumpIdx {
         let CaseArm { pattern, on_match } = c;
+
+        let offset_before_arm = self.block.offset;
+        let pre_local_count = self.locals.len();
+
+        let bindings = pattern.binding_names();
+        let binding_count = bindings.len();
+
+        for Ident(i) in bindings {
+            gc.intern(i);
+
+            self.write_const_op(Value::Nil);
+            self.func
+                .chunk
+                .constants
+                .push(Value::String(gc.alloc(LambString::new(i))));
+
+            self.add_local(i.clone());
+        }
+
+        self.func.chunk.constants.push(Value::Int(
+            i64::try_from(offset_before_arm).unwrap() - 1_i64,
+        ));
+
+        self.write_op(Op::GetLocal(
+            u16::try_from(self.func.chunk.constants.len() - 1).unwrap(),
+        ));
+
         self.compile_pattern(pattern, gc);
-        todo!()
+
+        let if_no_match = self.write_jump(Jump::IfFalse);
+
+        // If match ----->
+        // Remove True
+        self.write_op(Op::Pop);
+        match on_match {
+            Either::Left(b) => self.compile_block(b, gc),
+            Either::Right(e) => self.compile_expr(e, gc),
+        }
+
+        self.write_op(Op::SaveValue);
+        // Remove scrutinee dup
+        self.write_op(Op::Pop);
+
+        for _ in 0..binding_count {
+            self.write_op(Op::Pop);
+        }
+
+        // Remove scrutinee
+        self.write_op(Op::Pop);
+        self.write_op(Op::UnsaveValue);
+
+        let past_arms = self.write_jump(Jump::Always);
+        // <----- If match
+        // If no match ----->
+        self.patch_jump(if_no_match);
+
+        // Remove False
+        self.write_op(Op::Pop);
+
+        // Remove scrutinee dup
+        self.write_op(Op::Pop);
+
+        for _ in 0..binding_count {
+            self.write_op(Op::Pop);
+        }
+
+        self.block.offset = offset_before_arm;
+        self.locals.truncate(pre_local_count);
+        // <----- If no match
+
+        past_arms
     }
 
     // Note:
@@ -634,7 +702,6 @@ impl Compiler {
                     self.write_op(Op::UnsaveValue);
                 }
 
-                let mut ends = Vec::with_capacity(min_len);
                 for (idx, pat) in tail.iter().enumerate() {
                     ends.push(self.write_jump(Jump::IfFalse));
 
@@ -651,6 +718,10 @@ impl Compiler {
                     self.write_op(Op::SaveValue);
                     self.write_op(Op::Pop);
                     self.write_op(Op::UnsaveValue);
+                }
+
+                for j in ends {
+                    self.patch_jump(j);
                 }
             }
         }
