@@ -241,7 +241,8 @@ impl Compiler {
             | Op::GetUpvalue(_)
             | Op::Len
             | Op::UnsaveValue => self.block.offset += 1,
-            Op::MakeArray(off) => self.block.offset -= usize::from(off) - 1,
+            Op::MakeArray(0) => self.block.offset += 1,
+            Op::MakeArray(elems) => self.block.offset -= usize::from(elems) - 1,
             Op::Call(off) => self.block.offset -= usize::from(off),
             Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) | Op::Slice(_) => {
                 self.block.offset += 0;
