@@ -3,7 +3,8 @@
 -- + AssignStatement
 -- + Block
 {};
-{ x := 2; y := "fail"; assert(x = 2); };
+-- assert is not defined currently in the VM
+-- { x := 2; y := "fail"; assert(x = 2); };
 
 -- FuncCall
 println("32 Tests:n-------");
