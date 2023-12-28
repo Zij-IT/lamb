@@ -544,6 +544,8 @@ impl Compiler {
         for jmp in to_elses {
             self.patch_jump(jmp);
         }
+
+        assert_eq!(self.locals.pop().unwrap().name, SCRUTINEE);
     }
 
     fn compile_case_arm<'ast>(&mut self, c: &'ast CaseArm, gc: &mut LambGc) -> JumpIdx {
@@ -567,16 +569,11 @@ impl Compiler {
             self.add_local(i.clone());
         }
 
-        self.func.chunk.constants.push(Value::Int(
-            i64::try_from(offset_before_arm).unwrap() - 1_i64,
-        ));
-
-        self.write_op(Op::GetLocal(
-            u16::try_from(self.func.chunk.constants.len() - 1).unwrap(),
-        ));
+        self.write_op(Op::GetLocal(u16::try_from(offset_before_arm).unwrap()));
 
         self.compile_pattern(pattern, gc);
 
+        let offset_match = self.block.offset;
         let if_no_match = self.write_jump(Jump::IfFalse);
 
         // If match ----->
@@ -588,6 +585,7 @@ impl Compiler {
         }
 
         self.write_op(Op::SaveValue);
+
         // Remove scrutinee dup
         self.write_op(Op::Pop);
 
@@ -601,6 +599,11 @@ impl Compiler {
 
         let past_arms = self.write_jump(Jump::Always);
         // <----- If match
+
+        // Only one of these are run, so we want to set the offset
+        // to before the "If match" was executed.
+        self.block.offset = offset_match;
+
         // If no match ----->
         self.patch_jump(if_no_match);
 
@@ -686,7 +689,7 @@ impl Compiler {
                 let mut ends = Vec::with_capacity(min_len);
                 for (idx, pat) in head.iter().enumerate() {
                     ends.push(self.write_jump(Jump::IfFalse));
-
+                    self.write_op(Op::Pop);
                     self.write_op(Op::Dup);
                     self.write_const_op(Value::Int(idx.try_into().unwrap()));
                     self.write_op(Op::Index);
@@ -705,9 +708,10 @@ impl Compiler {
                 for (idx, pat) in tail.iter().enumerate() {
                     ends.push(self.write_jump(Jump::IfFalse));
 
+                    self.write_op(Op::Pop);
                     self.write_op(Op::Dup);
                     self.write_const_op(Value::Int((tail.len() - 1 - idx).try_into().unwrap()));
-                    self.write_op(Op::Index);
+                    self.write_op(Op::IndexRev);
 
                     self.compile_pattern(pat, gc);
 
