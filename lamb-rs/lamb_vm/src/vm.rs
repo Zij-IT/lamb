@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap, ops};
+use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
 
 use crate::{
     chunk::{Chunk, Op},
@@ -305,12 +305,12 @@ impl Vm {
                 Op::LShift => self.num_bin_op(ops::Shl::shl),
                 Op::RShift => self.num_bin_op(ops::Shr::shr),
 
-                Op::Eq => self.value_cmp_op(|o| matches!(o, Ordering::Equal)),
+                Op::Eq => self.value_eq_op(identity),
+                Op::Ne => self.value_eq_op(ops::Not::not),
                 Op::Ge => self.value_cmp_op(|o| matches!(o, Ordering::Equal | Ordering::Greater)),
                 Op::Gt => self.value_cmp_op(|o| matches!(o, Ordering::Greater)),
                 Op::Le => self.value_cmp_op(|o| matches!(o, Ordering::Less | Ordering::Equal)),
                 Op::Lt => self.value_cmp_op(|o| matches!(o, Ordering::Less)),
-                Op::Ne => self.value_cmp_op(|o| matches!(o, Ordering::Less | Ordering::Greater)),
             }
         }
     }
@@ -418,6 +418,21 @@ impl Vm {
         };
 
         self.push(Value::Bool(f(ord)))
+    }
+
+    fn value_eq_op<F>(&mut self, f: F)
+    where
+        F: Fn(bool) -> bool,
+    {
+        let rhs = self.pop();
+        let lhs = self.pop();
+
+        let eq = match lhs.compare(&rhs, &self.gc) {
+            Some(Ordering::Equal) => true,
+            _ => false,
+        };
+
+        self.push(Value::Bool(f(eq)))
     }
 
     fn close_upvalues(&mut self, slot: usize) {
