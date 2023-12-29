@@ -240,11 +240,12 @@ impl Compiler {
             | Op::GetLocal(_)
             | Op::GetUpvalue(_)
             | Op::Len
+            | Op::Slice(_)
             | Op::UnsaveValue => self.block.offset += 1,
             Op::MakeArray(0) => self.block.offset += 1,
             Op::MakeArray(elems) => self.block.offset -= usize::from(elems) - 1,
             Op::Call(off) => self.block.offset -= usize::from(off),
-            Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) | Op::Slice(_) => {
+            Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) => {
                 self.block.offset += 0;
             }
             Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
