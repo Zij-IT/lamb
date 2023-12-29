@@ -418,6 +418,7 @@ impl Compiler {
         let orig_self = std::mem::replace(self, composition);
 
         self.enclosing = Some(Box::new(orig_self));
+        self.func.arity += 1;
         self.start_block();
         self.compile_expr(lhs, gc);
         self.compile_expr(rhs, gc);
