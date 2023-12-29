@@ -355,6 +355,13 @@ impl Vm {
                 let s = self.gc.intern(format!("{l}{r}"));
                 self.push(Value::String(s));
             }
+            (Value::Array(larr), Value::Array(rarr)) => {
+                let l = self.gc.deref(larr);
+                let r = self.gc.deref(rarr);
+                let arr = l.into_iter().chain(r.into_iter()).copied().collect();
+                let arr_ref = self.gc.alloc(arr);
+                self.push(Value::Array(arr_ref));
+            }
             _ => panic!("type error!"),
         }
     }

@@ -155,6 +155,14 @@ impl From<Vec<Value>> for LambArray {
     }
 }
 
+impl FromIterator<Value> for LambArray {
+    fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
+        Self {
+            items: iter.into_iter().collect(),
+        }
+    }
+}
+
 impl IntoIterator for LambArray {
     type Item = Value;
 
