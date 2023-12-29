@@ -572,7 +572,9 @@ impl Compiler {
             self.add_local(i.clone());
         }
 
-        self.write_op(Op::GetLocal(u16::try_from(offset_before_arm).unwrap()));
+        self.write_op(Op::GetLocal(
+            u16::try_from(self.block.base + offset_before_arm - 1).unwrap(),
+        ));
 
         self.compile_pattern(pattern, gc);
 
