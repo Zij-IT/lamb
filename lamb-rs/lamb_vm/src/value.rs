@@ -25,7 +25,7 @@ impl Value {
             Value::Nil => "nil".into(),
             Value::Int(i) => i.to_string(),
             Value::Bool(b) => b.to_string(),
-            Value::Char(c) => c.to_string(),
+            Value::Char(c) => format!("'{c}'"),
             Value::Double(d) => d.to_string(),
             Value::Array(a) => {
                 let arr = gc.deref(*a);
