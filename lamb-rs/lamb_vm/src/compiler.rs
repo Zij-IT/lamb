@@ -707,6 +707,40 @@ impl Compiler {
                     self.write_op(Op::UnsaveValue);
                 }
 
+                // Assign dot locals the proper patterns
+                if let Some(rest) = dots.as_deref() {
+                    let bindings = rest.binding_names();
+                    if bindings.len() > 0 {
+                        let start = head.len();
+                        let dist_from_end = tail.len();
+
+                        let max = usize::try_from(u32::MAX).unwrap();
+                        if start > max || dist_from_end > max {
+                            panic!("crap");
+                        }
+
+                        let start = (start as u64) << u32::BITS;
+                        let dist_from_end = dist_from_end as u64;
+                        let repr = (start | dist_from_end) as i64;
+
+                        ends.push(self.write_jump(Jump::IfFalse));
+                        self.write_op(Op::Pop);
+
+                        self.func.chunk.constants.push(Value::Int(repr));
+                        self.write_op(Op::Slice(
+                            u16::try_from(self.func.chunk.constants.len() - 1).unwrap(),
+                        ));
+
+                        for Ident(bind) in bindings {
+                            let slot = self.local_slot(bind).unwrap();
+                            self.write_op(Op::SetSlot(u16::try_from(slot).unwrap()))
+                        }
+
+                        self.write_op(Op::Pop);
+                        self.write_const_op(Value::Bool(true));
+                    }
+                }
+
                 for (idx, pat) in tail.iter().enumerate() {
                     ends.push(self.write_jump(Jump::IfFalse));
 
