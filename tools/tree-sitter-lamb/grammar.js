@@ -21,6 +21,9 @@ module.exports = grammar({
     $.line_comment,
     /[\s\f\uFEFF\u2060\u200B]|\\\r?\n/
   ],
+  conflicts: $ => [
+    [$.case_arm, $._expression],
+  ],
   rules: {
     // Rules    
     file: $ => choice(
@@ -174,12 +177,40 @@ module.exports = grammar({
     ),
     
     case_arm: $ => seq(
-      choice($._literal, $.identifier),
+      $._pattern,
       '->',
       choice(
-        seq($.block),
+        $.block,
         seq($._expression, ',')
       ),
+    ),
+
+    _pattern: $ => sep_req_one(
+      $._pattern_top,
+      '|'
+    ),
+
+    _pattern_top: $ => choice(
+      $.rest_pattern,
+      $.literal_pattern,
+      $.array_pattern,
+      $.binding
+    ),
+
+    rest_pattern: $ => "..",
+    
+    literal_pattern: $ => $._literal,
+    
+    array_pattern: $ => seq(
+      '[',
+        optional(comma_sep_req_one($._pattern)),
+        optional(','),
+      ']',
+    ),
+    
+    binding: $ => seq(
+      $.identifier,
+      optional(seq('@', $._pattern_top,))
     ),
     
     grouped: $ => seq(
