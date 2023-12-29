@@ -7,7 +7,7 @@
 -- { x := 2; y := "fail"; assert(x = 2); };
 
 -- FuncCall
-println("32 Tests:n-------");
+println("33 Tests:n-------");
 { x := "pass 1"; y := "fail"; println(x); };
 
 -- Define global

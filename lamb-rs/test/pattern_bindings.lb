@@ -1,4 +1,4 @@
-println("14 Tests:n--------");
+println("20 Tests:n--------");
 
 case 1 {
   1 -> { x := "pass 1"; y := "fail"; println(x); },
@@ -38,3 +38,18 @@ case [1] {
   [x @ 1] -> { x := "pass 13"; y := "fail"; println(x); },
 };
 { x := "pass 14"; y := "fail"; println(x); };
+
+case [1] {
+  [1, i @ ..] -> { x := "pass 15"; y := "fail"; println(x); },
+};
+{ x := "pass 16"; y := "fail"; println(x); };
+
+case [1] {
+  [i @ .., 1] -> { x := "pass 17"; y := "fail"; println(x); },
+};
+{ x := "pass 18"; y := "fail"; println(x); };
+
+case [1] {
+  [i @ ..] -> { x := "pass 19"; y := "fail"; println(x); },
+};
+{ x := "pass 20"; y := "fail"; println(x); };
