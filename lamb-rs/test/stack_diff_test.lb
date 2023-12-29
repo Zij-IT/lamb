@@ -7,7 +7,7 @@
 -- { x := 2; y := "fail"; assert(x = 2); };
 
 -- FuncCall
-println("33 Tests:n-------");
+println("34 Tests:n-------");
 { x := "pass 1"; y := "fail"; println(x); };
 
 -- Define global
@@ -127,3 +127,5 @@ false || { x := "pass 30"; y := "fail"; println(x); true };
 
 -- Test that this works after!
 { z := ["pass 33", "fail"][[0][{ x := 0; y := 1; x }]]; println(z); };
+
+(fn(a, b, c) -> { x := "fail"; y := "pass 34"; println(y); })("fail", "fail", "fail");

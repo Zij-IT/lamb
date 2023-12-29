@@ -131,6 +131,7 @@ impl Compiler {
         self.func.chunk.constants.push(Value::String(rf));
         self.add_local(arg.clone());
         self.func.arity += 1;
+        self.block.offset += 1;
     }
 
     fn add_local(&mut self, name: String) {
