@@ -217,14 +217,15 @@ impl PatternTop {
             PatternTop::Ident(i, pat) => std::iter::once(i)
                 .chain(pat.as_ref().map_or(Vec::new(), |b| b.binding_names()))
                 .collect(),
-            PatternTop::Array(ArrayPattern::Elements {
-                head,
-                tail,
-                dots: _dots,
-            }) => head
+            PatternTop::Array(ArrayPattern::Elements { head, tail, dots }) => head
                 .iter()
-                .chain(tail.iter())
                 .map(Pattern::binding_names)
+                .chain(
+                    dots.as_deref()
+                        .map_or(Vec::new(), |p| vec![p.binding_names()])
+                        .into_iter(),
+                )
+                .chain(tail.iter().map(Pattern::binding_names))
                 .flatten()
                 .collect(),
             PatternTop::Array(ArrayPattern::Err) => {
