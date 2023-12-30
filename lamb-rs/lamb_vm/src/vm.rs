@@ -448,9 +448,9 @@ impl Vm {
             if up.index >= slot {
                 let loc = up.index;
                 up.closed = Some(stack[loc]);
-                true
-            } else {
                 false
+            } else {
+                true
             }
         });
     }
