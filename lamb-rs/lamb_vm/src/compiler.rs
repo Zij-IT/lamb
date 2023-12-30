@@ -501,6 +501,7 @@ impl Compiler {
         }
 
         // compile else
+        self.write_op(Op::Pop);
         if let Some(Else { block }) = els.as_deref() {
             self.compile_block(block, gc);
         } else {
@@ -520,10 +521,10 @@ impl Compiler {
     ) -> JumpIdx {
         self.compile_expr(cond, gc);
         let cond_false = self.write_jump(Jump::IfFalse);
+        self.write_op(Op::Pop);
         self.compile_block(block, gc);
         let past_else = self.write_jump(Jump::Always);
         self.patch_jump(cond_false);
-        self.write_op(Op::Pop);
         past_else
     }
 
