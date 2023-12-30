@@ -7,7 +7,7 @@
 -- { x := 2; y := "fail"; assert(x = 2); };
 
 -- FuncCall
-println("34 Tests:n-------");
+println("36 Tests:n-------");
 { x := "pass 1"; y := "fail"; println(x); };
 
 -- Define global
@@ -69,8 +69,8 @@ print .> print; print <. print;
 [1,2,3][[1][0]];
 { x := "pass 16"; y := "fail"; println(x); };
 
--- If without elif & else
-if true { };
+-- If without elif & without else
+if false { };
 { x := "pass 17"; y := "fail"; println(x); };
 
 -- If without elif & with else
@@ -89,43 +89,47 @@ if true { } elif true { } elif true { };
 if true { } elif true { } elif true { } else { };
 { x := "pass 21"; y := "fail"; println(x); };
 
+-- If with else inside else
+if false { } else { y := "pass 22"; println(y); };
+{ x := "pass 23"; y := "fail"; println(x); };
+
 -- Case without arms
 case false {};
-{ x := "pass 22"; y := "fail"; println(x); };
+{ x := "pass 24"; y := "fail"; println(x); };
 
 -- Case with 1 arm
 case false { true -> 1, };
-{ x := "pass 23"; y := "fail"; println(x); };
+{ x := "pass 25"; y := "fail"; println(x); };
 
 -- Case with 2 arm, no match
 case false { true -> 1, false -> 2, };
-{ x := "pass 24"; y := "fail"; println(x); };
+{ x := "pass 26"; y := "fail"; println(x); };
 
 -- Case with 2 arms, last match
 case false { true -> 1, false -> 2, };
-{ x := "pass 25"; y := "fail"; println(x); };
+{ x := "pass 27"; y := "fail"; println(x); };
 
 -- Case with 3 arms, no match
 case 1 { 2 -> 1, 3 -> 2, 5 -> 2, };
-{ x := "pass 26"; y := "fail"; println(x); };
-
--- Case with 3 arms, last match
-case 1 { 2 -> 1, 3 -> 2, 1 -> { x := "pass 27"; y := "fail"; println(x); }, };
 { x := "pass 28"; y := "fail"; println(x); };
 
+-- Case with 3 arms, last match
+case 1 { 2 -> 1, 3 -> 2, 1 -> { x := "pass 29"; y := "fail"; println(x); }, };
+{ x := "pass 30"; y := "fail"; println(x); };
+
 -- Block expression in RHS of LogAnd
-true  && { x := "pass 29"; y := "fail"; println(x); true };
+true  && { x := "pass 31"; y := "fail"; println(x); true };
 
 -- Block expression in RHS of LogOr
-false || { x := "pass 30"; y := "fail"; println(x); true };
+false || { x := "pass 32"; y := "fail"; println(x); true };
 
 -- Array followed by block expression
-{ z := ["pass 31", "fail"][[0][{ x := 0; y := 1; x }]]; println(z); };
-
--- Empty array followed by block expression (this can't be run)
-[nil][{ x := "fail"; y := "pass 32"; println(y); 0 }];
-
--- Test that this works after!
 { z := ["pass 33", "fail"][[0][{ x := 0; y := 1; x }]]; println(z); };
 
-(fn(a, b, c) -> { x := "fail"; y := "pass 34"; println(y); })("fail", "fail", "fail");
+-- Empty array followed by block expression (this can't be run)
+[nil][{ x := "fail"; y := "pass 34"; println(y); 0 }];
+
+-- Test that this works after!
+{ z := ["pass 35", "fail"][[0][{ x := 0; y := 1; x }]]; println(z); };
+
+(fn(a, b, c) -> { x := "fail"; y := "pass 36"; println(y); })("fail", "fail", "fail");
