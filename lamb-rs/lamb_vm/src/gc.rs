@@ -1,9 +1,6 @@
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{
-    chunk::Op,
-    value::{FuncUpvalue, LambArray, LambClosure, LambFunc, LambString, Upvalue, Value},
-};
+use crate::value::LambString;
 
 pub struct LambGc {
     free_slots: Vec<usize>,
@@ -100,152 +97,161 @@ impl<T> std::hash::Hash for GcRef<T> {
     }
 }
 
-enum GcItemRaw {
-    Array(LambArray),
-    Closure(LambClosure),
-    String(LambString),
-    Upvalue(Upvalue),
-    Func(LambFunc),
-}
+mod sealed {
+    use crate::{
+        chunk::Op,
+        value::{FuncUpvalue, LambArray, LambClosure, LambFunc, LambString, Upvalue, Value},
+    };
 
-impl GcItemRaw {
-    fn size(&self) -> usize {
-        match self {
-            GcItemRaw::Upvalue(u) => std::mem::size_of::<Upvalue>(),
-            GcItemRaw::Array(a) => a.capacity() + std::mem::size_of::<LambArray>(),
-            GcItemRaw::String(s) => s.capacity() + std::mem::size_of::<LambString>(),
-            GcItemRaw::Closure(c) => {
-                std::mem::size_of::<LambClosure>()
-                    + c.upvalues.capacity() * std::mem::size_of::<Upvalue>()
+    pub trait Allocable {
+        fn into_raw(self) -> GcItemRaw;
+
+        fn from_raw(item: &GcItemRaw) -> &Self;
+
+        fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self;
+    }
+
+    pub enum GcItemRaw {
+        Array(LambArray),
+        Closure(LambClosure),
+        String(LambString),
+        Upvalue(Upvalue),
+        Func(LambFunc),
+    }
+
+    impl GcItemRaw {
+        pub(super) fn size(&self) -> usize {
+            match self {
+                GcItemRaw::Upvalue(u) => std::mem::size_of::<Upvalue>(),
+                GcItemRaw::Array(a) => a.capacity() + std::mem::size_of::<LambArray>(),
+                GcItemRaw::String(s) => s.capacity() + std::mem::size_of::<LambString>(),
+                GcItemRaw::Closure(c) => {
+                    std::mem::size_of::<LambClosure>()
+                        + c.upvalues.capacity() * std::mem::size_of::<Upvalue>()
+                }
+                GcItemRaw::Func(f) => {
+                    std::mem::size_of::<LambFunc>()
+                        + f.upvalues.capacity() * std::mem::size_of::<FuncUpvalue>()
+                        + f.chunk.code.capacity() * std::mem::size_of::<Op>()
+                        + f.chunk.constants.capacity() * std::mem::size_of::<Value>()
+                }
             }
-            GcItemRaw::Func(f) => {
-                std::mem::size_of::<LambFunc>()
-                    + f.upvalues.capacity() * std::mem::size_of::<FuncUpvalue>()
-                    + f.chunk.code.capacity() * std::mem::size_of::<Op>()
-                    + f.chunk.constants.capacity() * std::mem::size_of::<Value>()
+        }
+
+        pub(super) fn as_inner<T: Allocable>(&self) -> &T {
+            <T as Allocable>::from_raw(self)
+        }
+
+        pub(super) fn as_inner_mut<T: Allocable>(&mut self) -> &mut T {
+            <T as Allocable>::from_raw_mut(self)
+        }
+    }
+
+    pub struct GcItem {
+        pub(super) obj: GcItemRaw,
+        pub(super) size: usize,
+        pub(super) is_marked: bool,
+    }
+
+    impl Allocable for LambString {
+        fn into_raw(self) -> GcItemRaw {
+            GcItemRaw::String(self)
+        }
+
+        fn from_raw(item: &GcItemRaw) -> &Self {
+            match item {
+                GcItemRaw::String(s) => s,
+                _ => panic!("Bad type!"),
+            }
+        }
+
+        fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+            match item {
+                GcItemRaw::String(s) => s,
+                _ => panic!("Bad type!"),
             }
         }
     }
 
-    fn as_inner<T: Allocable>(&self) -> &T {
-        <T as Allocable>::from_raw(self)
-    }
+    impl Allocable for LambFunc {
+        fn into_raw(self) -> GcItemRaw {
+            GcItemRaw::Func(self)
+        }
 
-    fn as_inner_mut<T: Allocable>(&mut self) -> &mut T {
-        <T as Allocable>::from_raw_mut(self)
-    }
-}
+        fn from_raw(item: &GcItemRaw) -> &Self {
+            match item {
+                GcItemRaw::Func(s) => s,
+                _ => panic!("Bad type!"),
+            }
+        }
 
-struct GcItem {
-    obj: GcItemRaw,
-    size: usize,
-    is_marked: bool,
-}
-
-trait Allocable {
-    fn into_raw(self) -> GcItemRaw;
-
-    fn from_raw(item: &GcItemRaw) -> &Self;
-
-    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self;
-}
-
-impl Allocable for LambString {
-    fn into_raw(self) -> GcItemRaw {
-        GcItemRaw::String(self)
-    }
-
-    fn from_raw(item: &GcItemRaw) -> &Self {
-        match item {
-            GcItemRaw::String(s) => s,
-            _ => panic!("Bad type!"),
+        fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+            match item {
+                GcItemRaw::Func(s) => s,
+                _ => panic!("Bad type!"),
+            }
         }
     }
 
-    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
-        match item {
-            GcItemRaw::String(s) => s,
-            _ => panic!("Bad type!"),
+    impl Allocable for LambClosure {
+        fn into_raw(self) -> GcItemRaw {
+            GcItemRaw::Closure(self)
         }
-    }
-}
 
-impl Allocable for LambFunc {
-    fn into_raw(self) -> GcItemRaw {
-        GcItemRaw::Func(self)
-    }
-
-    fn from_raw(item: &GcItemRaw) -> &Self {
-        match item {
-            GcItemRaw::Func(s) => s,
-            _ => panic!("Bad type!"),
+        fn from_raw(item: &GcItemRaw) -> &Self {
+            match item {
+                GcItemRaw::Closure(s) => s,
+                _ => panic!("Bad type!"),
+            }
         }
-    }
 
-    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
-        match item {
-            GcItemRaw::Func(s) => s,
-            _ => panic!("Bad type!"),
-        }
-    }
-}
-
-impl Allocable for LambClosure {
-    fn into_raw(self) -> GcItemRaw {
-        GcItemRaw::Closure(self)
-    }
-
-    fn from_raw(item: &GcItemRaw) -> &Self {
-        match item {
-            GcItemRaw::Closure(s) => s,
-            _ => panic!("Bad type!"),
+        fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+            match item {
+                GcItemRaw::Closure(s) => s,
+                _ => panic!("Bad type!"),
+            }
         }
     }
 
-    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
-        match item {
-            GcItemRaw::Closure(s) => s,
-            _ => panic!("Bad type!"),
+    impl Allocable for LambArray {
+        fn into_raw(self) -> GcItemRaw {
+            GcItemRaw::Array(self)
+        }
+
+        fn from_raw(item: &GcItemRaw) -> &Self {
+            match item {
+                GcItemRaw::Array(s) => s,
+                _ => panic!("Bad type!"),
+            }
+        }
+
+        fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+            match item {
+                GcItemRaw::Array(s) => s,
+                _ => panic!("Bad type!"),
+            }
         }
     }
-}
 
-impl Allocable for LambArray {
-    fn into_raw(self) -> GcItemRaw {
-        GcItemRaw::Array(self)
-    }
-
-    fn from_raw(item: &GcItemRaw) -> &Self {
-        match item {
-            GcItemRaw::Array(s) => s,
-            _ => panic!("Bad type!"),
+    impl Allocable for Upvalue {
+        fn into_raw(self) -> GcItemRaw {
+            GcItemRaw::Upvalue(self)
         }
-    }
 
-    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
-        match item {
-            GcItemRaw::Array(s) => s,
-            _ => panic!("Bad type!"),
+        fn from_raw(item: &GcItemRaw) -> &Self {
+            match item {
+                GcItemRaw::Upvalue(s) => s,
+                _ => panic!("Bad type!"),
+            }
+        }
+
+        fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
+            match item {
+                GcItemRaw::Upvalue(s) => s,
+                _ => panic!("Bad type!"),
+            }
         }
     }
 }
 
-impl Allocable for Upvalue {
-    fn into_raw(self) -> GcItemRaw {
-        GcItemRaw::Upvalue(self)
-    }
-
-    fn from_raw(item: &GcItemRaw) -> &Self {
-        match item {
-            GcItemRaw::Upvalue(s) => s,
-            _ => panic!("Bad type!"),
-        }
-    }
-
-    fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self {
-        match item {
-            GcItemRaw::Upvalue(s) => s,
-            _ => panic!("Bad type!"),
-        }
-    }
-}
+use sealed::{Allocable, GcItem};
