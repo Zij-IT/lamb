@@ -17,6 +17,10 @@ input $> part_one .> println;
 
 More examples can be found in the [examples](examples) folder.
 
+## How to Use
+
+Currently Lamb is only available by building from source; this should only require [Rust](https://www.rust-lang.org/tools/install). After installing Rust and downloading the source it can be built by running `cargo run --release -- [PATH]`. If no path is provided, the REPL is run. The REPL is also a work and progress and only parses the input as a whole, so to allow code to execute, either `CTRL-D` or `:quit` must be used.
+
 ## Goals
 
 I have no farfetched hopes for Lamb to being a production language. This project is being developed for
