@@ -27,6 +27,11 @@ sum := rec fn(xs) -> case xs {
   [] -> 0,
 };
 
+product := rec fn(xs) -> case xs {
+  [y, rest @ ..] -> y * product(rest),
+  [] -> 1,
+};
+
 char_to_num := fn(ch) -> case ch {
   '1' -> 1,
   '2' -> 2,
@@ -69,11 +74,17 @@ ribbon := fn(x) -> case x {
   }
 };
 
-input $> (fn(i) -> map(get_nums, i)) $> sum;
-
-
-part_one := input $> map(get_nums .> ribbon, $) .> sum;
+ribbon_pt2 := fn(x) -> case x {
+  [l, w, h] ->
+    if   l >= w && l >= h { w + h }
+    elif h >= w && h >= l { w + l }
+    else                  { l + h } * 2 + product(x),
+};
 
 part_one := map(get_nums .> ribbon, input) $> sum;
 
+part_two := map(get_nums .> ribbon_pt2, input) $> sum;
+
 println(part_one);
+
+println(part_two);
