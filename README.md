@@ -53,3 +53,7 @@ In the future I would like to be able to add the following:
   - [ ] ...
   - [ ] Dead-Code Removal
 - [ ] Pattern exhaustivity checking
+
+## Tooling
+
+(tools/tree-sitter-lamb)[tools/tree-sitter-lamb] contains a tree-sitter grammar for use with editors that are able to use this for syntax highlighting.
