@@ -6,7 +6,7 @@ This chapter will go through some of the types available in Lamb.
 
 ---
 
-`nil` is the simplist value in Lamb as it is both a type, as well as a value. `nil` is the default value of a block that did not end with an expression, or a function that doesn't explicitly return a value. It's similar to `void` from C except that it is also a value.
+`nil` is the simplest value in Lamb as it is both a type, as well as a value. `nil` is the default value of a block that did not end with an expression, or a function that doesn't explicitly return a value. It's similar to `void` from C except that it is also a value.
 
 ```
 assert_eq(nil, {});
@@ -30,7 +30,7 @@ assert_eq(false, !true);
 
 ---
 
-Unlike most other languages of this size, Lamb makes a hard distinction between floating point numbers and integers. They cannot be used interchangably, and attempting to do so will result in a type error. Numbers look just as in other languages:
+Unlike most other languages of this size, Lamb makes a hard distinction between floating point numbers and integers. They cannot be used interchangeably, and attempting to do so will result in a type error. Numbers look just as in other languages:
 
 ```
 -- Integer Literals

@@ -61,7 +61,7 @@ block := {
 
 ---
 
-Fuction definitions in Lamb take the form `fn(<args>) -> <expr>`. This allows them to either be in the short form, like:
+Function definitions in Lamb take the form `fn(<args>) -> <expr>`. This allows them to either be in the short form, like:
 
 ```
 inc := fn(x) -> x + 1;  
