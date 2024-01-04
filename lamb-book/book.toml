@@ -1,0 +1,6 @@
+[book]
+authors = ["Zij-IT"]
+language = "en"
+multilingual = false
+src = "src"
+title = "lamb lang"
