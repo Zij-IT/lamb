@@ -149,7 +149,7 @@ impl Chunk {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::{Chunk, Jump, Op};
 
     #[test]
