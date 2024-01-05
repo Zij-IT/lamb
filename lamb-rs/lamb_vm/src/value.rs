@@ -37,7 +37,7 @@ impl Value {
                 }
 
                 // Pop extra ", "
-                if s.len() > 0 {
+                if s.len() > 1 {
                     s.pop();
                     s.pop();
                 }
