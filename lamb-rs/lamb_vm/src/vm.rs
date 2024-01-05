@@ -6,6 +6,46 @@ use crate::{
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
+macro_rules! num_bin_op {
+    (%, $this:expr) => {{
+        let rhs = $this.pop();
+        let lhs = $this.pop();
+
+        let val = match (lhs, rhs) {
+            (Value::Int(l), Value::Int(r)) => Value::Int(l % r),
+            _ => panic!("type error"),
+        };
+
+        $this.push(val);
+    }};
+    ($op:tt, $this:expr) => {{
+        let rhs = $this.pop();
+        let lhs = $this.pop();
+
+        let val = match (lhs, rhs) {
+            (Value::Int(l), Value::Int(r)) => Value::Int(l $op r),
+            (Value::Double(l), Value::Double(r)) => Value::Double(l $op r),
+            _ => panic!("type error"),
+        };
+
+        $this.push(val);
+    }};
+}
+
+macro_rules! num_un_op {
+    ($op:tt, $this:expr) => {{
+        let rhs = $this.pop();
+
+        let val = match rhs {
+            Value::Int(r) => Value::Int($op r),
+            Value::Double(r) => Value::Double($op r),
+            _ => panic!("type error"),
+        };
+
+        $this.push(val);
+    }};
+}
+
 pub struct Vm {
     gc: LambGc,
     globals: HashMap<GcRef<LambString>, Value>,
@@ -290,18 +330,18 @@ impl Vm {
                     self.push(Value::Array(arr));
                 }
 
-                Op::NumNeg => self.num_un_op(ops::Neg::neg),
+                Op::NumNeg => num_un_op!(-, self),
+                Op::BinNeg => self.num_un_op(ops::Not::not),
                 Op::LogNeg => self.bool_un_op(ops::Not::not),
 
                 Op::Add => self.add_op(),
-                Op::Sub => self.num_bin_op(ops::Sub::sub),
+                Op::Sub => num_bin_op!(-, self),
+                Op::Div => num_bin_op!(/, self),
+                Op::Mod => num_bin_op!(%, self),
+                Op::Mul => num_bin_op!(*, self),
                 Op::BinAnd => self.num_bin_op(ops::BitAnd::bitand),
-                Op::BinNeg => self.num_un_op(ops::Not::not),
                 Op::BinOr => self.num_bin_op(ops::BitOr::bitor),
                 Op::BinXor => self.num_bin_op(ops::BitXor::bitxor),
-                Op::Div => self.num_bin_op(ops::Div::div),
-                Op::Mod => self.num_bin_op(ops::Rem::rem),
-                Op::Mul => self.num_bin_op(ops::Mul::mul),
                 Op::LShift => self.num_bin_op(ops::Shl::shl),
                 Op::RShift => self.num_bin_op(ops::Shr::shr),
 
