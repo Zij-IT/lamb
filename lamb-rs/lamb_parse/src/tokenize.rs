@@ -3,6 +3,7 @@ use chumsky::{
     prelude::*,
     text::{ascii, digits},
 };
+use ordered_float::OrderedFloat;
 
 macro_rules! parse_num {
     ($prefix:literal, $filter:expr, $radix:literal, $on_fail:literal $(,)?) => {
@@ -101,6 +102,7 @@ pub enum Token {
     // Literals
     Nil,
     Num(i64),
+    Double(OrderedFloat<f64>),
     Bool(bool),
     Char(char),
     Str(String),
@@ -137,6 +139,7 @@ impl std::fmt::Display for Token {
             Token::Char(c) => c,
             Token::Ident(i) => i,
             Token::Num(n) => n,
+            Token::Double(f) => f,
             Token::Op(op) => op,
             Token::Str(s) => s,
             Token::Open(Delim::Brace) => &"{",
@@ -205,9 +208,9 @@ pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
         chars(),
         strings(),
         syntax(),
+        numbers(),
         ops(),
         delimeters(),
-        numbers(),
         word,
     ))
     .or(any().validate(|t: char, ex, emitter| {
@@ -292,15 +295,30 @@ fn numbers<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
         "Octal number may only contain [0-7_]"
     );
 
-    let decimal = just("0d")
-        .or_not()
-        .ignore_then(digits(10).separated_by(just('_')).at_least(1).to_slice())
+    let dec = |i| digits(10).separated_by(just('_')).at_least(i).to_slice();
+
+    let dec_num = dec(1)
         .map(|s: I<'a>| s.chars().filter(|&c| c != '_').collect::<String>())
         .from_str()
         .unwrapped()
         .map(Token::Num);
 
-    choice((binary, hex, octal, decimal))
+    let decimal = just("0d").or_not().ignore_then(dec_num);
+
+    let exp = one_of("eE").then(one_of("+-")).then(dec(1));
+
+    let floats = choice((
+        dec(0).then(just('.')).then(dec(1)),
+        dec(1).then(just('.')).then(dec(0)),
+    ))
+    .then(exp.or_not())
+    .to_slice()
+    .map(|s: &str| s.chars().filter(|&c| c != '_').collect::<String>())
+    .from_str()
+    .unwrapped()
+    .map(Token::Double);
+
+    choice((floats, binary, hex, octal, decimal))
         .then(ascii::ident().or_not().map_with(|t, ex| (t, ex.span())))
         .validate(|(num, (t, s)), _, emitter| {
             if !t.map_or(true, str::is_empty) {

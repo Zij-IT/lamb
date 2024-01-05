@@ -1,3 +1,5 @@
+use ordered_float::OrderedFloat;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Either<L, R> {
     Left(L),
@@ -252,6 +254,7 @@ impl PatternTop {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Literal {
     Num(i64),
+    Double(OrderedFloat<f64>),
     Str(String),
     Char(char),
     Bool(bool),

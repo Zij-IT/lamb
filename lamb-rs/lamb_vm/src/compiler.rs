@@ -804,6 +804,7 @@ impl Compiler {
 
     fn compile_literal<'ast>(&mut self, l: &'ast Literal, gc: &mut LambGc) {
         match l {
+            Literal::Double(d) => self.write_const_op(Value::Double(d.0)),
             Literal::Str(s) => self.write_const_op(Value::String(gc.intern(s))),
             Literal::Num(i) => self.write_const_op(Value::Int(*i)),
             Literal::Char(c) => self.write_const_op(Value::Char(*c)),

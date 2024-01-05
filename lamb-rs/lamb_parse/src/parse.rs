@@ -347,6 +347,7 @@ where
     select! {
         Token::Nil => Literal::Nil,
         Token::Num(l) => Literal::Num(l),
+        Token::Double(l) => Literal::Double(l),
         Token::Bool(l) => Literal::Bool(l),
         Token::Char(l) => Literal::Char(l),
         Token::Str(l) => Literal::Str(l),

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 lamb_ast = { path = "../lamb_ast" }
 chumsky = { version = "1.0.0-6.alpha", features = ["pratt", "label"] }
+ordered-float = "4.2.0"
