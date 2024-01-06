@@ -55,7 +55,7 @@ where
         RichReason::ExpectedFound { found, expected } => {
             let found = match found {
                 Some(f) => format!("'{}'", &**f),
-                None => format!("EOF"),
+                None => "EOF".to_string(),
             };
 
             match expected.len() {
@@ -75,7 +75,7 @@ where
     }
 }
 
-fn format_expected<'a, T>(patterns: &[RichPattern<'a, T>]) -> String
+fn format_expected<T>(patterns: &[RichPattern<'_, T>]) -> String
 where
     T: std::fmt::Display,
 {
@@ -85,8 +85,8 @@ where
         1 => patterns[0].to_string(),
         2 => format!(
             "either {} or {}",
-            patterns[0].to_string(),
-            patterns[1].to_string()
+            patterns[0],
+            patterns[1]
         ),
         len => {
             let first = &patterns[0];
@@ -101,9 +101,9 @@ where
 
             format!(
                 "one of {}{}, or {}",
-                first.to_string(),
+                first,
                 mid,
-                last.to_string()
+                last
             )
         }
     }

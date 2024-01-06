@@ -8,6 +8,12 @@ pub struct LambGc {
     strings: HashMap<String, GcRef<LambString>>,
 }
 
+impl Default for LambGc {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LambGc {
     pub fn new() -> Self {
         Self {
@@ -46,7 +52,7 @@ impl LambGc {
     pub fn intern(&mut self, s: impl Into<String>) -> GcRef<LambString> {
         let s = s.into();
         if let Some(s) = self.strings.get(&s) {
-            return *s;
+            *s
         } else {
             let str = LambString::new(s.clone());
             let str_ref = self.alloc(str);
@@ -122,7 +128,7 @@ mod sealed {
     impl GcItemRaw {
         pub(super) fn size(&self) -> usize {
             match self {
-                GcItemRaw::Upvalue(u) => std::mem::size_of::<Upvalue>(),
+                GcItemRaw::Upvalue(_u) => std::mem::size_of::<Upvalue>(),
                 GcItemRaw::Array(a) => a.capacity() + std::mem::size_of::<LambArray>(),
                 GcItemRaw::String(s) => s.capacity() + std::mem::size_of::<LambString>(),
                 GcItemRaw::Closure(c) => {

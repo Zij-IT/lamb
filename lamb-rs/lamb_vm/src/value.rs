@@ -30,7 +30,7 @@ impl Value {
             Value::Array(a) => {
                 let arr = gc.deref(*a);
                 let mut s = String::with_capacity(32);
-                s.push_str("[");
+                s.push('[');
                 for i in arr {
                     s.push_str(i.format(gc).as_str());
                     s.push_str(", ");
@@ -42,7 +42,7 @@ impl Value {
                     s.pop();
                 }
 
-                s.push_str("]");
+                s.push(']');
                 s
             }
             Value::String(s) => gc.deref(*s).0.to_string(),
@@ -110,6 +110,12 @@ pub struct LambArray {
     items: Vec<Value>,
 }
 
+impl Default for LambArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LambArray {
     pub fn new() -> Self {
         Self { items: Vec::new() }
@@ -133,8 +139,8 @@ impl LambArray {
 
     pub fn compare(&self, other: &Self, gc: &LambGc) -> Option<Ordering> {
         match self.items.len().cmp(&other.items.len()) {
-            Ordering::Less => return Some(Ordering::Less),
-            Ordering::Greater => return Some(Ordering::Greater),
+            Ordering::Less => Some(Ordering::Less),
+            Ordering::Greater => Some(Ordering::Greater),
             Ordering::Equal => self
                 .items
                 .iter()
@@ -179,7 +185,7 @@ impl<'a> IntoIterator for &'a LambArray {
     type IntoIter = <&'a Vec<Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.items).into_iter()
+        self.items.iter()
     }
 }
 
@@ -189,7 +195,7 @@ impl<'a> IntoIterator for &'a mut LambArray {
     type IntoIter = <&'a mut Vec<Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&mut self.items).into_iter()
+        self.items.iter_mut()
     }
 }
 

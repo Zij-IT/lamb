@@ -3,7 +3,7 @@ use crate::tokenize::{Delim, Op, Token};
 use chumsky::{
     extra,
     input::ValueInput,
-    prelude::{empty, Input, Rich},
+    prelude::{Input, Rich},
     primitive::{any, choice, just, none_of},
     recovery::{via_parser, ViaParser},
     recursive::recursive,

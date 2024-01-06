@@ -41,7 +41,7 @@ where
 
     let eoi = SimpleSpan::new(src.len(), src.len());
     match parser
-        .parse(Stream::from_iter(tokens.into_iter()).spanned(eoi))
+        .parse(Stream::from_iter(tokens).spanned(eoi))
         .into_output_errors()
     {
         (Some(t), errs) if errs.is_empty() => Ok(t),

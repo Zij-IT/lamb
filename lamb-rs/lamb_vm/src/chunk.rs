@@ -103,6 +103,12 @@ pub struct Chunk {
     pub constants: Vec<Value>,
 }
 
+impl Default for Chunk {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Chunk {
     pub fn new() -> Self {
         Self {
@@ -159,6 +165,6 @@ mod test {
         chunk.write_op(Op::Add);
         chunk.patch_jmp(idx);
 
-        assert_eq!(chunk.code.get(0), Some(&Op::Jump(1)));
+        assert_eq!(chunk.code.first(), Some(&Op::Jump(1)));
     }
 }

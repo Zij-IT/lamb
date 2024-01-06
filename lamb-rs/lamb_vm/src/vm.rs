@@ -398,7 +398,7 @@ impl Vm {
             (Value::Array(larr), Value::Array(rarr)) => {
                 let l = self.gc.deref(larr);
                 let r = self.gc.deref(rarr);
-                let arr = l.into_iter().chain(r.into_iter()).copied().collect();
+                let arr = l.into_iter().chain(r).copied().collect();
                 let arr_ref = self.gc.alloc(arr);
                 self.push(Value::Array(arr_ref));
             }
@@ -466,11 +466,7 @@ impl Vm {
     {
         let rhs = self.pop();
         let lhs = self.pop();
-
-        let eq = match lhs.compare(&rhs, &self.gc) {
-            Some(Ordering::Equal) => true,
-            _ => false,
-        };
+        let eq = matches!(lhs.compare(&rhs, &self.gc), Some(Ordering::Equal));
 
         self.push(Value::Bool(f(eq)))
     }

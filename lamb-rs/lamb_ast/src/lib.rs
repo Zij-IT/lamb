@@ -187,8 +187,7 @@ impl Pattern {
     pub fn binding_names(&self) -> Vec<&Ident> {
         self.pattern
             .iter()
-            .map(PatternTop::binding_names)
-            .flatten()
+            .flat_map(PatternTop::binding_names)
             .collect()
     }
 }
@@ -224,8 +223,7 @@ impl PatternTop {
                 .map(Pattern::binding_names)
                 .chain(
                     dots.as_deref()
-                        .map_or(Vec::new(), |p| vec![p.binding_names()])
-                        .into_iter(),
+                        .map_or(Vec::new(), |p| vec![p.binding_names()]),
                 )
                 .chain(tail.iter().map(Pattern::binding_names))
                 .flatten()
