@@ -344,14 +344,25 @@ where
     S: 'a,
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
 {
-    select! {
+    (select! {
         Token::Nil => Literal::Nil,
-        Token::Num(l) => Literal::Num(l),
-        Token::Double(l) => Literal::Double(l),
         Token::Bool(l) => Literal::Bool(l),
         Token::Char(l) => Literal::Char(l),
         Token::Str(l) => Literal::Str(l),
-    }
+    })
+    .or(just(Token::Op(Op::Sub))
+        .or_not()
+        .then(select! {
+            Token::Num(l) => Literal::Num(l),
+            Token::Double(l) => Literal::Double(l),
+        })
+        .map(|(sub, num)| match num {
+            Literal::Num(n) if sub.is_some() => Literal::Num(-n),
+            Literal::Double(d) if sub.is_some() => Literal::Double(-d),
+            Literal::Num(n) => Literal::Num(n),
+            Literal::Double(d) => Literal::Double(d),
+            _ => unreachable!(),
+        }))
 }
 
 fn parend<'a, I, S>(
