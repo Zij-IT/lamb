@@ -7,13 +7,12 @@ part_one := rec fn(xs) -> case xs {
 };
 
 part_two := fn(xs) -> {
-  inner := rec fn(xs, n, sum) -> if sum = -1 {
-    n
-  } else {
-    case xs {
+  inner := rec fn(xs, n, sum) -> case sum {
+    -1 -> n,
+    _  -> case xs {
       ['(', rest @ ..] -> inner(rest, n + 1, sum + 1),
       [')', rest @ ..] -> inner(rest, n + 1, sum - 1),
-    }
+    },
   };
 
   inner(xs, 0, 0)
