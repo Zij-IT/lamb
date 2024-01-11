@@ -81,7 +81,7 @@ impl Compiler {
         self.compile_script(script, gc);
     }
 
-    pub fn finish(mut self, gc: &mut LambGc) -> Gc<LambClosure> {
+    pub fn finish(mut self) -> Gc<LambClosure> {
         self.write_op(Op::Return);
         let closure = LambClosure {
             func: Gc::new(self.func),
@@ -201,7 +201,7 @@ impl Compiler {
         }
     }
 
-    fn write_closure(&mut self, gc: &mut LambGc, func: LambFunc) {
+    fn write_closure(&mut self, func: LambFunc) {
         let closure = LambClosure::new(Gc::new(func));
         self.func
             .chunk
@@ -434,7 +434,7 @@ impl Compiler {
         let this = *self.enclosing.take().unwrap();
         let composition = std::mem::replace(self, this);
 
-        self.write_closure(gc, composition.func);
+        self.write_closure(composition.func);
     }
 
     fn compile_sc_op<'ast>(
@@ -798,7 +798,7 @@ impl Compiler {
         let this = *self.enclosing.take().unwrap();
         let composition = std::mem::replace(self, this);
 
-        self.write_closure(gc, composition.func);
+        self.write_closure(composition.func);
     }
 
     fn compile_literal(&mut self, l: &Literal, gc: &mut LambGc) {

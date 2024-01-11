@@ -15,7 +15,7 @@ pub fn run_script(script: &Script) {
     let mut compiler = Compiler::new(name);
 
     compiler.compile(&mut gc, script);
-    let closure = compiler.finish(&mut gc);
+    let closure = compiler.finish();
     let vm = Vm::new(gc);
     vm.exec(closure);
 }

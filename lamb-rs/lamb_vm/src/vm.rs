@@ -465,7 +465,6 @@ impl Vm {
 
     fn close_upvalues(&mut self, slot: usize) {
         let Self {
-            gc,
             open_upvalues,
             stack,
             ..
