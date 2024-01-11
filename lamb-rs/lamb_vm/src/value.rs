@@ -1,12 +1,12 @@
-use std::{cmp::Ordering, ops::Range};
+use std::{cell::RefCell, cmp::Ordering, ops::Range};
 
 use crate::{
     chunk::Chunk,
-    gc::{Gc, LambGc},
+    gc::{ref_count::Gc, LambGc},
     vm::Vm,
 };
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Nil,
     Int(i64),
@@ -28,10 +28,9 @@ impl Value {
             Value::Char(c) => format!("'{c}'"),
             Value::Double(d) => d.to_string(),
             Value::Array(a) => {
-                let arr = gc.deref(*a);
                 let mut s = String::with_capacity(32);
                 s.push('[');
-                for i in arr {
+                for i in (&**a).into_iter() {
                     s.push_str(i.format(gc).as_str());
                     s.push_str(", ");
                 }
@@ -45,12 +44,8 @@ impl Value {
                 s.push(']');
                 s
             }
-            Value::String(s) => gc.deref(*s).0.to_string(),
-            Value::Closure(c) => {
-                let f = gc.deref(*c).func;
-                let s = gc.deref(f).name;
-                gc.deref(s).0.to_string()
-            }
+            Value::String(s) => s.0.to_string(),
+            Value::Closure(c) => c.func.name.0.to_string(),
             Value::Native(_) => "<native fn>".into(),
         }
     }
@@ -62,22 +57,14 @@ impl Value {
             (Value::Bool(l), Value::Bool(r)) => l.partial_cmp(r),
             (Value::Char(l), Value::Char(r)) => l.partial_cmp(r),
             (Value::Double(l), Value::Double(r)) => l.partial_cmp(r),
-            (Value::Array(l), Value::Array(r)) => {
-                let l = gc.deref(*l);
-                let r = gc.deref(*r);
-                l.compare(r, gc)
-            }
-            (Value::String(l), Value::String(r)) => {
-                let l = gc.deref(*l);
-                let r = gc.deref(*r);
-                Some(l.0.cmp(&r.0))
-            }
+            (Value::Array(l), Value::Array(r)) => l.compare(r, gc),
+            (Value::String(l), Value::String(r)) => Some(l.0.cmp(&r.0)),
             _ => None,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct LambString(pub String);
 
 impl LambString {
@@ -122,7 +109,7 @@ impl LambArray {
     }
 
     pub fn get(&self, idx: usize) -> Value {
-        self.items.get(idx).copied().unwrap()
+        self.items.get(idx).cloned().unwrap()
     }
 
     pub fn slice(&self, range: Range<usize>) -> Self {
@@ -227,14 +214,14 @@ pub struct FuncUpvalue {
 #[derive(Debug)]
 pub struct LambClosure {
     pub func: Gc<LambFunc>,
-    pub upvalues: Vec<Gc<Upvalue>>,
+    pub upvalues: RefCell<Vec<Gc<RefCell<Upvalue>>>>,
 }
 
 impl LambClosure {
     pub fn new(func: Gc<LambFunc>) -> Self {
         Self {
             func,
-            upvalues: Vec::new(),
+            upvalues: RefCell::new(Vec::new()),
         }
     }
 }

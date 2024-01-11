@@ -1,8 +1,11 @@
-use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
+use std::{cell::RefCell, cmp::Ordering, collections::HashMap, convert::identity, ops};
 
 use crate::{
     chunk::{Chunk, Op},
-    gc::{Gc, LambGc},
+    gc::{
+        ref_count::{self, Gc},
+        LambGc,
+    },
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
@@ -52,7 +55,7 @@ pub struct Vm {
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
     saved: Option<Value>,
-    open_upvalues: Vec<Gc<Upvalue>>,
+    open_upvalues: Vec<Gc<RefCell<Upvalue>>>,
 }
 
 impl Vm {
@@ -71,9 +74,9 @@ impl Vm {
         this
     }
 
-    pub fn exec(mut self, rf: Gc<LambClosure>) {
-        self.stack.push(Value::Closure(rf));
-        self.frames.push(CallFrame::new(rf, 0));
+    pub fn exec(mut self, rf: ref_count::Gc<LambClosure>) {
+        self.stack.push(Value::Closure(rf.clone()));
+        self.frames.push(CallFrame::new(rf.clone(), 0));
         self.run();
     }
 
@@ -84,16 +87,16 @@ impl Vm {
 
             match op {
                 Op::Constant(i) => {
-                    let value = self.chunk().constants[usize::from(i)];
+                    let value = self.chunk().constants[usize::from(i)].clone();
                     self.push(value);
                 }
                 Op::GetLocal(i) => {
                     let idx = self.frame().slot + usize::from(i);
-                    let value = self.stack[idx];
+                    let value = self.stack[idx].clone();
                     self.push(value);
                 }
                 Op::DefineGlobal(i) => {
-                    let Value::String(name) = self.chunk().constants[usize::from(i)] else {
+                    let Value::String(name) = self.chunk().constants[usize::from(i)].clone() else {
                         panic!("type error");
                     };
 
@@ -101,22 +104,20 @@ impl Vm {
                     self.globals.insert(name, value);
                 }
                 Op::GetGlobal(i) => {
-                    let Value::String(name) = self.chunk().constants[usize::from(i)] else {
+                    let Value::String(name) = self.chunk().constants[usize::from(i)].clone() else {
                         panic!("type error");
                     };
 
-                    let global = self.globals.get(&name).copied().unwrap();
+                    let global = self.globals.get(&name).cloned().unwrap();
                     self.push(global);
                 }
                 Op::GetUpvalue(i) => {
-                    let clo_ref = self.frame().closure;
-                    let closure = self.gc.deref(clo_ref);
-                    let up = closure.upvalues[usize::from(i)];
-                    let up = self.gc.deref(up);
-                    let val = if let Some(value) = up.closed {
-                        value
+                    let closure = &self.frame().closure;
+                    let up = closure.upvalues.borrow()[usize::from(i)].clone();
+                    let val = if let Some(value) = &up.borrow().closed {
+                        value.clone()
                     } else {
-                        self.stack[up.index]
+                        self.stack[up.borrow().index].clone()
                     };
 
                     self.push(val);
@@ -126,8 +127,7 @@ impl Vm {
                     let callee = self.peek(args);
                     match callee {
                         Value::Closure(cl) => {
-                            let closure = self.gc.deref(cl);
-                            let func = self.gc.deref(closure.func);
+                            let func = &cl.func;
                             if args != func.arity {
                                 panic!("too many args!");
                             } else {
@@ -163,26 +163,24 @@ impl Vm {
                     self.pop();
                 }
                 Op::Closure(i) => {
-                    let Value::Closure(clo_ref) = self.chunk().constants[usize::from(i)] else {
+                    let Value::Closure(clo_ref) = self.chunk().constants[usize::from(i)].clone()
+                    else {
                         panic!("type error!");
                     };
 
-                    let func = self.gc.deref(clo_ref).func;
-                    let len = self.gc.deref(func).upvalues.len();
+                    let func = &clo_ref.func;
+                    let len = func.upvalues.len();
 
                     for i in 0..len {
-                        let FuncUpvalue { index, is_local } = self.gc.deref(func).upvalues[i];
+                        let FuncUpvalue { index, is_local } = func.upvalues[i];
                         if is_local {
                             let up = self.capture_upvalue(self.frame().slot + index);
-                            let closure = self.gc.deref_mut(clo_ref);
-                            closure.upvalues.push(up);
+                            clo_ref.upvalues.borrow_mut().push(up);
                         } else {
-                            let curr_closure = self.frame().closure;
-                            let curr_closure = self.gc.deref(curr_closure);
-                            let up = curr_closure.upvalues[index];
+                            let curr_closure = &self.frame().closure;
+                            let up = curr_closure.upvalues.borrow()[index].clone();
 
-                            let closure = self.gc.deref_mut(clo_ref);
-                            closure.upvalues.push(up);
+                            clo_ref.upvalues.borrow_mut().push(up);
                         }
                     }
 
@@ -221,7 +219,7 @@ impl Vm {
 
                 Op::SetSlot(i) => {
                     let idx = self.frame().slot + usize::from(i);
-                    self.stack[idx] = self.stack.last().copied().unwrap();
+                    self.stack[idx] = self.stack.last().cloned().unwrap();
                 }
                 Op::SaveValue => {
                     self.saved = Some(self.pop());
@@ -233,8 +231,8 @@ impl Vm {
 
                 Op::Len => {
                     let len = match self.peek(0) {
-                        Value::Array(arr) => self.gc.deref(arr).len(),
-                        Value::String(str) => self.gc.deref(str).len(),
+                        Value::Array(arr) => arr.len(),
+                        Value::String(str) => str.len(),
                         _ => panic!("type error!"),
                     };
 
@@ -249,11 +247,11 @@ impl Vm {
 
                     match self.pop() {
                         Value::String(str) => {
-                            let val = self.gc.deref(str).get(idx);
+                            let val = str.get(idx);
                             self.push(Value::Char(val));
                         }
                         Value::Array(arr) => {
-                            let val = self.gc.deref(arr).get(idx);
+                            let val = arr.get(idx);
                             self.push(val);
                         }
                         _ => panic!("type error!"),
@@ -268,7 +266,6 @@ impl Vm {
 
                     match self.pop() {
                         Value::String(str) => {
-                            let str = self.gc.deref(str);
                             if idx >= str.len() {
                                 panic!("Index out of bounds!");
                             }
@@ -278,7 +275,6 @@ impl Vm {
                             self.push(Value::Char(val));
                         }
                         Value::Array(arr) => {
-                            let arr = self.gc.deref(arr);
                             if idx >= arr.len() {
                                 panic!("Index out of bounds!");
                             }
@@ -301,17 +297,15 @@ impl Vm {
                     let val = self.peek(0);
                     match val {
                         Value::Array(arr) => {
-                            let arr = self.gc.deref(arr);
                             let end = arr.len() - dist_from_end;
                             let new = arr.slice(start..end);
-                            let new = self.gc.alloc(new);
+                            let new = Gc::new(new);
                             self.push(Value::Array(new));
                         }
                         Value::String(str) => {
-                            let str = self.gc.deref(str);
                             let end = str.len() - dist_from_end;
                             let new = str.slice(start..end);
-                            let new = self.gc.alloc(new);
+                            let new = Gc::new(new);
                             self.push(Value::String(new));
                         }
                         _ => panic!("type error!"),
@@ -326,7 +320,7 @@ impl Vm {
                     v.reverse();
 
                     let arr = LambArray::from(v);
-                    let arr = self.gc.alloc(arr);
+                    let arr = Gc::new(arr);
                     self.push(Value::Array(arr));
                 }
 
@@ -356,9 +350,7 @@ impl Vm {
     }
 
     fn chunk(&self) -> &Chunk {
-        let cls = self.frame().closure;
-        let func = self.gc.deref(cls).func;
-        &self.gc.deref(func).chunk
+        &self.frame().closure.func.chunk
     }
 
     fn frame(&self) -> &CallFrame {
@@ -370,7 +362,7 @@ impl Vm {
     }
 
     fn peek(&self, offset: usize) -> Value {
-        self.stack.iter().rev().nth(offset).copied().unwrap()
+        self.stack.iter().rev().nth(offset).cloned().unwrap()
     }
 
     fn pop(&mut self) -> Value {
@@ -390,16 +382,16 @@ impl Vm {
                 self.push(Value::Int(l + r));
             }
             (Value::String(l), Value::String(r)) => {
-                let l = &self.gc.deref(l).0;
-                let r = &self.gc.deref(r).0;
+                let l = &l.0;
+                let r = &r.0;
                 let s = self.gc.intern(format!("{l}{r}"));
                 self.push(Value::String(s));
             }
             (Value::Array(larr), Value::Array(rarr)) => {
-                let l = self.gc.deref(larr);
-                let r = self.gc.deref(rarr);
-                let arr = l.into_iter().chain(r).copied().collect();
-                let arr_ref = self.gc.alloc(arr);
+                let l = &*larr;
+                let r = &*rarr;
+                let arr = l.into_iter().chain(r).cloned().collect();
+                let arr_ref = Gc::new(arr);
                 self.push(Value::Array(arr_ref));
             }
             _ => panic!("type error!"),
@@ -480,10 +472,9 @@ impl Vm {
         } = self;
 
         open_upvalues.retain(|up| {
-            let up = gc.deref_mut(*up);
-            if up.index >= slot {
-                let loc = up.index;
-                up.closed = Some(stack[loc]);
+            if up.borrow().index >= slot {
+                let loc = up.borrow().index;
+                up.borrow_mut().closed = Some(stack[loc].clone());
                 false
             } else {
                 true
@@ -491,18 +482,18 @@ impl Vm {
         });
     }
 
-    fn capture_upvalue(&mut self, index: usize) -> Gc<Upvalue> {
+    fn capture_upvalue(&mut self, index: usize) -> Gc<RefCell<Upvalue>> {
         let up_ref = self
             .open_upvalues
             .iter()
-            .find(|&&up| self.gc.deref(up).index == index)
-            .copied();
+            .find(|&up| up.borrow().index == index)
+            .cloned();
 
         match up_ref {
             Some(up_ref) => up_ref,
             None => {
-                let up_ref = self.gc.alloc(Upvalue::new(index));
-                self.open_upvalues.push(up_ref);
+                let up_ref = Gc::new(RefCell::new(Upvalue::new(index)));
+                self.open_upvalues.push(up_ref.clone());
                 up_ref
             }
         }
@@ -532,13 +523,13 @@ impl Vm {
 }
 
 struct CallFrame {
-    closure: Gc<LambClosure>,
+    closure: ref_count::Gc<LambClosure>,
     ip: usize,
     slot: usize,
 }
 
 impl CallFrame {
-    fn new(closure: Gc<LambClosure>, slot: usize) -> Self {
+    fn new(closure: ref_count::Gc<LambClosure>, slot: usize) -> Self {
         CallFrame {
             closure,
             ip: 0,

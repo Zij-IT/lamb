@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use dumpster::Collectable;
 
 use crate::value::{LambArray, LambClosure, LambFunc, LambString, NativeFunc, Upvalue, Value};
@@ -45,6 +47,8 @@ impl<T: LambAllocable + PartialEq> PartialEq for Gc<T> {
         *self.0 == *other.0
     }
 }
+
+impl<T: LambAllocable + Eq> Eq for Gc<T> {}
 
 impl<T: LambAllocable + std::fmt::Debug> std::fmt::Debug for Gc<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -128,7 +132,7 @@ unsafe impl Collectable for LambFunc {
         } = self;
 
         name.accept(visitor)?;
-        for value in chunk.constants {
+        for value in &chunk.constants {
             value.accept(visitor)?;
         }
 
@@ -144,3 +148,5 @@ unsafe impl Collectable for Upvalue {
         Ok(())
     }
 }
+
+impl<T: LambAllocable> LambAllocable for RefCell<T> {}

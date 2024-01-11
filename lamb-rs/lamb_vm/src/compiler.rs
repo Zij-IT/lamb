@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use lamb_ast::{
     ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Either, Elif,
     Else, Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script,
@@ -6,7 +8,7 @@ use lamb_ast::{
 
 use crate::{
     chunk::{Jump, JumpIdx, Op},
-    gc::{Gc, LambGc},
+    gc::{ref_count::Gc, LambGc},
     value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
 };
 
@@ -82,11 +84,11 @@ impl Compiler {
     pub fn finish(mut self, gc: &mut LambGc) -> Gc<LambClosure> {
         self.write_op(Op::Return);
         let closure = LambClosure {
-            func: gc.alloc(self.func),
-            upvalues: Vec::new(),
+            func: Gc::new(self.func),
+            upvalues: RefCell::new(Vec::new()),
         };
 
-        gc.alloc(closure)
+        Gc::new(closure)
     }
 
     fn start_block(&mut self) {
@@ -200,11 +202,11 @@ impl Compiler {
     }
 
     fn write_closure(&mut self, gc: &mut LambGc, func: LambFunc) {
-        let closure = LambClosure::new(gc.alloc(func));
+        let closure = LambClosure::new(Gc::new(func));
         self.func
             .chunk
             .constants
-            .push(Value::Closure(gc.alloc(closure)));
+            .push(Value::Closure(Gc::new(closure)));
 
         let idx = self.func.chunk.constants.len() - 1;
         self.write_op(Op::Closure(idx.try_into().unwrap()))
@@ -563,13 +565,10 @@ impl Compiler {
         let binding_count = bindings.len();
 
         for Ident(i) in bindings {
-            gc.intern(i);
+            let s = gc.intern(i);
 
             self.write_const_op(Value::Nil);
-            self.func
-                .chunk
-                .constants
-                .push(Value::String(gc.alloc(LambString::new(i))));
+            self.func.chunk.constants.push(Value::String(s));
 
             self.add_local(i.clone());
         }
