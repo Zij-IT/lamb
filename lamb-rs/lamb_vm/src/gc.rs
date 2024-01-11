@@ -1,3 +1,4 @@
+mod ref_count;
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::value::LambString;
