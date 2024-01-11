@@ -6,7 +6,7 @@ use lamb_ast::{
 
 use crate::{
     chunk::{Jump, JumpIdx, Op},
-    gc::{GcRef, LambGc},
+    gc::{Gc, LambGc},
     value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
 };
 
@@ -63,7 +63,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn new(name: GcRef<LambString>) -> Self {
+    pub fn new(name: Gc<LambString>) -> Self {
         Self {
             enclosing: None,
             func: LambFunc::new(name),
@@ -79,7 +79,7 @@ impl Compiler {
         self.compile_script(script, gc);
     }
 
-    pub fn finish(mut self, gc: &mut LambGc) -> GcRef<LambClosure> {
+    pub fn finish(mut self, gc: &mut LambGc) -> Gc<LambClosure> {
         self.write_op(Op::Return);
         let closure = LambClosure {
             func: gc.alloc(self.func),

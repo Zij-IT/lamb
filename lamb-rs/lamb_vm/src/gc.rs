@@ -6,7 +6,7 @@ use crate::value::LambString;
 pub struct LambGc {
     free_slots: Vec<usize>,
     objects: Vec<Option<GcItem>>,
-    strings: HashMap<String, GcRef<LambString>>,
+    strings: HashMap<String, Gc<LambString>>,
 }
 
 impl Default for LambGc {
@@ -24,7 +24,7 @@ impl LambGc {
         }
     }
 
-    pub fn alloc<T: Allocable>(&mut self, obj: T) -> GcRef<T> {
+    pub fn alloc<T: Allocable>(&mut self, obj: T) -> Gc<T> {
         let obj = obj.into_raw();
         let size = obj.size() + std::mem::size_of::<GcItem>();
         let item = GcItem {
@@ -44,13 +44,13 @@ impl LambGc {
             }
         };
 
-        GcRef {
+        Gc {
             idx,
             _type: PhantomData,
         }
     }
 
-    pub fn intern(&mut self, s: impl Into<String>) -> GcRef<LambString> {
+    pub fn intern(&mut self, s: impl Into<String>) -> Gc<LambString> {
         let s = s.into();
         if let Some(s) = self.strings.get(&s) {
             *s
@@ -62,43 +62,43 @@ impl LambGc {
         }
     }
 
-    pub fn deref<T: Allocable>(&self, gcref: GcRef<T>) -> &T {
+    pub fn deref<T: Allocable>(&self, gcref: Gc<T>) -> &T {
         self.objects[gcref.idx].as_ref().unwrap().obj.as_inner()
     }
 
-    pub fn deref_mut<T: Allocable>(&mut self, gcref: GcRef<T>) -> &mut T {
+    pub fn deref_mut<T: Allocable>(&mut self, gcref: Gc<T>) -> &mut T {
         self.objects[gcref.idx].as_mut().unwrap().obj.as_inner_mut()
     }
 }
 
-pub struct GcRef<T> {
+pub struct Gc<T> {
     idx: usize,
     _type: PhantomData<T>,
 }
 
-impl<T> Copy for GcRef<T> {}
+impl<T> Copy for Gc<T> {}
 
-impl<T> Clone for GcRef<T> {
+impl<T> Clone for Gc<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T> std::fmt::Debug for GcRef<T> {
+impl<T> std::fmt::Debug for Gc<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("GcRef").field(&self.idx).finish()
     }
 }
 
-impl<T> PartialEq for GcRef<T> {
+impl<T> PartialEq for Gc<T> {
     fn eq(&self, other: &Self) -> bool {
         self.idx == other.idx
     }
 }
 
-impl<T> Eq for GcRef<T> {}
+impl<T> Eq for Gc<T> {}
 
-impl<T> std::hash::Hash for GcRef<T> {
+impl<T> std::hash::Hash for Gc<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.idx.hash(state);
     }

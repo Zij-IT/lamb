@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
 
 use crate::{
     chunk::{Chunk, Op},
-    gc::{GcRef, LambGc},
+    gc::{Gc, LambGc},
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
@@ -48,11 +48,11 @@ macro_rules! num_un_op {
 
 pub struct Vm {
     gc: LambGc,
-    globals: HashMap<GcRef<LambString>, Value>,
+    globals: HashMap<Gc<LambString>, Value>,
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
     saved: Option<Value>,
-    open_upvalues: Vec<GcRef<Upvalue>>,
+    open_upvalues: Vec<Gc<Upvalue>>,
 }
 
 impl Vm {
@@ -71,7 +71,7 @@ impl Vm {
         this
     }
 
-    pub fn exec(mut self, rf: GcRef<LambClosure>) {
+    pub fn exec(mut self, rf: Gc<LambClosure>) {
         self.stack.push(Value::Closure(rf));
         self.frames.push(CallFrame::new(rf, 0));
         self.run();
@@ -491,7 +491,7 @@ impl Vm {
         });
     }
 
-    fn capture_upvalue(&mut self, index: usize) -> GcRef<Upvalue> {
+    fn capture_upvalue(&mut self, index: usize) -> Gc<Upvalue> {
         let up_ref = self
             .open_upvalues
             .iter()
@@ -532,13 +532,13 @@ impl Vm {
 }
 
 struct CallFrame {
-    closure: GcRef<LambClosure>,
+    closure: Gc<LambClosure>,
     ip: usize,
     slot: usize,
 }
 
 impl CallFrame {
-    fn new(closure: GcRef<LambClosure>, slot: usize) -> Self {
+    fn new(closure: Gc<LambClosure>, slot: usize) -> Self {
         CallFrame {
             closure,
             ip: 0,

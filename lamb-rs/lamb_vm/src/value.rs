@@ -2,7 +2,7 @@ use std::{cmp::Ordering, ops::Range};
 
 use crate::{
     chunk::Chunk,
-    gc::{GcRef, LambGc},
+    gc::{Gc, LambGc},
     vm::Vm,
 };
 
@@ -13,9 +13,9 @@ pub enum Value {
     Bool(bool),
     Char(char),
     Double(f64),
-    Array(GcRef<LambArray>),
-    String(GcRef<LambString>),
-    Closure(GcRef<LambClosure>),
+    Array(Gc<LambArray>),
+    String(Gc<LambString>),
+    Closure(Gc<LambClosure>),
     Native(NativeFunc),
 }
 
@@ -203,12 +203,12 @@ impl<'a> IntoIterator for &'a mut LambArray {
 pub struct LambFunc {
     pub arity: usize,
     pub chunk: Chunk,
-    pub name: GcRef<LambString>,
+    pub name: Gc<LambString>,
     pub upvalues: Vec<FuncUpvalue>,
 }
 
 impl LambFunc {
-    pub fn new(name: GcRef<LambString>) -> Self {
+    pub fn new(name: Gc<LambString>) -> Self {
         Self {
             name,
             arity: 0,
@@ -226,12 +226,12 @@ pub struct FuncUpvalue {
 
 #[derive(Debug)]
 pub struct LambClosure {
-    pub func: GcRef<LambFunc>,
-    pub upvalues: Vec<GcRef<Upvalue>>,
+    pub func: Gc<LambFunc>,
+    pub upvalues: Vec<Gc<Upvalue>>,
 }
 
 impl LambClosure {
-    pub fn new(func: GcRef<LambFunc>) -> Self {
+    pub fn new(func: Gc<LambFunc>) -> Self {
         Self {
             func,
             upvalues: Vec::new(),
