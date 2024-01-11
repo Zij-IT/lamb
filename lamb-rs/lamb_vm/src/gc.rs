@@ -1,38 +1,8 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::cell::RefCell;
 
 use dumpster::Collectable;
 
 use crate::value::{LambArray, LambClosure, LambFunc, LambString, NativeFunc, Upvalue, Value};
-
-pub struct LambGc {
-    strings: HashMap<String, Gc<LambString>>,
-}
-
-impl Default for LambGc {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl LambGc {
-    pub fn new() -> Self {
-        Self {
-            strings: Default::default(),
-        }
-    }
-
-    pub fn intern(&mut self, s: impl Into<String>) -> Gc<LambString> {
-        let s = s.into();
-        if let Some(s) = self.strings.get(&s) {
-            s.clone()
-        } else {
-            let str = LambString::new(s.clone());
-            let str_ref = Gc::new(str);
-            self.strings.insert(s, str_ref.clone());
-            str_ref
-        }
-    }
-}
 
 pub trait LambAllocable: 'static + dumpster::Collectable {}
 

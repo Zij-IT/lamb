@@ -1,10 +1,6 @@
 use std::{cell::RefCell, cmp::Ordering, ops::Range};
 
-use crate::{
-    chunk::Chunk,
-    gc::{Gc, LambGc},
-    vm::Vm,
-};
+use crate::{chunk::Chunk, gc::Gc, interner::Interner, vm::Vm};
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -50,7 +46,7 @@ impl Value {
         }
     }
 
-    pub fn compare(&self, other: &Self, gc: &LambGc) -> Option<Ordering> {
+    pub fn compare(&self, other: &Self, gc: &Interner) -> Option<Ordering> {
         match (self, other) {
             (Value::Nil, Value::Nil) => Some(Ordering::Equal),
             (Value::Int(l), Value::Int(r)) => l.partial_cmp(r),
@@ -124,7 +120,7 @@ impl LambArray {
         self.items.capacity()
     }
 
-    pub fn compare(&self, other: &Self, gc: &LambGc) -> Option<Ordering> {
+    pub fn compare(&self, other: &Self, gc: &Interner) -> Option<Ordering> {
         match self.items.len().cmp(&other.items.len()) {
             Ordering::Less => Some(Ordering::Less),
             Ordering::Greater => Some(Ordering::Greater),

@@ -8,7 +8,8 @@ use lamb_ast::{
 
 use crate::{
     chunk::{Jump, JumpIdx, Op},
-    gc::{Gc, LambGc},
+    gc::Gc,
+    interner::Interner,
     value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
 };
 
@@ -77,7 +78,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, gc: &mut LambGc, script: &Script) {
+    pub fn compile(&mut self, gc: &mut Interner, script: &Script) {
         self.compile_script(script, gc);
     }
 
@@ -128,8 +129,8 @@ impl Compiler {
         self.func.chunk.write_op(Op::UnsaveValue);
     }
 
-    fn add_arg(&mut self, gc: &mut LambGc, Ident(arg): &Ident) {
-        let rf = gc.intern(arg);
+    fn add_arg(&mut self, interner: &mut Interner, Ident(arg): &Ident) {
+        let rf = interner.intern(arg);
         self.func.chunk.constants.push(Value::String(rf));
         self.add_local(arg.clone());
         self.func.arity += 1;
@@ -273,12 +274,12 @@ impl Compiler {
         self.func.chunk.patch_jmp(jmp);
     }
 
-    fn compile_script(&mut self, script: &Script, gc: &mut LambGc) {
+    fn compile_script(&mut self, script: &Script, gc: &mut Interner) {
         let Script { block } = script;
         self.compile_block(block, gc);
     }
 
-    fn compile_block(&mut self, block: &LambBlock, gc: &mut LambGc) {
+    fn compile_block(&mut self, block: &LambBlock, gc: &mut Interner) {
         let LambBlock { stats, value } = block;
         self.start_block();
 
@@ -300,7 +301,7 @@ impl Compiler {
         self.block.offset += 1;
     }
 
-    fn compile_stmt(&mut self, stat: &Statement, gc: &mut LambGc) {
+    fn compile_stmt(&mut self, stat: &Statement, gc: &mut Interner) {
         match stat {
             Statement::Assign(assign) => {
                 let Assign {
@@ -344,7 +345,7 @@ impl Compiler {
         }
     }
 
-    fn compile_expr(&mut self, value: &Expr, gc: &mut LambGc) {
+    fn compile_expr(&mut self, value: &Expr, gc: &mut Interner) {
         match value {
             Expr::Unary(Unary { rhs, op }) => {
                 self.compile_expr(rhs, gc);
@@ -389,7 +390,7 @@ impl Compiler {
         &mut self,
         Ident(inner): &'ast Ident,
         def: &'ast FuncDef,
-        gc: &mut LambGc,
+        gc: &mut Interner,
     ) {
         let ident = gc.intern(inner);
         self.func.chunk.write_val(Value::String(ident));
@@ -404,13 +405,13 @@ impl Compiler {
         }
     }
 
-    fn compile_apply<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
+    fn compile_apply<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut Interner) {
         self.compile_expr(lhs, gc);
         self.compile_expr(rhs, gc);
         self.write_op(Op::Call(1));
     }
 
-    fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
+    fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut Interner) {
         let ident = gc.intern("Anon Func");
         let mut composition = Compiler::new(ident);
         composition.locals[0].depth = 1;
@@ -442,7 +443,7 @@ impl Compiler {
         lhs: &'ast Expr,
         rhs: &'ast Expr,
         jump: Jump,
-        gc: &mut LambGc,
+        gc: &mut Interner,
     ) {
         self.compile_expr(lhs, gc);
         let idx = self.write_jump(jump);
@@ -451,7 +452,7 @@ impl Compiler {
         self.patch_jump(idx);
     }
 
-    fn compile_atom(&mut self, atom: &Atom, gc: &mut LambGc) {
+    fn compile_atom(&mut self, atom: &Atom, gc: &mut Interner) {
         match atom {
             Atom::Literal(l) => self.compile_literal(l, gc),
             Atom::Ident(i) => self.compile_ident(i, gc),
@@ -466,7 +467,7 @@ impl Compiler {
         }
     }
 
-    fn compile_if_expr(&mut self, if_: &If, gc: &mut LambGc) {
+    fn compile_if_expr(&mut self, if_: &If, gc: &mut Interner) {
         let If {
             cond,
             block,
@@ -519,7 +520,7 @@ impl Compiler {
         &mut self,
         cond: &'ast Expr,
         block: &'ast LambBlock,
-        gc: &mut LambGc,
+        gc: &mut Interner,
     ) -> JumpIdx {
         self.compile_expr(cond, gc);
         let cond_false = self.write_jump(Jump::IfFalse);
@@ -530,7 +531,7 @@ impl Compiler {
         past_else
     }
 
-    fn compile_case(&mut self, c: &Case, gc: &mut LambGc) {
+    fn compile_case(&mut self, c: &Case, gc: &mut Interner) {
         let Case { value, arms } = c;
 
         self.compile_expr(value, gc);
@@ -555,7 +556,7 @@ impl Compiler {
         assert_eq!(self.locals.pop().unwrap().name, SCRUTINEE);
     }
 
-    fn compile_case_arm(&mut self, c: &CaseArm, gc: &mut LambGc) -> JumpIdx {
+    fn compile_case_arm(&mut self, c: &CaseArm, gc: &mut Interner) -> JumpIdx {
         let CaseArm { pattern, on_match } = c;
 
         let offset_before_arm = self.block.offset;
@@ -636,7 +637,7 @@ impl Compiler {
     //     and is *only* to be removed after the case arm is complete.
     //
     //     This means that any sub-patterns must duplicate it.
-    fn compile_pattern(&mut self, c: &Pattern, gc: &mut LambGc) {
+    fn compile_pattern(&mut self, c: &Pattern, gc: &mut Interner) {
         let Pattern { pattern } = c;
 
         let offset = self.block.offset;
@@ -662,7 +663,7 @@ impl Compiler {
         }
     }
 
-    fn compile_pattern_top(&mut self, c: &PatternTop, gc: &mut LambGc) {
+    fn compile_pattern_top(&mut self, c: &PatternTop, gc: &mut Interner) {
         match c {
             PatternTop::Rest => unimplemented!("This must be handled by the parent pattern"),
             PatternTop::Literal(lit) => {
@@ -772,7 +773,7 @@ impl Compiler {
         }
     }
 
-    fn compile_func(&mut self, f: &FuncDef, gc: &mut LambGc, name: String) {
+    fn compile_func(&mut self, f: &FuncDef, gc: &mut Interner, name: String) {
         let FuncDef {
             args,
             body,
@@ -801,7 +802,7 @@ impl Compiler {
         self.write_closure(composition.func);
     }
 
-    fn compile_literal(&mut self, l: &Literal, gc: &mut LambGc) {
+    fn compile_literal(&mut self, l: &Literal, gc: &mut Interner) {
         match l {
             Literal::Double(d) => self.write_const_op(Value::Double(d.0)),
             Literal::Str(s) => self.write_const_op(Value::String(gc.intern(s))),
@@ -812,7 +813,7 @@ impl Compiler {
         }
     }
 
-    fn compile_ident(&mut self, Ident(i): &Ident, gc: &mut LambGc) {
+    fn compile_ident(&mut self, Ident(i): &Ident, gc: &mut Interner) {
         if let Some(slot) = self.local_slot(i) {
             self.write_op(Op::GetLocal(slot.try_into().unwrap()))
         } else if let Some(slot) = self.upvalue_idx(i) {

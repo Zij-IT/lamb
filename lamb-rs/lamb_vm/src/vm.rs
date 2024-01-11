@@ -2,7 +2,8 @@ use std::{cell::RefCell, cmp::Ordering, collections::HashMap, convert::identity,
 
 use crate::{
     chunk::{Chunk, Op},
-    gc::{Gc, LambGc},
+    gc::Gc,
+    interner::Interner,
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
@@ -47,7 +48,7 @@ macro_rules! num_un_op {
 }
 
 pub struct Vm {
-    gc: LambGc,
+    interner: Interner,
     globals: HashMap<Gc<LambString>, Value>,
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
@@ -56,9 +57,9 @@ pub struct Vm {
 }
 
 impl Vm {
-    pub fn new(gc: LambGc) -> Self {
+    pub fn new(interner: Interner) -> Self {
         let mut this = Self {
-            gc,
+            interner,
             globals: Default::default(),
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(u8::MAX as usize * 64),
@@ -381,7 +382,7 @@ impl Vm {
             (Value::String(l), Value::String(r)) => {
                 let l = &l.0;
                 let r = &r.0;
-                let s = self.gc.intern(format!("{l}{r}"));
+                let s = self.interner.intern(format!("{l}{r}"));
                 self.push(Value::String(s));
             }
             (Value::Array(larr), Value::Array(rarr)) => {
@@ -442,7 +443,7 @@ impl Vm {
         let rhs = self.pop();
         let lhs = self.pop();
 
-        let Some(ord) = lhs.compare(&rhs, &self.gc) else {
+        let Some(ord) = lhs.compare(&rhs, &self.interner) else {
             panic!("type error!");
         };
 
@@ -455,7 +456,7 @@ impl Vm {
     {
         let rhs = self.pop();
         let lhs = self.pop();
-        let eq = matches!(lhs.compare(&rhs, &self.gc), Some(Ordering::Equal));
+        let eq = matches!(lhs.compare(&rhs, &self.interner), Some(Ordering::Equal));
 
         self.push(Value::Bool(f(eq)))
     }
@@ -496,7 +497,7 @@ impl Vm {
     }
 
     fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Value) {
-        let name = self.gc.intern(name);
+        let name = self.interner.intern(name);
         self.globals.insert(name, Value::Native(NativeFunc::new(f)));
     }
 
