@@ -8,7 +8,7 @@ use lamb_ast::{
 
 use crate::{
     chunk::{Jump, JumpIdx, Op},
-    gc::{ref_count::Gc, LambGc},
+    gc::{Gc, LambGc},
     value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
 };
 

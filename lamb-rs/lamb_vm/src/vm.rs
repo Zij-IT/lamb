@@ -2,10 +2,7 @@ use std::{cell::RefCell, cmp::Ordering, collections::HashMap, convert::identity,
 
 use crate::{
     chunk::{Chunk, Op},
-    gc::{
-        ref_count::{self, Gc},
-        LambGc,
-    },
+    gc::{Gc, LambGc},
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
@@ -74,7 +71,7 @@ impl Vm {
         this
     }
 
-    pub fn exec(mut self, rf: ref_count::Gc<LambClosure>) {
+    pub fn exec(mut self, rf: Gc<LambClosure>) {
         self.stack.push(Value::Closure(rf.clone()));
         self.frames.push(CallFrame::new(rf.clone(), 0));
         self.run();
@@ -522,13 +519,13 @@ impl Vm {
 }
 
 struct CallFrame {
-    closure: ref_count::Gc<LambClosure>,
+    closure: Gc<LambClosure>,
     ip: usize,
     slot: usize,
 }
 
 impl CallFrame {
-    fn new(closure: ref_count::Gc<LambClosure>, slot: usize) -> Self {
+    fn new(closure: Gc<LambClosure>, slot: usize) -> Self {
         CallFrame {
             closure,
             ip: 0,

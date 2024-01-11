@@ -2,7 +2,7 @@ use std::{cell::RefCell, cmp::Ordering, ops::Range};
 
 use crate::{
     chunk::Chunk,
-    gc::{ref_count::Gc, LambGc},
+    gc::{Gc, LambGc},
     vm::Vm,
 };
 
