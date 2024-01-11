@@ -117,7 +117,7 @@ impl Chunk {
         }
     }
 
-    pub fn display<'b, 'c>(&self, name: &'b str) -> ChunkFormatter<'_, 'b> {
+    pub fn display<'b>(&self, name: &'b str) -> ChunkFormatter<'_, 'b> {
         ChunkFormatter::new(self, name)
     }
 
