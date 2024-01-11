@@ -2,7 +2,7 @@ mod format;
 
 use lamb_ast::{BinaryOp, UnaryOp};
 
-use crate::{gc::LambGc, value::Value};
+use crate::value::Value;
 
 use self::format::ChunkFormatter;
 
@@ -117,8 +117,8 @@ impl Chunk {
         }
     }
 
-    pub fn display<'b, 'c>(&self, gc: &'b LambGc, name: &'c str) -> ChunkFormatter<'_, 'b, 'c> {
-        ChunkFormatter::new(self, gc, name)
+    pub fn display<'b, 'c>(&self, name: &'b str) -> ChunkFormatter<'_, 'b> {
+        ChunkFormatter::new(self, name)
     }
 
     pub fn write_op(&mut self, op: Op) {

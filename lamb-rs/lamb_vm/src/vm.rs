@@ -506,7 +506,7 @@ impl Vm {
 
     fn native_print(vm: &Self, args: &[Value]) -> Value {
         for arg in args {
-            print!("{}", arg.format(&vm.gc));
+            print!("{}", arg.format());
         }
 
         Value::Nil
@@ -514,7 +514,7 @@ impl Vm {
 
     fn native_println(vm: &Self, args: &[Value]) -> Value {
         for arg in args {
-            print!("{}", arg.format(&vm.gc));
+            print!("{}", arg.format());
         }
 
         println!();

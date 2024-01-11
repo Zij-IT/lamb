@@ -20,7 +20,7 @@ pub enum Value {
 }
 
 impl Value {
-    pub(crate) fn format(&self, gc: &LambGc) -> String {
+    pub(crate) fn format(&self) -> String {
         match self {
             Value::Nil => "nil".into(),
             Value::Int(i) => i.to_string(),
@@ -31,7 +31,7 @@ impl Value {
                 let mut s = String::with_capacity(32);
                 s.push('[');
                 for i in (&**a).into_iter() {
-                    s.push_str(i.format(gc).as_str());
+                    s.push_str(i.format().as_str());
                     s.push_str(", ");
                 }
 

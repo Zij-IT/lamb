@@ -2,19 +2,17 @@ use std::fmt::Formatter;
 
 use crate::{
     chunk::{Chunk, Op},
-    gc::LambGc,
     value::Value,
 };
 
-pub struct ChunkFormatter<'a, 'b, 'c> {
+pub struct ChunkFormatter<'a, 'b> {
     chunk: &'a Chunk,
-    gc: &'b LambGc,
-    name: &'c str,
+    name: &'b str,
 }
 
-impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
-    pub fn new(chunk: &'a Chunk, gc: &'b LambGc, name: &'c str) -> Self {
-        Self { chunk, gc, name }
+impl<'a, 'b> ChunkFormatter<'a, 'b> {
+    pub fn new(chunk: &'a Chunk, name: &'b str) -> Self {
+        Self { chunk, name }
     }
 
     fn format(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -96,7 +94,7 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
     }
 
     fn const_op(&self, name: &str, idx: u16, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let value = self.chunk.constants[idx as usize].format(self.gc);
+        let value = self.chunk.constants[idx as usize].format();
         writeln!(f, "{name:<16} {idx:4} ({value})")
     }
 
@@ -117,7 +115,7 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> std::fmt::Display for ChunkFormatter<'a, 'b, 'c> {
+impl<'a, 'b> std::fmt::Display for ChunkFormatter<'a, 'b> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.format(f)
     }
