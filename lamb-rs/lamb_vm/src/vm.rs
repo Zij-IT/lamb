@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
 
 use crate::{
     chunk::{Chunk, Op},
-    gc::{GcRef, LambGc},
+    gc::{Allocable, GcRef, LambGc},
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
@@ -304,14 +304,14 @@ impl Vm {
                             let arr = self.gc.deref(arr);
                             let end = arr.len() - dist_from_end;
                             let new = arr.slice(start..end);
-                            let new = self.gc.alloc(new);
+                            let new = self.alloc(new);
                             self.push(Value::Array(new));
                         }
                         Value::String(str) => {
                             let str = self.gc.deref(str);
                             let end = str.len() - dist_from_end;
                             let new = str.slice(start..end);
-                            let new = self.gc.alloc(new);
+                            let new = self.alloc(new);
                             self.push(Value::String(new));
                         }
                         _ => panic!("type error!"),
@@ -326,7 +326,7 @@ impl Vm {
                     v.reverse();
 
                     let arr = LambArray::from(v);
-                    let arr = self.gc.alloc(arr);
+                    let arr = self.alloc(arr);
                     self.push(Value::Array(arr));
                 }
 
@@ -399,7 +399,7 @@ impl Vm {
                 let l = self.gc.deref(larr);
                 let r = self.gc.deref(rarr);
                 let arr = l.into_iter().chain(r).copied().collect();
-                let arr_ref = self.gc.alloc(arr);
+                let arr_ref = self.alloc(arr);
                 self.push(Value::Array(arr_ref));
             }
             _ => panic!("type error!"),
@@ -501,10 +501,42 @@ impl Vm {
         match up_ref {
             Some(up_ref) => up_ref,
             None => {
-                let up_ref = self.gc.alloc(Upvalue::new(index));
+                let up_ref = self.alloc(Upvalue::new(index));
                 self.open_upvalues.push(up_ref);
                 up_ref
             }
+        }
+    }
+
+    fn alloc<T: Allocable>(&mut self, item: T) -> GcRef<T> {
+        if self.gc.should_collect() {
+            self.mark_roots();
+            self.gc.collect_garbage();
+        }
+
+        self.gc.alloc(item)
+    }
+
+    fn mark_roots(&mut self) {
+        for value in &self.stack {
+            self.gc.mark_value(*value);
+        }
+
+        for frame in &self.frames {
+            self.gc.mark_object(frame.closure);
+        }
+
+        for upvalue in &self.open_upvalues {
+            self.gc.mark_object(*upvalue)
+        }
+
+        for (k, v) in &self.globals {
+            self.gc.mark_object(*k);
+            self.gc.mark_value(*v);
+        }
+
+        if let Some(val) = self.saved {
+            self.gc.mark_value(val);
         }
     }
 
