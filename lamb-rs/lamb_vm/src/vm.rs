@@ -78,9 +78,13 @@ impl Vm {
     }
 
     fn run(&mut self) {
+        let mut current_frame: *mut CallFrame = self.frames.last_mut().unwrap();
+
         loop {
-            let op = self.chunk().code[self.frame().ip];
-            self.frame_mut().ip += 1;
+            let op = unsafe { self.chunk().code[(*current_frame).ip] };
+            unsafe {
+                (*current_frame).ip += 1;
+            };
 
             match op {
                 Op::Constant(i) => {
@@ -88,7 +92,7 @@ impl Vm {
                     self.push(value);
                 }
                 Op::GetLocal(i) => {
-                    let idx = self.frame().slot + usize::from(i);
+                    let idx = unsafe { (*current_frame).slot + usize::from(i) };
                     let value = self.stack[idx];
                     self.push(value);
                 }
@@ -109,7 +113,7 @@ impl Vm {
                     self.push(global);
                 }
                 Op::GetUpvalue(i) => {
-                    let clo_ref = self.frame().closure;
+                    let clo_ref = unsafe { (*current_frame).closure };
                     let closure = self.gc.deref(clo_ref);
                     let up = closure.upvalues[usize::from(i)];
                     let up = self.gc.deref(up);
@@ -133,6 +137,8 @@ impl Vm {
                             } else {
                                 let frame = CallFrame::new(cl, self.stack.len() - 1 - args);
                                 self.frames.push(frame);
+
+                                current_frame = self.frames.last_mut().unwrap();
                             }
                         }
                         Value::Native(native) => {
@@ -155,6 +161,8 @@ impl Vm {
                         self.stack.truncate(frame.slot);
                         self.push(ret_value);
                     }
+
+                    current_frame = self.frames.last_mut().unwrap();
                 }
 
                 Op::CloseValue => {
@@ -173,11 +181,11 @@ impl Vm {
                     for i in 0..len {
                         let FuncUpvalue { index, is_local } = self.gc.deref(func).upvalues[i];
                         if is_local {
-                            let up = self.capture_upvalue(self.frame().slot + index);
+                            let up = unsafe { self.capture_upvalue((*current_frame).slot + index) };
                             let closure = self.gc.deref_mut(clo_ref);
                             closure.upvalues.push(up);
                         } else {
-                            let curr_closure = self.frame().closure;
+                            let curr_closure = unsafe { (*current_frame).closure };
                             let curr_closure = self.gc.deref(curr_closure);
                             let up = curr_closure.upvalues[index];
 
@@ -198,7 +206,7 @@ impl Vm {
                 }
 
                 Op::Jump(off) => {
-                    self.frame_mut().ip += usize::from(off);
+                    unsafe { (*current_frame).ip += usize::from(off) };
                 }
                 Op::JumpIfFalse(off) => {
                     let Value::Bool(is_true) = self.peek(0) else {
@@ -206,7 +214,7 @@ impl Vm {
                     };
 
                     if !is_true {
-                        self.frame_mut().ip += usize::from(off);
+                        unsafe { (*current_frame).ip += usize::from(off) };
                     }
                 }
                 Op::JumpIfTrue(off) => {
@@ -215,12 +223,12 @@ impl Vm {
                     };
 
                     if is_true {
-                        self.frame_mut().ip += usize::from(off);
+                        unsafe { (*current_frame).ip += usize::from(off) };
                     }
                 }
 
                 Op::SetSlot(i) => {
-                    let idx = self.frame().slot + usize::from(i);
+                    let idx = unsafe { (*current_frame).slot + usize::from(i) };
                     self.stack[idx] = self.stack.last().copied().unwrap();
                 }
                 Op::SaveValue => {
@@ -356,17 +364,9 @@ impl Vm {
     }
 
     fn chunk(&self) -> &Chunk {
-        let cls = self.frame().closure;
+        let cls = self.frames.last().unwrap().closure;
         let func = self.gc.deref(cls).func;
         &self.gc.deref(func).chunk
-    }
-
-    fn frame(&self) -> &CallFrame {
-        self.frames.last().unwrap()
-    }
-
-    fn frame_mut(&mut self) -> &mut CallFrame {
-        self.frames.last_mut().unwrap()
     }
 
     fn peek(&self, offset: usize) -> Value {
