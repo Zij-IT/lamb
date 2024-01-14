@@ -79,9 +79,15 @@ impl Vm {
 
     fn run(&mut self) {
         let mut current_frame: *mut CallFrame = self.frames.last_mut().unwrap();
+        let mut current_chunk: *const Chunk = unsafe {
+            &self
+                .gc
+                .deref(self.gc.deref((*current_frame).closure).func)
+                .chunk
+        };
 
         loop {
-            let op = unsafe { self.chunk().code[(*current_frame).ip] };
+            let op = unsafe { (*current_chunk).code[(*current_frame).ip] };
             unsafe {
                 (*current_frame).ip += 1;
             };
@@ -139,6 +145,12 @@ impl Vm {
                                 self.frames.push(frame);
 
                                 current_frame = self.frames.last_mut().unwrap();
+                                current_chunk = unsafe {
+                                    &self
+                                        .gc
+                                        .deref(self.gc.deref((*current_frame).closure).func)
+                                        .chunk
+                                };
                             }
                         }
                         Value::Native(native) => {
@@ -163,6 +175,12 @@ impl Vm {
                     }
 
                     current_frame = self.frames.last_mut().unwrap();
+                    current_chunk = unsafe {
+                        &self
+                            .gc
+                            .deref(self.gc.deref((*current_frame).closure).func)
+                            .chunk
+                    };
                 }
 
                 Op::CloseValue => {
@@ -360,6 +378,8 @@ impl Vm {
                 Op::Le => self.value_cmp_op(|o| matches!(o, Ordering::Less | Ordering::Equal)),
                 Op::Lt => self.value_cmp_op(|o| matches!(o, Ordering::Less)),
             }
+
+            assert!(std::ptr::eq(self.chunk(), current_chunk), "After: {:?}", op);
         }
     }
 
