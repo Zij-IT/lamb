@@ -18,22 +18,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         path,
     } = cli::LambOptions::parse();
 
-    let src = match path.as_ref().map(std::fs::read_to_string) {
-        Some(src) => src?,
-        None => return Ok(run_repl()?),
-    };
-
-    let script = match lamb_parse::script(src.as_str()) {
-        Ok(s) => s,
-        Err(errs) => {
-            report::errors(&src, path.as_deref(), &errs, "[Lamb] Syntax Errors:");
-            return Ok(());
-        }
-    };
-
-    lamb_vm::run_script(&script);
-
-    Ok(())
+    Ok(match path.as_ref().map(std::fs::read_to_string) {
+        Some(src) => run_input(&src?),
+        None => run_repl()?,
+    })
 }
 
 fn run_repl() -> Result<(), repl::Error> {
@@ -46,23 +34,20 @@ fn run_repl() -> Result<(), repl::Error> {
     print!("{}", repl::Repl::REPL_START);
 
     let mut lines = String::with_capacity(32);
-    let input = loop {
+    loop {
         match lamb.read_line()? {
             Command::Quit => return Ok(()),
-            Command::Run => break lines,
+            Command::Run => break,
             Command::String(s) => lines.push_str(&s),
         }
-    };
+    }
 
-    let script = match lamb_parse::script(input.as_str()) {
-        Ok(s) => s,
-        Err(errs) => {
-            report::errors(&input, None, &errs, "[Lamb] Syntax Errors:");
-            return Ok(());
-        }
-    };
+    Ok(run_input(&lines))
+}
 
-    lamb_vm::run_script(&script);
-
-    Ok(())
+fn run_input(input: &str) {
+    match lamb_parse::script(&input) {
+        Ok(s) => lamb_vm::run_script(&s),
+        Err(errs) => report::errors(&input, None, &errs, "[Lamb] Syntax Errors:"),
+    }
 }
