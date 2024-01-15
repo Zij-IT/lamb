@@ -5,12 +5,6 @@ use std::path::PathBuf;
 use directories::ProjectDirs;
 use rustyline::error::ReadlineError;
 
-const REPL_START: &str = concat!(
-    ",~~~@> Baaaah... Welcome to the Lamb REPL! (Lamb v0.1.0)\n",
-    " W-W'  Type ':quit' to exit, or ':run' to run the input.\n",
-    "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
-);
-
 pub fn input() -> Result<Option<String>, Error> {
     let mut repl = Repl::new()?;
     match repl.with_history() {
@@ -20,38 +14,15 @@ pub fn input() -> Result<Option<String>, Error> {
 
     let mut input = String::with_capacity(32);
 
-    print!("{REPL_START}");
+    print!("{}", Repl::REPL_START);
 
     loop {
-        let line = repl.inner.readline(">>> ");
-        match line {
-            Ok(line) => match line.trim() {
-                ":quit" => {
-                    if let Some(path) = repl.history.as_deref() {
-                        repl.inner.save_history(path)?;
-                    }
-                    return Ok(None);
-                }
-                ":run" => break,
-                _ => {
-                    repl.inner.add_history_entry(line.as_str())?;
-                    input.push_str(&line);
-                }
-            },
-            Err(ReadlineError::Interrupted) => continue,
-            Err(ReadlineError::Eof) => {
-                if let Some(path) = repl.history.as_deref() {
-                    repl.inner.save_history(path)?;
-                }
-                break;
-            }
-            Err(err) => {
-                println!("Error: {err}");
-            }
+        match repl.read_line()? {
+            Command::Quit => return Ok(None),
+            Command::Run => return Ok(Some(input)),
+            Command::String(s) => input.push_str(&s),
         }
     }
-
-    Ok(Some(input))
 }
 
 #[derive(Debug)]
@@ -85,12 +56,24 @@ impl From<rustyline::error::ReadlineError> for Error {
     }
 }
 
+enum Command {
+    String(String),
+    Quit,
+    Run,
+}
+
 struct Repl {
     inner: rustyline::Editor<(), rustyline::history::DefaultHistory>,
     history: Option<PathBuf>,
 }
 
 impl Repl {
+    const REPL_START: &'static str = concat!(
+        ",~~~@> Baaaah... Welcome to the Lamb REPL! (Lamb v0.1.0)\n",
+        " W-W'  Type ':quit' to exit, or ':run' to run the input.\n",
+        "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
+    );
+
     pub fn new() -> Result<Self, Error> {
         let editor = rustyline::DefaultEditor::new()?;
         let history_path =
@@ -122,5 +105,32 @@ impl Repl {
         }
 
         Ok(self)
+    }
+
+    pub fn read_line(&mut self) -> Result<Command, Error> {
+        loop {
+            let line = self.inner.readline(">>> ");
+            match line {
+                Ok(line) => match &*line {
+                    ":quit" => return Ok(Command::Quit),
+                    ":run" => return Ok(Command::Run),
+                    _ => {
+                        self.inner.add_history_entry(&line)?;
+                        return Ok(Command::String(line));
+                    }
+                },
+                Err(ReadlineError::Interrupted) => continue,
+                Err(ReadlineError::Eof) => return Ok(Command::Run),
+                Err(err) => return Err(err.into()),
+            }
+        }
+    }
+}
+
+impl Drop for Repl {
+    fn drop(&mut self) {
+        if let Some(path) = self.history.as_deref() {
+            let _ = self.inner.save_history(path);
+        }
     }
 }
