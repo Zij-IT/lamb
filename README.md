@@ -1,6 +1,6 @@
 # Lamb
 
-A [WIP] dynamically-typed functional programming language with enough features to work.
+A _WIP_ dynamically-typed functional programming language with enough features to work.
 
 Here is a solution to the first [Advent of Code](https://adventofcode.com/2015/day/1) puzzle from 2015:
 
@@ -17,7 +17,7 @@ input $> part_one .> println;
 
 More examples can be found in the [examples](examples) folder.
 
-## How to Use
+## Testing Lamb
 
 Currently Lamb is only available by building from source; this should only require [Rust](https://www.rust-lang.org/tools/install). After installing Rust and downloading the source it can be built by running `cargo run --release -- [PATH]`. If no path is provided, the REPL is run. The REPL is also a work and progress and only parses the input as a whole, so to allow code to execute, either `CTRL-D` or `:quit` must be used.
 
@@ -54,6 +54,7 @@ In the future I would like to be able to add the following:
   - [ ] Dead-Code Removal
 - [ ] Pattern exhaustivity checking
 
-## Tooling
+## Resources and Tools
 
-[tools/tree-sitter-lamb](tools/tree-sitter-lamb) contains a tree-sitter grammar for use with editors that are able to use this for syntax highlighting.
+- [Lamb Book](https://zij-it.github.io/lamb) contains an up-to-date book for the Lamb language
+- [tools/tree-sitter-lamb](tools/tree-sitter-lamb) contains a tree-sitter grammar for use with editors that are able to use this for syntax highlighting.
