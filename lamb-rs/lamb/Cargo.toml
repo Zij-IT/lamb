@@ -12,3 +12,5 @@ lamb_parse = { path = "../lamb_parse" }
 ariadne = { version = "0.3.0", features = ["auto-color"] }
 clap = { version = "4.3.0", features = ["derive"] }
 human-panic = "1.1.5"
+rustyline = "13.0.0"
+directories = "5.0.1"

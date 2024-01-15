@@ -1,11 +1,13 @@
 #![warn(clippy::pedantic)]
 
+use std::error::Error;
+
 mod cli;
 mod optimization;
 mod repl;
 mod report;
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     human_panic::setup_panic!();
 
     let cli::LambOptions {
