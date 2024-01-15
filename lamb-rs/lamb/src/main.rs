@@ -1,5 +1,6 @@
 #![warn(clippy::pedantic)]
 
+use repl::Command;
 use std::error::Error;
 
 mod cli;
@@ -19,16 +20,44 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let src = match path.as_ref().map(std::fs::read_to_string) {
         Some(src) => src?,
-        None => match repl::input()? {
-            Some(src) => src,
-            None => return Ok(()),
-        },
+        None => return Ok(run_repl()?),
     };
 
     let script = match lamb_parse::script(src.as_str()) {
         Ok(s) => s,
         Err(errs) => {
             report::errors(&src, path.as_deref(), &errs, "[Lamb] Syntax Errors:");
+            return Ok(());
+        }
+    };
+
+    lamb_vm::run_script(&script);
+
+    Ok(())
+}
+
+fn run_repl() -> Result<(), repl::Error> {
+    let mut lamb = repl::Repl::new()?;
+    match lamb.with_history() {
+        Ok(_) => (),
+        Err(err) => println!("[Lamb]: Error while loading history ({err})"),
+    }
+
+    print!("{}", repl::Repl::REPL_START);
+
+    let mut lines = String::with_capacity(32);
+    let input = loop {
+        match lamb.read_line()? {
+            Command::Quit => return Ok(()),
+            Command::Run => break lines,
+            Command::String(s) => lines.push_str(&s),
+        }
+    };
+
+    let script = match lamb_parse::script(input.as_str()) {
+        Ok(s) => s,
+        Err(errs) => {
+            report::errors(&input, None, &errs, "[Lamb] Syntax Errors:");
             return Ok(());
         }
     };

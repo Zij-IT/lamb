@@ -1,29 +1,8 @@
 #![allow(clippy::unused_io_amount)]
 
-use std::path::PathBuf;
-
 use directories::ProjectDirs;
 use rustyline::error::ReadlineError;
-
-pub fn input() -> Result<Option<String>, Error> {
-    let mut repl = Repl::new()?;
-    match repl.with_history() {
-        Ok(_) => (),
-        Err(err) => println!("[Lamb]: Error while loading history ({err})"),
-    }
-
-    let mut input = String::with_capacity(32);
-
-    print!("{}", Repl::REPL_START);
-
-    loop {
-        match repl.read_line()? {
-            Command::Quit => return Ok(None),
-            Command::Run => return Ok(Some(input)),
-            Command::String(s) => input.push_str(&s),
-        }
-    }
-}
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum Error {
@@ -56,19 +35,19 @@ impl From<rustyline::error::ReadlineError> for Error {
     }
 }
 
-enum Command {
+pub enum Command {
     String(String),
     Quit,
     Run,
 }
 
-struct Repl {
+pub struct Repl {
     inner: rustyline::Editor<(), rustyline::history::DefaultHistory>,
     history: Option<PathBuf>,
 }
 
 impl Repl {
-    const REPL_START: &'static str = concat!(
+    pub const REPL_START: &'static str = concat!(
         ",~~~@> Baaaah... Welcome to the Lamb REPL! (Lamb v0.1.0)\n",
         " W-W'  Type ':quit' to exit, or ':run' to run the input.\n",
         "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
