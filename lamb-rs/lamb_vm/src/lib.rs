@@ -16,6 +16,6 @@ pub fn run_script(script: &Script) {
 
     compiler.compile(&mut gc, script);
     let closure = compiler.finish(&mut gc);
-    let vm = Vm::new(gc);
+    let mut vm = Vm::new(gc);
     vm.exec(closure);
 }

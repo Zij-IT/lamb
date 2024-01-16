@@ -71,7 +71,7 @@ impl Vm {
         this
     }
 
-    pub fn exec(mut self, rf: GcRef<LambClosure>) {
+    pub fn exec(&mut self, rf: GcRef<LambClosure>) {
         self.stack.push(Value::Closure(rf));
         self.frames.push(CallFrame::new(rf, 0));
         self.run();
