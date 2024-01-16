@@ -602,14 +602,12 @@ impl Compiler {
         self.write_op(Op::SaveValue);
 
         // Remove scrutinee dup
-        self.write_op(Op::Pop(NZ_ONE_U16));
-
-        for _ in 0..binding_count {
-            self.write_op(Op::Pop(NZ_ONE_U16));
-        }
-
+        // Remove `binding_count` amount of bindings
         // Remove scrutinee
-        self.write_op(Op::Pop(NZ_ONE_U16));
+        self.write_op(Op::Pop(
+            NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2).unwrap(),
+        ));
+
         self.write_op(Op::UnsaveValue);
 
         let past_arms = self.write_jump(Jump::Always);
@@ -622,15 +620,12 @@ impl Compiler {
         // If no match ----->
         self.patch_jump(if_no_match);
 
-        // Remove False
-        self.write_op(Op::Pop(NZ_ONE_U16));
-
+        // Remove `false`
         // Remove scrutinee dup
-        self.write_op(Op::Pop(NZ_ONE_U16));
-
-        for _ in 0..binding_count {
-            self.write_op(Op::Pop(NZ_ONE_U16));
-        }
+        // Remove `binding_count` amount of bindings
+        self.write_op(Op::Pop(
+            NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2).unwrap(),
+        ));
 
         self.block.offset = offset_before_arm;
         self.locals.truncate(pre_local_count);
