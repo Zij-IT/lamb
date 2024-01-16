@@ -331,14 +331,8 @@ impl Vm {
                     }
                 }
                 Op::MakeArray(n) => {
-                    let mut v = Vec::with_capacity(usize::from(n));
-                    for _ in 0..n {
-                        v.push(self.pop());
-                    }
-
-                    v.reverse();
-
-                    let arr = LambArray::from(v);
+                    let vec = self.stack.split_off(self.stack.len() - usize::from(n));
+                    let arr = LambArray::from(vec);
                     let arr = self.alloc(arr);
                     self.push(Value::Array(arr));
                 }
