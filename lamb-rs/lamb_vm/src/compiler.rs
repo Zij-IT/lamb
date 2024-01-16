@@ -272,8 +272,9 @@ impl Compiler {
     }
 
     fn compile_script(&mut self, script: &Script, gc: &mut LambGc) {
-        let Script { block } = script;
-        self.compile_block(block, gc);
+        for stat in &script.block.stats {
+            self.compile_stmt(stat, gc);
+        }
     }
 
     fn compile_block(&mut self, block: &LambBlock, gc: &mut LambGc) {
