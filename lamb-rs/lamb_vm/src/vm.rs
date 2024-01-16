@@ -58,6 +58,12 @@ pub struct Vm {
     open_upvalues: Vec<GcRef<Upvalue>>,
 }
 
+impl Default for Vm {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Vm {
     pub fn new() -> Self {
         let mut this = Self {
