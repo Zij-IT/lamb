@@ -1,5 +1,7 @@
 #![warn(clippy::pedantic)]
 
+use lamb_ast::{Atom, Block, Expr, FuncCall, Ident, Script, Statement};
+use lamb_parse::SyntaxResult;
 use repl::Command;
 use std::error::Error;
 
@@ -24,6 +26,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     })
 }
 
+fn run_input(input: &str) {
+    match lamb_parse::script(&input) {
+        Ok(s) => lamb_vm::run_script(&s),
+        Err(errs) => report::errors(&input, None, &errs, "[Lamb] Syntax Errors:"),
+    }
+}
+
 fn run_repl() -> Result<(), repl::Error> {
     let mut lamb = repl::Repl::new()?;
     match lamb.with_history() {
@@ -33,21 +42,55 @@ fn run_repl() -> Result<(), repl::Error> {
 
     print!("{}", repl::Repl::REPL_START);
 
-    let mut lines = String::with_capacity(32);
+    let mut vm = lamb_vm::Vm::new();
     loop {
         match lamb.read_line()? {
             Command::Quit => return Ok(()),
             Command::Run => break,
-            Command::String(s) => lines.push_str(&s),
+            Command::String(s) => match extract_script(&s) {
+                Ok(script) => {
+                    vm.load_script(&script);
+                    vm.run()
+                }
+                Err(errs) => {
+                    report::errors(&s, None, &errs, "[Lamb] Syntax Errors:");
+                    continue;
+                }
+            },
         }
     }
 
-    Ok(run_input(&lines))
+    Ok(())
 }
 
-fn run_input(input: &str) {
-    match lamb_parse::script(&input) {
-        Ok(s) => lamb_vm::run_script(&s),
-        Err(errs) => report::errors(&input, None, &errs, "[Lamb] Syntax Errors:"),
+fn extract_script(input: &str) -> SyntaxResult<Script> {
+    let stat = match lamb_parse::statement(input) {
+        Ok(stat) => stat,
+        Err(_) => match lamb_parse::expr(input) {
+            Ok(expr) => wrap_expr(expr),
+            Err(err) => return Err(err),
+        },
+    };
+
+    Ok(Script {
+        block: Block {
+            stats: vec![stat],
+            value: None,
+        },
+    })
+}
+
+fn wrap_expr(expr: Expr) -> Statement {
+    if let Expr::FuncCall(FuncCall { callee, args: _ }) = &expr {
+        if let Expr::Atom(Atom::Ident(Ident(name))) = &**callee {
+            if name == "println" || name == "print" {
+                return Statement::Expr(expr);
+            }
+        }
     }
+
+    return Statement::Expr(Expr::FuncCall(FuncCall {
+        callee: Box::new(Expr::Atom(Atom::Ident(Ident("println".into())))),
+        args: vec![expr],
+    }));
 }

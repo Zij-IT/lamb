@@ -6,7 +6,7 @@ mod gc;
 mod value;
 mod vm;
 
-use vm::Vm;
+pub use vm::Vm;
 
 pub fn run_script(script: &Script) {
     let mut vm = Vm::new();
