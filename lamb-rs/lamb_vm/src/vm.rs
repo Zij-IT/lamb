@@ -1,7 +1,10 @@
 use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
 
+use lamb_ast::Script;
+
 use crate::{
     chunk::{Chunk, Op},
+    compiler::Compiler,
     gc::{Allocable, GcRef, LambGc},
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
@@ -56,9 +59,9 @@ pub struct Vm {
 }
 
 impl Vm {
-    pub fn new(gc: LambGc) -> Self {
+    pub fn new() -> Self {
         let mut this = Self {
-            gc,
+            gc: LambGc::new(),
             globals: Default::default(),
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(u8::MAX as usize * 64),
@@ -71,13 +74,17 @@ impl Vm {
         this
     }
 
-    pub fn exec(&mut self, rf: GcRef<LambClosure>) {
-        self.stack.push(Value::Closure(rf));
-        self.frames.push(CallFrame::new(rf, 0));
-        self.run();
+    pub fn load_script(&mut self, script: &Script) {
+        let name = self.gc.intern("__LAMB__SCRIPT__");
+        let mut compiler = Compiler::new(name);
+        compiler.compile(&mut self.gc, script);
+
+        let closure = compiler.finish(&mut self.gc);
+        self.stack.push(Value::Closure(closure));
+        self.frames.push(CallFrame::new(closure, 0));
     }
 
-    fn run(&mut self) {
+    pub fn run(&mut self) {
         loop {
             let op = self.chunk().code[self.frame().ip];
             self.frame_mut().ip += 1;
