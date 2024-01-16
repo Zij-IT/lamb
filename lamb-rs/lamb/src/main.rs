@@ -50,7 +50,7 @@ fn run_repl() -> Result<(), repl::Error> {
             Command::String(s) => match extract_script(&s) {
                 Ok(script) => {
                     vm.load_script(&script);
-                    vm.run()
+                    vm.run();
                 }
                 Err(errs) => {
                     report::errors(&s, None, &errs, "[Lamb] Syntax Errors:");
@@ -64,25 +64,24 @@ fn run_repl() -> Result<(), repl::Error> {
 }
 
 fn extract_script(input: &str) -> SyntaxResult<Script> {
-    let stat = match lamb_parse::statement(input) {
-        Ok(stat) => stat,
-        Err(_) => match lamb_parse::expr(input) {
-            Ok(expr) => wrap_expr(expr),
-            Err(err) => return Err(err),
-        },
-    };
-
-    Ok(Script {
-        block: Block {
-            stats: vec![stat],
-            value: None,
-        },
-    })
+    match lamb_parse::script(input) {
+        Ok(script) => return Ok(script),
+        Err(_) => {
+            let expr = lamb_parse::expr(input)?;
+            let stat = wrap_expr(expr);
+            Ok(Script {
+                block: Block {
+                    stats: vec![stat],
+                    value: None,
+                },
+            })
+        }
+    }
 }
 
-fn wrap_expr(expr: Expr) -> Statement {
-    if let Expr::FuncCall(FuncCall { callee, args: _ }) = &expr {
-        if let Expr::Atom(Atom::Ident(Ident(name))) = &**callee {
+fn wrap_expr(mut expr: Expr) -> Statement {
+    if let Expr::FuncCall(FuncCall { callee, args: _ }) = &mut expr {
+        if let Expr::Atom(Atom::Ident(Ident(name))) = &mut **callee {
             if name == "println" || name == "print" {
                 return Statement::Expr(expr);
             }
