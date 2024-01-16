@@ -1,3 +1,5 @@
+use std::num::NonZeroU16;
+
 use lamb_ast::{
     ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Either, Elif,
     Else, Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script,
@@ -13,6 +15,9 @@ use crate::{
 // This is safe because it contains whitespace, which user identifiers
 // cannot have.
 const SCRUTINEE: &str = " SCRUTINEE";
+
+// Safety: 1, despite its appearence, is not equal to zero
+const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
 
 #[derive(Debug, Default)]
 struct Block {
@@ -120,7 +125,9 @@ impl Compiler {
             if loc.is_captured {
                 self.func.chunk.write_op(Op::CloseValue);
             } else {
-                self.func.chunk.write_op(Op::Pop);
+                self.func
+                    .chunk
+                    .write_op(Op::Pop(NonZeroU16::new(1).unwrap()));
             }
         }
         self.func.chunk.write_op(Op::UnsaveValue);
@@ -230,10 +237,10 @@ impl Compiler {
             | Op::Mod
             | Op::Mul
             | Op::Ne
-            | Op::Pop
             | Op::RShift
             | Op::SaveValue
             | Op::Sub => self.block.offset -= 1,
+            Op::Pop(n) => self.block.offset -= usize::from(n.get()),
             Op::Closure(_)
             | Op::Constant(_)
             | Op::Dup
@@ -330,7 +337,7 @@ impl Compiler {
             }
             Statement::Expr(e) => {
                 self.compile_expr(e, gc);
-                self.write_op(Op::Pop);
+                self.write_op(Op::Pop(NZ_ONE_U16));
             }
             Statement::Return(Some(r)) => {
                 self.compile_expr(r, gc);
@@ -445,7 +452,7 @@ impl Compiler {
     ) {
         self.compile_expr(lhs, gc);
         let idx = self.write_jump(jump);
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
         self.compile_expr(rhs, gc);
         self.patch_jump(idx);
     }
@@ -502,7 +509,7 @@ impl Compiler {
         }
 
         // compile else
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
         if let Some(Else { block }) = els.as_deref() {
             self.compile_block(block, gc);
         } else {
@@ -522,7 +529,7 @@ impl Compiler {
     ) -> JumpIdx {
         self.compile_expr(cond, gc);
         let cond_false = self.write_jump(Jump::IfFalse);
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
         self.compile_block(block, gc);
         let past_else = self.write_jump(Jump::Always);
         self.patch_jump(cond_false);
@@ -544,7 +551,7 @@ impl Compiler {
         }
 
         // If no match arms are taken, use `Op::Pop`
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
         self.write_const_op(Value::Nil);
 
         for jmp in to_elses {
@@ -586,7 +593,7 @@ impl Compiler {
 
         // If match ----->
         // Remove True
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
         match on_match {
             Either::Left(b) => self.compile_block(b, gc),
             Either::Right(e) => self.compile_expr(e, gc),
@@ -595,14 +602,14 @@ impl Compiler {
         self.write_op(Op::SaveValue);
 
         // Remove scrutinee dup
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
 
         for _ in 0..binding_count {
-            self.write_op(Op::Pop);
+            self.write_op(Op::Pop(NZ_ONE_U16));
         }
 
         // Remove scrutinee
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
         self.write_op(Op::UnsaveValue);
 
         let past_arms = self.write_jump(Jump::Always);
@@ -616,13 +623,13 @@ impl Compiler {
         self.patch_jump(if_no_match);
 
         // Remove False
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
 
         // Remove scrutinee dup
-        self.write_op(Op::Pop);
+        self.write_op(Op::Pop(NZ_ONE_U16));
 
         for _ in 0..binding_count {
-            self.write_op(Op::Pop);
+            self.write_op(Op::Pop(NZ_ONE_U16));
         }
 
         self.block.offset = offset_before_arm;
@@ -650,7 +657,7 @@ impl Compiler {
         for pat in rest {
             let eop = self.write_jump(Jump::IfTrue);
             jumps.push(eop);
-            self.write_op(Op::Pop);
+            self.write_op(Op::Pop(NZ_ONE_U16));
 
             // Just like `if` and `case` all patterns must start at the
             // same stack offset and will leave one expression on the stack
@@ -698,7 +705,7 @@ impl Compiler {
                 let mut ends = Vec::with_capacity(min_len);
                 for (idx, pat) in head.iter().enumerate() {
                     ends.push(self.write_jump(Jump::IfFalse));
-                    self.write_op(Op::Pop);
+                    self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::Dup);
                     self.write_const_op(Value::Int(idx.try_into().unwrap()));
                     self.write_op(Op::Index);
@@ -710,7 +717,7 @@ impl Compiler {
                     //   <local>       <---- Need to remove
                     //   <scrutinee>
                     self.write_op(Op::SaveValue);
-                    self.write_op(Op::Pop);
+                    self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::UnsaveValue);
                 }
 
@@ -731,7 +738,7 @@ impl Compiler {
                         let repr = (start | dist_from_end) as i64;
 
                         ends.push(self.write_jump(Jump::IfFalse));
-                        self.write_op(Op::Pop);
+                        self.write_op(Op::Pop(NZ_ONE_U16));
 
                         self.func.chunk.constants.push(Value::Int(repr));
                         self.write_op(Op::Slice(
@@ -743,7 +750,7 @@ impl Compiler {
                             self.write_op(Op::SetSlot(u16::try_from(slot).unwrap()))
                         }
 
-                        self.write_op(Op::Pop);
+                        self.write_op(Op::Pop(NZ_ONE_U16));
                         self.write_const_op(Value::Bool(true));
                     }
                 }
@@ -751,7 +758,7 @@ impl Compiler {
                 for (idx, pat) in tail.iter().enumerate() {
                     ends.push(self.write_jump(Jump::IfFalse));
 
-                    self.write_op(Op::Pop);
+                    self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::Dup);
                     self.write_const_op(Value::Int((tail.len() - 1 - idx).try_into().unwrap()));
                     self.write_op(Op::IndexRev);
@@ -763,7 +770,7 @@ impl Compiler {
                     //   <local>       <---- Need to remove
                     //   <scrutinee>
                     self.write_op(Op::SaveValue);
-                    self.write_op(Op::Pop);
+                    self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::UnsaveValue);
                 }
 

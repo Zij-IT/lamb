@@ -206,10 +206,9 @@ impl Vm {
                     let item = self.peek(0);
                     self.push(item);
                 }
-                Op::Pop => {
-                    self.pop();
+                Op::Pop(n) => {
+                    self.stack.truncate(self.stack.len() - usize::from(n.get()));
                 }
-
                 Op::Jump(off) => {
                     self.frame_mut().ip += usize::from(off);
                 }

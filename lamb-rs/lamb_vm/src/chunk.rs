@@ -1,5 +1,7 @@
 mod format;
 
+use std::num::NonZeroU16;
+
 use lamb_ast::{BinaryOp, UnaryOp};
 
 use crate::{gc::LambGc, value::Value};
@@ -41,7 +43,7 @@ pub enum Op {
     Mul,
     Ne,
     NumNeg,
-    Pop,
+    Pop(NonZeroU16),
     RShift,
     Return,
     SaveValue,

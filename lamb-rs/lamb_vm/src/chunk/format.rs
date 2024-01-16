@@ -52,7 +52,7 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
             Op::Mul => writeln!(f, "Mul"),
             Op::Ne => writeln!(f, "Ne"),
             Op::NumNeg => writeln!(f, "NumNeg"),
-            Op::Pop => writeln!(f, "Pop"),
+            Op::Pop(n) => self.slot_op("Pop", n.get(), f),
             Op::RShift => writeln!(f, "RShift"),
             Op::Return => writeln!(f, "Return"),
             Op::SaveValue => writeln!(f, "SaveValue"),
