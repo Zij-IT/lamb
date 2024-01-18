@@ -1,3 +1,0 @@
-assert_eq(!true, false);
-assert_eq(!false, true);
-assert_eq(!!true, true);

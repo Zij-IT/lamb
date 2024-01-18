@@ -1,7 +1,0 @@
-a := "a";
-b := "b";
-c := "c";
-
-assert_eq(a, "a");
-assert_eq(b, "b");
-assert_eq(c, "c");

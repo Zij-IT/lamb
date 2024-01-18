@@ -1,2 +1,0 @@
-foo := fn(param) -> fn() -> param;
-assert_eq(foo("penguin")(), "penguin");

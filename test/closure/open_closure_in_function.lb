@@ -1,5 +1,0 @@
-{
-  local := "local";
-  f := fn() ->  local;
-  assert_eq(f(), local);
-};

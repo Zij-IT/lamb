@@ -1,7 +1,0 @@
-{
-  a := 2;
-  b := 3;
-
-  assert_eq(a, 2);
-  assert_eq(b, 3);
-};

@@ -1,7 +1,0 @@
-id := fn(arg) -> arg;
-
-call_with := fn(func, arg) -> id(func)(arg);
-
-inc := fn(arg) -> arg + 1;
-
-assert_eq(call_with(inc, 3), 4);

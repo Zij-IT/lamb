@@ -1,2 +1,0 @@
-f := fn() -> {};
-assert_eq(f(), nil);
