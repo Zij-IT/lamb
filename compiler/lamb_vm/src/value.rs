@@ -3,7 +3,7 @@ use std::{cmp::Ordering, ops::Range};
 use crate::{
     chunk::Chunk,
     gc::{GcRef, LambGc},
-    vm::Vm,
+    vm::{self, Vm},
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -270,11 +270,11 @@ impl Upvalue {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct NativeFunc {
-    raw: fn(&Vm, &[Value]) -> Result<Value, crate::vm::Error>,
+    raw: vm::RawNative,
 }
 
 impl NativeFunc {
-    pub fn new(f: fn(&Vm, &[Value]) -> Result<Value, crate::vm::Error>) -> Self {
+    pub fn new(f: vm::RawNative) -> Self {
         Self { raw: f }
     }
 

@@ -9,6 +9,9 @@ use crate::{
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
+pub type RawNative = fn(&Vm, &[Value]) -> Result<Value>;
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("No global with the name '{0}'")]
@@ -143,7 +146,7 @@ impl Vm {
         self.frames.push(CallFrame::new(closure, 0));
     }
 
-    pub fn run(&mut self) -> Result<(), Error> {
+    pub fn run(&mut self) -> Result<()> {
         loop {
             let op = self.chunk().code[self.frame().ip];
             self.frame_mut().ip += 1;
@@ -465,7 +468,7 @@ impl Vm {
         self.stack.push(v);
     }
 
-    fn add_op(&mut self) -> Result<(), Error> {
+    fn add_op(&mut self) -> Result<()> {
         let rhs = self.pop();
         let lhs = self.pop();
 
@@ -498,7 +501,7 @@ impl Vm {
         Ok(())
     }
 
-    fn bool_un_op<F>(&mut self, f: F, op: &'static str) -> Result<(), Error>
+    fn bool_un_op<F>(&mut self, f: F, op: &'static str) -> Result<()>
     where
         F: Fn(bool) -> bool,
     {
@@ -512,7 +515,7 @@ impl Vm {
         Ok(())
     }
 
-    fn num_un_op<F>(&mut self, f: F, op: &'static str) -> Result<(), Error>
+    fn num_un_op<F>(&mut self, f: F, op: &'static str) -> Result<()>
     where
         F: Fn(i64) -> i64,
     {
@@ -526,7 +529,7 @@ impl Vm {
         Ok(())
     }
 
-    fn value_cmp_op<F>(&mut self, f: F, op: &'static str) -> Result<(), Error>
+    fn value_cmp_op<F>(&mut self, f: F, op: &'static str) -> Result<()>
     where
         F: Fn(Ordering) -> bool,
     {
@@ -625,7 +628,7 @@ impl Vm {
         }
     }
 
-    fn error(&mut self, err: Error) -> Result<(), Error> {
+    fn error(&mut self, err: Error) -> Result<()> {
         self.recover();
         Err(err)
     }
@@ -636,12 +639,12 @@ impl Vm {
         self.frames.clear();
     }
 
-    fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Result<Value, Error>) {
+    fn define_native(&mut self, name: &str, f: RawNative) {
         let name = self.gc.intern(name);
         self.globals.insert(name, Value::Native(NativeFunc::new(f)));
     }
 
-    fn native_print(vm: &Self, args: &[Value]) -> Result<Value, Error> {
+    fn native_print(vm: &Self, args: &[Value]) -> Result<Value> {
         for arg in args {
             print!("{}", arg.format(&vm.gc));
         }
@@ -649,7 +652,7 @@ impl Vm {
         Ok(Value::Nil)
     }
 
-    fn native_println(vm: &Self, args: &[Value]) -> Result<Value, Error> {
+    fn native_println(vm: &Self, args: &[Value]) -> Result<Value> {
         for arg in args {
             print!("{}", arg.format(&vm.gc));
         }
