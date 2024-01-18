@@ -8,8 +8,14 @@ mod vm;
 
 pub use vm::Vm;
 
-pub fn run_script(script: &Script) {
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Runtime Error: {0}")]
+    Runtime(#[from] vm::Error),
+}
+
+pub fn run_script(script: &Script) -> Result<(), Error> {
     let mut vm = Vm::new();
     vm.load_script(script);
-    vm.run();
+    Ok(vm.run()?)
 }

@@ -30,7 +30,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn run_input(input: &str) {
     match lamb_parse::script(input) {
-        Ok(s) => lamb_vm::run_script(&s),
+        Ok(s) => {
+            if let Err(err) = lamb_vm::run_script(&s) {
+                println!("{err}");
+            }
+        }
         Err(errs) => report::errors(input, None, &errs, "[Lamb] Syntax Errors:"),
     }
 }
@@ -52,7 +56,9 @@ fn run_repl() -> Result<(), repl::Error> {
             Command::String(s) => match extract_script(&s) {
                 Ok(script) => {
                     vm.load_script(&script);
-                    vm.run();
+                    if let Err(err) = vm.run() {
+                        println!("{err}");
+                    }
                 }
                 Err(errs) => {
                     report::errors(&s, None, &errs, "[Lamb] Syntax Errors:");
