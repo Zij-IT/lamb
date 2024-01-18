@@ -134,7 +134,7 @@ impl Vm {
                     };
 
                     let Some(global) = self.globals.get(&name).copied() else {
-                        return Err(Error::NoSuchGlobal(self.gc.deref(name).0.clone()));
+                        return self.error(Error::NoSuchGlobal(self.gc.deref(name).0.clone()));
                     };
 
                     self.push(global);
@@ -265,7 +265,7 @@ impl Vm {
                     let len = match self.peek(0) {
                         Value::Array(arr) => self.gc.deref(arr).len(),
                         Value::String(str) => self.gc.deref(str).len(),
-                        val => return Err(Error::BadArrayScrutinee(val.type_name())),
+                        val => return self.error(Error::BadArrayScrutinee(val.type_name())),
                     };
 
                     self.push(Value::Int(i64::try_from(len).unwrap()))
@@ -273,7 +273,7 @@ impl Vm {
                 Op::Index => {
                     let idx = match self.pop() {
                         Value::Int(idx) => idx,
-                        val => return Err(Error::BadIndexType(val.type_name())),
+                        val => return self.error(Error::BadIndexType(val.type_name())),
                     };
 
                     let idx = usize::try_from(idx).unwrap();
@@ -287,13 +287,13 @@ impl Vm {
                             let val = self.gc.deref(arr).get(idx);
                             self.push(val);
                         }
-                        val => return Err(Error::BadIndexeeType(val.type_name())),
+                        val => return self.error(Error::BadIndexeeType(val.type_name())),
                     }
                 }
                 Op::IndexRev => {
                     let idx = match self.pop() {
                         Value::Int(idx) => idx,
-                        val => return Err(Error::BadIndexType(val.type_name())),
+                        val => return self.error(Error::BadIndexType(val.type_name())),
                     };
 
                     let idx = usize::try_from(idx).unwrap();
@@ -319,7 +319,7 @@ impl Vm {
                             let val = arr.get(idx);
                             self.push(val);
                         }
-                        val => return Err(Error::BadIndexeeType(val.type_name())),
+                        val => return self.error(Error::BadIndexeeType(val.type_name())),
                     }
                 }
                 Op::Slice(idx) => {
@@ -346,7 +346,7 @@ impl Vm {
                             let new = self.alloc(new);
                             self.push(Value::String(new));
                         }
-                        val => return Err(Error::BadArrayScrutinee(val.type_name())),
+                        val => return self.error(Error::BadArrayScrutinee(val.type_name())),
                     }
                 }
                 Op::MakeArray(n) => {
@@ -564,6 +564,17 @@ impl Vm {
         if let Some(val) = self.saved {
             self.gc.mark_value(val);
         }
+    }
+
+    fn error(&mut self, err: Error) -> Result<(), Error> {
+        self.recover();
+        Err(err)
+    }
+
+    fn recover(&mut self) {
+        self.close_upvalues(0);
+        self.stack.clear();
+        self.frames.clear();
     }
 
     fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Value) {
