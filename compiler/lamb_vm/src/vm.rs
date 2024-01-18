@@ -40,6 +40,9 @@ pub enum Error {
 
     #[error("The unary op {1} can't be used with a value of type {0}")]
     UnaryTypeMismatch(&'static str, &'static str),
+
+    #[error("Index {0} is out of bounds (max {1})")]
+    IndexOutOfBounds(usize, usize),
 }
 
 macro_rules! num_bin_op {
@@ -317,11 +320,23 @@ impl Vm {
 
                     match self.pop() {
                         Value::String(str) => {
-                            let val = self.gc.deref(str).get(idx);
+                            let str = self.gc.deref(str);
+                            let len = str.len();
+                            let val = str.get(idx).ok_or_else(|| {
+                                self.recover();
+                                Error::IndexOutOfBounds(idx, len)
+                            })?;
+
                             self.push(Value::Char(val));
                         }
                         Value::Array(arr) => {
-                            let val = self.gc.deref(arr).get(idx);
+                            let arr = self.gc.deref(arr);
+                            let len = arr.len();
+                            let val = arr.get(idx).ok_or_else(|| {
+                                self.recover();
+                                Error::IndexOutOfBounds(idx, len)
+                            })?;
+
                             self.push(val);
                         }
                         val => return self.error(Error::BadIndexeeType(val.type_name())),
@@ -338,22 +353,24 @@ impl Vm {
                     match self.pop() {
                         Value::String(str) => {
                             let str = self.gc.deref(str);
-                            if idx >= str.len() {
-                                panic!("Index out of bounds!");
-                            }
+                            let len = str.len();
+                            let idx = len - idx - 1;
+                            let val = str.get(idx).ok_or_else(|| {
+                                self.recover();
+                                Error::IndexOutOfBounds(idx, len)
+                            })?;
 
-                            let idx = str.len() - idx - 1;
-                            let val = str.get(idx);
                             self.push(Value::Char(val));
                         }
                         Value::Array(arr) => {
                             let arr = self.gc.deref(arr);
-                            if idx >= arr.len() {
-                                panic!("Index out of bounds!");
-                            }
+                            let len = arr.len();
+                            let idx = len - idx - 1;
+                            let val = arr.get(idx).ok_or_else(|| {
+                                self.recover();
+                                Error::IndexOutOfBounds(idx, len)
+                            })?;
 
-                            let idx = arr.len() - idx - 1;
-                            let val = arr.get(idx);
                             self.push(val);
                         }
                         val => return self.error(Error::BadIndexeeType(val.type_name())),
@@ -484,7 +501,7 @@ impl Vm {
         let rhs = self.pop();
 
         let Value::Bool(r) = rhs else {
-            return Err(Error::UnaryTypeMismatch(rhs.type_name(), op));
+            return self.error(Error::UnaryTypeMismatch(rhs.type_name(), op));
         };
 
         self.push(Value::Bool(f(r)));
@@ -498,7 +515,7 @@ impl Vm {
         let rhs = self.pop();
 
         let Value::Int(r) = rhs else {
-            return Err(Error::UnaryTypeMismatch(rhs.type_name(), op));
+            return self.error(Error::UnaryTypeMismatch(rhs.type_name(), op));
         };
 
         self.push(Value::Int(f(r)));
@@ -513,7 +530,7 @@ impl Vm {
         let lhs = self.pop();
 
         let Some(ord) = lhs.compare(&rhs, &self.gc) else {
-            return Err(Error::BinaryTypeMismatch(
+            return self.error(Error::BinaryTypeMismatch(
                 lhs.type_name(),
                 rhs.type_name(),
                 op,

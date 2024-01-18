@@ -110,8 +110,8 @@ impl LambString {
         self.0.capacity()
     }
 
-    pub fn get(&self, idx: usize) -> char {
-        self.0.chars().nth(idx).unwrap()
+    pub fn get(&self, idx: usize) -> Option<char> {
+        self.0.chars().nth(idx)
     }
 
     pub fn slice(&self, range: Range<usize>) -> Self {
@@ -135,8 +135,8 @@ impl LambArray {
         Self { items: Vec::new() }
     }
 
-    pub fn get(&self, idx: usize) -> Value {
-        self.items.get(idx).copied().unwrap()
+    pub fn get(&self, idx: usize) -> Option<Value> {
+        self.items.get(idx).copied()
     }
 
     pub fn slice(&self, range: Range<usize>) -> Self {
