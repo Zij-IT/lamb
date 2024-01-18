@@ -14,31 +14,31 @@ pub enum Error {
     #[error("No global with the name '{0}'")]
     NoSuchGlobal(String),
 
-    #[error("Attempt to test a value of type {0} against an array pattern")]
+    #[error("Type Error: Attempt to test a value of type {0} against an array pattern")]
     BadArrayScrutinee(&'static str),
 
-    #[error("Attempt to use a value of type {0} as an index")]
+    #[error("Type Error: Attempt to use a value of type {0} as an index")]
     BadIndexType(&'static str),
 
-    #[error("Attempt to index into a value of type {0}")]
+    #[error("Type Error: Attempt to index into a value of type {0}")]
     BadIndexeeType(&'static str),
 
     #[error("Callee accepts {0} arguments, but was provided {1}")]
     ArgAmountMismatch(usize, usize),
 
-    #[error("Attempt to call a value of type {0}")]
+    #[error("Type Error: Attempt to call a value of type {0}")]
     BadCalleeType(&'static str),
 
-    #[error("Expected bool, recieved {0}")]
+    #[error("Type Error: Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
 
-    #[error("Values of types {1} and {0} can't be compared with {2}")]
+    #[error("Type Error: Values of types {1} and {0} can't be compared with {2}")]
     NotComparable(&'static str, &'static str, &'static str),
 
-    #[error("The binary op {2} can't be used with values of types {1} and {0}")]
+    #[error("Type Error: The binary op {2} can't be used with values of types {1} and {0}")]
     BinaryTypeMismatch(&'static str, &'static str, &'static str),
 
-    #[error("The unary op {1} can't be used with a value of type {0}")]
+    #[error("Type Error: The unary op {1} can't be used with a value of type {0}")]
     UnaryTypeMismatch(&'static str, &'static str),
 
     #[error("Index {0} is out of bounds (max {1})")]
