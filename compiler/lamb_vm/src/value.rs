@@ -270,15 +270,15 @@ impl Upvalue {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct NativeFunc {
-    raw: fn(&Vm, &[Value]) -> Value,
+    raw: fn(&Vm, &[Value]) -> Result<Value, crate::vm::Error>,
 }
 
 impl NativeFunc {
-    pub fn new(f: fn(&Vm, &[Value]) -> Value) -> Self {
+    pub fn new(f: fn(&Vm, &[Value]) -> Result<Value, crate::vm::Error>) -> Self {
         Self { raw: f }
     }
 
-    pub fn call(&self, vm: &Vm, args: &[Value]) -> Value {
+    pub fn call(&self, vm: &Vm, args: &[Value]) -> Result<Value, crate::vm::Error> {
         (self.raw)(vm, args)
     }
 }
