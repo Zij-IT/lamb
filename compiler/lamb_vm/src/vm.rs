@@ -206,7 +206,11 @@ impl Vm {
                         }
                         Value::Native(native) => {
                             let args = self.stack.len() - args;
-                            let result = native.call(self, &self.stack[args..]);
+                            let result = native.call(self, &self.stack[args..]).map_err(|e| {
+                                self.recover();
+                                e
+                            })?;
+
                             self.stack.truncate(args - 1);
                             self.push(result);
                         }
@@ -632,26 +636,26 @@ impl Vm {
         self.frames.clear();
     }
 
-    fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Value) {
+    fn define_native(&mut self, name: &str, f: fn(&Vm, &[Value]) -> Result<Value, Error>) {
         let name = self.gc.intern(name);
         self.globals.insert(name, Value::Native(NativeFunc::new(f)));
     }
 
-    fn native_print(vm: &Self, args: &[Value]) -> Value {
+    fn native_print(vm: &Self, args: &[Value]) -> Result<Value, Error> {
         for arg in args {
             print!("{}", arg.format(&vm.gc));
         }
 
-        Value::Nil
+        Ok(Value::Nil)
     }
 
-    fn native_println(vm: &Self, args: &[Value]) -> Value {
+    fn native_println(vm: &Self, args: &[Value]) -> Result<Value, Error> {
         for arg in args {
             print!("{}", arg.format(&vm.gc));
         }
 
         println!();
-        Value::Nil
+        Ok(Value::Nil)
     }
 }
 
