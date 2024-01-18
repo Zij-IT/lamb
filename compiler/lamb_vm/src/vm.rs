@@ -10,7 +10,10 @@ use crate::{
 };
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {}
+pub enum Error {
+    #[error("No global with the name '{0}'")]
+    NoSuchGlobal(String),
+}
 
 macro_rules! num_bin_op {
     (%, $this:expr) => {{
@@ -121,7 +124,10 @@ impl Vm {
                         panic!("type error");
                     };
 
-                    let global = self.globals.get(&name).copied().unwrap();
+                    let Some(global) = self.globals.get(&name).copied() else {
+                        return Err(Error::NoSuchGlobal(self.gc.deref(name).0.clone()));
+                    };
+
                     self.push(global);
                 }
                 Op::GetUpvalue(i) => {
