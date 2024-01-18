@@ -14,7 +14,7 @@ pub enum Error {
     #[error("No global with the name '{0}'")]
     NoSuchGlobal(String),
 
-    #[error("Attempt to test a value of type {0} with an array pattern")]
+    #[error("Attempt to test a value of type {0} against an array pattern")]
     BadArrayScrutinee(&'static str),
 
     #[error("Attempt to use a value of type {0} as an index")]
@@ -31,6 +31,12 @@ pub enum Error {
 
     #[error("Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
+
+    #[error("The binary op {2} can't be used with values of types {1} and {0}")]
+    BinaryTypeMismatch(&'static str, &'static str, &'static str),
+
+    #[error("The unary op {1} can't be used with a value of type {0}")]
+    UnaryTypeMismatch(&'static str, &'static str),
 }
 
 macro_rules! num_bin_op {
@@ -40,7 +46,11 @@ macro_rules! num_bin_op {
 
         let val = match (lhs, rhs) {
             (Value::Int(l), Value::Int(r)) => Value::Int(l % r),
-            _ => panic!("type error"),
+            _ => return $this.error(Error::BinaryTypeMismatch(
+                lhs.type_name(),
+                rhs.type_name(),
+                "%"
+            )),
         };
 
         $this.push(val);
@@ -52,7 +62,11 @@ macro_rules! num_bin_op {
         let val = match (lhs, rhs) {
             (Value::Int(l), Value::Int(r)) => Value::Int(l $op r),
             (Value::Double(l), Value::Double(r)) => Value::Double(l $op r),
-            _ => panic!("type error"),
+            _ => return $this.error(Error::BinaryTypeMismatch(
+                lhs.type_name(),
+                rhs.type_name(),
+                stringify!($op)
+            )),
         };
 
         $this.push(val);
@@ -66,7 +80,10 @@ macro_rules! num_un_op {
         let val = match rhs {
             Value::Int(r) => Value::Int($op r),
             Value::Double(r) => Value::Double($op r),
-            _ => panic!("type error"),
+            _ => return $this.error(Error::UnaryTypeMismatch(
+                rhs.type_name(),
+                stringify!($op)
+            )),
         };
 
         $this.push(val);
@@ -371,7 +388,7 @@ impl Vm {
                 Op::BinNeg => self.num_un_op(ops::Not::not),
                 Op::LogNeg => self.bool_un_op(ops::Not::not),
 
-                Op::Add => self.add_op(),
+                Op::Add => self.add_op()?,
                 Op::Sub => num_bin_op!(-, self),
                 Op::Div => num_bin_op!(/, self),
                 Op::Mod => num_bin_op!(%, self),
@@ -418,7 +435,7 @@ impl Vm {
         self.stack.push(v);
     }
 
-    fn add_op(&mut self) {
+    fn add_op(&mut self) -> Result<(), Error> {
         let rhs = self.pop();
         let lhs = self.pop();
 
@@ -439,8 +456,16 @@ impl Vm {
                 let arr_ref = self.alloc(arr);
                 self.push(Value::Array(arr_ref));
             }
-            _ => panic!("type error!"),
+            _ => {
+                return self.error(Error::BinaryTypeMismatch(
+                    lhs.type_name(),
+                    rhs.type_name(),
+                    "+",
+                ));
+            }
         }
+
+        Ok(())
     }
 
     fn bool_un_op<F>(&mut self, f: F)
