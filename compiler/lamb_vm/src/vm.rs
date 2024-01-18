@@ -346,7 +346,7 @@ impl Vm {
                             let new = self.alloc(new);
                             self.push(Value::String(new));
                         }
-                        _ => panic!("type error!"),
+                        val => return Err(Error::BadArrayScrutinee(val.type_name())),
                     }
                 }
                 Op::MakeArray(n) => {
