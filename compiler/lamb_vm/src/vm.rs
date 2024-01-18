@@ -13,6 +13,9 @@ use crate::{
 pub enum Error {
     #[error("No global with the name '{0}'")]
     NoSuchGlobal(String),
+
+    #[error("Attempt to test a value of type {0} with an array pattern")]
+    BadArrayScrutinee(&'static str),
 }
 
 macro_rules! num_bin_op {
@@ -256,7 +259,7 @@ impl Vm {
                     let len = match self.peek(0) {
                         Value::Array(arr) => self.gc.deref(arr).len(),
                         Value::String(str) => self.gc.deref(str).len(),
-                        _ => panic!("type error!"),
+                        val => return Err(Error::BadArrayScrutinee(val.type_name())),
                     };
 
                     self.push(Value::Int(i64::try_from(len).unwrap()))

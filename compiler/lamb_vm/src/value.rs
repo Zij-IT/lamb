@@ -75,6 +75,20 @@ impl Value {
             _ => None,
         }
     }
+
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            Value::Nil => "nil",
+            Value::Int(_) => "i64",
+            Value::Bool(_) => "bool",
+            Value::Char(_) => "char",
+            Value::Double(_) => "double",
+            Value::Array(_) => "array",
+            Value::String(_) => "string",
+            Value::Closure(_) => "closure",
+            Value::Native(_) => "native",
+        }
+    }
 }
 
 #[derive(Debug)]
