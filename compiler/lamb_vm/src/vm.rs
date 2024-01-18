@@ -32,6 +32,9 @@ pub enum Error {
     #[error("Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
 
+    #[error("Values of types {1} and {0} can't be compared with {2}")]
+    NotComparable(&'static str, &'static str, &'static str),
+
     #[error("The binary op {2} can't be used with values of types {1} and {0}")]
     BinaryTypeMismatch(&'static str, &'static str, &'static str),
 
@@ -407,10 +410,10 @@ impl Vm {
 
                 Op::Eq => self.value_eq_op(identity),
                 Op::Ne => self.value_eq_op(ops::Not::not),
-                Op::Ge => self.value_cmp_op(|o| matches!(o, Ordering::Equal | Ordering::Greater)),
-                Op::Gt => self.value_cmp_op(|o| matches!(o, Ordering::Greater)),
-                Op::Le => self.value_cmp_op(|o| matches!(o, Ordering::Less | Ordering::Equal)),
-                Op::Lt => self.value_cmp_op(|o| matches!(o, Ordering::Less)),
+                Op::Ge => self.value_cmp_op(|o| !matches!(o, Ordering::Less), ">=")?,
+                Op::Le => self.value_cmp_op(|o| !matches!(o, Ordering::Greater), "<=")?,
+                Op::Gt => self.value_cmp_op(|o| matches!(o, Ordering::Greater), ">")?,
+                Op::Lt => self.value_cmp_op(|o| matches!(o, Ordering::Less), "<")?,
             }
         }
     }
@@ -502,7 +505,7 @@ impl Vm {
         Ok(())
     }
 
-    fn value_cmp_op<F>(&mut self, f: F)
+    fn value_cmp_op<F>(&mut self, f: F, op: &'static str) -> Result<(), Error>
     where
         F: Fn(Ordering) -> bool,
     {
@@ -510,10 +513,15 @@ impl Vm {
         let lhs = self.pop();
 
         let Some(ord) = lhs.compare(&rhs, &self.gc) else {
-            panic!("type error!");
+            return Err(Error::BinaryTypeMismatch(
+                lhs.type_name(),
+                rhs.type_name(),
+                op,
+            ));
         };
 
-        self.push(Value::Bool(f(ord)))
+        self.push(Value::Bool(f(ord)));
+        Ok(())
     }
 
     fn value_eq_op<F>(&mut self, f: F)
