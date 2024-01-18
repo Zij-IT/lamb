@@ -391,8 +391,8 @@ impl Vm {
                 }
 
                 Op::NumNeg => num_un_op!(-, self),
-                Op::BinNeg => self.num_un_op(ops::Not::not),
-                Op::LogNeg => self.bool_un_op(ops::Not::not),
+                Op::BinNeg => self.num_un_op(ops::Not::not, "~")?,
+                Op::LogNeg => self.bool_un_op(ops::Not::not, "!")?,
 
                 Op::Add => self.add_op()?,
                 Op::Sub => num_bin_op!(-, self),
@@ -474,44 +474,32 @@ impl Vm {
         Ok(())
     }
 
-    fn bool_un_op<F>(&mut self, f: F)
+    fn bool_un_op<F>(&mut self, f: F, op: &'static str) -> Result<(), Error>
     where
         F: Fn(bool) -> bool,
     {
         let rhs = self.pop();
 
         let Value::Bool(r) = rhs else {
-            panic!("type error!");
+            return Err(Error::UnaryTypeMismatch(rhs.type_name(), op));
         };
 
         self.push(Value::Bool(f(r)));
+        Ok(())
     }
 
-    fn num_un_op<F>(&mut self, f: F)
+    fn num_un_op<F>(&mut self, f: F, op: &'static str) -> Result<(), Error>
     where
         F: Fn(i64) -> i64,
     {
         let rhs = self.pop();
 
         let Value::Int(r) = rhs else {
-            panic!("type error!");
+            return Err(Error::UnaryTypeMismatch(rhs.type_name(), op));
         };
 
         self.push(Value::Int(f(r)));
-    }
-
-    fn num_bin_op<F>(&mut self, f: F)
-    where
-        F: Fn(i64, i64) -> i64,
-    {
-        let rhs = self.pop();
-        let lhs = self.pop();
-
-        let (Value::Int(l), Value::Int(r)) = (lhs, rhs) else {
-            panic!("type error!");
-        };
-
-        self.push(Value::Int(f(l, r)));
+        Ok(())
     }
 
     fn value_cmp_op<F>(&mut self, f: F)
