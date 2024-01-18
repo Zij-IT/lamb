@@ -40,7 +40,7 @@ pub enum Error {
 }
 
 macro_rules! num_bin_op {
-    (%, $this:expr) => {{
+    (__ONLY_INT, $op:tt, $this:expr) => {{
         let rhs = $this.pop();
         let lhs = $this.pop();
 
@@ -49,12 +49,18 @@ macro_rules! num_bin_op {
             _ => return $this.error(Error::BinaryTypeMismatch(
                 lhs.type_name(),
                 rhs.type_name(),
-                "%"
+                stringify!($op)
             )),
         };
 
         $this.push(val);
     }};
+    (%, $this:expr) => { num_bin_op!(__ONLY_INT, %, $this) };
+    (&, $this:expr) => { num_bin_op!(__ONLY_INT, &, $this) };
+    (|, $this:expr) => { num_bin_op!(__ONLY_INT, |, $this) };
+    (^, $this:expr) => { num_bin_op!(__ONLY_INT, ^, $this) };
+    (<<, $this:expr) => { num_bin_op!(__ONLY_INT, <<, $this) };
+    (>>, $this:expr) => { num_bin_op!(__ONLY_INT, >>, $this) };
     ($op:tt, $this:expr) => {{
         let rhs = $this.pop();
         let lhs = $this.pop();
@@ -393,11 +399,11 @@ impl Vm {
                 Op::Div => num_bin_op!(/, self),
                 Op::Mod => num_bin_op!(%, self),
                 Op::Mul => num_bin_op!(*, self),
-                Op::BinAnd => self.num_bin_op(ops::BitAnd::bitand),
-                Op::BinOr => self.num_bin_op(ops::BitOr::bitor),
-                Op::BinXor => self.num_bin_op(ops::BitXor::bitxor),
-                Op::LShift => self.num_bin_op(ops::Shl::shl),
-                Op::RShift => self.num_bin_op(ops::Shr::shr),
+                Op::BinAnd => num_bin_op!(&, self),
+                Op::BinOr => num_bin_op!(|, self),
+                Op::BinXor => num_bin_op!(^, self),
+                Op::LShift => num_bin_op!(<<, self),
+                Op::RShift => num_bin_op!(>>, self),
 
                 Op::Eq => self.value_eq_op(identity),
                 Op::Ne => self.value_eq_op(ops::Not::not),
