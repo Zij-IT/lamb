@@ -54,7 +54,7 @@ macro_rules! num_bin_op {
         let lhs = $this.pop();
 
         let val = match (lhs, rhs) {
-            (Value::Int(l), Value::Int(r)) => Value::Int(l % r),
+            (Value::Int(l), Value::Int(r)) => Value::Int(l $op r),
             _ => return $this.error(Error::BinaryTypeMismatch(
                 lhs.type_name(),
                 rhs.type_name(),
