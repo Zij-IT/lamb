@@ -15,6 +15,7 @@ use crate::{
 // This is safe because it contains whitespace, which user identifiers
 // cannot have.
 const SCRUTINEE: &str = " SCRUTINEE";
+const COMPOSE_ARG: &str = "COMP ARG";
 
 // Safety: 1, despite its appearence, is not equal to zero
 const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
@@ -426,10 +427,11 @@ impl Compiler {
         let orig_self = std::mem::replace(self, composition);
 
         self.enclosing = Some(Box::new(orig_self));
-        self.func.arity += 1;
+        self.add_arg(gc, &Ident(COMPOSE_ARG.into()));
         self.start_block();
         self.compile_expr(lhs, gc);
         self.compile_expr(rhs, gc);
+        // It's clearly at spot 1... soo.... cheat!
         self.write_op(Op::GetLocal(1));
         self.write_op(Op::Call(1));
         self.write_op(Op::Call(1));
