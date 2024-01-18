@@ -16,6 +16,12 @@ pub enum Error {
 
     #[error("Attempt to test a value of type {0} with an array pattern")]
     BadArrayScrutinee(&'static str),
+
+    #[error("Attempt to use a value of type {0} as an index")]
+    BadIndexType(&'static str),
+
+    #[error("Attempt to index into a value of type {0}")]
+    BadIndexeeType(&'static str),
 }
 
 macro_rules! num_bin_op {
@@ -265,8 +271,9 @@ impl Vm {
                     self.push(Value::Int(i64::try_from(len).unwrap()))
                 }
                 Op::Index => {
-                    let Value::Int(idx) = self.pop() else {
-                        panic!("type error!");
+                    let idx = match self.pop() {
+                        Value::Int(idx) => idx,
+                        val => return Err(Error::BadIndexType(val.type_name())),
                     };
 
                     let idx = usize::try_from(idx).unwrap();
@@ -280,12 +287,13 @@ impl Vm {
                             let val = self.gc.deref(arr).get(idx);
                             self.push(val);
                         }
-                        _ => panic!("type error!"),
+                        val => return Err(Error::BadIndexeeType(val.type_name())),
                     }
                 }
                 Op::IndexRev => {
-                    let Value::Int(idx) = self.pop() else {
-                        panic!("type error!");
+                    let idx = match self.pop() {
+                        Value::Int(idx) => idx,
+                        val => return Err(Error::BadIndexType(val.type_name())),
                     };
 
                     let idx = usize::try_from(idx).unwrap();
@@ -311,7 +319,7 @@ impl Vm {
                             let val = arr.get(idx);
                             self.push(val);
                         }
-                        _ => panic!("type error!"),
+                        val => return Err(Error::BadIndexeeType(val.type_name())),
                     }
                 }
                 Op::Slice(idx) => {
