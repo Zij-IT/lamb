@@ -148,7 +148,7 @@ impl Vm {
                 }
                 Op::DefineGlobal(i) => {
                     let Value::String(name) = self.chunk().constants[usize::from(i)] else {
-                        panic!("type error");
+                        panic!("Compilation Error: DefineGlobal references non-string constant");
                     };
 
                     let value = self.pop();
@@ -156,7 +156,7 @@ impl Vm {
                 }
                 Op::GetGlobal(i) => {
                     let Value::String(name) = self.chunk().constants[usize::from(i)] else {
-                        panic!("type error");
+                        panic!("Compilation Error: GetGlobal references non-string constant");
                     };
 
                     let Some(global) = self.globals.get(&name).copied() else {
@@ -221,7 +221,7 @@ impl Vm {
                 }
                 Op::Closure(i) => {
                     let Value::Closure(clo_ref) = self.chunk().constants[usize::from(i)] else {
-                        panic!("type error!");
+                        panic!("Compilation Error: Closure references non-closure constant");
                     };
 
                     let func = self.gc.deref(clo_ref).func;
@@ -352,7 +352,7 @@ impl Vm {
                 }
                 Op::Slice(idx) => {
                     let Value::Int(i) = self.chunk().constants[usize::from(idx)] else {
-                        panic!("type error!");
+                        panic!("Compilation Error: Slice references non-int constant");
                     };
 
                     let start = ((i as u64 >> u32::BITS) as u32) as usize;
