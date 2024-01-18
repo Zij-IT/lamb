@@ -49,7 +49,7 @@ pub struct Repl {
 impl Repl {
     pub const REPL_START: &'static str = concat!(
         ",~~~@> Baaaah... Welcome to the Lamb REPL! (Lamb v0.1.0)\n",
-        " W-W'  Type ':quit' to exit, or ':run' to run the input.\n",
+        " W-W'  Type ':quit' to exit.\n",
         "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
     );
 
@@ -92,7 +92,6 @@ impl Repl {
             match line {
                 Ok(line) => match &*line {
                     ":quit" => return Ok(Command::Quit),
-                    ":run" => return Ok(Command::Run),
                     _ => {
                         self.inner.add_history_entry(&line)?;
                         return Ok(Command::String(line));
