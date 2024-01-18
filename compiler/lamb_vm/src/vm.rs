@@ -22,6 +22,15 @@ pub enum Error {
 
     #[error("Attempt to index into a value of type {0}")]
     BadIndexeeType(&'static str),
+
+    #[error("Callee accepts {0} arguments, but was provided {1}")]
+    ArgAmountMismatch(usize, usize),
+
+    #[error("Attempt to call a value of type {0}")]
+    BadCalleeType(&'static str),
+
+    #[error("Expected bool, recieved {0}")]
+    CtrlFlowNotBool(&'static str),
 }
 
 macro_rules! num_bin_op {
@@ -160,7 +169,7 @@ impl Vm {
                             let closure = self.gc.deref(cl);
                             let func = self.gc.deref(closure.func);
                             if args != func.arity {
-                                panic!("too many args!");
+                                return self.error(Error::ArgAmountMismatch(args, func.arity));
                             } else {
                                 let frame = CallFrame::new(cl, self.stack.len() - 1 - args);
                                 self.frames.push(frame);
@@ -172,7 +181,7 @@ impl Vm {
                             self.stack.truncate(args - 1);
                             self.push(result);
                         }
-                        _ => panic!("type error!"),
+                        val => return self.error(Error::BadCalleeType(val.type_name())),
                     }
                 }
                 Op::Return => {
@@ -231,8 +240,9 @@ impl Vm {
                     self.frame_mut().ip += usize::from(off);
                 }
                 Op::JumpIfFalse(off) => {
-                    let Value::Bool(is_true) = self.peek(0) else {
-                        panic!("type error!");
+                    let is_true = match self.peek(0) {
+                        Value::Bool(is_true) => is_true,
+                        val => return self.error(Error::CtrlFlowNotBool(val.type_name())),
                     };
 
                     if !is_true {
@@ -240,8 +250,9 @@ impl Vm {
                     }
                 }
                 Op::JumpIfTrue(off) => {
-                    let Value::Bool(is_true) = self.peek(0) else {
-                        panic!("type error!");
+                    let is_true = match self.peek(0) {
+                        Value::Bool(is_true) => is_true,
+                        val => return self.error(Error::CtrlFlowNotBool(val.type_name())),
                     };
 
                     if is_true {
