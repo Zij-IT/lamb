@@ -9,6 +9,9 @@ use crate::{
     value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
 };
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {}
+
 macro_rules! num_bin_op {
     (%, $this:expr) => {{
         let rhs = $this.pop();
@@ -90,7 +93,7 @@ impl Vm {
         self.frames.push(CallFrame::new(closure, 0));
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let op = self.chunk().code[self.frame().ip];
             self.frame_mut().ip += 1;
@@ -163,7 +166,7 @@ impl Vm {
                     self.close_upvalues(frame.slot);
 
                     if self.frames.is_empty() {
-                        return;
+                        return Ok(());
                     } else {
                         self.stack.truncate(frame.slot);
                         self.push(ret_value);

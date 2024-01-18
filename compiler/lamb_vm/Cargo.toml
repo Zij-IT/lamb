@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 lamb_ast = { path = "../lamb_ast" }
+thiserror = "1.0.56"
