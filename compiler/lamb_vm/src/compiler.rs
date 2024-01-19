@@ -506,8 +506,8 @@ impl Compiler {
 
         // compile elifs
         for Elif { cond, block } in elifs {
-            self.block.offset = offset;
             self.write_op(Op::Pop(NZ_ONE_U16));
+            self.block.offset = offset;
             to_elses.push(self.compile_conditional(cond, block, gc));
         }
 
