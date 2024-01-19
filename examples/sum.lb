@@ -1,3 +1,8 @@
+len := rec fn(xs) -> case xs {
+  [x, rest @ ..] -> 1 + len(rest),
+  [] -> 0,
+};
+
 sum := fn(xs) -> { 
   x := "THIS SHOULD NOT BE PRINTED";
   length := len(xs);                
