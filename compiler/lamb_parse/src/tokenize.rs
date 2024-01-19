@@ -241,12 +241,12 @@ fn chars<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
                 .filter(|c| *c != ':' && *c != '\'')
                 .or(escape_chars())
                 .repeated()
-                .to_slice(),
+                .collect::<Vec<_>>(),
         )
         .then_ignore(just('\''))
-        .validate(|ch, ex, emitter| {
+        .validate(|mut ch, ex, emitter| {
             if ch.len() == 1 {
-                Token::Char(ch.chars().next().expect("ch should have length 1"))
+                Token::Char(ch.swap_remove(0))
             } else {
                 emitter.emit(Rich::custom(
                     ex.span(),
