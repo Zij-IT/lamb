@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 lamb_ast = { path = "../lamb_ast" }
+rand = { version = "0.8.5", features = ["std"] }
 thiserror = "1.0.56"

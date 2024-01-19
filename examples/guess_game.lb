@@ -1,5 +1,8 @@
 -- Guessing Game
-new_num := fn() -> rand() % 200;
+new_num := fn() -> {
+	r := rand();
+	if r < 0 { -r } else { r } % 200
+};
 
 println("Enter a number! (0 .. 200)");
 guess := rec fn(n, guess_count) -> {

@@ -46,6 +46,12 @@ pub enum Error {
 
     #[error("Index {0} is out of bounds (max {1})")]
     IndexOutOfBounds(usize, usize),
+
+    #[error("IoError: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Cant convert input to a value of type {0}")]
+    InputConv(&'static str),
 }
 
 macro_rules! num_bin_op {
@@ -133,6 +139,9 @@ impl Vm {
 
         this.define_native("print", Self::native_print);
         this.define_native("println", Self::native_println);
+        this.define_native("rand", Self::native_rand);
+        this.define_native("user_int", Self::native_user_int);
+        this.define_native("user_char", Self::native_user_char);
         this
     }
 
@@ -659,6 +668,42 @@ impl Vm {
 
         println!();
         Ok(Value::Nil)
+    }
+
+    fn native_rand(_vm: &Self, args: &[Value]) -> Result<Value> {
+        match args.is_empty() {
+            true => Ok(Value::Int(rand::random())),
+            false => Err(Error::ArgAmountMismatch(0, args.len())),
+        }
+    }
+
+    fn native_user_int(_vm: &Self, args: &[Value]) -> Result<Value> {
+        if !args.is_empty() {
+            return Err(Error::ArgAmountMismatch(0, args.len()));
+        }
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+
+        Ok(Value::Int(
+            input
+                .trim()
+                .parse()
+                .map_err(|_| Error::InputConv(Value::INT_TYPE_NAME))?,
+        ))
+    }
+
+    fn native_user_char(_vm: &Self, args: &[Value]) -> Result<Value> {
+        if !args.is_empty() {
+            return Err(Error::ArgAmountMismatch(0, args.len()));
+        }
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+
+        Ok(Value::Char(input.trim().parse().map_err(|_| {
+            Error::InputConv(Value::Char('o').type_name())
+        })?))
     }
 }
 

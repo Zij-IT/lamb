@@ -20,6 +20,16 @@ pub enum Value {
 }
 
 impl Value {
+    pub const NIL_TYPE_NAME: &'static str = "nil";
+    pub const INT_TYPE_NAME: &'static str = "i64";
+    pub const BOOL_TYPE_NAME: &'static str = "bool";
+    pub const CHAR_TYPE_NAME: &'static str = "char";
+    pub const DOUBLE_TYPE_NAME: &'static str = "double";
+    pub const ARRAY_TYPE_NAME: &'static str = "array";
+    pub const STRING_TYPE_NAME: &'static str = "string";
+    pub const CLOSURE_TYPE_NAME: &'static str = "closure";
+    pub const NATIVE_TYPE_NAME: &'static str = "native";
+
     pub(crate) fn format(&self, gc: &LambGc) -> String {
         match self {
             Value::Nil => "nil".into(),
@@ -78,15 +88,15 @@ impl Value {
 
     pub fn type_name(&self) -> &'static str {
         match self {
-            Value::Nil => "nil",
-            Value::Int(_) => "i64",
-            Value::Bool(_) => "bool",
-            Value::Char(_) => "char",
-            Value::Double(_) => "double",
-            Value::Array(_) => "array",
-            Value::String(_) => "string",
-            Value::Closure(_) => "closure",
-            Value::Native(_) => "native",
+            Value::Nil => Self::NIL_TYPE_NAME,
+            Value::Int(_) => Self::INT_TYPE_NAME,
+            Value::Bool(_) => Self::BOOL_TYPE_NAME,
+            Value::Char(_) => Self::CHAR_TYPE_NAME,
+            Value::Double(_) => Self::DOUBLE_TYPE_NAME,
+            Value::Array(_) => Self::ARRAY_TYPE_NAME,
+            Value::String(_) => Self::STRING_TYPE_NAME,
+            Value::Closure(_) => Self::CLOSURE_TYPE_NAME,
+            Value::Native(_) => Self::NATIVE_TYPE_NAME,
         }
     }
 }
