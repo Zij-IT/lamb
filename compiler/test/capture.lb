@@ -1,0 +1,7 @@
+captured := fn(x) -> fn() -> x;
+
+two := captured(2);
+thr := captured(3);
+
+two() $> println;
+thr() $> println;
