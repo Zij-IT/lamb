@@ -101,6 +101,7 @@ impl LambGc {
             Value::Char(_) => (),
             Value::Double(_) => (),
             Value::Native(_nat) => (),
+            Value::Function(func) => self.mark_object(func),
             Value::Array(arr) => self.mark_object(arr),
             Value::String(str) => self.mark_object(str),
             Value::Closure(clo) => self.mark_object(clo),

@@ -15,6 +15,7 @@ pub enum Value {
     Double(f64),
     Array(GcRef<LambArray>),
     String(GcRef<LambString>),
+    Function(GcRef<LambFunc>),
     Closure(GcRef<LambClosure>),
     Native(NativeFunc),
 }
@@ -46,6 +47,7 @@ impl Value {
                 s
             }
             Value::String(s) => gc.deref(*s).0.to_string(),
+            Value::Function(f) => gc.deref(gc.deref(*f).name).0.to_string(),
             Value::Closure(c) => {
                 let f = gc.deref(*c).func;
                 let s = gc.deref(f).name;
@@ -85,6 +87,7 @@ impl Value {
             Value::Double(_) => "double",
             Value::Array(_) => "array",
             Value::String(_) => "string",
+            Value::Function(_) => "function",
             Value::Closure(_) => "closure",
             Value::Native(_) => "native",
         }

@@ -239,30 +239,30 @@ impl Vm {
                     self.pop();
                 }
                 Op::Closure(i) => {
-                    let Value::Closure(clo_ref) = self.chunk().constants[usize::from(i)] else {
-                        panic!("Compilation Error: Closure references non-closure constant");
+                    let Value::Function(func_ref) = self.chunk().constants[usize::from(i)] else {
+                        panic!("Compilation Error: Op::Closure expects Value::Function");
                     };
 
-                    let func = self.gc.deref(clo_ref).func;
-                    let len = self.gc.deref(func).upvalues.len();
+                    let func = self.gc.deref(func_ref);
+                    let len = func.upvalues.len();
+                    let mut closure = LambClosure::new(func_ref);
+                    closure.upvalues.reserve(len);
 
                     for i in 0..len {
-                        let FuncUpvalue { index, is_local } = self.gc.deref(func).upvalues[i];
+                        let FuncUpvalue { index, is_local } = self.gc.deref(func_ref).upvalues[i];
                         if is_local {
                             let up = self.capture_upvalue(self.frame().slot + index);
-                            let closure = self.gc.deref_mut(clo_ref);
                             closure.upvalues.push(up);
                         } else {
                             let curr_closure = self.frame().closure;
                             let curr_closure = self.gc.deref(curr_closure);
                             let up = curr_closure.upvalues[index];
-
-                            let closure = self.gc.deref_mut(clo_ref);
                             closure.upvalues.push(up);
                         }
                     }
 
-                    self.stack.push(Value::Closure(clo_ref));
+                    let closure = self.alloc(closure);
+                    self.stack.push(Value::Closure(closure));
                 }
 
                 Op::Dup => {

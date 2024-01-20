@@ -208,11 +208,10 @@ impl Compiler {
     }
 
     fn write_closure(&mut self, gc: &mut LambGc, func: LambFunc) {
-        let closure = LambClosure::new(gc.alloc(func));
         self.func
             .chunk
             .constants
-            .push(Value::Closure(gc.alloc(closure)));
+            .push(Value::Function(gc.alloc(func)));
 
         let idx = self.func.chunk.constants.len() - 1;
         self.write_op(Op::Closure(idx.try_into().unwrap()))
