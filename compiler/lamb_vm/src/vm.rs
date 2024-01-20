@@ -476,6 +476,9 @@ impl Vm {
             (Value::Int(l), Value::Int(r)) => {
                 self.push(Value::Int(l + r));
             }
+            (Value::Double(l), Value::Double(r)) => {
+                self.push(Value::Double(l + r));
+            }
             (Value::String(l), Value::String(r)) => {
                 let l = &self.gc.deref(l).0;
                 let r = &self.gc.deref(r).0;
