@@ -7,7 +7,39 @@ pub enum Either<L, R> {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Script {
+    pub exports: Option<Export>,
+    pub imports: Vec<Import>,
     pub block: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Import {
+    pub path: String,
+    pub alias: Option<Ident>,
+    pub imports: Option<Vec<Ident>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Export {
+    pub items: Vec<Exportable>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Exportable {
+    pub name: Ident,
+    pub alias: Option<Ident>,
+}
+
+impl Exportable {
+    pub fn new<S>(name: S, alias: Option<&'_ str>) -> Self
+    where
+        S: Into<String>,
+    {
+        Exportable {
+            name: Ident(name.into()),
+            alias: alias.map(Into::into).map(Ident),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -294,6 +326,15 @@ pub struct FuncDef {
 pub struct Block {
     pub stats: Vec<Statement>,
     pub value: Option<Box<Expr>>,
+}
+
+impl Block {
+    pub fn empty() -> Self {
+        Self {
+            stats: vec![],
+            value: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

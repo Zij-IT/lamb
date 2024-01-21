@@ -78,6 +78,8 @@ fn extract_script(input: &str) -> SyntaxResult<Script> {
             let expr = lamb_parse::expr(input)?;
             let stat = wrap_expr(expr);
             Ok(Script {
+                exports: None,
+                imports: vec![],
                 block: Block {
                     stats: vec![stat],
                     value: None,
