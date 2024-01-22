@@ -1,14 +1,14 @@
 [package]
-name = "lamb"
+name = "lambc"
 version = "0.1.0"
 edition = "2021"
-default-run = "lamb"
+default-run = "lambc"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-lamb_ast = { path = "../lamb_ast" }
-lamb_vm = { path = "../lamb_vm" }
-lamb_parse = { path = "../lamb_parse" }
+lambc_ast = { path = "../lambc_ast" }
+lambc_vm = { path = "../lambc_vm" }
+lambc_parse = { path = "../lambc_parse" }
 ariadne = { version = "0.3.0", features = ["auto-color"] }
 clap = { version = "4.3.0", features = ["derive"] }
 human-panic = "1.1.5"

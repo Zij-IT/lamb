@@ -1,11 +1,11 @@
 [package]
-name = "lamb_vm"
+name = "lambc_parse"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lamb_ast = { path = "../lamb_ast" }
-rand = { version = "0.8.5", features = ["std"] }
-thiserror = "1.0.56"
+lambc_ast = { path = "../lambc_ast" }
+chumsky = { version = "1.0.0-6.alpha", features = ["pratt", "label"] }
+ordered-float = "4.2.0"

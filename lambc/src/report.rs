@@ -1,7 +1,7 @@
 use std::{ops::Range, path::Path};
 
 use ariadne::{Label, Report, ReportKind, Source};
-use lamb_parse::SyntaxError;
+use lambc_parse::SyntaxError;
 
 pub fn errors<'a, S, P, M>(src: S, path: P, errs: &[SyntaxError], msg: M)
 where

@@ -16,15 +16,15 @@ type StreamInp = SpannedInput<Token, SimpleSpan, Stream<std::vec::IntoIter<(Toke
 
 pub type SyntaxResult<'a, T> = Result<T, Vec<SyntaxError<'a>>>;
 
-pub fn script(src: &str) -> SyntaxResult<lamb_ast::Script> {
+pub fn script(src: &str) -> SyntaxResult<lambc_ast::Script> {
     parse(src, parse::script())
 }
 
-pub fn statement(src: &str) -> SyntaxResult<lamb_ast::Statement> {
+pub fn statement(src: &str) -> SyntaxResult<lambc_ast::Statement> {
     parse(src, parse::statement())
 }
 
-pub fn expr(src: &str) -> SyntaxResult<lamb_ast::Expr> {
+pub fn expr(src: &str) -> SyntaxResult<lambc_ast::Expr> {
     parse(src, parse::expr())
 }
 

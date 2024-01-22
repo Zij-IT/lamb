@@ -12,7 +12,7 @@ use chumsky::{
     IterParser, Parser,
 };
 
-use lamb_ast::{
+use lambc_ast::{
     ArrayPattern, Assign, Atom, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef,
     Ident, If, Index, Literal, Pattern, PatternTop, Script, Statement, UnaryOp,
 };
@@ -23,10 +23,10 @@ macro_rules! bin {
             ::chumsky::pratt::left($str),
             ::chumsky::primitive::just(crate::tokenize::Token::Op(crate::tokenize::Op::$tok)),
             |lhs, rhs| {
-                ::lamb_ast::Expr::Binary(::lamb_ast::Binary::new(
+                ::lambc_ast::Expr::Binary(::lambc_ast::Binary::new(
                     lhs,
                     rhs,
-                    ::lamb_ast::BinaryOp::$tok,
+                    ::lambc_ast::BinaryOp::$tok,
                 ))
             },
         )
@@ -38,7 +38,7 @@ macro_rules! unary {
         ::chumsky::pratt::prefix(
             $str,
             ::chumsky::primitive::just(crate::tokenize::Token::Op($op)),
-            |rhs| ::lamb_ast::Expr::Unary(::lamb_ast::Unary::new(rhs, $uop)),
+            |rhs| ::lambc_ast::Expr::Unary(::lambc_ast::Unary::new(rhs, $uop)),
         )
     }};
 }

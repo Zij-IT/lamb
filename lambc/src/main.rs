@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic)]
 
-use lamb_ast::{Atom, Block, Expr, FuncCall, Ident, Script, Statement};
-use lamb_parse::SyntaxResult;
+use lambc_ast::{Atom, Block, Expr, FuncCall, Ident, Script, Statement};
+use lambc_parse::SyntaxResult;
 use repl::Command;
 use std::error::Error;
 
@@ -29,9 +29,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_input(input: &str) {
-    match lamb_parse::script(input) {
+    match lambc_parse::script(input) {
         Ok(s) => {
-            if let Err(err) = lamb_vm::run_script(&s) {
+            if let Err(err) = lambc_vm::run_script(&s) {
                 println!("{err}");
             }
         }
@@ -48,7 +48,7 @@ fn run_repl() -> Result<(), repl::Error> {
 
     print!("{}", repl::Repl::REPL_START);
 
-    let mut vm = lamb_vm::Vm::new();
+    let mut vm = lambc_vm::Vm::new();
     loop {
         match lamb.read_line()? {
             Command::Quit => return Ok(()),
@@ -72,10 +72,10 @@ fn run_repl() -> Result<(), repl::Error> {
 }
 
 fn extract_script(input: &str) -> SyntaxResult<Script> {
-    match lamb_parse::script(input) {
+    match lambc_parse::script(input) {
         Ok(script) => Ok(script),
         Err(_) => {
-            let expr = lamb_parse::expr(input)?;
+            let expr = lambc_parse::expr(input)?;
             let stat = wrap_expr(expr);
             Ok(Script {
                 block: Block {

@@ -2,8 +2,8 @@
 resolver = "2"
 
 members = [
-    "lamb",
-    "lamb_vm",
-    "lamb_ast",
-    "lamb_parse",
+    "lambc",
+    "lambc_vm",
+    "lambc_ast",
+    "lambc_parse",
 ]
