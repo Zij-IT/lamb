@@ -1,7 +1,6 @@
 #![warn(clippy::pedantic)]
 
-use lambc_ast::{Atom, Block, Expr, FuncCall, Ident, Script, Statement};
-use lambc_parse::SyntaxResult;
+use lambc_parse::{Atom, Block, Expr, FuncCall, Ident, Script, Statement, SyntaxResult};
 use repl::Command;
 use std::error::Error;
 

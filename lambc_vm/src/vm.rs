@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
 
-use lambc_ast::Script;
+use lambc_parse::Script;
 
 use crate::{
     chunk::{Chunk, Op},

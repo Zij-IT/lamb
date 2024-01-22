@@ -1,4 +1,4 @@
-use lambc_ast::Script;
+use lambc_parse::Script;
 
 mod chunk;
 mod compiler;

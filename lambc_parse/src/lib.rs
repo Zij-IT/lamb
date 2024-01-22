@@ -1,7 +1,9 @@
+mod ast;
 mod error;
 mod parse;
 mod tokenize;
 
+pub use ast::*;
 use chumsky::{
     extra,
     input::{SpannedInput, Stream},
@@ -16,15 +18,15 @@ type StreamInp = SpannedInput<Token, SimpleSpan, Stream<std::vec::IntoIter<(Toke
 
 pub type SyntaxResult<'a, T> = Result<T, Vec<SyntaxError<'a>>>;
 
-pub fn script(src: &str) -> SyntaxResult<lambc_ast::Script> {
+pub fn script(src: &str) -> SyntaxResult<Script> {
     parse(src, parse::script())
 }
 
-pub fn statement(src: &str) -> SyntaxResult<lambc_ast::Statement> {
+pub fn statement(src: &str) -> SyntaxResult<Statement> {
     parse(src, parse::statement())
 }
 
-pub fn expr(src: &str) -> SyntaxResult<lambc_ast::Expr> {
+pub fn expr(src: &str) -> SyntaxResult<Expr> {
     parse(src, parse::expr())
 }
 

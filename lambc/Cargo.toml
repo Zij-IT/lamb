@@ -6,7 +6,6 @@ default-run = "lambc"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-lambc_ast = { path = "../lambc_ast" }
 lambc_vm = { path = "../lambc_vm" }
 lambc_parse = { path = "../lambc_parse" }
 ariadne = { version = "0.3.0", features = ["auto-color"] }

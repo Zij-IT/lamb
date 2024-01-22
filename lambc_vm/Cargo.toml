@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lambc_ast = { path = "../lambc_ast" }
+lambc_parse = { path = "../lambc_parse" }
 rand = { version = "0.8.5", features = ["std"] }
 thiserror = "1.0.56"

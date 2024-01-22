@@ -6,6 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lambc_ast = { path = "../lambc_ast" }
 chumsky = { version = "1.0.0-6.alpha", features = ["pratt", "label"] }
 ordered-float = "4.2.0"

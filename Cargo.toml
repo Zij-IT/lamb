@@ -4,6 +4,5 @@ resolver = "2"
 members = [
     "lambc",
     "lambc_vm",
-    "lambc_ast",
     "lambc_parse",
 ]

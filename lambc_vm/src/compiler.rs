@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use lambc_ast::{
+use lambc_parse::{
     ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Either, Elif,
     Else, Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script,
     Statement, Unary,

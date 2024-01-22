@@ -1,6 +1,6 @@
 #![allow(clippy::needless_bitwise_bool)]
 
-use lambc_ast::{
+use lambc_parse::{
     Assign, Atom, Binary, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef, Ident,
     If, Index, Literal, Pattern, PatternTop, Script, Statement, Unary,
 };
@@ -198,7 +198,7 @@ impl Optimize for PatternTop {
 }
 
 mod extra_impls {
-    use lambc_ast::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
+    use lambc_parse::{Atom, Binary, BinaryOp, Expr, Literal, Unary, UnaryOp};
 
     pub(super) trait ExprExt {
         fn as_literal_mut(&mut self) -> Option<&mut Literal>;

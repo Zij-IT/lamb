@@ -2,7 +2,7 @@ mod format;
 
 use std::num::NonZeroU16;
 
-use lambc_ast::{BinaryOp, UnaryOp};
+use lambc_parse::{BinaryOp, UnaryOp};
 
 use crate::{gc::LambGc, value::Value};
 
