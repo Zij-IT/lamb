@@ -6,7 +6,7 @@ use crate::{
     chunk::{Chunk, Op},
     compiler::Compiler,
     gc::{Allocable, GcRef, LambGc},
-    value::{FuncUpvalue, LambArray, LambClosure, LambString, NativeFunc, Upvalue, Value},
+    value::{Array, Closure, NativeFunction, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
 };
 
 pub type RawNative = fn(&Vm, &[Value]) -> Result<Value>;
@@ -113,11 +113,11 @@ macro_rules! num_un_op {
 
 pub struct Vm {
     gc: LambGc,
-    globals: HashMap<GcRef<LambString>, Value>,
+    globals: HashMap<GcRef<Str>, Value>,
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
     saved: Option<Value>,
-    open_upvalues: Vec<GcRef<Upvalue>>,
+    open_upvalues: Vec<GcRef<ResolvedUpvalue>>,
 }
 
 impl Default for Vm {
@@ -254,11 +254,12 @@ impl Vm {
 
                     let func = self.gc.deref(func_ref);
                     let len = func.upvalues.len();
-                    let mut closure = LambClosure::new(func_ref);
+                    let mut closure = Closure::new(func_ref);
                     closure.upvalues.reserve(len);
 
                     for i in 0..len {
-                        let FuncUpvalue { index, is_local } = self.gc.deref(func_ref).upvalues[i];
+                        let UnresolvedUpvalue { index, is_local } =
+                            self.gc.deref(func_ref).upvalues[i];
                         if is_local {
                             let up = self.capture_upvalue(self.frame().slot + index);
                             closure.upvalues.push(up);
@@ -421,7 +422,7 @@ impl Vm {
                 }
                 Op::MakeArray(n) => {
                     let vec = self.stack.split_off(self.stack.len() - usize::from(n));
-                    let arr = LambArray::from(vec);
+                    let arr = Array::from(vec);
                     let arr = self.alloc(arr);
                     self.push(Value::Array(arr));
                 }
@@ -591,7 +592,7 @@ impl Vm {
         });
     }
 
-    fn capture_upvalue(&mut self, index: usize) -> GcRef<Upvalue> {
+    fn capture_upvalue(&mut self, index: usize) -> GcRef<ResolvedUpvalue> {
         let up_ref = self
             .open_upvalues
             .iter()
@@ -601,7 +602,7 @@ impl Vm {
         match up_ref {
             Some(up_ref) => up_ref,
             None => {
-                let up_ref = self.alloc(Upvalue::new(index));
+                let up_ref = self.alloc(ResolvedUpvalue::new(index));
                 self.open_upvalues.push(up_ref);
                 up_ref
             }
@@ -653,7 +654,8 @@ impl Vm {
 
     fn define_native(&mut self, name: &str, f: RawNative) {
         let name = self.gc.intern(name);
-        self.globals.insert(name, Value::Native(NativeFunc::new(f)));
+        self.globals
+            .insert(name, Value::Native(NativeFunction::new(f)));
     }
 
     fn native_print(vm: &Self, args: &[Value]) -> Result<Value> {
@@ -711,13 +713,13 @@ impl Vm {
 }
 
 struct CallFrame {
-    closure: GcRef<LambClosure>,
+    closure: GcRef<Closure>,
     ip: usize,
     slot: usize,
 }
 
 impl CallFrame {
-    fn new(closure: GcRef<LambClosure>, slot: usize) -> Self {
+    fn new(closure: GcRef<Closure>, slot: usize) -> Self {
         CallFrame {
             closure,
             ip: 0,

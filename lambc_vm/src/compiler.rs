@@ -9,7 +9,7 @@ use lambc_parse::{
 use crate::{
     chunk::{Jump, JumpIdx, Op},
     gc::{GcRef, LambGc},
-    value::{FuncUpvalue, LambClosure, LambFunc, LambString, Value},
+    value::{Closure, Function, Str, UnresolvedUpvalue, Value},
 };
 
 // This is safe because it contains whitespace, which user identifiers
@@ -64,15 +64,15 @@ impl Local {
 pub struct Compiler {
     block: Block,
     locals: Vec<Local>,
-    func: LambFunc,
+    func: Function,
     enclosing: Option<Box<Compiler>>,
 }
 
 impl Compiler {
-    pub fn new(name: GcRef<LambString>) -> Self {
+    pub fn new(name: GcRef<Str>) -> Self {
         Self {
             enclosing: None,
-            func: LambFunc::new(name),
+            func: Function::new(name),
             block: Block::new_for_func(None),
             // This local refers to the function that is currently being compiled.
             // By setting its depth to zero, we make sure it is unaccessible to
@@ -85,9 +85,9 @@ impl Compiler {
         self.compile_script(script, gc);
     }
 
-    pub fn finish(mut self, gc: &mut LambGc) -> GcRef<LambClosure> {
+    pub fn finish(mut self, gc: &mut LambGc) -> GcRef<Closure> {
         self.write_op(Op::Return);
-        let closure = LambClosure {
+        let closure = Closure {
             func: gc.alloc(self.func),
             upvalues: Vec::new(),
         };
@@ -201,13 +201,15 @@ impl Compiler {
         match pos {
             Some(p) => p,
             None => {
-                self.func.upvalues.push(FuncUpvalue { index, is_local });
+                self.func
+                    .upvalues
+                    .push(UnresolvedUpvalue { index, is_local });
                 self.func.upvalues.len() - 1
             }
         }
     }
 
-    fn write_closure(&mut self, gc: &mut LambGc, func: LambFunc) {
+    fn write_closure(&mut self, gc: &mut LambGc, func: Function) {
         self.func
             .chunk
             .constants
@@ -579,7 +581,7 @@ impl Compiler {
             self.func
                 .chunk
                 .constants
-                .push(Value::String(gc.alloc(LambString::new(i))));
+                .push(Value::String(gc.alloc(Str::new(i))));
 
             self.add_local(i.clone());
         }

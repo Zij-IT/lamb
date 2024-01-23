@@ -13,11 +13,11 @@ pub enum Value {
     Bool(bool),
     Char(char),
     Double(f64),
-    Array(GcRef<LambArray>),
-    String(GcRef<LambString>),
-    Function(GcRef<LambFunc>),
-    Closure(GcRef<LambClosure>),
-    Native(NativeFunc),
+    Array(GcRef<Array>),
+    String(GcRef<Str>),
+    Function(GcRef<Function>),
+    Closure(GcRef<Closure>),
+    Native(NativeFunction),
 }
 
 impl Value {
@@ -27,7 +27,7 @@ impl Value {
     pub const CHAR_TYPE_NAME: &'static str = "char";
     pub const DOUBLE_TYPE_NAME: &'static str = "double";
     pub const ARRAY_TYPE_NAME: &'static str = "array";
-    pub const STRING_TYPE_NAME: &'static str = "string";
+    pub const STR_TYPE_NAME: &'static str = "string";
     pub const FUNCTION_TYPE_NAME: &'static str = "function";
     pub const CLOSURE_TYPE_NAME: &'static str = "closure";
     pub const NATIVE_TYPE_NAME: &'static str = "native";
@@ -97,7 +97,7 @@ impl Value {
             Value::Char(_) => Self::CHAR_TYPE_NAME,
             Value::Double(_) => Self::DOUBLE_TYPE_NAME,
             Value::Array(_) => Self::ARRAY_TYPE_NAME,
-            Value::String(_) => Self::STRING_TYPE_NAME,
+            Value::String(_) => Self::STR_TYPE_NAME,
             Value::Function(_) => Self::FUNCTION_TYPE_NAME,
             Value::Closure(_) => Self::CLOSURE_TYPE_NAME,
             Value::Native(_) => Self::NATIVE_TYPE_NAME,
@@ -106,14 +106,14 @@ impl Value {
 }
 
 #[derive(Debug)]
-pub struct LambString(pub String);
+pub struct Str(pub String);
 
-impl LambString {
+impl Str {
     pub fn new<S: Into<String>>(s: S) -> Self {
         // CAUTION: If you change this so that the original `S` is handled by
         // the GC, then you have to make sure that any strings used are still
         // rooted.
-        LambString(s.into())
+        Str(s.into())
     }
 
     pub fn len(&self) -> usize {
@@ -134,17 +134,17 @@ impl LambString {
 }
 
 #[derive(Debug)]
-pub struct LambArray {
+pub struct Array {
     items: Vec<Value>,
 }
 
-impl Default for LambArray {
+impl Default for Array {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl LambArray {
+impl Array {
     pub fn new() -> Self {
         Self { items: Vec::new() }
     }
@@ -183,13 +183,13 @@ impl LambArray {
     }
 }
 
-impl From<Vec<Value>> for LambArray {
+impl From<Vec<Value>> for Array {
     fn from(value: Vec<Value>) -> Self {
         Self { items: value }
     }
 }
 
-impl FromIterator<Value> for LambArray {
+impl FromIterator<Value> for Array {
     fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
         Self {
             items: iter.into_iter().collect(),
@@ -197,7 +197,7 @@ impl FromIterator<Value> for LambArray {
     }
 }
 
-impl IntoIterator for LambArray {
+impl IntoIterator for Array {
     type Item = Value;
 
     type IntoIter = <Vec<Value> as IntoIterator>::IntoIter;
@@ -207,7 +207,7 @@ impl IntoIterator for LambArray {
     }
 }
 
-impl<'a> IntoIterator for &'a LambArray {
+impl<'a> IntoIterator for &'a Array {
     type Item = &'a Value;
 
     type IntoIter = <&'a Vec<Value> as IntoIterator>::IntoIter;
@@ -217,7 +217,7 @@ impl<'a> IntoIterator for &'a LambArray {
     }
 }
 
-impl<'a> IntoIterator for &'a mut LambArray {
+impl<'a> IntoIterator for &'a mut Array {
     type Item = &'a mut Value;
 
     type IntoIter = <&'a mut Vec<Value> as IntoIterator>::IntoIter;
@@ -228,15 +228,15 @@ impl<'a> IntoIterator for &'a mut LambArray {
 }
 
 #[derive(Debug)]
-pub struct LambFunc {
+pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
-    pub name: GcRef<LambString>,
-    pub upvalues: Vec<FuncUpvalue>,
+    pub name: GcRef<Str>,
+    pub upvalues: Vec<UnresolvedUpvalue>,
 }
 
-impl LambFunc {
-    pub fn new(name: GcRef<LambString>) -> Self {
+impl Function {
+    pub fn new(name: GcRef<Str>) -> Self {
         Self {
             name,
             arity: 0,
@@ -247,19 +247,19 @@ impl LambFunc {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct FuncUpvalue {
+pub struct UnresolvedUpvalue {
     pub index: usize,
     pub is_local: bool,
 }
 
 #[derive(Debug)]
-pub struct LambClosure {
-    pub func: GcRef<LambFunc>,
-    pub upvalues: Vec<GcRef<Upvalue>>,
+pub struct Closure {
+    pub func: GcRef<Function>,
+    pub upvalues: Vec<GcRef<ResolvedUpvalue>>,
 }
 
-impl LambClosure {
-    pub fn new(func: GcRef<LambFunc>) -> Self {
+impl Closure {
+    pub fn new(func: GcRef<Function>) -> Self {
         Self {
             func,
             upvalues: Vec::new(),
@@ -268,12 +268,12 @@ impl LambClosure {
 }
 
 #[derive(Debug)]
-pub struct Upvalue {
+pub struct ResolvedUpvalue {
     pub index: usize,
     pub closed: Option<Value>,
 }
 
-impl Upvalue {
+impl ResolvedUpvalue {
     pub fn new(index: usize) -> Self {
         Self {
             index,
@@ -283,11 +283,11 @@ impl Upvalue {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct NativeFunc {
+pub struct NativeFunction {
     raw: vm::RawNative,
 }
 
-impl NativeFunc {
+impl NativeFunction {
     pub fn new(f: vm::RawNative) -> Self {
         Self { raw: f }
     }

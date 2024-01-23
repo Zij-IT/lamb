@@ -2,7 +2,7 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     chunk::Op,
-    value::{FuncUpvalue, LambArray, LambClosure, LambFunc, LambString, Upvalue, Value},
+    value::{Array, Closure, Function, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
 };
 
 const KB: usize = 1024;
@@ -14,7 +14,7 @@ pub struct LambGc {
     free_slots: Vec<usize>,
     grey_stack: Vec<usize>,
     objects: Vec<Option<GcItem>>,
-    strings: HashMap<String, GcRef<LambString>>,
+    strings: HashMap<String, GcRef<Str>>,
 }
 
 impl Default for LambGc {
@@ -62,12 +62,12 @@ impl LambGc {
         }
     }
 
-    pub fn intern(&mut self, s: impl Into<String>) -> GcRef<LambString> {
+    pub fn intern(&mut self, s: impl Into<String>) -> GcRef<Str> {
         let s = s.into();
         if let Some(s) = self.strings.get(&s) {
             *s
         } else {
-            let str = LambString::new(s.clone());
+            let str = Str::new(s.clone());
             let str_ref = self.alloc(str);
             self.strings.insert(s, str_ref);
             str_ref
@@ -227,26 +227,26 @@ pub trait Allocable {
 }
 
 pub enum GcItemRaw {
-    Array(LambArray),
-    Closure(LambClosure),
-    String(LambString),
-    Upvalue(Upvalue),
-    Func(LambFunc),
+    Array(Array),
+    Closure(Closure),
+    String(Str),
+    Upvalue(ResolvedUpvalue),
+    Func(Function),
 }
 
 impl GcItemRaw {
     pub(super) fn size(&self) -> usize {
         match self {
-            GcItemRaw::Upvalue(_u) => std::mem::size_of::<Upvalue>(),
-            GcItemRaw::Array(a) => a.capacity() + std::mem::size_of::<LambArray>(),
-            GcItemRaw::String(s) => s.capacity() + std::mem::size_of::<LambString>(),
+            GcItemRaw::Upvalue(_u) => std::mem::size_of::<ResolvedUpvalue>(),
+            GcItemRaw::Array(a) => a.capacity() + std::mem::size_of::<Array>(),
+            GcItemRaw::String(s) => s.capacity() + std::mem::size_of::<Str>(),
             GcItemRaw::Closure(c) => {
-                std::mem::size_of::<LambClosure>()
-                    + c.upvalues.capacity() * std::mem::size_of::<Upvalue>()
+                std::mem::size_of::<Closure>()
+                    + c.upvalues.capacity() * std::mem::size_of::<ResolvedUpvalue>()
             }
             GcItemRaw::Func(f) => {
-                std::mem::size_of::<LambFunc>()
-                    + f.upvalues.capacity() * std::mem::size_of::<FuncUpvalue>()
+                std::mem::size_of::<Function>()
+                    + f.upvalues.capacity() * std::mem::size_of::<UnresolvedUpvalue>()
                     + f.chunk.code.capacity() * std::mem::size_of::<Op>()
                     + f.chunk.constants.capacity() * std::mem::size_of::<Value>()
             }
@@ -268,7 +268,7 @@ pub struct GcItem {
     pub(super) is_marked: bool,
 }
 
-impl Allocable for LambString {
+impl Allocable for Str {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::String(self)
     }
@@ -288,7 +288,7 @@ impl Allocable for LambString {
     }
 }
 
-impl Allocable for LambFunc {
+impl Allocable for Function {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Func(self)
     }
@@ -308,7 +308,7 @@ impl Allocable for LambFunc {
     }
 }
 
-impl Allocable for LambClosure {
+impl Allocable for Closure {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Closure(self)
     }
@@ -328,7 +328,7 @@ impl Allocable for LambClosure {
     }
 }
 
-impl Allocable for LambArray {
+impl Allocable for Array {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Array(self)
     }
@@ -348,7 +348,7 @@ impl Allocable for LambArray {
     }
 }
 
-impl Allocable for Upvalue {
+impl Allocable for ResolvedUpvalue {
     fn into_raw(self) -> GcItemRaw {
         GcItemRaw::Upvalue(self)
     }
