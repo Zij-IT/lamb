@@ -1,6 +1,7 @@
-use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
+mod module;
 
 use lambc_parse::Script;
+use std::{cmp::Ordering, collections::HashMap, convert::identity, ops, path::Path};
 
 use crate::{
     chunk::{Chunk, Op},
@@ -8,6 +9,8 @@ use crate::{
     gc::{Allocable, GcRef, LambGc},
     value::{Array, Closure, NativeFunction, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
 };
+
+use module::Module;
 
 pub type RawNative = fn(&Vm, &[Value]) -> Result<Value>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -52,6 +55,9 @@ pub enum Error {
 
     #[error("Cant convert input to a value of type {0}")]
     InputConv(&'static str),
+
+    #[error("Error attempting to {0} from {1}: {2}")]
+    ImportError(String, String, module::Error),
 }
 
 macro_rules! num_bin_op {
@@ -117,6 +123,7 @@ pub struct Vm {
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
     saved: Option<Value>,
+    modules: HashMap<GcRef<Str>, Module>,
     open_upvalues: Vec<GcRef<ResolvedUpvalue>>,
 }
 
@@ -131,6 +138,7 @@ impl Vm {
         let mut this = Self {
             gc: LambGc::new(),
             globals: Default::default(),
+            modules: Default::default(),
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(u8::MAX as usize * 64),
             saved: None,
@@ -145,14 +153,15 @@ impl Vm {
         this
     }
 
-    pub fn load_script(&mut self, script: &Script) {
+    pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, path: P) {
         let name = self.gc.intern("__LAMB__SCRIPT__");
-        let mut compiler = Compiler::new(name);
+        let path = self.gc.intern(path.as_ref().to_string_lossy());
+        let mut compiler = Compiler::new(name, path);
         compiler.compile(&mut self.gc, script);
 
         let closure = compiler.finish(&mut self.gc);
         self.stack.push(Value::Closure(closure));
-        self.frames.push(CallFrame::new(closure, 0));
+        self.frames.push(CallFrame::new(path, closure, 0));
     }
 
     pub fn run(&mut self) -> Result<()> {
@@ -183,7 +192,13 @@ impl Vm {
                         panic!("Compilation Error: GetGlobal references non-string constant");
                     };
 
-                    let Some(global) = self.globals.get(&name).copied() else {
+                    let module = self.frame().module;
+                    let global = self.modules.get(&module).map_or_else(
+                        || self.globals.get(&name).copied(),
+                        |m| m.get_global(name).ok(),
+                    );
+
+                    let Some(global) = global else {
                         return self.error(Error::NoSuchGlobal(self.gc.deref(name).0.clone()));
                     };
 
@@ -212,7 +227,8 @@ impl Vm {
                             if args != func.arity {
                                 return self.error(Error::ArgAmountMismatch(args, func.arity));
                             } else {
-                                let frame = CallFrame::new(cl, self.stack.len() - 1 - args);
+                                let frame =
+                                    CallFrame::new(func.module, cl, self.stack.len() - 1 - args);
                                 self.frames.push(frame);
                             }
                         }
@@ -627,6 +643,11 @@ impl Vm {
             self.gc.mark_object(frame.closure);
         }
 
+        for (k, v) in &self.modules {
+            self.gc.mark_object(*k);
+            v.mark_items(&mut self.gc);
+        }
+
         for upvalue in &self.open_upvalues {
             self.gc.mark_object(*upvalue)
         }
@@ -713,14 +734,16 @@ impl Vm {
 }
 
 struct CallFrame {
+    module: GcRef<Str>,
     closure: GcRef<Closure>,
     ip: usize,
     slot: usize,
 }
 
 impl CallFrame {
-    fn new(closure: GcRef<Closure>, slot: usize) -> Self {
+    fn new(module: GcRef<Str>, closure: GcRef<Closure>, slot: usize) -> Self {
         CallFrame {
+            module,
             closure,
             ip: 0,
             slot,

@@ -105,6 +105,7 @@ impl LambGc {
             Value::Array(arr) => self.mark_object(arr),
             Value::String(str) => self.mark_object(str),
             Value::Closure(clo) => self.mark_object(clo),
+            Value::ModulePath(str) => self.mark_object(str),
         }
     }
 
@@ -147,6 +148,7 @@ impl LambGc {
             }
             GcItemRaw::Func(func) => {
                 self.mark_object(func.name);
+                self.mark_object(func.module);
                 for constant in &func.chunk.constants {
                     self.mark_value(*constant);
                 }

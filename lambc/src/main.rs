@@ -2,7 +2,7 @@
 
 use lambc_parse::{Atom, Block, Expr, FuncCall, Ident, Script, Statement, SyntaxResult};
 use repl::Command;
-use std::error::Error;
+use std::{error::Error, path::Path};
 
 mod cli;
 mod optimization;
@@ -19,18 +19,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         path,
     } = cli::LambOptions::parse();
 
-    match path.as_ref().map(std::fs::read_to_string) {
-        Some(src) => run_input(&src?),
+    match path.as_ref().map(|p| (p, std::fs::read_to_string(p))) {
+        Some((path, src)) => run_input(path, &src?),
         None => run_repl()?,
     }
 
     Ok(())
 }
 
-fn run_input(input: &str) {
+fn run_input<P: AsRef<Path>>(path: P, input: &str) {
     match lambc_parse::script(input) {
         Ok(s) => {
-            if let Err(err) = lambc_vm::run_script(&s) {
+            if let Err(err) = lambc_vm::run_script(path, &s) {
                 println!("{err}");
             }
         }
@@ -54,7 +54,7 @@ fn run_repl() -> Result<(), repl::Error> {
             Command::Run => break,
             Command::String(s) => match extract_script(&s) {
                 Ok(script) => {
-                    vm.load_script(&script);
+                    vm.load_script(&script, "repl");
                     if let Err(err) = vm.run() {
                         println!("{err}");
                     }

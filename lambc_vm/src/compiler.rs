@@ -62,6 +62,7 @@ impl Local {
 
 #[derive(Debug)]
 pub struct Compiler {
+    module: GcRef<Str>,
     block: Block,
     locals: Vec<Local>,
     func: Function,
@@ -69,10 +70,11 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn new(name: GcRef<Str>) -> Self {
+    pub fn new(name: GcRef<Str>, module: GcRef<Str>) -> Self {
         Self {
+            module,
             enclosing: None,
-            func: Function::new(name),
+            func: Function::new(name, module),
             block: Block::new_for_func(None),
             // This local refers to the function that is currently being compiled.
             // By setting its depth to zero, we make sure it is unaccessible to
@@ -420,7 +422,7 @@ impl Compiler {
 
     fn compile_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
         let ident = gc.intern("Anon Func");
-        let mut composition = Compiler::new(ident);
+        let mut composition = Compiler::new(ident, self.module);
         composition.locals[0].depth = 1;
 
         // `self` now refers to `composition`. This is done because I
@@ -788,7 +790,7 @@ impl Compiler {
         } = f;
 
         let func_name = gc.intern(name.clone());
-        let mut func_comp = Compiler::new(func_name);
+        let mut func_comp = Compiler::new(func_name, self.module);
         if *is_recursive {
             func_comp.locals[0].name = name;
         }

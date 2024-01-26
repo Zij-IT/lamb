@@ -18,6 +18,7 @@ pub enum Value {
     Function(GcRef<Function>),
     Closure(GcRef<Closure>),
     Native(NativeFunction),
+    ModulePath(GcRef<Str>),
 }
 
 impl Value {
@@ -31,6 +32,7 @@ impl Value {
     pub const FUNCTION_TYPE_NAME: &'static str = "function";
     pub const CLOSURE_TYPE_NAME: &'static str = "closure";
     pub const NATIVE_TYPE_NAME: &'static str = "native";
+    pub const MODULE_TYPE_NAME: &'static str = "module";
 
     pub(crate) fn format(&self, gc: &LambGc) -> String {
         match self {
@@ -65,6 +67,7 @@ impl Value {
                 gc.deref(s).0.to_string()
             }
             Value::Native(_) => "<native fn>".into(),
+            Value::ModulePath(s) => gc.deref(*s).0.to_string(),
         }
     }
 
@@ -101,6 +104,7 @@ impl Value {
             Value::Function(_) => Self::FUNCTION_TYPE_NAME,
             Value::Closure(_) => Self::CLOSURE_TYPE_NAME,
             Value::Native(_) => Self::NATIVE_TYPE_NAME,
+            Value::ModulePath(_) => Self::MODULE_TYPE_NAME,
         }
     }
 }
@@ -232,13 +236,15 @@ pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
     pub name: GcRef<Str>,
+    pub module: GcRef<Str>,
     pub upvalues: Vec<UnresolvedUpvalue>,
 }
 
 impl Function {
-    pub fn new(name: GcRef<Str>) -> Self {
+    pub fn new(name: GcRef<Str>, module: GcRef<Str>) -> Self {
         Self {
             name,
+            module,
             arity: 0,
             chunk: Chunk::new(),
             upvalues: Vec::new(),
