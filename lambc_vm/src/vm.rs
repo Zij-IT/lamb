@@ -1,6 +1,6 @@
 mod module;
 
-use lambc_parse::Script;
+use lambc_parse::{Ident, Import, Script};
 use std::{cmp::Ordering, collections::HashMap, convert::identity, ops, path::Path};
 
 use crate::{
@@ -11,6 +11,8 @@ use crate::{
 };
 
 use module::Module;
+
+use self::module::ModuleExport;
 
 pub type RawNative = fn(&Vm, &[Value]) -> Result<Value>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -64,6 +66,9 @@ pub enum Error {
 
     #[error("Module {0} doesn't export an item named {1}")]
     NoExportViaName(String, String),
+
+    #[error("Syntax Errors in import. File: '{0}'")]
+    SyntaxErrorInImport(String),
 }
 
 macro_rules! num_bin_op {
@@ -163,10 +168,23 @@ impl Vm {
     // Current behavior: If a module was previously loaded, and we attempt to load
     // a script with the same path, then we keep the module and basically append the
     // changes.
-    pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, path: P) {
+    //
+    // Also, figure out how to get good error messages to this place. Perhaps a script
+    // shouldn't be all the scripts like this...
+    pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, script_path: P) {
         let name = self.gc.intern("__LAMB__SCRIPT__");
-        let path = self.gc.intern(path.as_ref().to_string_lossy());
+        let path = self.gc.intern(
+            script_path
+                .as_ref()
+                .canonicalize()
+                .unwrap()
+                .to_string_lossy(),
+        );
+
         self.modules.entry(path).or_insert(Module::new());
+        for import in &script.imports {
+            self.load_import(import, &script_path);
+        }
 
         let mut compiler = Compiler::new(name, path);
         compiler.compile(&mut self.gc, script);
@@ -174,6 +192,49 @@ impl Vm {
         let closure = compiler.finish(&mut self.gc);
         self.stack.push(Value::Closure(closure));
         self.frames.push(CallFrame::new(path, closure, 0));
+    }
+
+    fn load_import<P: AsRef<Path>>(&mut self, import: &Import, script_path: P) {
+        let total_path = script_path
+            .as_ref()
+            .parent()
+            .unwrap()
+            .join(&import.path)
+            .canonicalize()
+            .unwrap();
+
+        let module = self.gc.intern(total_path.to_string_lossy());
+        // Don't attempt to run an import if there exists an import
+        // with the same path
+        if self.modules.contains_key(&module) {
+            return;
+        }
+
+        let module = std::fs::read_to_string(&total_path).unwrap();
+        let script = lambc_parse::script(&module).unwrap();
+        self.load_script(&script, &total_path);
+        self.run().unwrap();
+
+        let export = &script.exports;
+        let script = self.gc.intern(script_path.as_ref().to_string_lossy());
+        let module = self.gc.intern(total_path.to_string_lossy());
+        if let Some(Ident(alias)) = &import.alias {
+            let alias = self.gc.intern(alias);
+            self.modules
+                .get_mut(&script)
+                .unwrap()
+                .define_global(alias, Value::ModulePath(module));
+        }
+
+        if let Some(exports) = export {
+            self.modules
+                .get_mut(&module)
+                .unwrap()
+                .build_exports(exports.items.iter().map(|i| ModuleExport {
+                    name: self.gc.intern(&i.name.0),
+                    alias: i.alias.as_ref().map(|i| self.gc.intern(&i.0)),
+                }));
+        }
     }
 
     pub fn run(&mut self) -> Result<()> {

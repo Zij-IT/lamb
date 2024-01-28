@@ -5,6 +5,11 @@ use crate::{
     value::{Str, Value},
 };
 
+pub struct ModuleExport {
+    pub name: GcRef<Str>,
+    pub alias: Option<GcRef<Str>>,
+}
+
 #[derive(Debug)]
 pub struct Module {
     globals: HashMap<GcRef<Str>, Value>,
@@ -16,6 +21,21 @@ impl Module {
         Self {
             globals: Default::default(),
             exports: Default::default(),
+        }
+    }
+
+    pub fn build_exports<I>(&mut self, exports: I)
+    where
+        I: Iterator<Item = ModuleExport>,
+    {
+        for ModuleExport { name, alias } in exports {
+            let item = self.get_global(name).unwrap();
+            let export_name = match alias {
+                Some(alias) => alias,
+                None => name,
+            };
+
+            self.exports.insert(export_name, item);
         }
     }
 
