@@ -11,6 +11,7 @@ use self::format::ChunkFormatter;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Op {
     Add,
+    Access,
     BinAnd,
     BinNeg,
     BinOr,

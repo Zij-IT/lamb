@@ -224,6 +224,7 @@ impl Compiler {
     fn write_op(&mut self, op: Op) {
         match op {
             Op::Add
+            | Op::Access
             | Op::BinAnd
             | Op::BinOr
             | Op::BinXor
@@ -464,7 +465,33 @@ impl Compiler {
     }
 
     fn compile_path<'ast>(&mut self, path: &'ast lambc_parse::Path, gc: &mut LambGc) {
-        todo!()
+        // Module::item1::item2
+        // ^^^^^^  ^^^^^  ^^^^^
+        //     |   |      |
+        //     |   |      +--> ModuleItemRef
+        //     |   |
+        //     |   +--> ModuleItemRef
+        //     |
+        //     +--> Expr
+        let (first, rest) = path.segments.split_first().unwrap();
+        self.compile_ident(first, gc);
+
+        let mut iter = rest.chunks_exact(2);
+        while let Some(&[Ident(ref left), Ident(ref right)]) = iter.next() {
+            let left = Value::ModulePath(gc.intern(left));
+            let right = Value::ModulePath(gc.intern(right));
+            self.write_const_op(left);
+            self.write_op(Op::Access);
+            self.write_const_op(right);
+        }
+
+        let path = match iter.remainder() {
+            &[Ident(ref i)] => Value::ModulePath(gc.intern(i)),
+            _ => return,
+        };
+
+        self.write_const_op(path);
+        self.write_op(Op::Access);
     }
 
     fn compile_atom(&mut self, atom: &Atom, gc: &mut LambGc) {

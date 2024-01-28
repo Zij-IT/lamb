@@ -58,6 +58,15 @@ pub enum Error {
 
     #[error("Error attempting to {0} from {1}: {2}")]
     ImportError(String, String, module::Error),
+
+    #[error("{0}:\n- item: {1}\n- module: {2}")]
+    ModuleError(module::Error, String, String),
+
+    #[error("No module with path '{0}' has been loaded.")]
+    NoSuchModule(String),
+
+    #[error("Attempt to treat a value of type '{0}' as a module.")]
+    NotAModule(&'static str),
 }
 
 macro_rules! num_bin_op {
@@ -119,7 +128,7 @@ macro_rules! num_un_op {
 
 pub struct Vm {
     gc: LambGc,
-    globals: HashMap<GcRef<Str>, Value>,
+    builtins: HashMap<GcRef<Str>, Value>,
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
     saved: Option<Value>,
@@ -137,7 +146,7 @@ impl Vm {
     pub fn new() -> Self {
         let mut this = Self {
             gc: LambGc::new(),
-            globals: Default::default(),
+            builtins: Default::default(),
             modules: Default::default(),
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(u8::MAX as usize * 64),
@@ -185,7 +194,7 @@ impl Vm {
                     };
 
                     let value = self.pop();
-                    self.globals.insert(name, value);
+                    self.builtins.insert(name, value);
                 }
                 Op::GetGlobal(i) => {
                     let Value::String(name) = self.chunk().constants[usize::from(i)] else {
@@ -193,10 +202,11 @@ impl Vm {
                     };
 
                     let module = self.frame().module;
-                    let global = self.modules.get(&module).map_or_else(
-                        || self.globals.get(&name).copied(),
-                        |m| m.get_global(name).ok(),
-                    );
+                    let module = self.modules.get(&module).expect("Module must be defined");
+                    let global = match module.get_global(name) {
+                        Ok(item) => Some(item),
+                        Err(_) => self.builtins.get(&name).copied(),
+                    };
 
                     let Some(global) = global else {
                         return self.error(Error::NoSuchGlobal(self.gc.deref(name).0.clone()));
@@ -447,6 +457,32 @@ impl Vm {
                 Op::BinNeg => self.num_un_op(ops::Not::not, "~")?,
                 Op::LogNeg => self.bool_un_op(ops::Not::not, "!")?,
 
+                Op::Access => {
+                    let rhs = self.pop();
+                    let lhs = self.pop();
+                    let (Value::ModulePath(path), Value::ModulePath(item)) = (lhs, rhs) else {
+                        return self.error(Error::NotAModule(lhs.type_name()));
+                    };
+
+                    let item = self
+                        .modules
+                        .get(&path)
+                        .ok_or_else(|| Error::NoSuchModule(self.gc.deref(path).0.to_string()))
+                        .and_then(|module| {
+                            module.get_export(item).map_err(|e| {
+                                Error::ModuleError(
+                                    e,
+                                    self.gc.deref(path).0.to_string(),
+                                    self.gc.deref(item).0.to_string(),
+                                )
+                            })
+                        });
+
+                    match item {
+                        Ok(v) => self.push(v),
+                        Err(e) => return self.error(e),
+                    }
+                }
                 Op::Add => self.add_op()?,
                 Op::Sub => num_bin_op!(-, self),
                 Op::Div => num_bin_op!(/, self),
@@ -652,7 +688,7 @@ impl Vm {
             self.gc.mark_object(*upvalue)
         }
 
-        for (k, v) in &self.globals {
+        for (k, v) in &self.builtins {
             self.gc.mark_object(*k);
             self.gc.mark_value(*v);
         }
@@ -675,7 +711,7 @@ impl Vm {
 
     fn define_native(&mut self, name: &str, f: RawNative) {
         let name = self.gc.intern(name);
-        self.globals
+        self.builtins
             .insert(name, Value::Native(NativeFunction::new(f)));
     }
 
