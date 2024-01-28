@@ -56,17 +56,14 @@ pub enum Error {
     #[error("Cant convert input to a value of type {0}")]
     InputConv(&'static str),
 
-    #[error("Error attempting to {0} from {1}: {2}")]
-    ImportError(String, String, module::Error),
-
-    #[error("{0}:\n- item: {1}\n- module: {2}")]
-    ModuleError(module::Error, String, String),
-
     #[error("No module with path '{0}' has been loaded.")]
     NoSuchModule(String),
 
     #[error("Attempt to treat a value of type '{0}' as a module.")]
     NotAModule(&'static str),
+
+    #[error("Module {0} doesn't export an item named {1}")]
+    NoExportViaName(String, String),
 }
 
 macro_rules! num_bin_op {
@@ -162,9 +159,15 @@ impl Vm {
         this
     }
 
+    // TODO:
+    // Current behavior: If a module was previously loaded, and we attempt to load
+    // a script with the same path, then we keep the module and basically append the
+    // changes.
     pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, path: P) {
         let name = self.gc.intern("__LAMB__SCRIPT__");
         let path = self.gc.intern(path.as_ref().to_string_lossy());
+        self.modules.entry(path).or_insert(Module::new());
+
         let mut compiler = Compiler::new(name, path);
         compiler.compile(&mut self.gc, script);
 
@@ -194,7 +197,13 @@ impl Vm {
                     };
 
                     let value = self.pop();
-                    self.builtins.insert(name, value);
+                    let module = self.frame().module;
+                    let module = self
+                        .modules
+                        .get_mut(&module)
+                        .expect("Module must be defined");
+
+                    module.define_global(name, value);
                 }
                 Op::GetGlobal(i) => {
                     let Value::String(name) = self.chunk().constants[usize::from(i)] else {
@@ -204,8 +213,8 @@ impl Vm {
                     let module = self.frame().module;
                     let module = self.modules.get(&module).expect("Module must be defined");
                     let global = match module.get_global(name) {
-                        Ok(item) => Some(item),
-                        Err(_) => self.builtins.get(&name).copied(),
+                        Some(item) => Some(item),
+                        None => self.builtins.get(&name).copied(),
                     };
 
                     let Some(global) = global else {
@@ -469,9 +478,8 @@ impl Vm {
                         .get(&path)
                         .ok_or_else(|| Error::NoSuchModule(self.gc.deref(path).0.to_string()))
                         .and_then(|module| {
-                            module.get_export(item).map_err(|e| {
-                                Error::ModuleError(
-                                    e,
+                            module.get_export(item).ok_or_else(|| {
+                                Error::NoExportViaName(
                                     self.gc.deref(path).0.to_string(),
                                     self.gc.deref(item).0.to_string(),
                                 )
