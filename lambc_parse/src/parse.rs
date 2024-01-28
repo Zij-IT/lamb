@@ -1,4 +1,7 @@
-use crate::tokenize::{Delim, Op, Token};
+use crate::{
+    ast,
+    tokenize::{Delim, Op, Token},
+};
 
 use chumsky::{
     extra,
@@ -13,8 +16,9 @@ use chumsky::{
 };
 
 use super::{
-    ArrayPattern, Assign, Atom, Block, Case, CaseArm, Either, Elif, Else, Expr, FuncCall, FuncDef,
-    Ident, If, Index, Literal, Pattern, PatternTop, Script, Statement, UnaryOp,
+    ArrayPattern, Assign, Atom, Block, Case, CaseArm, Either, Elif, Else, Export, Exportable, Expr,
+    FuncCall, FuncDef, Ident, If, Import, Index, Literal, Pattern, PatternTop, Script, Statement,
+    UnaryOp,
 };
 
 macro_rules! bin {
@@ -52,9 +56,75 @@ where
     S: 'a,
     I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
 {
-    statement().repeated().collect().map(|stats| Script {
-        block: Block { stats, value: None },
-    })
+    export()
+        .or_not()
+        .then(import().repeated().collect())
+        .then(statement().repeated().collect())
+        .map(|((exports, imports), stats)| Script {
+            exports,
+            imports,
+            block: Block { stats, value: None },
+        })
+}
+
+pub fn import<'a, I, S>() -> impl Parser<'a, I, Import, E<'a, S>>
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    let alias = ident().filter(|i| i.0 == "as").ignore_then(ident());
+
+    let import = ident()
+        .filter(|i| i.0 == "import")
+        .ignore_then(safe_delimited(
+            ident()
+                .separated_by(just(Token::Comma))
+                .at_least(1)
+                .allow_trailing()
+                .collect(),
+            Delim::Paren,
+            |_| Vec::new(),
+        ));
+
+    ident()
+        .filter(|i| i.0 == "from")
+        .ignore_then(select! { Token::Str(s) => s.clone(), })
+        .then(alias.or_not())
+        .then(import.or_not())
+        .then_ignore(just(Token::Semi))
+        .map(|((path, alias), imports)| Import {
+            path,
+            alias,
+            imports,
+        })
+}
+
+pub fn export<'a, I, S>() -> impl Parser<'a, I, Export, E<'a, S>>
+where
+    S: 'a,
+    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+{
+    let exportable = ident()
+        .then(
+            ident()
+                .filter(|i| i.0 == "as")
+                .ignore_then(ident())
+                .or_not(),
+        )
+        .map(|(name, alias)| Exportable { name, alias });
+
+    ident()
+        .filter(|i| i.0 == "export")
+        .ignore_then(safe_delimited(
+            exportable
+                .separated_by(just(Token::Comma))
+                .allow_trailing()
+                .collect(),
+            Delim::Brace,
+            |_| Vec::new(),
+        ))
+        .then_ignore(just(Token::Semi))
+        .map(|exports| Export { items: exports })
 }
 
 pub fn statement<'a, I, S>() -> impl Parser<'a, I, Statement, E<'a, S>>
@@ -85,6 +155,12 @@ where
 
         let array = array(expr.clone());
 
+        let path = ident()
+            .separated_by(just(Token::Colon).then(just(Token::Colon)))
+            .at_least(2)
+            .collect()
+            .map(|segments| Expr::Path(ast::Path { segments }));
+
         let ident = ident().map(|i| Expr::Atom(Atom::Ident(i)));
 
         let block = block(stat.clone(), expr.clone());
@@ -98,6 +174,7 @@ where
         let atom = literal
             .or(parend)
             .or(array)
+            .or(path)
             .or(ident)
             .or(if_)
             .or(fun_def)

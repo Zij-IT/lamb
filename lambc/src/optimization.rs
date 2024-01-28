@@ -91,6 +91,7 @@ impl Optimize for Expr {
             Expr::FuncDef(f) => f.optimize(),
             Expr::Block(b) => b.optimize(),
             Expr::Atom(a) => a.optimize(),
+            Expr::Path(_p) => false,
         }
     }
 }

@@ -50,3 +50,106 @@ where
         (_, errs) => Err(errs.into_iter().map(SyntaxError::Syntactic).collect()),
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::ast::{Block, Export, Exportable, Ident, Import, Script};
+
+    #[test]
+    fn parses_exports() {
+        let input = r#"
+            export { main, bacon, tomato };
+        "#;
+
+        assert_eq!(
+            super::script(input),
+            Ok(Script {
+                exports: Some(Export {
+                    items: vec![
+                        Exportable::new("main", None),
+                        Exportable::new("bacon", None),
+                        Exportable::new("tomato", None)
+                    ]
+                }),
+                imports: vec![],
+                block: Block::empty(),
+            })
+        );
+    }
+
+    #[test]
+    fn parses_exports_none() {
+        let input = r#"
+            export { };
+        "#;
+
+        assert_eq!(
+            super::script(input),
+            Ok(Script {
+                exports: Some(Export { items: vec![] }),
+                imports: vec![],
+                block: Block::empty(),
+            })
+        );
+    }
+
+    #[test]
+    fn parses_qualified_import() {
+        let input = r#"
+            from "./hello/there" as T;
+        "#;
+
+        assert_eq!(
+            super::script(input),
+            Ok(Script {
+                exports: None,
+                imports: vec![Import {
+                    path: "./hello/there".into(),
+                    alias: Some(Ident("T".into())),
+                    imports: None,
+                }],
+                block: Block::empty(),
+            })
+        );
+    }
+
+    #[test]
+    fn parses_non_qualified_import_items() {
+        let input = r#"
+            from "./hello/there" import (add);
+        "#;
+
+        assert_eq!(
+            super::script(input),
+            Ok(Script {
+                exports: None,
+                imports: vec![Import {
+                    path: "./hello/there".into(),
+                    alias: None,
+                    imports: Some(vec![Ident("add".into())])
+                }],
+                block: Block::empty(),
+            })
+        );
+    }
+
+    #[test]
+    fn parses_qualified_import_items() {
+        let input = r#"
+            from "./hello/there" as T import (add, sub);
+        "#;
+
+        assert_eq!(
+            super::script(input),
+            Ok(Script {
+                exports: None,
+                imports: vec![Import {
+                    path: "./hello/there".into(),
+                    alias: Some(Ident("T".into())),
+                    imports: Some(vec![Ident("add".into()), Ident("sub".into()),]),
+                }],
+                block: Block::empty(),
+            })
+        );
+    }
+}

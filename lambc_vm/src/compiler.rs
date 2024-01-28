@@ -391,6 +391,7 @@ impl Compiler {
             Expr::FuncDef(f) => self.compile_func(f, gc, "Anon Func".into()),
             Expr::Block(block) => self.compile_block(block, gc),
             Expr::Atom(atom) => self.compile_atom(atom, gc),
+            Expr::Path(path) => self.compile_path(path, gc),
             Expr::Error => unimplemented!("Attempt to compile Expr::Error"),
         }
     }
@@ -460,6 +461,10 @@ impl Compiler {
         self.write_op(Op::Pop(NZ_ONE_U16));
         self.compile_expr(rhs, gc);
         self.patch_jump(idx);
+    }
+
+    fn compile_path<'ast>(&mut self, path: &'ast lambc_parse::Path, gc: &mut LambGc) {
+        todo!()
     }
 
     fn compile_atom(&mut self, atom: &Atom, gc: &mut LambGc) {

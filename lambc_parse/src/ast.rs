@@ -7,7 +7,39 @@ pub enum Either<L, R> {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Script {
+    pub exports: Option<Export>,
+    pub imports: Vec<Import>,
     pub block: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Import {
+    pub path: String,
+    pub alias: Option<Ident>,
+    pub imports: Option<Vec<Ident>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Export {
+    pub items: Vec<Exportable>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Exportable {
+    pub name: Ident,
+    pub alias: Option<Ident>,
+}
+
+impl Exportable {
+    pub fn new<S>(name: S, alias: Option<&'_ str>) -> Self
+    where
+        S: Into<String>,
+    {
+        Exportable {
+            name: Ident(name.into()),
+            alias: alias.map(Into::into).map(Ident),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,6 +57,7 @@ pub struct Assign {
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Expr {
+    Path(Path),
     Binary(Binary),
     Unary(Unary),
     FuncCall(FuncCall),
@@ -40,6 +73,7 @@ pub enum Expr {
 impl std::fmt::Debug for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let inner: &dyn std::fmt::Debug = match self {
+            Expr::Path(path) => path,
             Expr::Binary(i) => i,
             Expr::Unary(i) => i,
             Expr::FuncCall(i) => i,
@@ -67,6 +101,11 @@ where
     fn from(value: T) -> Self {
         Self::Atom(value.into())
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Path {
+    pub segments: Vec<Ident>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -294,6 +333,15 @@ pub struct FuncDef {
 pub struct Block {
     pub stats: Vec<Statement>,
     pub value: Option<Box<Expr>>,
+}
+
+impl Block {
+    pub fn empty() -> Self {
+        Self {
+            stats: vec![],
+            value: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
