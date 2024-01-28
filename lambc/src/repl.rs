@@ -1,8 +1,8 @@
 #![allow(clippy::unused_io_amount)]
 
 use directories::ProjectDirs;
-use rustyline::error::ReadlineError;
-use std::path::PathBuf;
+use rustyline::{error::ReadlineError, Config};
+use std::{io::Write, path::PathBuf};
 
 #[derive(Debug)]
 pub enum Error {
@@ -54,7 +54,8 @@ impl Repl {
     );
 
     pub fn new() -> Result<Self, Error> {
-        let editor = rustyline::DefaultEditor::new()?;
+        let config = Config::builder().check_cursor_position(true).build();
+        let editor = rustyline::Editor::with_config(config)?;
         let history_path =
             ProjectDirs::from("", "zij-it", "lamb").map(|pd| pd.data_dir().join("history.txt"));
 
@@ -88,6 +89,7 @@ impl Repl {
 
     pub fn read_line(&mut self) -> Result<Command, Error> {
         loop {
+            std::io::stdout().flush()?;
             let line = self.inner.readline(">>> ");
             match line {
                 Ok(line) => match &*line {
