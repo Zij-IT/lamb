@@ -8,11 +8,8 @@ use crate::{
     compiler::Compiler,
     gc::{Allocable, GcRef, LambGc},
     value::{Array, Closure, NativeFunction, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
+    vm::module::{Module, ModuleExport},
 };
-
-use module::Module;
-
-use self::module::ModuleExport;
 
 pub type RawNative = fn(&Vm, &[Value]) -> Result<Value>;
 pub type Result<T> = std::result::Result<T, Error>;
