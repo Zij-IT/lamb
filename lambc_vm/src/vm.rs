@@ -198,10 +198,10 @@ impl Vm {
             .canonicalize()
             .unwrap();
 
-        let module = self.gc.intern(total_path.to_string_lossy());
+        let module_ref = self.gc.intern(total_path.to_string_lossy());
         // Don't attempt to run an import if there exists an import
         // with the same path
-        if self.modules.contains_key(&module) {
+        if self.modules.contains_key(&module_ref) {
             return;
         }
 
@@ -212,18 +212,17 @@ impl Vm {
 
         let export = &script.exports;
         let script = self.gc.intern(script_path.as_ref().to_string_lossy());
-        let module = self.gc.intern(total_path.to_string_lossy());
         if let Some(Ident(alias)) = &import.alias {
             let alias = self.gc.intern(alias);
             self.modules
                 .get_mut(&script)
                 .unwrap()
-                .define_global(alias, Value::ModulePath(module));
+                .define_global(alias, Value::ModulePath(module_ref));
         }
 
         if let Some(exports) = export {
             self.modules
-                .get_mut(&module)
+                .get_mut(&module_ref)
                 .unwrap()
                 .build_exports(exports.items.iter().map(|i| ModuleExport {
                     name: self.gc.intern(&i.name.0),
@@ -236,7 +235,7 @@ impl Vm {
                 let gci = self.gc.intern(i);
                 let item = self
                     .modules
-                    .get_mut(&module)
+                    .get_mut(&module_ref)
                     .unwrap()
                     .get_export(gci)
                     .unwrap();
