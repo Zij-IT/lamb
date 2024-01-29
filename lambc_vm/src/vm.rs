@@ -178,7 +178,8 @@ impl Vm {
 
         self.modules.entry(path).or_insert(Module::new());
         for import in &script.imports {
-            self.load_import(import, Path::new(script_path.as_ref()));
+            self.load_import(import, Path::new(script_path.as_ref()))
+                .unwrap();
         }
 
         let mut compiler = Compiler::new(name, path);
@@ -189,26 +190,25 @@ impl Vm {
         self.frames.push(CallFrame::new(path, closure, 0));
     }
 
-    fn load_import<P: AsRef<Path>>(&mut self, import: &Import, script_path: P) {
+    fn load_import<P: AsRef<Path>>(&mut self, import: &Import, script_path: P) -> Result<()> {
         let total_path = script_path
             .as_ref()
             .parent()
-            .unwrap()
+            .expect("Can't execute empty file...")
             .join(&import.path)
-            .canonicalize()
-            .unwrap();
+            .canonicalize()?;
 
         let module_ref = self.gc.intern(total_path.to_string_lossy());
         // Don't attempt to run an import if there exists an import
         // with the same path
         if self.modules.contains_key(&module_ref) {
-            return;
+            return Ok(());
         }
 
-        let module = std::fs::read_to_string(&total_path).unwrap();
+        let module = std::fs::read_to_string(&total_path)?;
         let script = lambc_parse::script(&module).unwrap();
         self.load_script(&script, &total_path);
-        self.run().unwrap();
+        self.run()?;
 
         let export = &script.exports;
         let script = self.gc.intern(script_path.as_ref().to_string_lossy());
@@ -216,14 +216,14 @@ impl Vm {
             let alias = self.gc.intern(alias);
             self.modules
                 .get_mut(&script)
-                .unwrap()
+                .expect("Script must have been added at this point")
                 .define_global(alias, Value::ModulePath(module_ref));
         }
 
         if let Some(exports) = export {
             self.modules
                 .get_mut(&module_ref)
-                .unwrap()
+                .expect("Module must have been added at this point")
                 .build_exports(exports.items.iter().map(|i| ModuleExport {
                     name: self.gc.intern(&i.name.0),
                     alias: i.alias.as_ref().map(|i| self.gc.intern(&i.0)),
@@ -236,16 +236,22 @@ impl Vm {
                 let item = self
                     .modules
                     .get_mut(&module_ref)
-                    .unwrap()
-                    .get_export(gci)
-                    .unwrap();
+                    .expect("Module must have been added at this point")
+                    .get_export(gci);
+
+                let item = match item {
+                    Some(t) => t,
+                    None => return self.error(Error::NoExportViaName(i.clone(), module.clone())),
+                };
 
                 self.modules
                     .get_mut(&script)
-                    .unwrap()
+                    .expect("Script must have been added at this point")
                     .define_global(gci, item);
             }
         }
+
+        Ok(())
     }
 
     pub fn run(&mut self) -> Result<()> {
