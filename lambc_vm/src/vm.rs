@@ -171,15 +171,14 @@ impl Vm {
     //
     // Also, figure out how to get good error messages to this place. Perhaps a script
     // shouldn't be all the scripts like this...
-    pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, script_path: P) {
+    pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, script_path: P) -> Result<()> {
         let script_path = script_path.as_ref().to_string_lossy();
         let name = self.gc.intern("__LAMB__SCRIPT__");
         let path = self.gc.intern(script_path.as_ref());
 
         self.modules.entry(path).or_insert(Module::new());
         for import in &script.imports {
-            self.load_import(import, Path::new(script_path.as_ref()))
-                .unwrap();
+            self.load_import(import, Path::new(script_path.as_ref()))?;
         }
 
         let mut compiler = Compiler::new(name, path);
@@ -188,6 +187,8 @@ impl Vm {
         let closure = compiler.finish(&mut self.gc);
         self.stack.push(Value::Closure(closure));
         self.frames.push(CallFrame::new(path, closure, 0));
+
+        Ok(())
     }
 
     fn load_import<P: AsRef<Path>>(&mut self, import: &Import, script_path: P) -> Result<()> {
@@ -207,7 +208,7 @@ impl Vm {
 
         let module = std::fs::read_to_string(&total_path)?;
         let script = lambc_parse::script(&module).unwrap();
-        self.load_script(&script, &total_path);
+        self.load_script(&script, &total_path)?;
         self.run()?;
 
         let export = &script.exports;

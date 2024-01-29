@@ -8,6 +8,7 @@ use std::{io::Write, path::PathBuf};
 pub enum Error {
     Io(std::io::Error),
     Rustyline(ReadlineError),
+    Runtime(lambc_vm::Error),
     NoValidHomeDir,
 }
 
@@ -17,6 +18,7 @@ impl std::fmt::Display for Error {
             Error::Io(err) => write!(f, "[Lamb]: IO Error ({err})"),
             Error::Rustyline(err) => write!(f, "[Lamb]: Rustyline Error ({err})"),
             Error::NoValidHomeDir => write!(f, "[Lamb]: Found no valid home directory"),
+            Error::Runtime(run) => write!(f, "[Lamb]: Runtime Error: {run}"),
         }
     }
 }
@@ -32,6 +34,12 @@ impl From<std::io::Error> for Error {
 impl From<rustyline::error::ReadlineError> for Error {
     fn from(value: rustyline::error::ReadlineError) -> Self {
         Self::Rustyline(value)
+    }
+}
+
+impl From<lambc_vm::Error> for Error {
+    fn from(value: lambc_vm::Error) -> Self {
+        Self::Runtime(value)
     }
 }
 

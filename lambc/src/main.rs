@@ -55,7 +55,11 @@ fn run_repl() -> Result<(), repl::Error> {
             Command::Run => break,
             Command::String(s) => match extract_script(&s) {
                 Ok(script) => {
-                    vm.load_script(&script, &path);
+                    if let Err(err) = vm.load_script(&script, &path) {
+                        println!("{err}");
+                        continue;
+                    }
+
                     if let Err(err) = vm.run() {
                         println!("{err}");
                     }
