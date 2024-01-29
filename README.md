@@ -15,11 +15,11 @@ print("Part One:: ");
 input $> part_one .> println;
 ```
 
-More examples can be found in the [examples](examples) folder.
+More examples can be found in the [examples](./examples) folder.
 
-## Testing Lamb
+## Installing Lamb
 
-Currently Lamb is only available by building from source; this should only require [Rust](https://www.rust-lang.org/tools/install). After installing Rust and downloading the source it can be built by running `cargo run --release -- [PATH]`. If no path is provided, the REPL is run. The REPL is also a work and progress and only parses the input as a whole, so to allow code to execute, either `CTRL-D` or `:quit` must be used.
+Please see the [releases page](https://github.com/zij-it/lamb/releases) for instructions how to install Lamb, or download and install it from source using `cargo`.
 
 ## Goals
 
