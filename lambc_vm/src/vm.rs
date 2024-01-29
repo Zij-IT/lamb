@@ -172,18 +172,13 @@ impl Vm {
     // Also, figure out how to get good error messages to this place. Perhaps a script
     // shouldn't be all the scripts like this...
     pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, script_path: P) {
+        let script_path = script_path.as_ref().to_string_lossy();
         let name = self.gc.intern("__LAMB__SCRIPT__");
-        let path = self.gc.intern(
-            script_path
-                .as_ref()
-                .canonicalize()
-                .unwrap()
-                .to_string_lossy(),
-        );
+        let path = self.gc.intern(script_path.as_ref());
 
         self.modules.entry(path).or_insert(Module::new());
         for import in &script.imports {
-            self.load_import(import, &script_path);
+            self.load_import(import, Path::new(script_path.as_ref()));
         }
 
         let mut compiler = Compiler::new(name, path);
@@ -234,6 +229,23 @@ impl Vm {
                     name: self.gc.intern(&i.name.0),
                     alias: i.alias.as_ref().map(|i| self.gc.intern(&i.0)),
                 }));
+        }
+
+        if let Some(imports) = import.imports.as_ref() {
+            for Ident(ref i) in imports {
+                let gci = self.gc.intern(i);
+                let item = self
+                    .modules
+                    .get_mut(&module)
+                    .unwrap()
+                    .get_export(gci)
+                    .unwrap();
+
+                self.modules
+                    .get_mut(&script)
+                    .unwrap()
+                    .define_global(gci, item);
+            }
         }
     }
 

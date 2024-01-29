@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     } = cli::LambOptions::parse();
 
     match path.as_ref().map(|p| (p, std::fs::read_to_string(p))) {
-        Some((path, src)) => run_input(path, &src?),
+        Some((path, src)) => run_input(path.canonicalize().unwrap(), &src?),
         None => run_repl()?,
     }
 
@@ -48,13 +48,14 @@ fn run_repl() -> Result<(), repl::Error> {
     print!("{}", repl::Repl::REPL_START);
 
     let mut vm = lambc_vm::Vm::new();
+    let path = std::fs::canonicalize(".").unwrap().join("repl");
     loop {
         match lamb.read_line()? {
             Command::Quit => return Ok(()),
             Command::Run => break,
             Command::String(s) => match extract_script(&s) {
                 Ok(script) => {
-                    vm.load_script(&script, "repl");
+                    vm.load_script(&script, &path);
                     if let Err(err) = vm.run() {
                         println!("{err}");
                     }
