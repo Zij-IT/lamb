@@ -251,22 +251,25 @@ where
         .then_ignore(just(Token::Define))
         .then(expr.clone())
         .then_ignore(just(Token::Semi))
-        .map(|(i, e)| {
-            Statement::Assign(Assign {
-                assignee: i,
-                value: e,
-            })
+        .map_with(|(i, e), ex| {
+            Statement::Assign(Node::new(
+                Assign {
+                    assignee: i,
+                    value: e,
+                },
+                ex.span(),
+            ))
         });
 
     let expr_stmt = expr
         .clone()
         .then_ignore(just(Token::Semi))
-        .map(Statement::Expr);
+        .map_with(|expr, ex| Statement::Expr(Node::new(expr, ex.span())));
 
     let ret = just(Token::Return)
         .ignore_then(expr.or_not())
         .then_ignore(just(Token::Semi))
-        .map(Statement::Return);
+        .map_with(|expr, ex| Statement::Return(expr.map(|i| Node::new(i, ex.span()))));
 
     assign.or(expr_stmt).or(ret)
 }

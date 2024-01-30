@@ -100,20 +100,23 @@ fn wrap_expr(expr: Expr) -> Statement {
         if let Expr::Atom(atom) = &**callee {
             if let Atom::Ident(Ident(name)) = atom.inner() {
                 if name == "println" || name == "print" {
-                    return Statement::Expr(expr);
+                    return Statement::Expr(Node::new(expr, Span::new(0, 0)));
                 }
             }
         }
     }
 
-    Statement::Expr(Expr::FuncCall(Node::new(
-        FuncCall {
-            callee: Box::new(Expr::Atom(Node::new(
-                Atom::Ident(Ident("println".into())),
-                Span::new(0, 0),
-            ))),
-            args: vec![expr],
-        },
+    Statement::Expr(Node::new(
+        Expr::FuncCall(Node::new(
+            FuncCall {
+                callee: Box::new(Expr::Atom(Node::new(
+                    Atom::Ident(Ident("println".into())),
+                    Span::new(0, 0),
+                ))),
+                args: vec![expr],
+            },
+            Span::new(0, 0),
+        )),
         Span::new(0, 0),
-    )))
+    ))
 }

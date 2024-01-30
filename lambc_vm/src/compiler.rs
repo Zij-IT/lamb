@@ -317,7 +317,7 @@ impl Compiler {
                 let Assign {
                     assignee: i @ Ident(ident),
                     value,
-                } = assign;
+                } = assign.inner();
 
                 if let Expr::FuncDef(f) = value {
                     if f.is_recursive {

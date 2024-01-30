@@ -46,9 +46,9 @@ impl Exportable {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
-    Assign(Assign),
-    Expr(Expr),
-    Return(Option<Expr>),
+    Assign(SourceNode<Assign>),
+    Expr(SourceNode<Expr>),
+    Return(Option<SourceNode<Expr>>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
