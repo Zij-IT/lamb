@@ -1,11 +1,12 @@
 #![warn(clippy::pedantic)]
 
-use lambc_parse::{Atom, Block, Expr, FuncCall, Ident, Script, Statement, SyntaxResult};
+use lambc_parse::{
+    Atom, Block, Expr, FuncCall, Ident, Node, Script, Span, Statement, SyntaxResult,
+};
 use repl::Command;
 use std::{error::Error, path::Path};
 
 mod cli;
-mod optimization;
 mod repl;
 mod report;
 
@@ -94,16 +95,25 @@ fn extract_script(input: &str) -> SyntaxResult<Script> {
 }
 
 fn wrap_expr(expr: Expr) -> Statement {
-    if let Expr::FuncCall(FuncCall { callee, args: _ }) = &expr {
-        if let Expr::Atom(Atom::Ident(Ident(name))) = &**callee {
-            if name == "println" || name == "print" {
-                return Statement::Expr(expr);
+    if let Expr::FuncCall(func) = &expr {
+        let FuncCall { callee, .. } = func.inner();
+        if let Expr::Atom(atom) = &**callee {
+            if let Atom::Ident(Ident(name)) = atom.inner() {
+                if name == "println" || name == "print" {
+                    return Statement::Expr(expr);
+                }
             }
         }
     }
 
-    Statement::Expr(Expr::FuncCall(FuncCall {
-        callee: Box::new(Expr::Atom(Atom::Ident(Ident("println".into())))),
-        args: vec![expr],
-    }))
+    Statement::Expr(Expr::FuncCall(Node::new(
+        FuncCall {
+            callee: Box::new(Expr::Atom(Node::new(
+                Atom::Ident(Ident("println".into())),
+                Span::new(0, 0),
+            ))),
+            args: vec![expr],
+        },
+        Span::new(0, 0),
+    )))
 }

@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 use lambc_parse::{
     ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Either, Elif,
     Else, Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script,
-    Statement, Unary,
+    Statement,
 };
 
 use crate::{
@@ -319,14 +319,11 @@ impl Compiler {
                     value,
                 } = assign;
 
-                if let Expr::FuncDef(
-                    f @ FuncDef {
-                        is_recursive: true, ..
-                    },
-                ) = value
-                {
-                    self.compile_rec_func_def(i, f, gc);
-                    return;
+                if let Expr::FuncDef(f) = value {
+                    if f.is_recursive {
+                        self.compile_rec_func_def(i, f, gc);
+                        return;
+                    }
                 }
 
                 self.compile_expr(value, gc);
@@ -357,30 +354,35 @@ impl Compiler {
 
     fn compile_expr(&mut self, value: &Expr, gc: &mut LambGc) {
         match value {
-            Expr::Unary(Unary { rhs, op }) => {
-                self.compile_expr(rhs, gc);
-                self.write_op(Op::from(*op));
+            Expr::Unary(unary) => {
+                self.compile_expr(&unary.rhs, gc);
+                self.write_op(Op::from(unary.op));
             }
-            Expr::Binary(Binary { lhs, rhs, op }) => match Op::try_from(*op) {
-                Ok(op) => {
-                    self.compile_expr(lhs, gc);
-                    self.compile_expr(rhs, gc);
-                    self.write_op(op);
+            Expr::Binary(binary) => {
+                let Binary { rhs, lhs, op } = binary.inner();
+                match Op::try_from(*op) {
+                    Ok(op) => {
+                        self.compile_expr(lhs, gc);
+                        self.compile_expr(rhs, gc);
+                        self.write_op(op);
+                    }
+                    Err(BinaryOp::LogAnd) => self.compile_sc_op(lhs, rhs, Jump::IfFalse, gc),
+                    Err(BinaryOp::LogOr) => self.compile_sc_op(lhs, rhs, Jump::IfTrue, gc),
+                    Err(BinaryOp::LApply) => self.compile_apply(lhs, rhs, gc),
+                    Err(BinaryOp::RApply) => self.compile_apply(rhs, lhs, gc),
+                    Err(BinaryOp::LCompose) => self.compile_compose(lhs, rhs, gc),
+                    Err(BinaryOp::RCompose) => self.compile_compose(rhs, lhs, gc),
+                    Err(_) => unreachable!("All cases are actually covered!"),
                 }
-                Err(BinaryOp::LogAnd) => self.compile_sc_op(lhs, rhs, Jump::IfFalse, gc),
-                Err(BinaryOp::LogOr) => self.compile_sc_op(lhs, rhs, Jump::IfTrue, gc),
-                Err(BinaryOp::LApply) => self.compile_apply(lhs, rhs, gc),
-                Err(BinaryOp::RApply) => self.compile_apply(rhs, lhs, gc),
-                Err(BinaryOp::LCompose) => self.compile_compose(lhs, rhs, gc),
-                Err(BinaryOp::RCompose) => self.compile_compose(rhs, lhs, gc),
-                Err(_) => unreachable!("All cases are actually covered!"),
-            },
-            Expr::Index(Index { indexee, index }) => {
+            }
+            Expr::Index(index) => {
+                let Index { indexee, index } = index.inner();
                 self.compile_expr(indexee, gc);
                 self.compile_expr(index, gc);
                 self.write_op(Op::Index);
             }
-            Expr::FuncCall(FuncCall { callee, args }) => {
+            Expr::FuncCall(call) => {
+                let FuncCall { callee, args } = call.inner();
                 self.compile_expr(callee, gc);
                 for arg in args {
                     self.compile_expr(arg, gc);

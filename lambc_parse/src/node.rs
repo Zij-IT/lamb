@@ -1,4 +1,7 @@
-use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
+use std::{
+    cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd},
+    ops::{Deref, DerefMut},
+};
 
 #[derive(Clone, Debug)]
 pub struct Node<T, M> {
@@ -11,8 +14,29 @@ impl<T, M> Node<T, M> {
         Self { item, meta }
     }
 
+    pub fn inner(&self) -> &T {
+        &self.item
+    }
+
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.item
+    }
+
     pub fn into_inner(self) -> T {
         self.item
+    }
+}
+
+impl<T, M> Deref for Node<T, M> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        self.inner()
+    }
+}
+
+impl<T, M> DerefMut for Node<T, M> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner_mut()
     }
 }
 

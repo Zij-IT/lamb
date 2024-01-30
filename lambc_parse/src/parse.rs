@@ -1,6 +1,7 @@
 use crate::{
     ast,
     tokenize::{Delim, Op, Token},
+    Node, SourceNode, Span,
 };
 
 use chumsky::{
@@ -26,7 +27,12 @@ macro_rules! bin {
         ::chumsky::pratt::infix(
             ::chumsky::pratt::left($str),
             ::chumsky::primitive::just(crate::tokenize::Token::Op(crate::tokenize::Op::$tok)),
-            |lhs, rhs| crate::Expr::Binary(crate::Binary::new(lhs, rhs, crate::BinaryOp::$tok)),
+            |lhs, _, rhs, sp| {
+                crate::Expr::Binary(crate::Node::new(
+                    crate::Binary::new(lhs, rhs, crate::BinaryOp::$tok),
+                    sp,
+                ))
+            },
         )
     }};
 }
@@ -36,7 +42,7 @@ macro_rules! unary {
         ::chumsky::pratt::prefix(
             $str,
             ::chumsky::primitive::just(crate::tokenize::Token::Op($op)),
-            |rhs| crate::Expr::Unary(crate::Unary::new(rhs, $uop)),
+            |_, rhs, sp| crate::Expr::Unary(crate::Node::new(crate::Unary::new(rhs, $uop), sp)),
         )
     }};
 }
@@ -49,12 +55,11 @@ enum Chain {
     Call(Vec<Expr>),
 }
 
-type E<'a, S> = extra::Err<Rich<'a, Token, S>>;
+type E<'a> = extra::Err<Rich<'a, Token, Span>>;
 
-pub fn script<'a, I, S>() -> impl Parser<'a, I, Script, E<'a, S>>
+pub fn script<'a, I>() -> impl Parser<'a, I, Script, E<'a>>
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     export()
         .or_not()
@@ -67,10 +72,9 @@ where
         })
 }
 
-pub fn import<'a, I, S>() -> impl Parser<'a, I, Import, E<'a, S>>
+pub fn import<'a, I>() -> impl Parser<'a, I, Import, E<'a>>
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     let alias = ident().filter(|i| i.0 == "as").ignore_then(ident());
 
@@ -99,10 +103,9 @@ where
         })
 }
 
-pub fn export<'a, I, S>() -> impl Parser<'a, I, Export, E<'a, S>>
+pub fn export<'a, I>() -> impl Parser<'a, I, Export, E<'a>>
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     let exportable = ident()
         .then(
@@ -127,18 +130,16 @@ where
         .map(|exports| Export { items: exports })
 }
 
-pub fn statement<'a, I, S>() -> impl Parser<'a, I, Statement, E<'a, S>>
+pub fn statement<'a, I>() -> impl Parser<'a, I, Statement, E<'a>>
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     stat_inner(expr())
 }
 
-pub fn expr<'a, I, S>() -> impl Parser<'a, I, Expr, E<'a, S>> + Clone
+pub fn expr<'a, I>() -> impl Parser<'a, I, Expr, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     recursive(|expr| {
         // This cannot call `statement`, as that would result in infinite
@@ -149,7 +150,8 @@ where
         // The definitions are pulled apart for easier maintainability.
         let stat = stat_inner(expr.clone());
 
-        let literal = literal().map(|l| Expr::Atom(Atom::Literal(l)));
+        let literal =
+            literal().map_with(|l, ex| Expr::Atom(Node::new(Atom::Literal(l), ex.span())));
 
         let parend = parend(expr.clone());
 
@@ -159,17 +161,21 @@ where
             .separated_by(just(Token::Colon).then(just(Token::Colon)))
             .at_least(2)
             .collect()
-            .map(|segments| Expr::Path(ast::Path { segments }));
+            .map_with(|segments, ex| {
+                Expr::Path(SourceNode::new(ast::Path { segments }, ex.span()))
+            });
 
-        let ident = ident().map(|i| Expr::Atom(Atom::Ident(i)));
+        let ident = ident().map_with(|i, ex| Expr::Atom(Node::new(Atom::Ident(i), ex.span())));
 
         let block = block(stat.clone(), expr.clone());
 
         let if_ = if_(expr.clone(), block.clone());
 
-        let fun_def = fun_def(expr.clone()).map(Expr::FuncDef);
+        let fun_def =
+            fun_def(expr.clone()).map_with(|fu, ex| Expr::FuncDef(Node::new(fu, ex.span())));
 
-        let case = case(stat.clone(), expr.clone()).map(Expr::Case);
+        let case = case(stat.clone(), expr.clone())
+            .map_with(|ca, ex| Expr::Case(Node::new(ca, ex.span())));
 
         let atom = literal
             .or(parend)
@@ -179,23 +185,29 @@ where
             .or(if_)
             .or(fun_def)
             .or(case)
-            .or(block.map(Expr::Block))
+            .or(block.map_with(|bl, ex| Expr::Block(Node::new(bl, ex.span()))))
             .labelled("an expression");
 
-        let chain = atom.foldl(
+        let chain = atom.foldl_with(
             call(expr.clone())
                 .map(Chain::Call)
                 .or(index(expr).map(Chain::Index))
                 .repeated(),
-            |lhs, rhs| match rhs {
-                Chain::Index(i) => Expr::Index(Index {
-                    indexee: Box::new(lhs),
-                    index: Box::new(i),
-                }),
-                Chain::Call(args) => Expr::FuncCall(FuncCall {
-                    callee: Box::new(lhs),
-                    args,
-                }),
+            |lhs, rhs, ex| match rhs {
+                Chain::Index(i) => Expr::Index(Node::new(
+                    Index {
+                        indexee: Box::new(lhs),
+                        index: Box::new(i),
+                    },
+                    ex.span(),
+                )),
+                Chain::Call(args) => Expr::FuncCall(Node::new(
+                    FuncCall {
+                        callee: Box::new(lhs),
+                        args,
+                    },
+                    ex.span(),
+                )),
             },
         );
 
@@ -229,12 +241,11 @@ where
     })
 }
 
-fn stat_inner<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Statement, E<'a, S>> + Clone
+fn stat_inner<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Statement, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     let assign = ident()
         .then_ignore(just(Token::Define))
@@ -260,22 +271,20 @@ where
     assign.or(expr_stmt).or(ret)
 }
 
-fn index<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Expr, E<'a, S>> + Clone
+fn index<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Expr, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     safe_delimited(expr, Delim::Brack, |_| Expr::Error)
 }
 
-fn call<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Vec<Expr>, E<'a, S>> + Clone
+fn call<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Vec<Expr>, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     let args = expr
         .separated_by(just(Token::Comma))
@@ -285,13 +294,12 @@ where
     safe_delimited(args, Delim::Paren, |_| Vec::new())
 }
 
-fn case<'a, I, S>(
-    stat: impl Parser<'a, I, Statement, E<'a, S>> + Clone,
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Case, E<'a, S>> + Clone
+fn case<'a, I>(
+    stat: impl Parser<'a, I, Statement, E<'a>> + Clone,
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Case, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     just(Token::Case)
         .ignore_then(expr.clone().map(Box::new))
@@ -313,12 +321,11 @@ where
         .map(|(value, arms)| Case { value, arms })
 }
 
-fn fun_def<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, FuncDef, E<'a, S>> + Clone
+fn fun_def<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, FuncDef, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     just(Token::Rec)
         .or_not()
@@ -342,13 +349,12 @@ where
         })
 }
 
-fn block<'a, I, S>(
-    stat: impl Parser<'a, I, Statement, E<'a, S>> + Clone,
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Block, E<'a, S>> + Clone
+fn block<'a, I>(
+    stat: impl Parser<'a, I, Statement, E<'a>> + Clone,
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Block, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     let block = stat
         .repeated()
@@ -365,13 +371,12 @@ where
     })
 }
 
-fn if_<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-    block: impl Parser<'a, I, Block, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Expr, E<'a, S>> + Clone
+fn if_<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+    block: impl Parser<'a, I, Block, E<'a>> + Clone,
+) -> impl Parser<'a, I, Expr, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     just(Token::If)
         .ignore_then(expr.clone())
@@ -390,30 +395,31 @@ where
                 .map(|block| Box::new(Else { block }))
                 .or_not(),
         )
-        .map(|(((cond, block), elifs), els)| {
-            Expr::If(If {
-                cond: Box::new(cond),
-                block: Box::new(block),
-                elifs,
-                els,
-            })
+        .map_with(|(((cond, block), elifs), els), sp| {
+            Expr::If(Node::new(
+                If {
+                    cond: Box::new(cond),
+                    block: Box::new(block),
+                    elifs,
+                    els,
+                },
+                sp.span(),
+            ))
         })
 }
 
-fn ident<'a, I, S>() -> impl Parser<'a, I, Ident, E<'a, S>> + Clone
+fn ident<'a, I>() -> impl Parser<'a, I, Ident, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     select! {
         Token::Ident(i) => i.into()
     }
 }
 
-fn literal<'a, I, S>() -> impl Parser<'a, I, Literal, E<'a, S>> + Clone
+fn literal<'a, I>() -> impl Parser<'a, I, Literal, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     (select! {
         Token::Nil => Literal::Nil,
@@ -436,42 +442,35 @@ where
         }))
 }
 
-fn parend<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Expr, E<'a, S>> + Clone
+fn parend<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Expr, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     safe_delimited(expr, Delim::Paren, |_| Expr::Error)
 }
 
-fn array<'a, I, S>(
-    expr: impl Parser<'a, I, Expr, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, Expr, E<'a, S>> + Clone
+fn array<'a, I>(
+    expr: impl Parser<'a, I, Expr, E<'a>> + Clone,
+) -> impl Parser<'a, I, Expr, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     let values = expr
         .separated_by(just(Token::Comma))
         .allow_trailing()
         .collect()
-        .map(|v| Expr::Atom(Atom::Array(v)));
+        .map_with(|v, ex| Expr::Atom(Node::new(Atom::Array(v), ex.span())));
 
     safe_delimited(values, Delim::Brack, |_| Expr::Error)
 }
 
-fn safe_delimited<'a, I, O, S, F, P>(
-    p: P,
-    delim: Delim,
-    f: F,
-) -> impl Parser<'a, I, O, E<'a, S>> + Clone
+fn safe_delimited<'a, I, O, F, P>(p: P, delim: Delim, f: F) -> impl Parser<'a, I, O, E<'a>> + Clone
 where
-    S: 'a,
-    I: ValueInput<'a, Token = Token, Span = S> + 'a,
+    I: ValueInput<'a, Token = Token, Span = Span> + 'a,
     F: Fn(I::Span) -> O + Clone,
-    P: Parser<'a, I, O, E<'a, S>> + Clone,
+    P: Parser<'a, I, O, E<'a>> + Clone,
 {
     p.delimited_by(just(Token::Open(delim)), just(Token::Close(delim)))
         .recover_with(delim_recovery(delim, f))
@@ -538,10 +537,9 @@ where
     .map_with(move |_, ex| fallback(ex.span()))
 }
 
-fn pattern<'a, I, S>() -> impl Parser<'a, I, Pattern, E<'a, S>> + Clone
+fn pattern<'a, I>() -> impl Parser<'a, I, Pattern, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     recursive(|pat| {
         pattern_top(pat)
@@ -553,12 +551,11 @@ where
     })
 }
 
-fn pattern_top<'a, I, S>(
-    pat: impl Parser<'a, I, Pattern, E<'a, S>> + Clone + 'a,
-) -> impl Parser<'a, I, PatternTop, E<'a, S>> + Clone + 'a
+fn pattern_top<'a, I>(
+    pat: impl Parser<'a, I, Pattern, E<'a>> + Clone + 'a,
+) -> impl Parser<'a, I, PatternTop, E<'a>> + Clone + 'a
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     recursive(|top| {
         let rest_pat = just(Token::DotDot).to(PatternTop::Rest);
@@ -576,12 +573,11 @@ where
     })
 }
 
-fn array_pattern<'a, I, S>(
-    pattern: impl Parser<'a, I, Pattern, E<'a, S>> + Clone,
-) -> impl Parser<'a, I, ArrayPattern, E<'a, S>> + Clone
+fn array_pattern<'a, I>(
+    pattern: impl Parser<'a, I, Pattern, E<'a>> + Clone,
+) -> impl Parser<'a, I, ArrayPattern, E<'a>> + Clone
 where
-    S: 'a,
-    I: Input<'a, Token = Token, Span = S> + ValueInput<'a>,
+    I: Input<'a, Token = Token, Span = Span> + ValueInput<'a>,
 {
     // Possible Array Patterns:
     //   [1, 2, .., 8]: lhs, dots, rhs

@@ -1,5 +1,7 @@
 use ordered_float::OrderedFloat;
 
+use crate::SourceNode;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Either<L, R> {
     Left(L),
@@ -57,16 +59,16 @@ pub struct Assign {
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Expr {
-    Path(Path),
-    Binary(Binary),
-    Unary(Unary),
-    FuncCall(FuncCall),
-    Index(Index),
-    If(If),
-    Case(Case),
-    FuncDef(FuncDef),
-    Block(Block),
-    Atom(Atom),
+    Path(SourceNode<Path>),
+    Binary(SourceNode<Binary>),
+    Unary(SourceNode<Unary>),
+    FuncCall(SourceNode<FuncCall>),
+    Index(SourceNode<Index>),
+    If(SourceNode<If>),
+    Case(SourceNode<Case>),
+    FuncDef(SourceNode<FuncDef>),
+    Block(SourceNode<Block>),
+    Atom(SourceNode<Atom>),
     Error,
 }
 
@@ -91,15 +93,6 @@ impl std::fmt::Debug for Expr {
         } else {
             write!(f, "{inner:?}")
         }
-    }
-}
-
-impl<T> From<T> for Expr
-where
-    T: Into<Atom>,
-{
-    fn from(value: T) -> Self {
-        Self::Atom(value.into())
     }
 }
 
