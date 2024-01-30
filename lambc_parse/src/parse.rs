@@ -26,10 +26,11 @@ macro_rules! bin {
     ($tok:ident, $str:expr) => {{
         ::chumsky::pratt::infix(
             ::chumsky::pratt::left($str),
-            ::chumsky::primitive::just(crate::tokenize::Token::Op(crate::tokenize::Op::$tok)),
-            |lhs, _, rhs, sp| {
+            ::chumsky::primitive::just(crate::tokenize::Token::Op(crate::tokenize::Op::$tok))
+                .to_span(),
+            |lhs, op_span, rhs, sp| {
                 crate::Expr::Binary(crate::Node::new(
-                    crate::Binary::new(lhs, rhs, crate::BinaryOp::$tok),
+                    crate::Binary::new(lhs, rhs, crate::Node::new(crate::BinaryOp::$tok, op_span)),
                     sp,
                 ))
             },
@@ -41,8 +42,13 @@ macro_rules! unary {
     ($op:expr, $uop:expr, $str:expr) => {{
         ::chumsky::pratt::prefix(
             $str,
-            ::chumsky::primitive::just(crate::tokenize::Token::Op($op)),
-            |_, rhs, sp| crate::Expr::Unary(crate::Node::new(crate::Unary::new(rhs, $uop), sp)),
+            ::chumsky::primitive::just(crate::tokenize::Token::Op($op)).to_span(),
+            |op_span, rhs, sp| {
+                crate::Expr::Unary(crate::Node::new(
+                    crate::Unary::new(rhs, crate::Node::new($uop, op_span)),
+                    sp,
+                ))
+            },
         )
     }};
 }

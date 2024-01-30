@@ -356,11 +356,11 @@ impl Compiler {
         match value {
             Expr::Unary(unary) => {
                 self.compile_expr(&unary.rhs, gc);
-                self.write_op(Op::from(unary.op));
+                self.write_op(Op::from(*unary.op.inner()));
             }
             Expr::Binary(binary) => {
                 let Binary { rhs, lhs, op } = binary.inner();
-                match Op::try_from(*op) {
+                match Op::try_from(*op.inner()) {
                     Ok(op) => {
                         self.compile_expr(lhs, gc);
                         self.compile_expr(rhs, gc);

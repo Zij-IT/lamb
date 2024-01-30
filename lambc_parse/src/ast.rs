@@ -105,11 +105,11 @@ pub struct Path {
 pub struct Binary {
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
-    pub op: BinaryOp,
+    pub op: SourceNode<BinaryOp>,
 }
 
 impl Binary {
-    pub fn new(lhs: Expr, rhs: Expr, op: BinaryOp) -> Self {
+    pub fn new(lhs: Expr, rhs: Expr, op: SourceNode<BinaryOp>) -> Self {
         Self {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
@@ -147,11 +147,11 @@ pub enum BinaryOp {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unary {
     pub rhs: Box<Expr>,
-    pub op: UnaryOp,
+    pub op: SourceNode<UnaryOp>,
 }
 
 impl Unary {
-    pub fn new(rhs: Expr, op: UnaryOp) -> Self {
+    pub fn new(rhs: Expr, op: SourceNode<UnaryOp>) -> Self {
         Self {
             rhs: Box::new(rhs),
             op,
