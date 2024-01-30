@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn run_input<P: AsRef<Path>>(path: P, input: &str) {
     match lambc_parse::script(input) {
         Ok(s) => {
-            if let Err(err) = lambc_vm::run_script(path, &s) {
+            if let Err(err) = lambc_vm::run_script(path, &s.into_inner()) {
                 println!("{err}");
             }
         }
@@ -77,9 +77,9 @@ fn run_repl() -> Result<(), repl::Error> {
 
 fn extract_script(input: &str) -> SyntaxResult<Script> {
     match lambc_parse::script(input) {
-        Ok(script) => Ok(script),
+        Ok(script) => Ok(script.into_inner()),
         Err(_) => {
-            let expr = lambc_parse::expr(input)?;
+            let expr = lambc_parse::expr(input)?.into_inner();
             let stat = wrap_expr(expr);
             Ok(Script {
                 exports: None,

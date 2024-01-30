@@ -204,7 +204,7 @@ impl Vm {
         }
 
         let module = std::fs::read_to_string(&total_path)?;
-        let script = lambc_parse::script(&module).unwrap();
+        let script = lambc_parse::script(&module).unwrap().into_inner();
         self.load_script(&script, &total_path)?;
         self.run()?;
 

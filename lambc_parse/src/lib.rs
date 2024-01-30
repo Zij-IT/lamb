@@ -1,5 +1,6 @@
 mod ast;
 mod error;
+mod node;
 mod parse;
 mod tokenize;
 
@@ -12,22 +13,34 @@ use chumsky::{
     Parser,
 };
 pub use error::SyntaxError;
+pub use node::Node;
 use tokenize::Token;
 
 type StreamInp = SpannedInput<Token, SimpleSpan, Stream<std::vec::IntoIter<(Token, SimpleSpan)>>>;
 
+pub type Span = SimpleSpan;
+pub type SourceNode<T> = Node<T, Span>;
 pub type SyntaxResult<'a, T> = Result<T, Vec<SyntaxError<'a>>>;
 
-pub fn script(src: &str) -> SyntaxResult<Script> {
-    parse(src, parse::script())
+pub fn script(src: &str) -> SyntaxResult<SourceNode<Script>> {
+    parse(
+        src,
+        parse::script().map_with(|script, extra| SourceNode::new(script, extra.span())),
+    )
 }
 
-pub fn statement(src: &str) -> SyntaxResult<Statement> {
-    parse(src, parse::statement())
+pub fn statement(src: &str) -> SyntaxResult<SourceNode<Statement>> {
+    parse(
+        src,
+        parse::statement().map_with(|stat, extra| SourceNode::new(stat, extra.span())),
+    )
 }
 
-pub fn expr(src: &str) -> SyntaxResult<Expr> {
-    parse(src, parse::expr())
+pub fn expr(src: &str) -> SyntaxResult<SourceNode<Expr>> {
+    parse(
+        src,
+        parse::expr().map_with(|expr, extra| SourceNode::new(expr, extra.span())),
+    )
 }
 
 fn parse<'a, T, P>(src: &'a str, parser: P) -> Result<T, Vec<SyntaxError>>
@@ -53,6 +66,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::SourceNode;
+
     use super::ast::{Block, Export, Exportable, Ident, Import, Script};
 
     #[test]
@@ -62,7 +77,7 @@ mod test {
         "#;
 
         assert_eq!(
-            super::script(input),
+            super::script(input).map(SourceNode::into_inner),
             Ok(Script {
                 exports: Some(Export {
                     items: vec![
@@ -84,7 +99,7 @@ mod test {
         "#;
 
         assert_eq!(
-            super::script(input),
+            super::script(input).map(SourceNode::into_inner),
             Ok(Script {
                 exports: Some(Export { items: vec![] }),
                 imports: vec![],
@@ -100,7 +115,7 @@ mod test {
         "#;
 
         assert_eq!(
-            super::script(input),
+            super::script(input).map(SourceNode::into_inner),
             Ok(Script {
                 exports: None,
                 imports: vec![Import {
@@ -120,7 +135,7 @@ mod test {
         "#;
 
         assert_eq!(
-            super::script(input),
+            super::script(input).map(SourceNode::into_inner),
             Ok(Script {
                 exports: None,
                 imports: vec![Import {
@@ -140,7 +155,7 @@ mod test {
         "#;
 
         assert_eq!(
-            super::script(input),
+            super::script(input).map(SourceNode::into_inner),
             Ok(Script {
                 exports: None,
                 imports: vec![Import {
