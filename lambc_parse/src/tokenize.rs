@@ -1,72 +1,129 @@
 use crate::{FileId, Span};
 
+/// A type representing what the `slice` field of the [`Token`] type
+/// contains.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TokKind {
     // Delimiters
+    /// '{'
     OpenBrace,
+    /// '}'
     CloseBrace,
+    /// '['
     OpenBrack,
+    /// ']'
     CloseBrack,
+    /// '('
     OpenParen,
+    /// ')'
     CloseParen,
 
     // Literals
+    /// The literal `nil`
     Nil,
+    /// Signed 8-Byte integer literal
     I64,
+    /// The `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
+    /// type
     Char,
-    Double,
+    /// The `f64` literal`
+    F64,
+    /// The literal `true`
     True,
+    /// The literal `false`
     False,
+    /// String literal delimited by ""
     String,
 
     // Operators
+    /// '+'
     Add,
+    /// '-'
     Sub,
+    /// '/'
     Div,
+    /// '*'
     Mul,
+    /// '%'
     Mod,
+    /// '&'
     Band,
+    /// '|'
     Bor,
+    /// '^'
     Xor,
+    /// '~'
     Bneg,
+    /// '<<'
     Shl,
+    /// '>>'
     Shr,
+    /// '='
     Eq,
+    /// '!='
     Ne,
+    /// '>'
     Gt,
+    /// '<'
     Lt,
+    /// '>='
     Ge,
+    /// '<='
     Le,
+    /// '&&'
     Land,
+    /// '||'
     Lor,
+    /// '!'
     Lnot,
+    /// '<.'
     Cpsl,
+    /// '.>'
     Cpsr,
+    /// '<$'
     Appl,
+    /// '$>'
     Appr,
 
     // Keyword
+    /// 'fn'
     Fn,
+    /// 'if'
     If,
+    /// 'elif'
     Elif,
+    /// 'else'
     Else,
+    /// 'rec'
     Rec,
+    /// 'case'
     Case,
+    /// 'union'
     Union,
+    /// 'struct'
     Struct,
+    /// 'return'
     Return,
+    /// '/[A-Za-z_][A-Za-z_0-9]*/'
     Ident,
 
     // Syntax
+    /// ','
     Comma,
+    /// ';'
     Semi,
+    /// '@'
     Bind,
 
     // Meta
+    /// Used to indicate the end of the input
     End,
+    /// Used to indicate a character not usable by the lexer
     Invalid,
 }
 
+/// Represents a lexeme from the lamb language. See [`TokKind`] for the possible
+/// token kinds.
 pub struct Token<'a> {
     kind: TokKind,
     span: Span,
