@@ -261,7 +261,12 @@ impl<'a> Lexer<'a> {
     }
 
     fn greater(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'>' => self.token_from(start, start + 2, TokKind::Shr),
+            b'=' => self.token_from(start, start + 2, TokKind::Ge),
+            _ => self.token_from(start, start + 1, TokKind::Gt),
+        }
     }
 
     fn dot(&mut self) -> Token {
@@ -428,6 +433,18 @@ mod tests {
             TokKind::Le,
             TokKind::Lt,
         ];
+
+        lex_mult(input, &kinds);
+    }
+
+    #[test]
+    fn lexes_gt_start() {
+        lex_one(">", TokKind::Gt);
+        lex_one(">=", TokKind::Ge);
+        lex_one(">>", TokKind::Shr);
+
+        let input = ">>>=>";
+        let kinds = [TokKind::Shr, TokKind::Ge, TokKind::Gt];
 
         lex_mult(input, &kinds);
     }
