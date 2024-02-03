@@ -84,6 +84,8 @@ pub enum TokKind {
     Appl,
     /// '$>'
     Appr,
+    /// ':='
+    Assign,
 
     // Keyword
     /// 'fn'
@@ -114,8 +116,12 @@ pub enum TokKind {
     Semi,
     /// '@'
     Bind,
+    /// '->'
+    Arrow,
 
     // Meta
+    /// Used to indicate a comment
+    Comment,
     /// Used to indicate the end of the input
     End,
     /// Used to indicate a character not usable by the lexer
@@ -270,11 +276,19 @@ impl<'a> Lexer<'a> {
     }
 
     fn dot(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'>' => self.token_from(start, start + 2, TokKind::Cpsl),
+            _ => self.token_from(start, start + 1, TokKind::Invalid),
+        }
     }
 
     fn colon(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'=' => self.token_from(start, start + 2, TokKind::Assign),
+            _ => self.token_from(start, start + 1, TokKind::Invalid),
+        }
     }
 
     fn dash(&mut self) -> Token {
@@ -446,6 +460,26 @@ mod tests {
         let input = ">>>=>";
         let kinds = [TokKind::Shr, TokKind::Ge, TokKind::Gt];
 
+        lex_mult(input, &kinds);
+    }
+
+    #[test]
+    fn lexes_dot_start() {
+        lex_one(".>", TokKind::Cpsl);
+        lex_one(".", TokKind::Invalid);
+
+        let input = ".>.";
+        let kinds = [TokKind::Cpsl, TokKind::Invalid];
+        lex_mult(input, &kinds);
+    }
+
+    #[test]
+    fn lexes_colon_start() {
+        lex_one(":=", TokKind::Assign);
+        lex_one(":", TokKind::Invalid);
+
+        let input = ":=:";
+        let kinds = [TokKind::Assign, TokKind::Invalid];
         lex_mult(input, &kinds);
     }
 }
