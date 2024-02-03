@@ -292,7 +292,12 @@ impl<'a> Lexer<'a> {
     }
 
     fn dash(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'>' => self.token_from(start, start + 2, TokKind::Arrow),
+            b'-' => self.eat_comment(),
+            _ => self.token_from(start, start + 1, TokKind::Sub),
+        }
     }
 
     fn bang(&mut self) -> Token {
@@ -342,6 +347,21 @@ impl<'a> Lexer<'a> {
 
     fn slice(&self, start: usize, end: usize) -> &'a str {
         std::str::from_utf8(&self.input[start..end]).unwrap()
+    }
+
+    fn eat_comment(&mut self) -> Token {
+        let start = self.at;
+        while !self.at_end() && self.current() != b'\n' {
+            self.at += 1;
+        }
+
+        // If a comment ends a file, and the `+1` was added, then it
+        // would go beyond the length of the input, and fail.
+        if !self.at_end() {
+            self.at += 1;
+        }
+
+        self.token_from(start, self.at, TokKind::Comment)
     }
 }
 
@@ -480,6 +500,18 @@ mod tests {
 
         let input = ":=:";
         let kinds = [TokKind::Assign, TokKind::Invalid];
+        lex_mult(input, &kinds);
+    }
+
+    #[test]
+    fn lexes_dash_start() {
+        lex_one("-", TokKind::Sub);
+        lex_one("->", TokKind::Arrow);
+        lex_one("--", TokKind::Comment);
+        lex_one("-- this is a comment", TokKind::Comment);
+
+        let input = "->--comment\n-";
+        let kinds = [TokKind::Arrow, TokKind::Comment, TokKind::Sub];
         lex_mult(input, &kinds);
     }
 }
