@@ -193,7 +193,14 @@ impl<'a> Lexer<'a> {
     }
 
     fn less(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'$' => self.token_from(start, start + 2, TokKind::Appl),
+            b'.' => self.token_from(start, start + 2, TokKind::Cpsl),
+            b'<' => self.token_from(start, start + 2, TokKind::Shl),
+            b'=' => self.token_from(start, start + 2, TokKind::Le),
+            _ => self.token_from(start, start + 1, TokKind::Lt),
+        }
     }
 
     fn greater(&mut self) -> Token {
@@ -248,6 +255,15 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn token_from(&mut self, start: usize, end: usize, kind: TokKind) -> Token<'a> {
+        self.at = end;
+        Token {
+            kind,
+            span: Span::new(start, end, self.file),
+            slice: self.slice(start, end),
+        }
+    }
+
     fn slice(&self, start: usize, end: usize) -> &'a str {
         std::str::from_utf8(&self.input[start..end]).unwrap()
     }
@@ -263,6 +279,18 @@ mod tests {
         let tok = lexer.next_token();
         assert_eq!(tok.kind, kind);
         assert_eq!(tok.slice, input);
+        assert!(lexer.at_end());
+    }
+
+    fn lex_mult(input: &str, kinds: &[TokKind]) {
+        let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+        let mut kinds = kinds.into_iter().copied();
+
+        while let (Some(kind), tok) = (kinds.next(), lexer.next_token()) {
+            assert_eq!(kind, tok.kind);
+            assert_eq!(&input[tok.span.start..tok.span.end], tok.slice);
+        }
+
         assert!(lexer.at_end());
     }
 
@@ -324,14 +352,26 @@ mod tests {
             TokKind::End,
         ];
 
-        let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
-        let mut kinds = kinds.into_iter();
+        lex_mult(input, &kinds);
+    }
 
-        while let (Some(kind), tok) = (kinds.next(), lexer.next_token()) {
-            assert_eq!(kind, tok.kind);
-            assert_eq!(&input[tok.span.start..tok.span.end], tok.slice);
-        }
+    #[test]
+    fn lexes_lt_start() {
+        lex_one("<", TokKind::Lt);
+        lex_one("<.", TokKind::Cpsl);
+        lex_one("<$", TokKind::Appl);
+        lex_one("<<", TokKind::Shl);
+        lex_one("<=", TokKind::Le);
 
-        assert!(lexer.at_end());
+        let input = "<.<$<<<=<";
+        let kinds = [
+            TokKind::Cpsl,
+            TokKind::Appl,
+            TokKind::Shl,
+            TokKind::Le,
+            TokKind::Lt,
+        ];
+
+        lex_mult(input, &kinds);
     }
 }
