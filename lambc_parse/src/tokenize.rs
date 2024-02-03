@@ -301,7 +301,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn bang(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'=' => self.token_from(start, start + 2, TokKind::Ne),
+            _ => self.token_from(start, start + 1, TokKind::Lnot),
+        }
     }
 
     fn pipe(&mut self) -> Token {
@@ -512,6 +516,16 @@ mod tests {
 
         let input = "->--comment\n-";
         let kinds = [TokKind::Arrow, TokKind::Comment, TokKind::Sub];
+        lex_mult(input, &kinds);
+    }
+
+    #[test]
+    fn lexes_bang_start() {
+        lex_one("!", TokKind::Lnot);
+        lex_one("!=", TokKind::Ne);
+
+        let input = "!=!";
+        let kinds = [TokKind::Ne, TokKind::Lnot];
         lex_mult(input, &kinds);
     }
 }
