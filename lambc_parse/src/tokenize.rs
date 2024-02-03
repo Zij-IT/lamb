@@ -1,425 +1,337 @@
-use chumsky::{
-    error, extra,
-    prelude::*,
-    text::{ascii, digits},
-};
-use ordered_float::OrderedFloat;
+use crate::{FileId, Span};
 
-macro_rules! parse_num {
-    ($prefix:literal, $filter:expr, $radix:literal, $on_fail:literal $(,)?) => {
-        just($prefix)
-            .ignore_then(digits($radix).repeated().at_least(1).to_slice())
-            .validate(|num: &str, ex, emitter| {
-                if !num.chars().all(|c| c.is_digit($radix) || c == '_') {
-                    emitter.emit(Rich::custom(ex.span(), $on_fail));
-                    return Token::Error(Error::InvalidNumLit);
-                }
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TokKind {
+    // Delimiters
+    OpenBrace,
+    CloseBrace,
+    OpenBrack,
+    CloseBrack,
+    OpenParen,
+    CloseParen,
 
-                let num = num.chars().filter(|&c| c != '_').collect::<String>();
-                match i64::from_str_radix(num.as_str(), $radix) {
-                    Ok(num) => Token::Num(num),
-                    Err(_) => unreachable!(),
-                }
-            })
-    };
-}
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash)]
-pub enum Op {
+    // Literals
+    Nil,
+    I64,
+    Char,
+    Double,
+    True,
+    False,
+    String,
+
+    // Operators
     Add,
     Sub,
     Div,
     Mul,
     Mod,
-    BinAnd,
-    BinOr,
-    BinXor,
-    BinComp,
-    LShift,
-    RShift,
+    Band,
+    Bor,
+    Xor,
+    Bneg,
+    Shl,
+    Shr,
     Eq,
     Ne,
     Gt,
     Lt,
     Ge,
     Le,
-    LogAnd,
-    LogOr,
-    LogNot,
-    LCompose,
-    RCompose,
-    LApply,
-    RApply,
-}
+    Land,
+    Lor,
+    Lnot,
+    Cpsl,
+    Cpsr,
+    Appl,
+    Appr,
 
-impl std::fmt::Display for Op {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let item = match self {
-            Op::Add => "+",
-            Op::Sub => "-",
-            Op::Div => "/",
-            Op::Mul => "*",
-            Op::Mod => "%",
-            Op::BinAnd => "&",
-            Op::BinOr => "|",
-            Op::BinXor => "^",
-            Op::BinComp => "~",
-            Op::LShift => "<<",
-            Op::RShift => ">>",
-            Op::Eq => "=",
-            Op::Ne => "!=",
-            Op::Gt => ">",
-            Op::Lt => "<",
-            Op::Ge => ">=",
-            Op::Le => "<=",
-            Op::LogAnd => "&&",
-            Op::LogOr => "||",
-            Op::LogNot => "!",
-            Op::LCompose => "<.",
-            Op::RCompose => ".>",
-            Op::LApply => "<$",
-            Op::RApply => "$>",
-        };
-
-        write!(f, "{item}")
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash)]
-pub enum Delim {
-    Brace,
-    Brack,
-    Paren,
-}
-
-#[derive(Clone, PartialEq, Debug, Eq, Hash)]
-pub enum Token {
-    Op(Op),
-
-    // Delimeters
-    Open(Delim),
-    Close(Delim),
-
-    // Literals
-    Nil,
-    Num(i64),
-    Double(OrderedFloat<f64>),
-    Bool(bool),
-    Char(char),
-    Str(String),
-    Ident(String),
-
-    // Keywords
+    // Keyword
     Fn,
-    Case,
     If,
     Elif,
     Else,
-    Return,
-    Struct,
-    Enum,
     Rec,
+    Case,
+    Union,
+    Struct,
+    Return,
+    Ident,
 
     // Syntax
-    Arrow,
-    Define,
     Comma,
-    Colon,
     Semi,
-    PatBind,
-    DotDot,
+    Bind,
 
-    // Error Handling
-    Error(Error),
+    // Meta
+    End,
+    Invalid,
 }
 
-impl std::fmt::Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let item: &dyn std::fmt::Display = match self {
-            Token::Bool(b) => b,
-            Token::Char(c) => c,
-            Token::Ident(i) => i,
-            Token::Num(n) => n,
-            Token::Double(f) => f,
-            Token::Op(op) => op,
-            Token::Str(s) => s,
-            Token::Open(Delim::Brace) => &"{",
-            Token::Open(Delim::Brack) => &"[",
-            Token::Open(Delim::Paren) => &"(",
-            Token::Close(Delim::Brace) => &"}",
-            Token::Close(Delim::Brack) => &"]",
-            Token::Close(Delim::Paren) => &")",
-            Token::Nil => &"nil",
-            Token::Fn => &"fn",
-            Token::Case => &"case",
-            Token::If => &"if",
-            Token::Elif => &"elif",
-            Token::Else => &"else",
-            Token::Return => &"return",
-            Token::Struct => &"struct",
-            Token::Enum => &"enum",
-            Token::Rec => &"rec",
-            Token::Arrow => &"arrow",
-            Token::Define => &":=",
-            Token::Comma => &",",
-            Token::Colon => &":",
-            Token::Semi => &";",
-            Token::PatBind => &"@",
-            Token::DotDot => &"..",
-            Token::Error(e) => {
-                write!(f, "{e:?}")?;
-                return Ok(());
-            }
+pub struct Token<'a> {
+    kind: TokKind,
+    span: Span,
+    slice: &'a str,
+}
+
+pub struct Lexer<'a> {
+    input: &'a [u8],
+    file: FileId,
+    at: usize,
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a [u8], file: FileId) -> Self {
+        Self { input, file, at: 0 }
+    }
+
+    pub fn next_token(&mut self) -> Token {
+        match self.current() {
+            byte if byte.is_ascii_alphabetic() || byte == b'_' => self.identlike(),
+            byte if byte.is_ascii_digit() => self.number(),
+            b'{' => self.simple(TokKind::OpenBrace),
+            b'}' => self.simple(TokKind::CloseBrace),
+            b'[' => self.simple(TokKind::OpenBrack),
+            b']' => self.simple(TokKind::CloseBrack),
+            b'(' => self.simple(TokKind::OpenParen),
+            b')' => self.simple(TokKind::CloseParen),
+            b'@' => self.simple(TokKind::Bind),
+            b';' => self.simple(TokKind::Semi),
+            b',' => self.simple(TokKind::Comma),
+            b'+' => self.simple(TokKind::Add),
+            b'*' => self.simple(TokKind::Mul),
+            b'/' => self.simple(TokKind::Div),
+            b'%' => self.simple(TokKind::Mod),
+            b'=' => self.simple(TokKind::Eq),
+            b'^' => self.simple(TokKind::Xor),
+            b'~' => self.simple(TokKind::Bneg),
+            b'<' => self.less(),
+            b'>' => self.greater(),
+            b'.' => self.dot(),
+            b':' => self.colon(),
+            b'-' => self.dash(),
+            b'!' => self.bang(),
+            b'|' => self.pipe(),
+            b'&' => self.and(),
+            b'$' => self.dollar(),
+            b'"' => self.string(),
+            b'\'' => self.char(),
+            b'\0' if self.at_end() => self.token(self.at, TokKind::End),
+            _ => self.simple(TokKind::Invalid),
+        }
+    }
+
+    fn current(&self) -> u8 {
+        self.input.get(self.at).copied().unwrap_or(0)
+    }
+
+    fn next(&self) -> u8 {
+        self.input.get(self.at + 1).copied().unwrap_or(0)
+    }
+
+    fn simple(&mut self, kind: TokKind) -> Token {
+        let start = self.at;
+        self.at += 1;
+
+        self.token(start, kind)
+    }
+
+    fn identlike(&mut self) -> Token {
+        let start = self.at;
+        self.at += 1;
+        self.continue_ident();
+        let slice = self.slice(start, self.at);
+        let kind = match slice {
+            "fn" => TokKind::Fn,
+            "if" => TokKind::If,
+            "nil" => TokKind::Nil,
+            "rec" => TokKind::Rec,
+            "case" => TokKind::Case,
+            "elif" => TokKind::Elif,
+            "else" => TokKind::Else,
+            "true" => TokKind::True,
+            "false" => TokKind::False,
+            "union" => TokKind::Union,
+            "struct" => TokKind::Struct,
+            "return" => TokKind::Return,
+            _ => TokKind::Ident,
         };
 
-        write!(f, "{item}")
+        self.token(start, kind)
+    }
+
+    fn continue_ident(&mut self) {
+        loop {
+            let byte = self.current();
+            if byte.is_ascii_alphanumeric() || byte == b'_' {
+                self.at += 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn number(&mut self) -> Token {
+        let start = self.at;
+
+        let curr = self.current();
+        let tok = if curr == b'0' && matches!(self.next(), b'X' | b'x') {
+            while self.current().is_ascii_hexdigit() {
+                self.at += 1;
+            }
+        } else if curr == b'0' && matches!(self.next(), b'b' | b'B') {
+            while self.current().is_ascii_hexdigit() {
+                self.at += 1;
+            }
+        } else if curr == b'0' && matches!(self.next(), b'o' | b'O') {
+            while self.current().is_ascii_hexdigit() {
+                self.at += 1;
+            }
+        } else {
+        };
+
+        todo!()
+    }
+
+    fn less(&mut self) -> Token {
+        todo!()
+    }
+
+    fn greater(&mut self) -> Token {
+        todo!()
+    }
+
+    fn dot(&mut self) -> Token {
+        todo!()
+    }
+
+    fn colon(&mut self) -> Token {
+        todo!()
+    }
+
+    fn dash(&mut self) -> Token {
+        todo!()
+    }
+
+    fn bang(&mut self) -> Token {
+        todo!()
+    }
+
+    fn pipe(&mut self) -> Token {
+        todo!()
+    }
+
+    fn and(&mut self) -> Token {
+        todo!()
+    }
+
+    fn dollar(&mut self) -> Token {
+        todo!()
+    }
+
+    fn string(&mut self) -> Token {
+        todo!()
+    }
+
+    fn char(&mut self) -> Token {
+        todo!()
+    }
+
+    fn at_end(&self) -> bool {
+        self.at >= self.input.len()
+    }
+
+    fn token(&self, start: usize, kind: TokKind) -> Token<'a> {
+        Token {
+            kind,
+            span: Span::new(start, self.at, self.file),
+            slice: self.slice(start, self.at),
+        }
+    }
+
+    fn slice(&self, start: usize, end: usize) -> &'a str {
+        std::str::from_utf8(&self.input[start..end]).unwrap()
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Error {
-    InvalidChar(char),
-    InvalidNumLit,
-}
-
-type I<'a> = &'a str;
-type E<'a> = extra::Err<Rich<'a, char>>;
-
-pub fn lamb<'a>() -> impl Parser<'a, I<'a>, Vec<(Token, SimpleSpan)>, E<'a>> {
-    // TODO:
-    // + Reduce the weird budget being used for odd choice
-    //   of escape char
-    let word = ascii::ident().map(|s| match s {
-        "fn" => Token::Fn,
-        "if" => Token::If,
-        "nil" => Token::Nil,
-        "rec" => Token::Rec,
-        "case" => Token::Case,
-        "enum" => Token::Enum,
-        "elif" => Token::Elif,
-        "else" => Token::Else,
-        "true" => Token::Bool(true),
-        "false" => Token::Bool(false),
-        "struct" => Token::Struct,
-        "return" => Token::Return,
-        _ => Token::Ident(s.into()),
-    });
-
-    let lang_element = choice((
-        chars(),
-        strings(),
-        syntax(),
-        numbers(),
-        ops(),
-        delimeters(),
-        word,
-    ))
-    .or(any().validate(|t: char, ex, emitter| {
-        emitter.emit(<Rich<_> as error::Error<I<'a>>>::expected_found(
-            None,
-            Some(t.into()),
-            ex.span(),
-        ));
-        Token::Error(Error::InvalidChar(t))
-    }));
-
-    let comment = just("--").ignore_then(none_of('\n').repeated()).padded();
-
-    lang_element
-        .map_with(|tok, ex| (tok, ex.span()))
-        .padded_by(comment.repeated())
-        .padded()
-        .repeated()
-        .collect()
-        .then_ignore(comment.repeated())
-        .then_ignore(end())
-}
-
-fn chars<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
-    just('\'')
-        .ignore_then(
-            any()
-                .filter(|c| *c != ':' && *c != '\'')
-                .or(escape_chars())
-                .repeated()
-                .collect::<Vec<_>>(),
-        )
-        .then_ignore(just('\''))
-        .validate(|mut ch, ex, emitter| {
-            if ch.len() == 1 {
-                Token::Char(ch.swap_remove(0))
-            } else {
-                emitter.emit(Rich::custom(
-                    ex.span(),
-                    format!(
-                        "Char literal should contain {} 1 character",
-                        if ch.len() > 1 { "at most" } else { "at least" }
-                    ),
-                ));
-                Token::Char('f')
-            }
-        })
-}
-
-fn strings<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
-    just('"')
-        .ignore_then(
-            any()
-                .filter(|c| *c != ':' && *c != '"')
-                .or(escape_chars())
-                .repeated()
-                .collect(),
-        )
-        .then_ignore(just('"'))
-        .map(Token::Str)
-}
-
-fn numbers<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
-    let binary = parse_num!(
-        "0b",
-        |c| matches!(c, '1' | '0' | '_'),
-        2,
-        "Binary number may only contain [01_]",
-    );
-
-    let hex = parse_num!(
-        "0h",
-        |c| char::is_ascii_hexdigit(&c) || c.eq(&'_'),
-        16,
-        "Hex number may only contain [a-fA-F0-9_]",
-    );
-
-    let octal = parse_num!(
-        "0o",
-        |c| matches!(c, '0'..='7' | '_'),
-        8,
-        "Octal number may only contain [0-7_]"
-    );
-
-    let dec = |i| digits(10).separated_by(just('_')).at_least(i).to_slice();
-
-    let dec_num = dec(1)
-        .map(|s: I<'a>| s.chars().filter(|&c| c != '_').collect::<String>())
-        .from_str()
-        .unwrapped()
-        .map(Token::Num);
-
-    let decimal = just("0d").or_not().ignore_then(dec_num);
-
-    let exp = one_of("eE").then(one_of("+-")).then(dec(1));
-
-    let floats = choice((
-        dec(0).then(just('.')).then(dec(1)),
-        dec(1).then(just('.')).then(dec(0)),
-    ))
-    .then(exp.or_not())
-    .to_slice()
-    .map(|s: &str| s.chars().filter(|&c| c != '_').collect::<String>())
-    .from_str()
-    .unwrapped()
-    .map(Token::Double);
-
-    choice((floats, binary, hex, octal, decimal))
-        .then(ascii::ident().or_not().map_with(|t, ex| (t, ex.span())))
-        .validate(|(num, (t, s)), _, emitter| {
-            if !t.map_or(true, str::is_empty) {
-                emitter.emit(Rich::custom(s, "Invalid suffix for number literal"));
-            }
-
-            num
-        })
-}
-
-fn delimeters<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
-    choice((
-        just('{').to(Token::Open(Delim::Brace)),
-        just('}').to(Token::Close(Delim::Brace)),
-        just('[').to(Token::Open(Delim::Brack)),
-        just(']').to(Token::Close(Delim::Brack)),
-        just('(').to(Token::Open(Delim::Paren)),
-        just(')').to(Token::Close(Delim::Paren)),
-    ))
-}
-
-fn syntax<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
-    choice((
-        just("..").to(Token::DotDot),
-        just("->").to(Token::Arrow),
-        just(":=").to(Token::Define),
-        just(',').to(Token::Comma),
-        just(';').to(Token::Semi),
-        just(':').to(Token::Colon),
-        just('@').to(Token::PatBind),
-    ))
-}
-
-fn ops<'a>() -> impl Parser<'a, I<'a>, Token, E<'a>> {
-    choice((
-        just(".>").to(Token::Op(Op::RCompose)),
-        just("<.").to(Token::Op(Op::LCompose)),
-        just("$>").to(Token::Op(Op::RApply)),
-        just("<$").to(Token::Op(Op::LApply)),
-        just("<<").to(Token::Op(Op::LShift)),
-        just(">>").to(Token::Op(Op::RShift)),
-        just("!=").to(Token::Op(Op::Ne)),
-        just(">=").to(Token::Op(Op::Ge)),
-        just("<=").to(Token::Op(Op::Le)),
-        just("&&").to(Token::Op(Op::LogAnd)),
-        just("||").to(Token::Op(Op::LogOr)),
-        just('+').to(Token::Op(Op::Add)),
-        just('-').to(Token::Op(Op::Sub)),
-        just('*').to(Token::Op(Op::Mul)),
-        just('/').to(Token::Op(Op::Div)),
-        just('%').to(Token::Op(Op::Mod)),
-        just('&').to(Token::Op(Op::BinAnd)),
-        just('|').to(Token::Op(Op::BinOr)),
-        just('^').to(Token::Op(Op::BinXor)),
-        just('~').to(Token::Op(Op::BinComp)),
-        just('=').to(Token::Op(Op::Eq)),
-        just('>').to(Token::Op(Op::Gt)),
-        just('<').to(Token::Op(Op::Lt)),
-        just('!').to(Token::Op(Op::LogNot)),
-    ))
-}
-
-fn escape_chars<'a>() -> impl Parser<'a, I<'a>, char, E<'a>> {
-    just(':').ignore_then(choice((
-        just(':'),
-        just('/'),
-        just('"'),
-        just('\''),
-        just('b').to('\x08'),
-        just('f').to('\x0C'),
-        just('n').to('\n'),
-        just('r').to('\r'),
-        just('t').to('\t'),
-    )))
-}
-
 #[cfg(test)]
-mod test {
-    use super::*;
+mod tests {
+    use super::{Lexer, TokKind};
+    use crate::FileId;
+
+    fn lex_one(input: &str, kind: TokKind) {
+        let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+        let tok = lexer.next_token();
+        assert_eq!(tok.kind, kind);
+        assert_eq!(tok.slice, input);
+        assert!(lexer.at_end());
+    }
+
     #[test]
-    fn numbers_() {
-        let test = |s| numbers().parse(s).into_result().unwrap();
-        let test_err = |s| numbers().parse(s).into_result().unwrap_err();
+    fn lexes_simple() {
+        // Syntax
+        lex_one(";", TokKind::Semi);
+        lex_one("@", TokKind::Bind);
+        lex_one(",", TokKind::Comma);
 
-        [
-            "00",
-            "12_341",
-            "0h0123_4567_89ab_cDEF",
-            "0d123_496_789",
-            "0o0123_4567",
-            "0b01010_1010",
-        ]
-        .map(test);
+        // Delimiters
+        lex_one("{", TokKind::OpenBrace);
+        lex_one("[", TokKind::OpenBrack);
+        lex_one("(", TokKind::OpenParen);
+        lex_one(")", TokKind::CloseParen);
+        lex_one("]", TokKind::CloseBrack);
+        lex_one("}", TokKind::CloseBrace);
 
-        [
-            "0acdefgh",
-            "0h_ghij_klmn",
-            "0d_abcd_efgh",
-            "0o_89ab_cdef",
-            "0b_0123_4567",
-        ]
-        .map(test_err);
+        // Operators
+        lex_one("+", TokKind::Add);
+        lex_one("*", TokKind::Mul);
+        lex_one("/", TokKind::Div);
+        lex_one("%", TokKind::Mod);
+        lex_one("=", TokKind::Eq);
+        lex_one("^", TokKind::Xor);
+        lex_one("~", TokKind::Bneg);
+    }
+
+    #[test]
+    fn lexes_none() {
+        lex_one("", TokKind::End);
+    }
+
+    #[test]
+    fn lexes_invalid() {
+        lex_one("#", TokKind::Invalid);
+    }
+
+    #[test]
+    fn lexes_multiple_simple() {
+        let input = ";@,{[()]}+*/%=^~";
+        let kinds = [
+            TokKind::Semi,
+            TokKind::Bind,
+            TokKind::Comma,
+            TokKind::OpenBrace,
+            TokKind::OpenBrack,
+            TokKind::OpenParen,
+            TokKind::CloseParen,
+            TokKind::CloseBrack,
+            TokKind::CloseBrace,
+            TokKind::Add,
+            TokKind::Mul,
+            TokKind::Div,
+            TokKind::Mod,
+            TokKind::Eq,
+            TokKind::Xor,
+            TokKind::Bneg,
+            TokKind::End,
+        ];
+
+        let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+        let mut kinds = kinds.into_iter();
+
+        while let (Some(kind), tok) = (kinds.next(), lexer.next_token()) {
+            assert_eq!(kind, tok.kind);
+            assert_eq!(&input[tok.span.start..tok.span.end], tok.slice);
+        }
+
+        assert!(lexer.at_end());
     }
 }
