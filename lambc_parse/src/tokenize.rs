@@ -206,7 +206,12 @@ impl<'a> Lexer<'a> {
     }
 
     fn string_token(&mut self) -> Token<'a> {
-        todo!()
+        let start = self.at;
+        match self.current() {
+            b'"' => self.string_end(),
+            _ if !self.at_end() => self.string_text(),
+            _ => self.token(start, TokKind::End),
+        }
     }
 
     fn current(&self) -> u8 {
@@ -260,7 +265,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn string_start(&mut self) -> Token<'a> {
-        todo!()
+        self.state = State::String;
+        self.simple(TokKind::StringStart)
     }
 
     fn string_text(&mut self) -> Token<'a> {
@@ -268,7 +274,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn string_end(&mut self) -> Token<'a> {
-        todo!()
+        self.state = State::Default;
+        self.simple(TokKind::StringEnd)
     }
 
     fn number(&mut self) -> Token<'a> {
