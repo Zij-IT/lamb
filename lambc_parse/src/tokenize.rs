@@ -570,4 +570,34 @@ mod tests {
         let kinds = [TokKind::Appr, TokKind::Invalid];
         lex_mult(input, &kinds);
     }
+
+    #[test]
+    fn lexes_identlike() {
+        let kws = [
+            "fn", "if", "nil", "rec", "case", "elif", "else", "true", "false", "union", "struct",
+        ];
+
+        let kinds = [
+            TokKind::Fn,
+            TokKind::If,
+            TokKind::Nil,
+            TokKind::Rec,
+            TokKind::Case,
+            TokKind::Elif,
+            TokKind::Else,
+            TokKind::True,
+            TokKind::False,
+            TokKind::Union,
+            TokKind::Struct,
+        ];
+
+        for (&input, kind) in kws.iter().zip(kinds) {
+            lex_one(input, kind);
+        }
+
+        let idents = ["fns", "map", "recu", "cases"];
+        for ident in idents {
+            lex_one(ident, TokKind::Ident);
+        }
+    }
 }
