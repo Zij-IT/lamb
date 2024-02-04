@@ -305,7 +305,7 @@ impl<'a> Lexer<'a> {
     fn dot(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
-            b'>' => self.token_from(start, start + 2, TokKind::Cpsl),
+            b'>' => self.token_from(start, start + 2, TokKind::Cpsr),
             _ => self.token_from(start, start + 1, TokKind::Invalid),
         }
     }
@@ -524,11 +524,11 @@ mod tests {
 
     #[test]
     fn lexes_dot_start() {
-        lex_one(".>", TokKind::Cpsl);
+        lex_one(".>", TokKind::Cpsr);
         lex_one(".", TokKind::Invalid);
 
         let input = ".>.";
-        let kinds = [TokKind::Cpsl, TokKind::Invalid];
+        let kinds = [TokKind::Cpsr, TokKind::Invalid];
         lex_mult(input, &kinds);
     }
 
