@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{FileId, Span};
 
 /// A type representing what the `slice` field of the [`Token`] type
@@ -142,7 +144,7 @@ enum State {
 pub struct Token<'a> {
     kind: TokKind,
     span: Span,
-    slice: &'a str,
+    slice: Cow<'a, str>,
 }
 
 pub struct Lexer<'a> {
@@ -371,7 +373,7 @@ impl<'a> Lexer<'a> {
         Token {
             kind,
             span: Span::new(start, self.at, self.file),
-            slice: self.slice(start, self.at),
+            slice: self.slice(start, self.at).into(),
         }
     }
 
@@ -380,7 +382,7 @@ impl<'a> Lexer<'a> {
         Token {
             kind,
             span: Span::new(start, end, self.file),
-            slice: self.slice(start, end),
+            slice: self.slice(start, end).into(),
         }
     }
 
