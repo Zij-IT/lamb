@@ -32,8 +32,12 @@ pub enum TokKind {
     True,
     /// The literal `false`
     False,
-    /// String literal delimited by ""
-    String,
+    /// The beginning '"' of a string literal
+    StringStart,
+    /// The text within a string literal
+    StringText,
+    /// The end '"' of a string literal
+    StringEnd,
 
     // Operators
     /// '+'
@@ -128,6 +132,11 @@ pub enum TokKind {
     Invalid,
 }
 
+enum State {
+    String,
+    Default,
+}
+
 /// Represents a lexeme from the lamb language. See [`TokKind`] for the possible
 /// token kinds.
 pub struct Token<'a> {
@@ -138,16 +147,29 @@ pub struct Token<'a> {
 
 pub struct Lexer<'a> {
     input: &'a [u8],
+    state: State,
     file: FileId,
     at: usize,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a [u8], file: FileId) -> Self {
-        Self { input, file, at: 0 }
+        Self {
+            state: State::Default,
+            input,
+            file,
+            at: 0,
+        }
     }
 
-    pub fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Token<'a> {
+        match self.state {
+            State::Default => self.default_token(),
+            State::String => self.string_token(),
+        }
+    }
+
+    fn default_token(&mut self) -> Token<'a> {
         match self.current() {
             byte if byte.is_ascii_alphabetic() || byte == b'_' => self.identlike(),
             byte if byte.is_ascii_digit() => self.number(),
@@ -183,6 +205,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn string_token(&mut self) -> Token<'a> {
+        todo!()
+    }
+
     fn current(&self) -> u8 {
         self.input.get(self.at).copied().unwrap_or(0)
     }
@@ -191,14 +217,14 @@ impl<'a> Lexer<'a> {
         self.input.get(self.at + 1).copied().unwrap_or(0)
     }
 
-    fn simple(&mut self, kind: TokKind) -> Token {
+    fn simple(&mut self, kind: TokKind) -> Token<'a> {
         let start = self.at;
         self.at += 1;
 
         self.token(start, kind)
     }
 
-    fn identlike(&mut self) -> Token {
+    fn identlike(&mut self) -> Token<'a> {
         let start = self.at;
         self.at += 1;
         self.continue_ident();
@@ -233,7 +259,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn number(&mut self) -> Token {
+    fn number(&mut self) -> Token<'a> {
         let start = self.at;
 
         let curr = self.current();
@@ -255,7 +281,7 @@ impl<'a> Lexer<'a> {
         todo!()
     }
 
-    fn less(&mut self) -> Token {
+    fn less(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'$' => self.token_from(start, start + 2, TokKind::Appl),
@@ -266,7 +292,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn greater(&mut self) -> Token {
+    fn greater(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'>' => self.token_from(start, start + 2, TokKind::Shr),
@@ -275,7 +301,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn dot(&mut self) -> Token {
+    fn dot(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'>' => self.token_from(start, start + 2, TokKind::Cpsl),
@@ -283,7 +309,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn colon(&mut self) -> Token {
+    fn colon(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'=' => self.token_from(start, start + 2, TokKind::Assign),
@@ -291,7 +317,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn dash(&mut self) -> Token {
+    fn dash(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'>' => self.token_from(start, start + 2, TokKind::Arrow),
@@ -300,7 +326,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn bang(&mut self) -> Token {
+    fn bang(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'=' => self.token_from(start, start + 2, TokKind::Ne),
@@ -308,7 +334,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn pipe(&mut self) -> Token {
+    fn pipe(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'|' => self.token_from(start, start + 2, TokKind::Lor),
@@ -316,7 +342,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn and(&mut self) -> Token {
+    fn and(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'&' => self.token_from(start, start + 2, TokKind::Land),
@@ -324,7 +350,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn dollar(&mut self) -> Token {
+    fn dollar(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
             b'>' => self.token_from(start, start + 2, TokKind::Appr),
@@ -332,11 +358,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn string(&mut self) -> Token {
+    fn string(&mut self) -> Token<'a> {
         todo!()
     }
 
-    fn char(&mut self) -> Token {
+    fn char(&mut self) -> Token<'a> {
         todo!()
     }
 
@@ -365,7 +391,7 @@ impl<'a> Lexer<'a> {
         std::str::from_utf8(&self.input[start..end]).unwrap()
     }
 
-    fn eat_comment(&mut self) -> Token {
+    fn eat_comment(&mut self) -> Token<'a> {
         let start = self.at;
         while !self.at_end() && self.current() != b'\n' {
             self.at += 1;
