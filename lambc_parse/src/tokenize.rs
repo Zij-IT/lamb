@@ -198,7 +198,7 @@ impl<'a> Lexer<'a> {
             b'|' => self.pipe(),
             b'&' => self.and(),
             b'$' => self.dollar(),
-            b'"' => self.string(),
+            b'"' => self.string_start(),
             b'\'' => self.char(),
             b'\0' if self.at_end() => self.token(self.at, TokKind::End),
             _ => self.simple(TokKind::Invalid),
@@ -257,6 +257,18 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
+    }
+
+    fn string_start(&mut self) -> Token<'a> {
+        todo!()
+    }
+
+    fn string_text(&mut self) -> Token<'a> {
+        todo!()
+    }
+
+    fn string_end(&mut self) -> Token<'a> {
+        todo!()
     }
 
     fn number(&mut self) -> Token<'a> {
@@ -338,10 +350,6 @@ impl<'a> Lexer<'a> {
             b'>' => self.token_from(start, start + 2, TokKind::Appr),
             _ => self.token_from(start, start + 1, TokKind::Invalid),
         }
-    }
-
-    fn string(&mut self) -> Token<'a> {
-        todo!()
     }
 
     fn char(&mut self) -> Token<'a> {
