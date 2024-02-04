@@ -1,6 +1,6 @@
 mod tokenize;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
     file: FileId,
     start: usize,

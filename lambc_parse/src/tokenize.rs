@@ -141,6 +141,7 @@ enum State {
 
 /// Represents a lexeme from the lamb language. See [`TokKind`] for the possible
 /// token kinds.
+#[derive(Debug, PartialEq, Eq)]
 pub struct Token<'a> {
     kind: TokKind,
     span: Span,
@@ -272,7 +273,79 @@ impl<'a> Lexer<'a> {
     }
 
     fn string_text(&mut self) -> Token<'a> {
-        todo!()
+        let start = self.at;
+        let mut buffer = String::new();
+        let mut use_buffer = false;
+        let slice = loop {
+            if use_buffer {
+                match self.current() {
+                    _ if self.at_end() => break buffer.into(),
+                    b'"' => break buffer.into(),
+                    b':' => match self.next() {
+                        b'n' => buffer.push('n'),
+                        b'r' => {
+                            self.at += 1;
+                            buffer.push('\r')
+                        }
+                        b't' => {
+                            self.at += 1;
+                            buffer.push('\t')
+                        }
+                        b':' => {
+                            self.at += 1;
+                            buffer.push(':')
+                        }
+                        b'"' => {
+                            self.at += 1;
+                            buffer.push('"')
+                        }
+                        _ => (),
+                    },
+                    b => buffer.push(b as char),
+                }
+            } else {
+                match self.current() {
+                    b'"' => break self.slice(start, self.at).into(),
+                    b':' => {
+                        use_buffer = true;
+                        buffer.push_str(self.slice(start, self.at));
+                        match self.next() {
+                            b'n' => {
+                                self.at += 1;
+                                buffer.push('\n')
+                            }
+                            b'r' => {
+                                self.at += 1;
+                                buffer.push('\r')
+                            }
+                            b't' => {
+                                self.at += 1;
+                                buffer.push('\t')
+                            }
+                            b':' => {
+                                self.at += 1;
+                                buffer.push(':')
+                            }
+                            b'"' => {
+                                self.at += 1;
+                                buffer.push('"')
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ if self.at_end() => break self.slice(start, self.at).into(),
+                    _ => (),
+                }
+            }
+
+            self.at += 1;
+        };
+
+        Token {
+            kind: TokKind::StringText,
+            span: Span::new(start, self.at, self.file),
+            slice,
+        }
     }
 
     fn string_end(&mut self) -> Token<'a> {
@@ -408,8 +481,21 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Lexer, TokKind};
-    use crate::FileId;
+    use super::{Lexer, TokKind, Token};
+    use crate::{FileId, Span};
+    use pretty_assertions::assert_eq;
+
+    fn tok(kind: TokKind, start: usize, end: usize, slice: &str) -> Token {
+        Token {
+            kind,
+            span: Span::new(start, end, FileId(0)),
+            slice: slice.into(),
+        }
+    }
+
+    fn lex(input: &str) -> Lexer {
+        Lexer::new(input.as_bytes(), FileId(0))
+    }
 
     fn lex_one(input: &str, kind: TokKind) {
         let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
@@ -624,5 +710,40 @@ mod tests {
         for ident in idents {
             lex_one(ident, TokKind::Ident);
         }
+    }
+
+    #[test]
+    fn lexes_string() {
+        lex_mult(r#""""#, &[TokKind::StringStart, TokKind::StringEnd]);
+        let strstart = tok(TokKind::StringStart, 0, 1, "\"");
+        let strend = tok(TokKind::StringEnd, 1, 2, "\"");
+        let end = tok(TokKind::End, 2, 2, "");
+
+        let mut lexer = lex(r#""""#);
+        assert_eq!(strstart, lexer.next_token());
+        assert_eq!(strend, lexer.next_token());
+        assert_eq!(end, lexer.next_token());
+
+        let strstart = tok(TokKind::StringStart, 0, 1, "\"");
+        let strtext = tok(TokKind::StringText, 1, 6, "hello");
+        let strend = tok(TokKind::StringEnd, 6, 7, "\"");
+        let end = tok(TokKind::End, 7, 7, "");
+
+        let mut lexer = lex(r#""hello""#);
+        assert_eq!(strstart, lexer.next_token());
+        assert_eq!(strtext, lexer.next_token());
+        assert_eq!(strend, lexer.next_token());
+        assert_eq!(end, lexer.next_token());
+
+        let strstart = tok(TokKind::StringStart, 0, 1, "\"");
+        let strtext = tok(TokKind::StringText, 1, 15, "hello\n\tworld");
+        let strend = tok(TokKind::StringEnd, 15, 16, "\"");
+        let end = tok(TokKind::End, 16, 16, "");
+
+        let mut lexer = lex(r#""hello:n:tworld""#);
+        assert_eq!(strstart, lexer.next_token());
+        assert_eq!(strtext, lexer.next_token());
+        assert_eq!(strend, lexer.next_token());
+        assert_eq!(end, lexer.next_token());
     }
 }
