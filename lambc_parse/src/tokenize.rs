@@ -317,7 +317,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn and(&mut self) -> Token {
-        todo!()
+        let start = self.at;
+        match self.next() {
+            b'&' => self.token_from(start, start + 2, TokKind::Land),
+            _ => self.token_from(start, start + 1, TokKind::Band),
+        }
     }
 
     fn dollar(&mut self) -> Token {
@@ -540,6 +544,16 @@ mod tests {
 
         let input = "|||";
         let kinds = [TokKind::Lor, TokKind::Bor];
+        lex_mult(input, &kinds);
+    }
+
+    #[test]
+    fn lexes_amp_start() {
+        lex_one("&", TokKind::Band);
+        lex_one("&&", TokKind::Land);
+
+        let input = "&&&";
+        let kinds = [TokKind::Land, TokKind::Band];
         lex_mult(input, &kinds);
     }
 }
