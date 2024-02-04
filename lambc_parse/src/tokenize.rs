@@ -260,24 +260,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn number(&mut self) -> Token<'a> {
-        let start = self.at;
-
-        let curr = self.current();
-        let tok = if curr == b'0' && matches!(self.next(), b'X' | b'x') {
-            while self.current().is_ascii_hexdigit() {
-                self.at += 1;
-            }
-        } else if curr == b'0' && matches!(self.next(), b'b' | b'B') {
-            while self.current().is_ascii_hexdigit() {
-                self.at += 1;
-            }
-        } else if curr == b'0' && matches!(self.next(), b'o' | b'O') {
-            while self.current().is_ascii_hexdigit() {
-                self.at += 1;
-            }
-        } else {
-        };
-
         todo!()
     }
 
