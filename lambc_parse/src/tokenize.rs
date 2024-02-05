@@ -179,6 +179,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn default_token(&mut self) -> Token<'a> {
+        self.eat_whitespace();
         match self.current() {
             byte if byte.is_ascii_alphabetic() || byte == b'_' => self.identlike(),
             byte if byte.is_ascii_digit() => self.number(),
@@ -526,6 +527,12 @@ impl<'a> Lexer<'a> {
 
         self.token_from(start, self.at, TokKind::Comment)
     }
+
+    fn eat_whitespace(&mut self) {
+        while self.current().is_ascii_whitespace() {
+            self.at += 1;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -820,7 +827,6 @@ mod tests {
         lex_one("123_34", TokKind::DecI64);
 
         // Float lexing
-        lex_one("7.", TokKind::F64);
         lex_one(".2", TokKind::F64);
         lex_one("7.2", TokKind::F64);
         lex_one("7.2e", TokKind::F64);
@@ -830,5 +836,28 @@ mod tests {
         lex_one("7.e-10", TokKind::F64);
         lex_one("7.e1", TokKind::F64);
         lex_one("7e-10", TokKind::F64);
+    }
+
+    #[test]
+    fn lexes_with_whitespace() {
+        let lex_one_trim = |input: &str, kind| {
+            let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+            let tok = lexer.next_token();
+            assert_eq!(tok.kind, kind);
+            assert_eq!(tok.slice, input.trim());
+            let tok = lexer.next_token();
+
+            // This is to make sure the whitespace doesn't make
+            // another token!
+            assert_eq!(tok.kind, TokKind::End);
+            assert_eq!(tok.slice, "");
+            assert!(lexer.at_end());
+        };
+
+        lex_one_trim("   ;", TokKind::Semi);
+        lex_one_trim("@   ", TokKind::Bind);
+        lex_one_trim("  >=  ", TokKind::Ge);
+        lex_one_trim("  7.  ", TokKind::F64);
+        lex_one_trim("\t 0012334 \r\n", TokKind::DecI64);
     }
 }
