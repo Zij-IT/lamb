@@ -31,9 +31,13 @@ pub enum TokKind {
     HexI64,
     /// Signed 8-Byte integer literal with the no prefix
     DecI64,
-    /// The `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
+    /// The beginning '\'' of a string literal
+    CharStart,
+    /// The text of a `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
     /// type
-    Char,
+    CharText,
+    /// The end '\'' of a string literal
+    CharEnd,
     /// The `f64` literal`
     F64,
     /// The literal `true`
@@ -144,6 +148,8 @@ pub enum TokKind {
 enum State {
     /// Active when the lexer is in the middle of lexing a string literal
     String,
+    /// Active when the lexer is in the middle of lexing a char literal
+    Char,
     /// Active when the lexer is doing anything but lexing a string literal
     Default,
 }
@@ -184,6 +190,7 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Token<'a> {
         match self.state {
             State::Default => self.default_token(),
+            State::Char => self.char_token(),
             State::String => self.string_token(),
         }
     }
@@ -219,7 +226,7 @@ impl<'a> Lexer<'a> {
             b'&' => self.and(),
             b'$' => self.dollar(),
             b'"' => self.string_start(),
-            b'\'' => self.char(),
+            b'\'' => self.char_start(),
             b'\0' if self.at_end() => self.token(self.at, TokKind::End),
             _ => self.simple(TokKind::Invalid),
         }
@@ -230,6 +237,15 @@ impl<'a> Lexer<'a> {
         match self.current() {
             b'"' => self.string_end(),
             _ if !self.at_end() => self.string_text(),
+            _ => self.token(start, TokKind::End),
+        }
+    }
+
+    fn char_token(&mut self) -> Token<'a> {
+        let start = self.at;
+        match self.current() {
+            b'\'' => self.char_end(),
+            _ if !self.at_end() => self.char_text(),
             _ => self.token(start, TokKind::End),
         }
     }
@@ -291,61 +307,61 @@ impl<'a> Lexer<'a> {
 
     fn string_text(&mut self) -> Token<'a> {
         let start = self.at;
-        let mut buffer = String::new();
+        let mut buffer = Vec::new();
         let mut use_buffer = false;
         let slice = loop {
             if use_buffer {
                 match self.current() {
-                    _ if self.at_end() => break buffer.into(),
-                    b'"' => break buffer.into(),
+                    _ if self.at_end() => break String::from_utf8(buffer).unwrap().into(),
+                    b'"' => break String::from_utf8(buffer).unwrap().into(),
                     b':' => match self.next() {
-                        b'n' => buffer.push('n'),
+                        b'n' => buffer.push(b'\n'),
                         b'r' => {
                             self.at += 1;
-                            buffer.push('\r')
+                            buffer.push(b'\r')
                         }
                         b't' => {
                             self.at += 1;
-                            buffer.push('\t')
+                            buffer.push(b'\t')
                         }
                         b':' => {
                             self.at += 1;
-                            buffer.push(':')
+                            buffer.push(b':')
                         }
                         b'"' => {
                             self.at += 1;
-                            buffer.push('"')
+                            buffer.push(b'"')
                         }
                         _ => (),
                     },
-                    b => buffer.push(b as char),
+                    b => buffer.push(b),
                 }
             } else {
                 match self.current() {
                     b'"' => break self.slice(start, self.at).into(),
                     b':' => {
                         use_buffer = true;
-                        buffer.push_str(self.slice(start, self.at));
+                        buffer.extend(self.slice(start, self.at).as_bytes());
                         match self.next() {
                             b'n' => {
                                 self.at += 1;
-                                buffer.push('\n')
+                                buffer.push(b'\n')
                             }
                             b'r' => {
                                 self.at += 1;
-                                buffer.push('\r')
+                                buffer.push(b'\r')
                             }
                             b't' => {
                                 self.at += 1;
-                                buffer.push('\t')
+                                buffer.push(b'\t')
                             }
                             b':' => {
                                 self.at += 1;
-                                buffer.push(':')
+                                buffer.push(b':')
                             }
                             b'"' => {
                                 self.at += 1;
-                                buffer.push('"')
+                                buffer.push(b'"')
                             }
                             _ => (),
                         }
@@ -368,6 +384,92 @@ impl<'a> Lexer<'a> {
     fn string_end(&mut self) -> Token<'a> {
         self.state = State::Default;
         self.simple(TokKind::StringEnd)
+    }
+
+    fn char_start(&mut self) -> Token<'a> {
+        self.state = State::Char;
+        self.simple(TokKind::CharStart)
+    }
+
+    fn char_text(&mut self) -> Token<'a> {
+        let start = self.at;
+        let mut buffer = String::new();
+        let mut use_buffer = false;
+        let slice = loop {
+            if use_buffer {
+                match self.current() {
+                    _ if self.at_end() => break buffer.into(),
+                    b'\'' => break buffer.into(),
+                    b':' => match self.next() {
+                        b'n' => buffer.push('n'),
+                        b'r' => {
+                            self.at += 1;
+                            buffer.push('\r')
+                        }
+                        b't' => {
+                            self.at += 1;
+                            buffer.push('\t')
+                        }
+                        b':' => {
+                            self.at += 1;
+                            buffer.push(':')
+                        }
+                        b'\'' => {
+                            self.at += 1;
+                            buffer.push('\'')
+                        }
+                        _ => (),
+                    },
+                    b => buffer.push(b as char),
+                }
+            } else {
+                match self.current() {
+                    b'\'' => break self.slice(start, self.at).into(),
+                    b':' => {
+                        use_buffer = true;
+                        buffer.push_str(self.slice(start, self.at));
+                        match self.next() {
+                            b'n' => {
+                                self.at += 1;
+                                buffer.push('\n')
+                            }
+                            b'r' => {
+                                self.at += 1;
+                                buffer.push('\r')
+                            }
+                            b't' => {
+                                self.at += 1;
+                                buffer.push('\t')
+                            }
+                            b':' => {
+                                self.at += 1;
+                                buffer.push(':')
+                            }
+                            b'\'' => {
+                                self.at += 1;
+                                buffer.push('\'')
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ if self.at_end() => break self.slice(start, self.at).into(),
+                    _ => (),
+                }
+            }
+
+            self.at += 1;
+        };
+
+        Token {
+            kind: TokKind::CharText,
+            span: Span::new(start, self.at, self.file),
+            slice,
+        }
+    }
+
+    fn char_end(&mut self) -> Token<'a> {
+        self.state = State::Default;
+        self.simple(TokKind::CharEnd)
     }
 
     fn number(&mut self) -> Token<'a> {
@@ -492,10 +594,6 @@ impl<'a> Lexer<'a> {
             b'>' => self.token_from(start, start + 2, TokKind::Appr),
             _ => self.token_from(start, start + 1, TokKind::Invalid),
         }
-    }
-
-    fn char(&mut self) -> Token<'a> {
-        todo!()
     }
 
     fn at_end(&self) -> bool {
@@ -810,6 +908,43 @@ mod tests {
         assert_eq!(strstart, lexer.next_token());
         assert_eq!(strtext, lexer.next_token());
         assert_eq!(strend, lexer.next_token());
+        assert_eq!(end, lexer.next_token());
+    }
+
+    #[test]
+    fn lexes_char() {
+        // This will be verified and expressed as an error in the parsing phase
+        let charstart = tok(TokKind::CharStart, 0, 1, "'");
+        let chartext = tok(TokKind::CharText, 1, 6, "hello");
+        let charend = tok(TokKind::CharEnd, 6, 7, "'");
+        let end = tok(TokKind::End, 7, 7, "");
+
+        let mut lexer = lex("'hello'");
+        assert_eq!(charstart, lexer.next_token());
+        assert_eq!(chartext, lexer.next_token());
+        assert_eq!(charend, lexer.next_token());
+        assert_eq!(end, lexer.next_token());
+
+        let charstart = tok(TokKind::CharStart, 0, 1, "'");
+        let chartext = tok(TokKind::CharText, 1, 3, "'");
+        let charend = tok(TokKind::CharEnd, 3, 4, "'");
+        let end = tok(TokKind::End, 4, 4, "");
+
+        let mut lexer = lex("':''");
+        assert_eq!(charstart, lexer.next_token());
+        assert_eq!(chartext, lexer.next_token());
+        assert_eq!(charend, lexer.next_token());
+        assert_eq!(end, lexer.next_token());
+
+        let charstart = tok(TokKind::CharStart, 0, 1, "'");
+        let chartext = tok(TokKind::CharText, 1, 3, "ö");
+        let charend = tok(TokKind::CharEnd, 3, 4, "'");
+        let end = tok(TokKind::End, 4, 4, "");
+
+        let mut lexer = lex("'ö'");
+        assert_eq!(charstart, lexer.next_token());
+        assert_eq!(chartext, lexer.next_token());
+        assert_eq!(charend, lexer.next_token());
         assert_eq!(end, lexer.next_token());
     }
 
