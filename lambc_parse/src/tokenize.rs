@@ -23,8 +23,14 @@ pub enum TokKind {
     // Literals
     /// The literal `nil`
     Nil,
-    /// Signed 8-Byte integer literal
-    I64,
+    /// Signed 8-Byte integer literal with the `0b` prefix
+    BinI64,
+    /// Signed 8-Byte integer literal with the `0o` prefix
+    OctI64,
+    /// Signed 8-Byte integer literal with the `0x` prefix
+    HexI64,
+    /// Signed 8-Byte integer literal with the no prefix
+    DecI64,
     /// The `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
     /// type
     Char,
@@ -354,7 +360,49 @@ impl<'a> Lexer<'a> {
     }
 
     fn number(&mut self) -> Token<'a> {
-        todo!()
+        match (self.current(), self.next()) {
+            (b'0', b'x' | b'X') => self.prefix_num(TokKind::HexI64, |b| b.is_ascii_hexdigit()),
+            (b'0', b'b' | b'B') => self.prefix_num(TokKind::BinI64, |b| matches!(b, b'0' | b'1')),
+            (b'0', b'o' | b'O') => self.prefix_num(TokKind::OctI64, |b| matches!(b, b'0'..=b'7')),
+            _ => self.dec_number(),
+        }
+    }
+
+    fn prefix_num<F: Fn(u8) -> bool>(&mut self, kind: TokKind, is_digit: F) -> Token<'a> {
+        self.at += 2;
+        let start = self.at;
+        while is_digit(self.current()) || self.current() == b'_' {
+            self.at += 1;
+        }
+
+        self.token(start, kind)
+    }
+
+    fn dec_number(&mut self) -> Token<'a> {
+        let start = self.at;
+        let mut kind = TokKind::DecI64;
+        loop {
+            match self.current() {
+                b'0'..=b'9' | b'_' => {}
+                b'e' | b'E' => {
+                    kind = TokKind::F64;
+                    self.at += 1;
+                    match self.current() {
+                        b'0'..=b'9' | b'_' => {}
+                        b'+' | b'-' if self.next().is_ascii_digit() => {
+                            self.at += 1;
+                        }
+                        _ => break,
+                    }
+                }
+                b'.' => kind = TokKind::F64,
+                _ => break,
+            }
+
+            self.at += 1;
+        }
+
+        self.token(start, kind)
     }
 
     fn less(&mut self) -> Token<'a> {
@@ -381,6 +429,7 @@ impl<'a> Lexer<'a> {
         let start = self.at;
         match self.next() {
             b'>' => self.token_from(start, start + 2, TokKind::Cpsr),
+            b'0'..=b'9' => self.dec_number(),
             _ => self.token_from(start, start + 1, TokKind::Invalid),
         }
     }
@@ -745,5 +794,41 @@ mod tests {
         assert_eq!(strtext, lexer.next_token());
         assert_eq!(strend, lexer.next_token());
         assert_eq!(end, lexer.next_token());
+    }
+
+    #[test]
+    fn lexes_numbers() {
+        let lex_prefixed = |input: &str, kind| {
+            let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+            let tok = lexer.next_token();
+            assert_eq!(tok.kind, kind);
+            assert_eq!(tok.slice, &input[2..]);
+            assert!(lexer.at_end());
+        };
+
+        // Prefix lexing
+        lex_prefixed("0xDEAD_beef", TokKind::HexI64);
+        lex_prefixed("0X", TokKind::HexI64);
+        lex_prefixed("0b1010_0101", TokKind::BinI64);
+        lex_prefixed("0B", TokKind::BinI64);
+        lex_prefixed("0o31337_", TokKind::OctI64);
+        lex_prefixed("0O", TokKind::OctI64);
+
+        // Integer lexing
+        lex_one("0012334", TokKind::DecI64);
+        lex_one("12334", TokKind::DecI64);
+        lex_one("123_34", TokKind::DecI64);
+
+        // Float lexing
+        lex_one("7.", TokKind::F64);
+        lex_one(".2", TokKind::F64);
+        lex_one("7.2", TokKind::F64);
+        lex_one("7.2e", TokKind::F64);
+        lex_one("7.2e10", TokKind::F64);
+        lex_one("7.2e+10", TokKind::F64);
+        lex_one("7.2e-10", TokKind::F64);
+        lex_one("7.e-10", TokKind::F64);
+        lex_one("7.e1", TokKind::F64);
+        lex_one("7e-10", TokKind::F64);
     }
 }
