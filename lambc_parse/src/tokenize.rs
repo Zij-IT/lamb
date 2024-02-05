@@ -140,8 +140,11 @@ pub enum TokKind {
     Invalid,
 }
 
+/// Tracker for the state of the lexer.
 enum State {
+    /// Active when the lexer is in the middle of lexing a string literal
     String,
+    /// Active when the lexer is doing anything but lexing a string literal
     Default,
 }
 
@@ -154,6 +157,8 @@ pub struct Token<'a> {
     slice: Cow<'a, str>,
 }
 
+/// A lexer for the Lamb language which features which outputs [`Token`](Token<'_>) using the
+/// [`Lexer::next_token`] method.
 pub struct Lexer<'a> {
     input: &'a [u8],
     state: State,
@@ -162,6 +167,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    /// Constructs a new `Lexer` with the input with the file identifier [`FileId`].
     pub fn new(input: &'a [u8], file: FileId) -> Self {
         Self {
             state: State::Default,
@@ -171,6 +177,10 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Returns the next [`Token`] in the input. If the lexer
+    /// has reached the end of the input, it will return [`TokKind::End`]
+    ///
+    /// All tokens inherit the [`FileId`] from `self`.
     pub fn next_token(&mut self) -> Token<'a> {
         match self.state {
             State::Default => self.default_token(),
