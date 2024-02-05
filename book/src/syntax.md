@@ -21,7 +21,7 @@ Lamb only features lime comments, and these begin with a `--`:
 Lamb doesn't feature many reserved words: 
 
 ```
-fn case if elif else return struct enum rec mod use
+fn case if elif else return struct union struct from import
 ```
 
 So... just don't go using these for variable names.
