@@ -1,4 +1,4 @@
-use crate::{BoolLit, F64Lit, FileId, I64Base, I64Lit, Lexer, Span, TokKind, Token};
+use crate::{BoolLit, F64Lit, FileId, I64Base, I64Lit, Lexer, NilLit, Span, TokKind, Token};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Error {
@@ -63,6 +63,13 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_nil(&mut self) -> Result<NilLit> {
+        let tok = self.next();
+        debug_assert!(matches!(tok.kind, TokKind::Nil));
+
+        Ok(NilLit { span: tok.span })
+    }
+
     fn peek(&mut self) -> &Token<'a> {
         match self.peeked {
             Some(ref t) => t,
@@ -98,7 +105,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse::Error, BoolLit, F64Lit, FileId, I64Base, I64Lit, Parser, Span};
+    use crate::{parse::Error, BoolLit, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span};
 
     fn int(value: &str, base: I64Base, start: usize, end: usize) -> I64Lit {
         I64Lit {
@@ -195,5 +202,20 @@ mod tests {
 
         parse_bool("true");
         parse_bool("false");
+    }
+
+    #[test]
+    fn parses_nil() {
+        let mut parser = Parser::new("nil".as_bytes(), FileId(0));
+        assert_eq!(
+            parser.parse_nil(),
+            Ok(NilLit {
+                span: Span {
+                    start: 0,
+                    end: 3,
+                    file: FileId(0),
+                }
+            })
+        );
     }
 }

@@ -26,3 +26,8 @@ pub struct BoolLit {
     pub value: bool,
     pub span: Span,
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct NilLit {
+    pub span: Span,
+}
