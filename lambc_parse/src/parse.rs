@@ -1,4 +1,4 @@
-use crate::{FileId, I64Base, I64Lit, Lexer, Span, TokKind, Token};
+use crate::{F64Lit, FileId, I64Base, I64Lit, Lexer, Span, TokKind, Token};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Error {
@@ -43,6 +43,16 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_f64(&mut self) -> Result<F64Lit> {
+        let tok = self.next();
+        debug_assert_eq!(tok.kind, TokKind::F64);
+
+        Ok(F64Lit {
+            value: tok.slice.into_owned(),
+            span: tok.span,
+        })
+    }
+
     fn peek(&mut self) -> &Token<'a> {
         match self.peeked {
             Some(ref t) => t,
@@ -78,7 +88,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse::Error, FileId, I64Base, I64Lit, Parser, Span};
+    use crate::{parse::Error, F64Lit, FileId, I64Base, I64Lit, Parser, Span};
 
     fn int(value: &str, base: I64Base, start: usize, end: usize) -> I64Lit {
         I64Lit {
@@ -126,5 +136,33 @@ mod tests {
                 }
             })
         )
+    }
+
+    #[test]
+    fn parses_f64() {
+        let parse_f64 = |inp: &str| {
+            let mut parser = Parser::new(inp.as_bytes(), FileId(0));
+            assert_eq!(
+                parser.parse_f64(),
+                Ok(F64Lit {
+                    value: inp.into(),
+                    span: Span {
+                        start: 0,
+                        end: inp.len(),
+                        file: FileId(0),
+                    }
+                })
+            );
+        };
+
+        parse_f64(".2");
+        parse_f64("7.2");
+        parse_f64("7.2e");
+        parse_f64("7.2e10");
+        parse_f64("7.2e+10");
+        parse_f64("7.2e-10");
+        parse_f64("7.e-10");
+        parse_f64("7.e1");
+        parse_f64("7e-10");
     }
 }

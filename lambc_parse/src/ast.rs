@@ -14,3 +14,9 @@ pub struct I64Lit {
     pub value: String,
     pub span: Span,
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct F64Lit {
+    pub value: String,
+    pub span: Span,
+}
