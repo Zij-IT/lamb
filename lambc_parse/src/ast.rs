@@ -20,3 +20,9 @@ pub struct F64Lit {
     pub value: String,
     pub span: Span,
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BoolLit {
+    pub value: bool,
+    pub span: Span,
+}
