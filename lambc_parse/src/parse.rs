@@ -23,17 +23,17 @@ impl<'a> Parser<'a> {
 
     fn parse_i64(&mut self) -> Result<I64Lit> {
         let tok = self.next();
+        debug_assert!(matches!(
+            tok.kind,
+            TokKind::DecI64 | TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64
+        ));
+
         let base = match tok.kind {
             TokKind::DecI64 => I64Base::Dec,
             TokKind::BinI64 => I64Base::Bin,
             TokKind::OctI64 => I64Base::Oct,
             TokKind::HexI64 => I64Base::Hex,
-            _ => {
-                return Err(Error {
-                    message: format!("expected i64 literal, found '{}'", tok.slice),
-                    span: tok.span,
-                })
-            }
+            _ => unreachable!(),
         };
 
         Ok(I64Lit {
