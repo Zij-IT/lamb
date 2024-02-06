@@ -488,7 +488,13 @@ impl<'a> Lexer<'a> {
             self.at += 1;
         }
 
-        self.token(start, kind)
+        // We don't use `self.token` because we want the span to include the prefix, but the
+        // slice shouldn't include the prefix
+        Token {
+            kind,
+            span: Span::new(start - 2, self.at, self.file),
+            slice: self.slice(start, self.at).into(),
+        }
     }
 
     fn dec_number(&mut self) -> Token<'a> {
