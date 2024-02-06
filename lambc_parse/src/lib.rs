@@ -1,4 +1,11 @@
+mod ast;
+mod parse;
 mod tokenize;
+
+pub use ast::*;
+pub use parse::Parser;
+use tokenize::Lexer;
+pub use tokenize::{TokKind, Token};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
