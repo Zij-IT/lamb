@@ -158,9 +158,9 @@ enum State {
 /// token kinds.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token<'a> {
-    kind: TokKind,
-    span: Span,
-    slice: Cow<'a, str>,
+    pub kind: TokKind,
+    pub span: Span,
+    pub slice: Cow<'a, str>,
 }
 
 /// A lexer for the Lamb language which features which outputs [`Token`](Token<'_>) using the
