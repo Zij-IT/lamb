@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_i64(&mut self) -> Result<I64Lit> {
+    fn parse_i64(&mut self) -> I64Lit {
         let tok = self.next();
         debug_assert!(matches!(
             tok.kind,
@@ -36,38 +36,38 @@ impl<'a> Parser<'a> {
             _ => unreachable!(),
         };
 
-        Ok(I64Lit {
+        I64Lit {
             base,
             value: tok.slice.into_owned(),
             span: tok.span,
-        })
+        }
     }
 
-    fn parse_f64(&mut self) -> Result<F64Lit> {
+    fn parse_f64(&mut self) -> F64Lit {
         let tok = self.next();
         debug_assert_eq!(tok.kind, TokKind::F64);
 
-        Ok(F64Lit {
+        F64Lit {
             value: tok.slice.into_owned(),
             span: tok.span,
-        })
+        }
     }
 
-    fn parse_bool(&mut self) -> Result<BoolLit> {
+    fn parse_bool(&mut self) -> BoolLit {
         let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::True | TokKind::False));
 
-        Ok(BoolLit {
+        BoolLit {
             value: tok.slice.starts_with('t'),
             span: tok.span,
-        })
+        }
     }
 
-    fn parse_nil(&mut self) -> Result<NilLit> {
+    fn parse_nil(&mut self) -> NilLit {
         let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::Nil));
 
-        Ok(NilLit { span: tok.span })
+        NilLit { span: tok.span }
     }
 
     fn peek(&mut self) -> &Token<'a> {
@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse::Error, BoolLit, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span};
+    use crate::{BoolLit, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span};
 
     fn int(value: &str, base: I64Base, start: usize, end: usize) -> I64Lit {
         I64Lit {
@@ -123,7 +123,7 @@ mod tests {
     fn parses_int() {
         let parse_int = |inp: &str, out: I64Lit| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
-            assert_eq!(parser.parse_i64(), Ok(out));
+            assert_eq!(parser.parse_i64(), out);
         };
 
         parse_int("123", int("123", I64Base::Dec, 0, 3));
@@ -137,22 +137,6 @@ mod tests {
         parse_int("0x", int("", I64Base::Hex, 0, 2));
         parse_int("0o", int("", I64Base::Oct, 0, 2));
         parse_int("0b", int("", I64Base::Bin, 0, 2));
-
-        let input = "notAnInt";
-        let message = format!("expected i64 literal, found '{input}'");
-        let mut parser = Parser::new(b"notAnInt", FileId(0));
-
-        assert_eq!(
-            parser.parse_i64(),
-            Err(Error {
-                message,
-                span: Span {
-                    file: FileId(0),
-                    start: 0,
-                    end: input.len(),
-                }
-            })
-        )
     }
 
     #[test]
@@ -161,14 +145,14 @@ mod tests {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
             assert_eq!(
                 parser.parse_f64(),
-                Ok(F64Lit {
+                F64Lit {
                     value: inp.into(),
                     span: Span {
                         start: 0,
                         end: inp.len(),
                         file: FileId(0),
                     }
-                })
+                }
             );
         };
 
@@ -189,14 +173,14 @@ mod tests {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
             assert_eq!(
                 parser.parse_bool(),
-                Ok(BoolLit {
+                BoolLit {
                     value: inp.parse().unwrap(),
                     span: Span {
                         start: 0,
                         end: inp.len(),
                         file: FileId(0),
                     }
-                })
+                }
             );
         };
 
@@ -209,13 +193,13 @@ mod tests {
         let mut parser = Parser::new("nil".as_bytes(), FileId(0));
         assert_eq!(
             parser.parse_nil(),
-            Ok(NilLit {
+            NilLit {
                 span: Span {
                     start: 0,
                     end: 3,
                     file: FileId(0),
                 }
-            })
+            }
         );
     }
 }
