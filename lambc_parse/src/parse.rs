@@ -1,10 +1,15 @@
 use crate::{
     BoolLit, F64Lit, FileId, I64Base, I64Lit, Lexer, NilLit, Span, StrLit, StrText, TokKind, Token,
 };
+use miette::Diagnostic;
+use thiserror::Error as ThError;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Diagnostic, Debug, ThError, PartialEq, Eq)]
+#[error("error[Parse Error]: {message}")]
+#[diagnostic()]
 pub struct Error {
     message: String,
+    #[label]
     span: Span,
 }
 
@@ -151,6 +156,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{BoolLit, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span, StrLit, StrText};
+    use pretty_assertions::assert_eq;
 
     fn int(value: &str, base: I64Base, start: usize, end: usize) -> I64Lit {
         I64Lit {
