@@ -1,6 +1,6 @@
 use crate::{
-    BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, Lexer, NilLit, Span, StrLit,
-    StrText, TokKind, Token,
+    BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, Ident, Lexer, NilLit, Span,
+    StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -164,6 +164,16 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_ident(&mut self) -> Ident {
+        let tok = self.next();
+        debug_assert_eq!(tok.kind, TokKind::Ident);
+
+        Ident {
+            raw: tok.slice.into(),
+            span: tok.span,
+        }
+    }
+
     fn peek(&mut self) -> &Token<'a> {
         match self.peeked {
             Some(ref t) => t,
@@ -200,8 +210,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span, StrLit,
-        StrText,
+        BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, Ident, NilLit, Parser, Span,
+        StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -396,5 +406,29 @@ mod tests {
                 }
             })
         );
+    }
+
+    #[test]
+    fn parses_ident() {
+        let ident = |ident: &str| {
+            let mut parser = Parser::new(ident.as_bytes(), FileId(0));
+            assert_eq!(
+                parser.parse_ident(),
+                Ident {
+                    raw: ident.into(),
+                    span: Span {
+                        file: FileId(0),
+                        start: 0,
+                        end: ident.len(),
+                    }
+                }
+            )
+        };
+
+        ident("improvise");
+        ident("adapt");
+        ident("overcome");
+        ident("reduce");
+        ident("map");
     }
 }

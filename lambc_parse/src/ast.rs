@@ -55,3 +55,9 @@ pub struct CharText {
     pub inner: String,
     pub span: Span,
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Ident {
+    pub raw: String,
+    pub span: Span,
+}
