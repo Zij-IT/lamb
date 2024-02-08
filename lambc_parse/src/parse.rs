@@ -1,5 +1,6 @@
 use crate::{
-    BoolLit, F64Lit, FileId, I64Base, I64Lit, Lexer, NilLit, Span, StrLit, StrText, TokKind, Token,
+    BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, Lexer, NilLit, Span, StrLit,
+    StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -120,6 +121,49 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_char(&mut self) -> Result<CharLit> {
+        let start = self.next();
+        debug_assert!(matches!(start.kind, TokKind::CharStart));
+
+        let text = if self.peek().kind == TokKind::CharText {
+            let text = self.next();
+            Some(CharText {
+                inner: text.slice.into_owned(),
+                span: text.span,
+            })
+        } else {
+            None
+        };
+
+        let end = match self.next() {
+            tok @ Token {
+                kind: TokKind::CharEnd,
+                ..
+            } => tok,
+            err => {
+                // TODO: When switching to miette diagnostics, this one should have
+                // a note that indicates where the string was started.
+                return Err(Error {
+                    message: "unclosed char literal".into(),
+                    span: Span {
+                        start: err.span.start,
+                        end: err.span.start,
+                        file: err.span.file,
+                    },
+                });
+            }
+        };
+
+        Ok(CharLit {
+            text,
+            span: Span {
+                start: start.span.start,
+                end: end.span.end,
+                file: end.span.file,
+            },
+        })
+    }
+
     fn peek(&mut self) -> &Token<'a> {
         match self.peeked {
             Some(ref t) => t,
@@ -155,7 +199,10 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{BoolLit, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span, StrLit, StrText};
+    use crate::{
+        BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, NilLit, Parser, Span, StrLit,
+        StrText,
+    };
     use pretty_assertions::assert_eq;
 
     fn int(value: &str, base: I64Base, start: usize, end: usize) -> I64Lit {
@@ -286,6 +333,65 @@ mod tests {
                 span: Span {
                     start: 0,
                     end: 7,
+                    file: FileId(0),
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn parses_char() {
+        let input = "''";
+        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        assert_eq!(
+            parser.parse_char(),
+            Ok(CharLit {
+                text: None,
+                span: Span {
+                    start: 0,
+                    end: input.len(),
+                    file: FileId(0),
+                }
+            })
+        );
+
+        let input = "'hello'";
+        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        assert_eq!(
+            parser.parse_char(),
+            Ok(CharLit {
+                text: Some(CharText {
+                    inner: String::from(input.trim_matches('\'')),
+                    span: Span {
+                        start: 1,
+                        end: 6,
+                        file: FileId(0),
+                    }
+                }),
+                span: Span {
+                    start: 0,
+                    end: 7,
+                    file: FileId(0),
+                }
+            })
+        );
+
+        let input = "'ä'";
+        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        assert_eq!(
+            parser.parse_char(),
+            Ok(CharLit {
+                text: Some(CharText {
+                    inner: String::from(input.trim_matches('\'')),
+                    span: Span {
+                        start: 1,
+                        end: 3,
+                        file: FileId(0),
+                    }
+                }),
+                span: Span {
+                    start: 0,
+                    end: 4,
                     file: FileId(0),
                 }
             })

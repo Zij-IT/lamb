@@ -43,3 +43,15 @@ pub struct StrText {
     pub inner: String,
     pub span: Span,
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CharLit {
+    pub text: Option<CharText>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CharText {
+    pub inner: String,
+    pub span: Span,
+}
