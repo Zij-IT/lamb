@@ -68,8 +68,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_nil(&mut self) -> NilLit {
-        let tok = self.next();
+    fn parse_nil(&mut self, tok: Token<'a>) -> NilLit {
         debug_assert!(matches!(tok.kind, TokKind::Nil));
 
         NilLit { span: tok.span }
@@ -299,8 +298,9 @@ mod tests {
     #[test]
     fn parses_nil() {
         let mut parser = Parser::new("nil".as_bytes(), FileId(0));
+        let tok = parser.next();
         assert_eq!(
-            parser.parse_nil(),
+            parser.parse_nil(tok),
             NilLit {
                 span: Span {
                     start: 0,
