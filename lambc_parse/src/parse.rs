@@ -74,9 +74,8 @@ impl<'a> Parser<'a> {
         NilLit { span: tok.span }
     }
 
-    fn parse_string(&mut self) -> Result<StrLit> {
-        let start = self.next();
-        debug_assert!(matches!(start.kind, TokKind::StringStart));
+    fn parse_string(&mut self, tok: Token<'a>) -> Result<StrLit> {
+        debug_assert!(matches!(tok.kind, TokKind::StringStart));
 
         let text = if self.peek().kind == TokKind::StringText {
             let text = self.next();
@@ -110,7 +109,7 @@ impl<'a> Parser<'a> {
         Ok(StrLit {
             text,
             span: Span {
-                start: start.span.start,
+                start: tok.span.start,
                 end: end.span.end,
                 file: end.span.file,
             },
@@ -315,8 +314,9 @@ mod tests {
     fn parses_string() {
         let input = r#""""#;
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let tok = parser.next();
         assert_eq!(
-            parser.parse_string(),
+            parser.parse_string(tok),
             Ok(StrLit {
                 text: None,
                 span: Span {
@@ -329,8 +329,9 @@ mod tests {
 
         let input = r#""hello""#;
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let tok = parser.next();
         assert_eq!(
-            parser.parse_string(),
+            parser.parse_string(tok),
             Ok(StrLit {
                 text: Some(StrText {
                     inner: String::from(input.trim_matches('"')),
