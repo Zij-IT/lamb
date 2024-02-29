@@ -59,8 +59,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_bool(&mut self) -> BoolLit {
-        let tok = self.next();
+    fn parse_bool(&mut self, tok: Token<'a>) -> BoolLit {
         debug_assert!(matches!(tok.kind, TokKind::True | TokKind::False));
 
         BoolLit {
@@ -279,8 +278,9 @@ mod tests {
     fn parses_bool() {
         let parse_bool = |inp: &str| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
+            let tok = parser.next();
             assert_eq!(
-                parser.parse_bool(),
+                parser.parse_bool(tok),
                 BoolLit {
                     value: inp.parse().unwrap(),
                     span: Span {
