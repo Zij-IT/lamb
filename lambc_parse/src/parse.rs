@@ -1,5 +1,5 @@
 use crate::{
-    BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, Ident, Lexer, NilLit, Span,
+    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, Lexer, NilLit, Span,
     StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
@@ -27,6 +27,37 @@ impl<'a> Parser<'a> {
             lexer: Lexer::new(input, file),
             peeked: None,
         }
+    }
+
+    fn parse_literal(&mut self, tok: Token<'a>) -> Result<Expr> {
+        Ok(match tok.kind {
+            TokKind::Ident => Expr::Ident(self.parse_ident(tok)),
+            TokKind::Nil => Expr::Nil(self.parse_nil(tok)),
+            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
+                Expr::I64(self.parse_i64(tok))
+            }
+            TokKind::CharStart => Expr::Char(self.parse_char(tok)?),
+            TokKind::F64 => Expr::F64(self.parse_f64(tok)),
+            TokKind::True | TokKind::False => Expr::Bool(self.parse_bool(tok)),
+            TokKind::StringStart => Expr::String(self.parse_string(tok)?),
+            TokKind::CharText
+            | TokKind::CharEnd
+            | TokKind::StringText
+            | TokKind::StringEnd
+            | TokKind::Comment => unreachable!(),
+            TokKind::End => {
+                return Err(Error {
+                    message: "Expected an expression, instead found end of input".into(),
+                    span: tok.span,
+                })
+            }
+            _ => {
+                return Err(Error {
+                    message: format!("Expected an expression, instead found '{}'", tok.slice),
+                    span: tok.span,
+                })
+            }
+        })
     }
 
     fn parse_i64(&mut self, tok: Token<'a>) -> I64Lit {
@@ -203,8 +234,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, F64Lit, FileId, I64Base, I64Lit, Ident, NilLit, Parser, Span,
-        StrLit, StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, NilLit, Parser,
+        Span, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -433,5 +464,93 @@ mod tests {
         ident("overcome");
         ident("reduce");
         ident("map");
+    }
+
+    #[test]
+    fn parses_literal() {
+        let file = FileId(0);
+        let literal = |literal: &str, out| {
+            let mut parser = Parser::new(literal.as_bytes(), file);
+            let tok = parser.next();
+            assert_eq!(parser.parse_literal(tok), out)
+        };
+
+        literal(
+            "true",
+            Ok(Expr::Bool(BoolLit {
+                value: true,
+                span: Span::new(0, 4, file),
+            })),
+        );
+
+        literal(
+            "false",
+            Ok(Expr::Bool(BoolLit {
+                value: false,
+                span: Span::new(0, 5, file),
+            })),
+        );
+
+        literal(
+            "2.0e2",
+            Ok(Expr::F64(F64Lit {
+                value: "2.0e2".into(),
+                span: Span::new(0, 5, file),
+            })),
+        );
+
+        literal(
+            "nil",
+            Ok(Expr::Nil(NilLit {
+                span: Span::new(0, 3, file),
+            })),
+        );
+
+        literal(
+            "42",
+            Ok(Expr::I64(I64Lit {
+                base: I64Base::Dec,
+                value: "42".into(),
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        literal(
+            "\"\"",
+            Ok(Expr::String(StrLit {
+                text: None,
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        literal(
+            "\"hello:nworld\"",
+            Ok(Expr::String(StrLit {
+                text: Some(StrText {
+                    inner: "hello\nworld".into(),
+                    span: Span::new(1, 13, file),
+                }),
+                span: Span::new(0, 14, file),
+            })),
+        );
+
+        literal(
+            "''",
+            Ok(Expr::Char(CharLit {
+                text: None,
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        literal(
+            "'hello:nworld'",
+            Ok(Expr::Char(CharLit {
+                text: Some(CharText {
+                    inner: "hello\nworld".into(),
+                    span: Span::new(1, 13, file),
+                }),
+                span: Span::new(0, 14, file),
+            })),
+        );
     }
 }

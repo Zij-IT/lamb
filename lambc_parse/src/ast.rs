@@ -61,3 +61,14 @@ pub struct Ident {
     pub raw: String,
     pub span: Span,
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Expr {
+    Ident(Ident),
+    Char(CharLit),
+    String(StrLit),
+    Bool(BoolLit),
+    Nil(NilLit),
+    I64(I64Lit),
+    F64(F64Lit),
+}
