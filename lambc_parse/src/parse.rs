@@ -116,9 +116,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_char(&mut self) -> Result<CharLit> {
-        let start = self.next();
-        debug_assert!(matches!(start.kind, TokKind::CharStart));
+    fn parse_char(&mut self, tok: Token<'a>) -> Result<CharLit> {
+        debug_assert!(matches!(tok.kind, TokKind::CharStart));
 
         let text = if self.peek().kind == TokKind::CharText {
             let text = self.next();
@@ -152,7 +151,7 @@ impl<'a> Parser<'a> {
         Ok(CharLit {
             text,
             span: Span {
-                start: start.span.start,
+                start: tok.span.start,
                 end: end.span.end,
                 file: end.span.file,
             },
@@ -354,8 +353,9 @@ mod tests {
     fn parses_char() {
         let input = "''";
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let tok = parser.next();
         assert_eq!(
-            parser.parse_char(),
+            parser.parse_char(tok),
             Ok(CharLit {
                 text: None,
                 span: Span {
@@ -368,8 +368,9 @@ mod tests {
 
         let input = "'hello'";
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let tok = parser.next();
         assert_eq!(
-            parser.parse_char(),
+            parser.parse_char(tok),
             Ok(CharLit {
                 text: Some(CharText {
                     inner: String::from(input.trim_matches('\'')),
@@ -389,8 +390,9 @@ mod tests {
 
         let input = "'ä'";
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let tok = parser.next();
         assert_eq!(
-            parser.parse_char(),
+            parser.parse_char(tok),
             Ok(CharLit {
                 text: Some(CharText {
                     inner: String::from(input.trim_matches('\'')),
