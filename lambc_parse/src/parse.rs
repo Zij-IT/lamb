@@ -158,8 +158,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_ident(&mut self) -> Ident {
-        let tok = self.next();
+    fn parse_ident(&mut self, tok: Token<'a>) -> Ident {
         debug_assert_eq!(tok.kind, TokKind::Ident);
 
         Ident {
@@ -415,8 +414,9 @@ mod tests {
     fn parses_ident() {
         let ident = |ident: &str| {
             let mut parser = Parser::new(ident.as_bytes(), FileId(0));
+            let tok = parser.next();
             assert_eq!(
-                parser.parse_ident(),
+                parser.parse_ident(tok),
                 Ident {
                     raw: ident.into(),
                     span: Span {
