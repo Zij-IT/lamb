@@ -50,8 +50,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_f64(&mut self) -> F64Lit {
-        let tok = self.next();
+    fn parse_f64(&mut self, tok: Token<'a>) -> F64Lit {
         debug_assert_eq!(tok.kind, TokKind::F64);
 
         F64Lit {
@@ -251,8 +250,9 @@ mod tests {
     fn parses_f64() {
         let parse_f64 = |inp: &str| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
+            let tok = parser.next();
             assert_eq!(
-                parser.parse_f64(),
+                parser.parse_f64(tok),
                 F64Lit {
                     value: inp.into(),
                     span: Span {
