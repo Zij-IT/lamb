@@ -29,8 +29,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_i64(&mut self) -> I64Lit {
-        let tok = self.next();
+    fn parse_i64(&mut self, tok: Token<'a>) -> I64Lit {
         debug_assert!(matches!(
             tok.kind,
             TokKind::DecI64 | TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64
@@ -231,7 +230,8 @@ mod tests {
     fn parses_int() {
         let parse_int = |inp: &str, out: I64Lit| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
-            assert_eq!(parser.parse_i64(), out);
+            let tok = parser.next();
+            assert_eq!(parser.parse_i64(tok), out);
         };
 
         parse_int("123", int("123", I64Base::Dec, 0, 3));
