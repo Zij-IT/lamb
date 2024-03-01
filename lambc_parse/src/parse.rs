@@ -29,6 +29,17 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses any value literal, such as that of a string or number, as well as an identifier.
+    /// ```text
+    /// Grammar:
+    ///
+    /// literal := 'nil'
+    ///          | number
+    ///          | boolean
+    ///          | string
+    ///          | char
+    ///          | ident
+    /// ```
     fn parse_literal(&mut self, tok: Token<'a>) -> Result<Expr> {
         Ok(match tok.kind {
             TokKind::Ident => Expr::Ident(self.parse_ident(tok)),
@@ -198,6 +209,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Returns a reference to the next token non-comment token in the input
     fn peek(&mut self) -> &Token<'a> {
         match self.peeked {
             Some(ref t) => t,
@@ -208,6 +220,8 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Returns the next token in the input, consuming the last peeked token if
+    /// present.
     fn next(&mut self) -> Token<'a> {
         loop {
             let token = self
@@ -221,6 +235,8 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Peeks at the next token, and returns `true` if it is of `kind`. If the peeked token is
+    /// of `kind`, then the token is skipped.
     fn next_if_is(&mut self, kind: TokKind) -> bool {
         if self.peek().kind == kind {
             self.next();
