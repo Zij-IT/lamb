@@ -66,37 +66,13 @@ impl<'a> Parser<'a> {
     /// ```
     fn parse_list(&mut self, tok: Token<'a>) -> Result<Expr> {
         debug_assert_eq!(tok.kind, TokKind::OpenBrack);
-        let mut next = self.next();
-        if next.kind == TokKind::CloseBrack {
-            return Ok(Expr::List(List {
-                values: vec![],
-                span: Span::new(tok.span.start, next.span.end, tok.span.file),
-            }));
-        }
-
-        let mut values = Vec::new();
-        loop {
-            values.push(self.parse_expr(next)?);
-            next = self.next();
-
-            if next.kind == TokKind::Comma {
-                next = self.next();
-                if next.kind == TokKind::CloseBrack {
-                    break;
-                }
-            } else if next.kind == TokKind::CloseBrack {
-                break;
-            } else {
-                return Err(Error {
-                    message: format!("Expected closing bracket, found '{}'", next.slice),
-                    span: Span::new(tok.span.start, next.span.end, tok.span.file),
-                });
-            }
-        }
+        let next = self.next();
+        let (values, end_tok) =
+            self.parse_node_list(next, TokKind::CloseBrack, |tok, this| this.parse_expr(tok))?;
 
         Ok(Expr::List(List {
             values,
-            span: Span::new(tok.span.start, next.span.end, tok.span.file),
+            span: Span::new(tok.span.start, end_tok.span.end, tok.span.file),
         }))
     }
 
@@ -333,6 +309,45 @@ impl<'a> Parser<'a> {
             raw: tok.slice.into(),
             span: tok.span,
         }
+    }
+
+    /// Parses a series of comma separated `T`, with a trailing comma allowed.
+    fn parse_node_list<T, F>(
+        &mut self,
+        tok: Token<'a>,
+        end_kind: TokKind,
+        parse_elem: F,
+    ) -> Result<(Vec<T>, Token<'a>)>
+    where
+        F: Fn(Token<'a>, &mut Self) -> Result<T>,
+    {
+        let mut values = Vec::new();
+        if tok.kind == end_kind {
+            return Ok((values, tok));
+        }
+
+        let span = tok.span;
+        let mut next = tok;
+        loop {
+            values.push(parse_elem(next, self)?);
+            next = self.next();
+
+            if next.kind == TokKind::Comma {
+                next = self.next();
+                if next.kind == end_kind {
+                    break;
+                }
+            } else if next.kind == end_kind {
+                break;
+            } else {
+                return Err(Error {
+                    message: format!("Expected {:?}, found '{}'", end_kind, next.slice),
+                    span: Span::new(span.start, next.span.end, span.file),
+                });
+            }
+        }
+
+        Ok((values, next))
     }
 
     /// Returns a reference to the next token non-comment token in the input
