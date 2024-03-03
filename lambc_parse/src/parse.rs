@@ -1,6 +1,6 @@
 use crate::{
-    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, Lexer, NilLit, Span,
-    StrLit, StrText, TokKind, Token,
+    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, Lexer, List, NilLit,
+    Span, StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -27,6 +27,74 @@ impl<'a> Parser<'a> {
             lexer: Lexer::new(input, file),
             peeked: None,
         }
+    }
+
+    /// TODO: Define the grammar for an expression
+    fn parse_expr(&mut self, tok: Token<'a>) -> Result<Expr> {
+        self.parse_atom(tok)
+    }
+
+    /// Parses the items that can make up an expression without any operators
+    /// ```text
+    /// Grammar:
+    ///
+    ///     atom := block
+    ///           | list
+    ///           | group
+    ///           | fn_def
+    ///           | case
+    ///           | if
+    ///           | literal
+    /// ```
+    fn parse_atom(&mut self, tok: Token<'a>) -> Result<Expr> {
+        Ok(match tok.kind {
+            TokKind::OpenBrack => self.parse_list(tok)?,
+            _ => self.parse_literal(tok)?,
+        })
+    }
+
+    /// Parses a list expression, which is a comma separated list of expressions followed by and
+    /// optional comma
+    /// ```text
+    /// Grammar:
+    ///
+    ///     list_expr := '[' expr (',' expr )* ','? ']'
+    ///                | '[' ']'
+    /// ```
+    fn parse_list(&mut self, tok: Token<'a>) -> Result<Expr> {
+        debug_assert_eq!(tok.kind, TokKind::OpenBrack);
+        let mut next = self.next();
+        if next.kind == TokKind::CloseBrack {
+            return Ok(Expr::List(List {
+                values: vec![],
+                span: Span::new(tok.span.start, next.span.end, tok.span.file),
+            }));
+        }
+
+        let mut values = Vec::new();
+        loop {
+            values.push(self.parse_expr(next)?);
+            next = self.next();
+
+            if next.kind == TokKind::Comma {
+                next = self.next();
+                if next.kind == TokKind::CloseBrack {
+                    break;
+                }
+            } else if next.kind == TokKind::CloseBrack {
+                break;
+            } else {
+                return Err(Error {
+                    message: format!("Expected closing bracket, found '{}'", next.slice),
+                    span: Span::new(tok.span.start, next.span.end, tok.span.file),
+                });
+            }
+        }
+
+        Ok(Expr::List(List {
+            values,
+            span: Span::new(tok.span.start, next.span.end, tok.span.file),
+        }))
     }
 
     /// Parses any value literal, such as that of a string or number, as well as an identifier.
@@ -250,8 +318,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, NilLit, Parser,
-        Span, StrLit, StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, List, NilLit,
+        Parser, Span, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -566,6 +634,165 @@ mod tests {
                     span: Span::new(1, 13, file),
                 }),
                 span: Span::new(0, 14, file),
+            })),
+        );
+    }
+
+    #[test]
+    fn parses_atom() {
+        let file = FileId(0);
+        let atom = |atom: &str, out| {
+            let mut parser = Parser::new(atom.as_bytes(), file);
+            let tok = parser.next();
+            assert_eq!(parser.parse_atom(tok), out)
+        };
+
+        atom(
+            "true",
+            Ok(Expr::Bool(BoolLit {
+                value: true,
+                span: Span::new(0, 4, file),
+            })),
+        );
+
+        atom(
+            "false",
+            Ok(Expr::Bool(BoolLit {
+                value: false,
+                span: Span::new(0, 5, file),
+            })),
+        );
+
+        atom(
+            "2.0e2",
+            Ok(Expr::F64(F64Lit {
+                value: "2.0e2".into(),
+                span: Span::new(0, 5, file),
+            })),
+        );
+
+        atom(
+            "nil",
+            Ok(Expr::Nil(NilLit {
+                span: Span::new(0, 3, file),
+            })),
+        );
+
+        atom(
+            "42",
+            Ok(Expr::I64(I64Lit {
+                base: I64Base::Dec,
+                value: "42".into(),
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        atom(
+            "\"\"",
+            Ok(Expr::String(StrLit {
+                text: None,
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        atom(
+            "\"hello:nworld\"",
+            Ok(Expr::String(StrLit {
+                text: Some(StrText {
+                    inner: "hello\nworld".into(),
+                    span: Span::new(1, 13, file),
+                }),
+                span: Span::new(0, 14, file),
+            })),
+        );
+
+        atom(
+            "''",
+            Ok(Expr::Char(CharLit {
+                text: None,
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        atom(
+            "'hello:nworld'",
+            Ok(Expr::Char(CharLit {
+                text: Some(CharText {
+                    inner: "hello\nworld".into(),
+                    span: Span::new(1, 13, file),
+                }),
+                span: Span::new(0, 14, file),
+            })),
+        );
+
+        atom(
+            "[]",
+            Ok(Expr::List(List {
+                values: vec![],
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        atom(
+            "[nil, 2, \"hello\"]",
+            Ok(Expr::List(List {
+                values: vec![
+                    Expr::Nil(NilLit {
+                        span: Span::new(1, 4, file),
+                    }),
+                    Expr::I64(I64Lit {
+                        base: I64Base::Dec,
+                        value: "2".into(),
+                        span: Span::new(6, 7, file),
+                    }),
+                    Expr::String(StrLit {
+                        text: Some(StrText {
+                            inner: "hello".into(),
+                            span: Span::new(10, 15, file),
+                        }),
+                        span: Span::new(9, 16, file),
+                    }),
+                ],
+                span: Span::new(0, 17, file),
+            })),
+        );
+    }
+
+    #[test]
+    fn parses_nested_list() {
+        let file = FileId(0);
+        let atom = |atom: &str, out| {
+            let mut parser = Parser::new(atom.as_bytes(), file);
+            let tok = parser.next();
+            assert_eq!(parser.parse_atom(tok), out)
+        };
+
+        atom(
+            "[nil, [], [nil, 2,],]",
+            Ok(Expr::List(List {
+                values: vec![
+                    Expr::Nil(NilLit {
+                        span: Span::new(1, 4, file),
+                    }),
+                    Expr::List(List {
+                        values: vec![],
+                        span: Span::new(6, 8, file),
+                    }),
+                    Expr::List(List {
+                        values: vec![
+                            Expr::Nil(NilLit {
+                                span: Span::new(11, 14, file),
+                            }),
+                            Expr::I64(I64Lit {
+                                base: I64Base::Dec,
+                                value: "2".into(),
+                                span: Span::new(16, 17, file),
+                            }),
+                        ],
+                        span: Span::new(10, 19, file),
+                    }),
+                ],
+                span: Span::new(0, 21, file),
             })),
         );
     }

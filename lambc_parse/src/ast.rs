@@ -63,6 +63,12 @@ pub struct Ident {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct List {
+    pub values: Vec<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -71,4 +77,5 @@ pub enum Expr {
     Nil(NilLit),
     I64(I64Lit),
     F64(F64Lit),
+    List(List),
 }
