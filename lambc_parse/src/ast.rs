@@ -112,3 +112,22 @@ impl Expr {
         }
     }
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Define {
+    pub ident: Ident,
+    pub value: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ExprStatement {
+    pub expr: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Statement {
+    Define(Define),
+    Expr(ExprStatement),
+}

@@ -1,6 +1,6 @@
 use crate::{
-    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, Lexer,
-    List, NilLit, Span, StrLit, StrText, TokKind, Token,
+    BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base,
+    I64Lit, Ident, Lexer, List, NilLit, Span, Statement, StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -26,6 +26,47 @@ impl<'a> Parser<'a> {
         Self {
             lexer: Lexer::new(input, file),
             peeked: None,
+        }
+    }
+
+    /// Parses a statement as defined by the following grammar
+    /// ```text
+    /// Grammar:
+    ///
+    ///     stmt := ident ':=' expr ';'
+    ///           | expr  ';'
+    /// ```
+    pub fn parse_stmt(&mut self, tok: Token<'a>) -> Result<Statement> {
+        let peek = self.peek();
+        if peek.kind == TokKind::Assign {
+            if tok.kind != TokKind::Ident {
+                return Err(Error {
+                    message: format!("Expected identifier, found '{}'", tok.slice),
+                    span: tok.span,
+                });
+            }
+
+            let span = tok.span;
+            let ident = self.parse_ident(tok);
+            self.expect(TokKind::Assign)?;
+            let next = self.next();
+            let value = self.parse_expr(next)?;
+            let semi = self.expect(TokKind::Semi)?;
+
+            Ok(Statement::Define(Define {
+                ident,
+                value,
+                span: Span::new(span.start, semi.span.end, span.file),
+            }))
+        } else {
+            let span = tok.span;
+            let expr = self.parse_expr(tok)?;
+            let semi = self.expect(TokKind::Semi)?;
+
+            Ok(Statement::Expr(ExprStatement {
+                expr,
+                span: Span::new(span.start, semi.span.end, span.file),
+            }))
         }
     }
 
@@ -415,8 +456,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident,
-        List, NilLit, Parser, Span, StrLit, StrText,
+        BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef, Group,
+        I64Base, I64Lit, Ident, List, NilLit, Parser, Span, Statement, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -1014,6 +1055,90 @@ mod tests {
                 recursive: false,
                 span: Span::new(0, 37, file),
             }))),
+        );
+    }
+
+    #[test]
+    fn parses_statement() {
+        let file = FileId(0);
+        let stmt = |stmt: &str, out| {
+            let mut parser = Parser::new(stmt.as_bytes(), file);
+            let tok = parser.next();
+            assert_eq!(parser.parse_stmt(tok), out)
+        };
+
+        stmt(
+            "x := 2;",
+            Ok(Statement::Define(Define {
+                ident: Ident {
+                    raw: "x".into(),
+                    span: Span::new(0, 1, file),
+                },
+                value: Expr::I64(I64Lit {
+                    base: I64Base::Dec,
+                    value: "2".into(),
+                    span: Span::new(5, 6, file),
+                }),
+                span: Span::new(0, 7, file),
+            })),
+        );
+
+        stmt(
+            "2;",
+            Ok(Statement::Expr(ExprStatement {
+                expr: Expr::I64(I64Lit {
+                    base: I64Base::Dec,
+                    value: "2".into(),
+                    span: Span::new(0, 1, file),
+                }),
+                span: Span::new(0, 2, file),
+            })),
+        );
+
+        stmt(
+            "fn(a, b) -> fn(c) -> fn(d, e,) -> nil;",
+            Ok(Statement::Expr(ExprStatement {
+                expr: Expr::FnDef(Box::new(FnDef {
+                    args: vec![
+                        Ident {
+                            raw: "a".into(),
+                            span: Span::new(3, 4, file),
+                        },
+                        Ident {
+                            raw: "b".into(),
+                            span: Span::new(6, 7, file),
+                        },
+                    ],
+                    body: Expr::FnDef(Box::new(FnDef {
+                        args: vec![Ident {
+                            raw: "c".into(),
+                            span: Span::new(15, 16, file),
+                        }],
+                        body: Expr::FnDef(Box::new(FnDef {
+                            args: vec![
+                                Ident {
+                                    raw: "d".into(),
+                                    span: Span::new(24, 25, file),
+                                },
+                                Ident {
+                                    raw: "e".into(),
+                                    span: Span::new(27, 28, file),
+                                },
+                            ],
+                            body: Expr::Nil(NilLit {
+                                span: Span::new(34, 37, file),
+                            }),
+                            recursive: false,
+                            span: Span::new(21, 37, file),
+                        })),
+                        recursive: false,
+                        span: Span::new(12, 37, file),
+                    })),
+                    recursive: false,
+                    span: Span::new(0, 37, file),
+                })),
+                span: Span::new(0, 38, file),
+            })),
         );
     }
 }
