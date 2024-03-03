@@ -1,6 +1,6 @@
 use crate::{
-    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, Group, I64Base, I64Lit, Ident, Lexer, List,
-    NilLit, Span, StrLit, StrText, TokKind, Token,
+    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, Lexer,
+    List, NilLit, Span, StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -50,6 +50,8 @@ impl<'a> Parser<'a> {
         Ok(match tok.kind {
             TokKind::OpenBrack => self.parse_list(tok)?,
             TokKind::OpenParen => self.parse_group(tok)?,
+            TokKind::Fn => self.parse_fn_def(tok, false)?,
+            TokKind::Rec => self.parse_fn_def(tok, true)?,
             _ => self.parse_literal(tok)?,
         })
     }
@@ -121,6 +123,36 @@ impl<'a> Parser<'a> {
                 span: Span::new(tok.span.start, next.span.end, tok.span.file),
             })))
         }
+    }
+
+    /// Parses a function definition
+    /// ```text
+    /// Grammar:
+    ///
+    ///     function_def := 'rec'? 'fn' '(' [arg_list] ')' '->' expr
+    ///
+    ///     arg_list := ident (',' ident )* ','?
+    /// ```
+    fn parse_fn_def(&mut self, tok: Token<'a>, is_recursive: bool) -> Result<Expr> {
+        debug_assert!(matches!(tok.kind, TokKind::Rec | TokKind::Fn));
+        if tok.kind == TokKind::Rec {
+            self.expect(TokKind::Fn)?;
+        }
+
+        self.expect(TokKind::OpenParen)?;
+        self.expect(TokKind::CloseParen)?;
+        self.expect(TokKind::Arrow)?;
+
+        let next = self.next();
+        let value = self.parse_expr(next)?;
+        let span = value.span();
+
+        Ok(Expr::FnDef(Box::new(FnDef {
+            args: vec![],
+            body: value,
+            recursive: is_recursive,
+            span: Span::new(tok.span.start, span.end, tok.span.file),
+        })))
     }
 
     /// Parses any value literal, such as that of a string or number, as well as an identifier.
@@ -339,13 +371,26 @@ impl<'a> Parser<'a> {
             false
         }
     }
+
+    fn expect(&mut self, kind: TokKind) -> Result<Token<'a>> {
+        let next = self.next();
+        if next.kind == kind {
+            return Ok(next);
+        }
+
+        // TODO: Get a unified way to do expected/found errors
+        Err(Error {
+            message: format!("Expected {:?}, but found '{}'", kind, next.slice),
+            span: next.span,
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, Group, I64Base, I64Lit, Ident, List,
-        NilLit, Parser, Span, StrLit, StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident,
+        List, NilLit, Parser, Span, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -833,6 +878,30 @@ mod tests {
                 span: Span::new(0, 21, file),
             })),
         );
+
+        atom(
+            "fn() -> nil",
+            Ok(Expr::FnDef(Box::new(FnDef {
+                args: vec![],
+                body: Expr::Nil(NilLit {
+                    span: Span::new(8, 11, file),
+                }),
+                recursive: false,
+                span: Span::new(0, 11, file),
+            }))),
+        );
+
+        atom(
+            "rec fn() -> nil",
+            Ok(Expr::FnDef(Box::new(FnDef {
+                args: vec![],
+                body: Expr::Nil(NilLit {
+                    span: Span::new(12, 15, file),
+                }),
+                recursive: true,
+                span: Span::new(0, 15, file),
+            }))),
+        );
     }
 
     #[test]
@@ -862,6 +931,38 @@ mod tests {
                     span: Span::new(1, 8, file),
                 })),
                 span: Span::new(0, 9, file),
+            }))),
+        );
+    }
+
+    #[test]
+    fn parses_nested_fn_def() {
+        let file = FileId(0);
+        let atom = |atom: &str, out| {
+            let mut parser = Parser::new(atom.as_bytes(), file);
+            let tok = parser.next();
+            assert_eq!(parser.parse_atom(tok), out)
+        };
+
+        atom(
+            "fn() -> fn() -> fn() -> nil",
+            Ok(Expr::FnDef(Box::new(FnDef {
+                args: vec![],
+                body: Expr::FnDef(Box::new(FnDef {
+                    args: vec![],
+                    body: Expr::FnDef(Box::new(FnDef {
+                        args: vec![],
+                        body: Expr::Nil(NilLit {
+                            span: Span::new(24, 27, file),
+                        }),
+                        recursive: false,
+                        span: Span::new(16, 27, file),
+                    })),
+                    recursive: false,
+                    span: Span::new(8, 27, file),
+                })),
+                recursive: false,
+                span: Span::new(0, 27, file),
             }))),
         );
     }

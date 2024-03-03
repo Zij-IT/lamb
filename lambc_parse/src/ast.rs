@@ -75,6 +75,14 @@ pub struct Group {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct FnDef {
+    pub args: Vec<Ident>,
+    pub body: Expr,
+    pub recursive: bool,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -85,4 +93,22 @@ pub enum Expr {
     F64(F64Lit),
     List(List),
     Group(Box<Group>),
+    FnDef(Box<FnDef>),
+}
+
+impl Expr {
+    pub fn span(&self) -> Span {
+        match self {
+            Expr::Ident(e) => e.span,
+            Expr::Char(e) => e.span,
+            Expr::String(e) => e.span,
+            Expr::Bool(e) => e.span,
+            Expr::Nil(e) => e.span,
+            Expr::I64(e) => e.span,
+            Expr::F64(e) => e.span,
+            Expr::List(e) => e.span,
+            Expr::Group(e) => e.span,
+            Expr::FnDef(e) => e.span,
+        }
+    }
 }
