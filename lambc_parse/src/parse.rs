@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
             Ok(Statement::Define(Define {
                 ident,
                 value,
-                span: Span::new(span.start, semi.span.end, span.file),
+                span: Span::connect(span, semi.span),
             }))
         } else {
             let span = tok.span;
@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
 
             Ok(Statement::Expr(ExprStatement {
                 expr,
-                span: Span::new(span.start, semi.span.end, span.file),
+                span: Span::connect(span, semi.span),
             }))
         }
     }
@@ -113,7 +113,7 @@ impl<'a> Parser<'a> {
 
         Ok(Expr::List(List {
             values,
-            span: Span::new(tok.span.start, end_tok.span.end, tok.span.file),
+            span: Span::connect(tok.span, end_tok.span),
         }))
     }
 
@@ -137,7 +137,7 @@ impl<'a> Parser<'a> {
         } else {
             Ok(Expr::Group(Box::new(Group {
                 value,
-                span: Span::new(tok.span.start, next.span.end, tok.span.file),
+                span: Span::connect(tok.span, next.span),
             })))
         }
     }
@@ -179,7 +179,7 @@ impl<'a> Parser<'a> {
             args,
             body: value,
             recursive: is_recursive,
-            span: Span::new(tok.span.start, span.end, tok.span.file),
+            span: Span::connect(tok.span, span),
         })))
     }
 
@@ -394,7 +394,7 @@ impl<'a> Parser<'a> {
             } else {
                 return Err(Error {
                     message: format!("Expected {:?}, found '{}'", end_kind, next.slice),
-                    span: Span::new(span.start, next.span.end, span.file),
+                    span: Span::connect(span, next.span),
                 });
             }
         }
