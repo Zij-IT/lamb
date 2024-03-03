@@ -30,7 +30,7 @@ impl<'a> Parser<'a> {
     }
 
     /// TODO: Define the grammar for an expression
-    fn parse_expr(&mut self, tok: Token<'a>) -> Result<Expr> {
+    pub fn parse_expr(&mut self, tok: Token<'a>) -> Result<Expr> {
         self.parse_atom(tok)
     }
 
