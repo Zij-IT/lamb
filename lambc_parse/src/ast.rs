@@ -69,6 +69,12 @@ pub struct List {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Group {
+    pub value: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -78,4 +84,5 @@ pub enum Expr {
     I64(I64Lit),
     F64(F64Lit),
     List(List),
+    Group(Box<Group>),
 }

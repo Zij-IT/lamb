@@ -1,6 +1,6 @@
 use crate::{
-    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, Lexer, List, NilLit,
-    Span, StrLit, StrText, TokKind, Token,
+    BoolLit, CharLit, CharText, Expr, F64Lit, FileId, Group, I64Base, I64Lit, Ident, Lexer, List,
+    NilLit, Span, StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -49,6 +49,7 @@ impl<'a> Parser<'a> {
     fn parse_atom(&mut self, tok: Token<'a>) -> Result<Expr> {
         Ok(match tok.kind {
             TokKind::OpenBrack => self.parse_list(tok)?,
+            TokKind::OpenParen => self.parse_group(tok)?,
             _ => self.parse_literal(tok)?,
         })
     }
@@ -95,6 +96,31 @@ impl<'a> Parser<'a> {
             values,
             span: Span::new(tok.span.start, next.span.end, tok.span.file),
         }))
+    }
+
+    /// Parses an expression surrounded with parenthesis
+    /// ```text
+    /// Grammar:
+    ///
+    ///     grouped_expr := '(' expr ')'
+    /// ```
+    fn parse_group(&mut self, tok: Token<'a>) -> Result<Expr> {
+        debug_assert_eq!(tok.kind, TokKind::OpenParen);
+        let next = self.next();
+        let value = self.parse_expr(next)?;
+
+        let next = self.next();
+        if next.kind != TokKind::CloseParen {
+            Err(Error {
+                message: format!("Expected '(', but found '{}'", next.slice),
+                span: next.span,
+            })
+        } else {
+            Ok(Expr::Group(Box::new(Group {
+                value,
+                span: Span::new(tok.span.start, next.span.end, tok.span.file),
+            })))
+        }
     }
 
     /// Parses any value literal, such as that of a string or number, as well as an identifier.
@@ -318,8 +344,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, List, NilLit,
-        Parser, Span, StrLit, StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, Group, I64Base, I64Lit, Ident, List,
+        NilLit, Parser, Span, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -756,6 +782,18 @@ mod tests {
                 span: Span::new(0, 17, file),
             })),
         );
+
+        atom(
+            "(1)",
+            Ok(Expr::Group(Box::new(Group {
+                value: Expr::I64(I64Lit {
+                    base: I64Base::Dec,
+                    value: "1".into(),
+                    span: Span::new(1, 2, file),
+                }),
+                span: Span::new(0, 3, file),
+            }))),
+        );
     }
 
     #[test]
@@ -794,6 +832,37 @@ mod tests {
                 ],
                 span: Span::new(0, 21, file),
             })),
+        );
+    }
+
+    #[test]
+    fn parses_nested_group() {
+        let file = FileId(0);
+        let atom = |atom: &str, out| {
+            let mut parser = Parser::new(atom.as_bytes(), file);
+            let tok = parser.next();
+            assert_eq!(parser.parse_atom(tok), out)
+        };
+
+        atom(
+            "((((1))))",
+            Ok(Expr::Group(Box::new(Group {
+                value: Expr::Group(Box::new(Group {
+                    value: Expr::Group(Box::new(Group {
+                        value: Expr::Group(Box::new(Group {
+                            value: Expr::I64(I64Lit {
+                                base: I64Base::Dec,
+                                value: "1".into(),
+                                span: Span::new(4, 5, file),
+                            }),
+                            span: Span::new(3, 6, file),
+                        })),
+                        span: Span::new(2, 7, file),
+                    })),
+                    span: Span::new(1, 8, file),
+                })),
+                span: Span::new(0, 9, file),
+            }))),
         );
     }
 }
