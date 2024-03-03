@@ -116,7 +116,18 @@ impl<'a> Parser<'a> {
         }
 
         self.expect(TokKind::OpenParen)?;
-        self.expect(TokKind::CloseParen)?;
+        let next = self.next();
+        let (args, _) = self.parse_node_list(next, TokKind::CloseParen, |next, this| {
+            if next.kind == TokKind::Ident {
+                Ok(this.parse_ident(next))
+            } else {
+                Err(Error {
+                    message: format!("Expected identifier or ')', found '{}'", next.slice),
+                    span: next.span,
+                })
+            }
+        })?;
+
         self.expect(TokKind::Arrow)?;
 
         let next = self.next();
@@ -124,7 +135,7 @@ impl<'a> Parser<'a> {
         let span = value.span();
 
         Ok(Expr::FnDef(Box::new(FnDef {
-            args: vec![],
+            args,
             body: value,
             recursive: is_recursive,
             span: Span::new(tok.span.start, span.end, tok.span.file),
@@ -907,14 +918,17 @@ mod tests {
         );
 
         atom(
-            "rec fn() -> nil",
+            "rec fn(a,) -> nil",
             Ok(Expr::FnDef(Box::new(FnDef {
-                args: vec![],
+                args: vec![Ident {
+                    raw: "a".into(),
+                    span: Span::new(7, 8, file),
+                }],
                 body: Expr::Nil(NilLit {
-                    span: Span::new(12, 15, file),
+                    span: Span::new(14, 17, file),
                 }),
                 recursive: true,
-                span: Span::new(0, 15, file),
+                span: Span::new(0, 17, file),
             }))),
         );
     }
@@ -960,24 +974,45 @@ mod tests {
         };
 
         atom(
-            "fn() -> fn() -> fn() -> nil",
+            "fn(a, b) -> fn(c) -> fn(d, e,) -> nil",
             Ok(Expr::FnDef(Box::new(FnDef {
-                args: vec![],
+                args: vec![
+                    Ident {
+                        raw: "a".into(),
+                        span: Span::new(3, 4, file),
+                    },
+                    Ident {
+                        raw: "b".into(),
+                        span: Span::new(6, 7, file),
+                    },
+                ],
                 body: Expr::FnDef(Box::new(FnDef {
-                    args: vec![],
+                    args: vec![Ident {
+                        raw: "c".into(),
+                        span: Span::new(15, 16, file),
+                    }],
                     body: Expr::FnDef(Box::new(FnDef {
-                        args: vec![],
+                        args: vec![
+                            Ident {
+                                raw: "d".into(),
+                                span: Span::new(24, 25, file),
+                            },
+                            Ident {
+                                raw: "e".into(),
+                                span: Span::new(27, 28, file),
+                            },
+                        ],
                         body: Expr::Nil(NilLit {
-                            span: Span::new(24, 27, file),
+                            span: Span::new(34, 37, file),
                         }),
                         recursive: false,
-                        span: Span::new(16, 27, file),
+                        span: Span::new(21, 37, file),
                     })),
                     recursive: false,
-                    span: Span::new(8, 27, file),
+                    span: Span::new(12, 37, file),
                 })),
                 recursive: false,
-                span: Span::new(0, 27, file),
+                span: Span::new(0, 37, file),
             }))),
         );
     }
