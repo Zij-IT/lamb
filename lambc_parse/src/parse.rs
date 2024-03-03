@@ -428,17 +428,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Peeks at the next token, and returns `true` if it is of `kind`. If the peeked token is
-    /// of `kind`, then the token is skipped.
-    fn next_if_is(&mut self, kind: TokKind) -> bool {
-        if self.peek().kind == kind {
-            self.next();
-            true
-        } else {
-            false
-        }
-    }
-
     fn expect(&mut self, kind: TokKind) -> Result<Token<'a>> {
         let next = self.next();
         if next.kind == kind {
