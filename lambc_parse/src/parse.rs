@@ -1,6 +1,7 @@
 use crate::{
-    Block, BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef, Group,
-    I64Base, I64Lit, Ident, Lexer, List, NilLit, Span, Statement, StrLit, StrText, TokKind, Token,
+    Block, BoolLit, CharLit, CharText, Define, Else, Expr, ExprStatement, F64Lit, FileId, FnDef,
+    Group, I64Base, I64Lit, Ident, If, IfCond, Lexer, List, NilLit, Span, Statement, StrLit,
+    StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -96,6 +97,7 @@ impl<'a> Parser<'a> {
             TokKind::OpenParen => self.parse_group()?,
             TokKind::Fn => self.parse_fn_def(false)?,
             TokKind::Rec => self.parse_fn_def(true)?,
+            TokKind::If => self.parse_if()?,
             _ => self.parse_literal()?,
         })
     }
@@ -144,6 +146,46 @@ impl<'a> Parser<'a> {
             value,
             span: Span::connect(open.span, close.span),
         })))
+    }
+
+    fn parse_raw_block(&mut self) -> Result<Block> {
+        let open = self.expect(TokKind::OpenBrace)?;
+        let mut stmts = Vec::new();
+        let (value, close) = loop {
+            if self.peek2().kind == TokKind::Assign {
+                let stmt = self.parse_stmt()?;
+                stmts.push(stmt);
+            } else if self.peek1().kind == TokKind::CloseBrace {
+                break (None, self.next());
+            } else {
+                let expr = self.parse_expr()?;
+                let peek1 = self.peek1();
+                if peek1.kind == TokKind::Semi {
+                    let semi = self.next();
+                    let span = expr.span();
+                    let stmt = Statement::Expr(ExprStatement {
+                        expr,
+                        span: Span::connect(span, semi.span),
+                    });
+
+                    stmts.push(stmt);
+                } else if peek1.kind == TokKind::CloseBrace {
+                    break (Some(expr), self.next());
+                } else {
+                    let err_tok = self.next();
+                    return Err(Error {
+                        message: format!("Expected a ';' or '}}', but found '{}'", err_tok.slice),
+                        span: err_tok.span,
+                    });
+                }
+            }
+        };
+
+        Ok(Block {
+            statements: stmts,
+            value,
+            span: Span::connect(open.span, close.span),
+        })
     }
 
     /// Parses a list expression, which is a comma separated list of expressions followed by and
@@ -229,6 +271,45 @@ impl<'a> Parser<'a> {
             body: value,
             recursive: is_recursive,
             span: Span::connect(tok.span, span),
+        })))
+    }
+
+    fn parse_if(&mut self) -> Result<Expr> {
+        let start = self.expect(TokKind::If)?;
+        let cond = self.parse_expr()?;
+        let body = self.parse_raw_block()?;
+        let span = Span::connect(start.span, body.span);
+        let if_ = IfCond { cond, body, span };
+
+        let mut end_span = span;
+
+        // Vec<Elif>
+        let mut elifs = Vec::new();
+        while self.peek1().kind == TokKind::Elif {
+            let elif = self.next();
+            let cond = self.parse_expr()?;
+            let body = self.parse_raw_block()?;
+            let span = Span::connect(elif.span, body.span);
+            end_span = span;
+            elifs.push(IfCond { cond, body, span });
+        }
+
+        let els_ = if self.peek1().kind == TokKind::Else {
+            let els_ = self.next();
+            let body = self.parse_raw_block()?;
+            let span = Span::connect(els_.span, body.span);
+            end_span = span;
+            Some(Else { body, span })
+        } else {
+            None
+        };
+
+        let span = Span::connect(if_.span, end_span);
+        Ok(Expr::If(Box::new(If {
+            cond: if_,
+            elif: elifs,
+            els_,
+            span,
         })))
     }
 
@@ -507,8 +588,9 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Block, BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef,
-        Group, I64Base, I64Lit, Ident, List, NilLit, Parser, Span, Statement, StrLit, StrText,
+        Block, BoolLit, CharLit, CharText, Define, Else, Expr, ExprStatement, F64Lit, FileId,
+        FnDef, Group, I64Base, I64Lit, Ident, If, IfCond, List, NilLit, Parser, Span, Statement,
+        StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -516,12 +598,25 @@ mod tests {
         I64Lit {
             base,
             value: value.into(),
-            span: Span {
-                file: FileId(0),
-                start,
-                end,
-            },
+            span: span(start, end),
         }
+    }
+
+    fn nil(start: usize, end: usize) -> NilLit {
+        NilLit {
+            span: span(start, end),
+        }
+    }
+
+    fn bool(value: bool, start: usize, end: usize) -> BoolLit {
+        BoolLit {
+            value,
+            span: span(start, end),
+        }
+    }
+
+    fn span(start: usize, end: usize) -> Span {
+        Span::new(start, end, FileId(0))
     }
 
     #[test]
@@ -1033,6 +1128,127 @@ mod tests {
                 span: Span::new(0, 13, file),
             }))),
         );
+
+        atom(
+            "if true { }",
+            Ok(Expr::If(Box::new(If {
+                cond: IfCond {
+                    cond: Expr::Bool(bool(true, 3, 7)),
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(8, 11),
+                    },
+                    span: span(0, 11),
+                },
+                elif: vec![],
+                els_: None,
+                span: span(0, 11),
+            }))),
+        );
+
+        atom(
+            "if true { } elif false { }",
+            Ok(Expr::If(Box::new(If {
+                cond: IfCond {
+                    cond: Expr::Bool(bool(true, 3, 7)),
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(8, 11),
+                    },
+                    span: span(0, 11),
+                },
+                elif: vec![IfCond {
+                    cond: Expr::Bool(bool(false, 17, 22)),
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(23, 26),
+                    },
+                    span: span(12, 26),
+                }],
+                els_: None,
+                span: span(0, 26),
+            }))),
+        );
+
+        atom(
+            "if true { } elif false { } else { }",
+            Ok(Expr::If(Box::new(If {
+                cond: IfCond {
+                    cond: Expr::Bool(bool(true, 3, 7)),
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(8, 11),
+                    },
+                    span: span(0, 11),
+                },
+                elif: vec![IfCond {
+                    cond: Expr::Bool(bool(false, 17, 22)),
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(23, 26),
+                    },
+                    span: span(12, 26),
+                }],
+                els_: Some(Else {
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(32, 35),
+                    },
+                    span: span(27, 35),
+                }),
+                span: span(0, 35),
+            }))),
+        );
+
+        atom(
+            "if true { } elif false { } elif false { } else { }",
+            Ok(Expr::If(Box::new(If {
+                cond: IfCond {
+                    cond: Expr::Bool(bool(true, 3, 7)),
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(8, 11),
+                    },
+                    span: span(0, 11),
+                },
+                elif: vec![
+                    IfCond {
+                        cond: Expr::Bool(bool(false, 17, 22)),
+                        body: Block {
+                            statements: vec![],
+                            value: None,
+                            span: span(23, 26),
+                        },
+                        span: span(12, 26),
+                    },
+                    IfCond {
+                        cond: Expr::Bool(bool(false, 32, 37)),
+                        body: Block {
+                            statements: vec![],
+                            value: None,
+                            span: span(38, 41),
+                        },
+                        span: span(27, 41),
+                    },
+                ],
+                els_: Some(Else {
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(47, 50),
+                    },
+                    span: span(42, 50),
+                }),
+                span: span(0, 50),
+            }))),
+        );
     }
 
     #[test]
@@ -1276,6 +1492,72 @@ mod tests {
                     span: Span::new(10, 37, file),
                 }))),
                 span: Span::new(0, 39, file),
+            }))),
+        );
+    }
+
+    #[test]
+    fn parses_nested_ifs() {
+        let file = FileId(0);
+        let atom = |atom: &str, out| {
+            let mut parser = Parser::new(atom.as_bytes(), file);
+            assert_eq!(parser.parse_atom(), out)
+        };
+
+        atom(
+            "if true { if true { } } elif false { } elif false { } else { }",
+            Ok(Expr::If(Box::new(If {
+                cond: IfCond {
+                    cond: Expr::Bool(bool(true, 3, 7)),
+                    body: Block {
+                        statements: vec![],
+                        value: Some(Expr::If(Box::new(If {
+                            cond: IfCond {
+                                cond: Expr::Bool(bool(true, 13, 17)),
+                                body: Block {
+                                    statements: vec![],
+                                    value: None,
+                                    span: span(18, 21),
+                                },
+                                span: span(10, 21),
+                            },
+                            elif: vec![],
+                            els_: None,
+                            span: span(10, 21),
+                        }))),
+                        span: span(8, 23),
+                    },
+                    span: span(0, 23),
+                },
+                elif: vec![
+                    IfCond {
+                        cond: Expr::Bool(bool(false, 29, 34)),
+                        body: Block {
+                            statements: vec![],
+                            value: None,
+                            span: span(35, 38),
+                        },
+                        span: span(24, 38),
+                    },
+                    IfCond {
+                        cond: Expr::Bool(bool(false, 44, 49)),
+                        body: Block {
+                            statements: vec![],
+                            value: None,
+                            span: span(50, 53),
+                        },
+                        span: span(39, 53),
+                    },
+                ],
+                els_: Some(Else {
+                    body: Block {
+                        statements: vec![],
+                        value: None,
+                        span: span(59, 62),
+                    },
+                    span: span(54, 62),
+                }),
+                span: span(0, 62),
             }))),
         );
     }

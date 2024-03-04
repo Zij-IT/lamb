@@ -90,6 +90,27 @@ pub struct Block {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct IfCond {
+    pub cond: Expr,
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Else {
+    pub body: Block,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct If {
+    pub cond: IfCond,
+    pub elif: Vec<IfCond>,
+    pub els_: Option<Else>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -102,6 +123,7 @@ pub enum Expr {
     Group(Box<Group>),
     FnDef(Box<FnDef>),
     Block(Box<Block>),
+    If(Box<If>),
 }
 
 impl Expr {
@@ -118,6 +140,7 @@ impl Expr {
             Expr::Group(e) => e.span,
             Expr::FnDef(e) => e.span,
             Expr::Block(e) => e.span,
+            Expr::If(e) => e.span,
         }
     }
 }
