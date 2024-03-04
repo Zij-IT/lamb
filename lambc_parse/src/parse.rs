@@ -49,7 +49,7 @@ impl<'a> Parser<'a> {
             }
 
             let span = peek1.span;
-            let ident = self.parse_ident();
+            let ident = self.parse_ident()?;
             self.expect(TokKind::Assign)?;
             let value = self.parse_expr()?;
             let semi = self.expect(TokKind::Semi)?;
@@ -108,8 +108,7 @@ impl<'a> Parser<'a> {
     ///                | '[' ']'
     /// ```
     fn parse_list(&mut self) -> Result<Expr> {
-        let tok = self.next();
-        debug_assert_eq!(tok.kind, TokKind::OpenBrack);
+        let tok = self.expect(TokKind::OpenBrack)?;
         let (values, end_tok) =
             self.parse_node_list(TokKind::CloseBrack, |this| this.parse_expr())?;
 
@@ -126,8 +125,7 @@ impl<'a> Parser<'a> {
     ///     grouped_expr := '(' expr ')'
     /// ```
     fn parse_group(&mut self) -> Result<Expr> {
-        let tok = self.next();
-        debug_assert_eq!(tok.kind, TokKind::OpenParen);
+        let tok = self.expect(TokKind::OpenParen)?;
         let value = self.parse_expr()?;
 
         let next = self.next();
@@ -153,17 +151,19 @@ impl<'a> Parser<'a> {
     ///     arg_list := ident (',' ident )* ','?
     /// ```
     fn parse_fn_def(&mut self, is_recursive: bool) -> Result<Expr> {
-        let tok = self.next();
-        debug_assert!(matches!(tok.kind, TokKind::Rec | TokKind::Fn));
-        if tok.kind == TokKind::Rec {
+        let tok = if is_recursive {
+            let tok = self.expect(TokKind::Rec)?;
             self.expect(TokKind::Fn)?;
-        }
+            tok
+        } else {
+            self.expect(TokKind::Fn)?
+        };
 
         self.expect(TokKind::OpenParen)?;
         let (args, _) = self.parse_node_list(TokKind::CloseParen, |this| {
             let next = this.peek1();
             if next.kind == TokKind::Ident {
-                Ok(this.parse_ident())
+                Ok(this.parse_ident()?)
             } else {
                 Err(Error {
                     message: format!("Expected identifier or ')', found '{}'", next.slice),
@@ -199,14 +199,14 @@ impl<'a> Parser<'a> {
     fn parse_literal(&mut self) -> Result<Expr> {
         let tok = self.peek1();
         Ok(match tok.kind {
-            TokKind::Ident => Expr::Ident(self.parse_ident()),
-            TokKind::Nil => Expr::Nil(self.parse_nil()),
+            TokKind::Ident => Expr::Ident(self.parse_ident()?),
+            TokKind::Nil => Expr::Nil(self.parse_nil()?),
             TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
-                Expr::I64(self.parse_i64())
+                Expr::I64(self.parse_i64()?)
             }
             TokKind::CharStart => Expr::Char(self.parse_char()?),
-            TokKind::F64 => Expr::F64(self.parse_f64()),
-            TokKind::True | TokKind::False => Expr::Bool(self.parse_bool()),
+            TokKind::F64 => Expr::F64(self.parse_f64()?),
+            TokKind::True | TokKind::False => Expr::Bool(self.parse_bool()?),
             TokKind::StringStart => Expr::String(self.parse_string()?),
             TokKind::CharText
             | TokKind::CharEnd
@@ -228,59 +228,61 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_i64(&mut self) -> I64Lit {
+    fn parse_i64(&mut self) -> Result<I64Lit> {
         let tok = self.next();
-        debug_assert!(matches!(
-            tok.kind,
-            TokKind::DecI64 | TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64
-        ));
-
         let base = match tok.kind {
             TokKind::DecI64 => I64Base::Dec,
             TokKind::BinI64 => I64Base::Bin,
             TokKind::OctI64 => I64Base::Oct,
             TokKind::HexI64 => I64Base::Hex,
-            _ => unreachable!(),
+            _ => {
+                return Err(Error {
+                    message: format!("Expected number, found '{}'", tok.slice),
+                    span: tok.span,
+                })
+            }
         };
 
-        I64Lit {
+        Ok(I64Lit {
             base,
             value: tok.slice.into_owned(),
             span: tok.span,
-        }
+        })
     }
 
-    fn parse_f64(&mut self) -> F64Lit {
-        let tok = self.next();
-        debug_assert_eq!(tok.kind, TokKind::F64);
-
-        F64Lit {
+    fn parse_f64(&mut self) -> Result<F64Lit> {
+        let tok = self.expect(TokKind::F64)?;
+        Ok(F64Lit {
             value: tok.slice.into_owned(),
             span: tok.span,
-        }
+        })
     }
 
-    fn parse_bool(&mut self) -> BoolLit {
+    fn parse_bool(&mut self) -> Result<BoolLit> {
         let tok = self.next();
-        debug_assert!(matches!(tok.kind, TokKind::True | TokKind::False));
+        let tok = match tok.kind {
+            TokKind::True | TokKind::False => tok,
+            _ => {
+                return Err(Error {
+                    message: format!("Expected boolean, found '{}'", tok.slice),
+                    span: tok.span,
+                })
+            }
+        };
 
-        BoolLit {
+        Ok(BoolLit {
             value: tok.slice.starts_with('t'),
             span: tok.span,
-        }
+        })
     }
 
-    fn parse_nil(&mut self) -> NilLit {
-        let tok = self.next();
-        debug_assert!(matches!(tok.kind, TokKind::Nil));
-
-        NilLit { span: tok.span }
+    fn parse_nil(&mut self) -> Result<NilLit> {
+        let tok = self.expect(TokKind::Nil)?;
+        Ok(NilLit { span: tok.span })
     }
 
     fn parse_string(&mut self) -> Result<StrLit> {
-        let tok = self.next();
-        debug_assert!(matches!(tok.kind, TokKind::StringStart));
-
+        let tok = self.expect(TokKind::StringStart)?;
         let text = if self.peek1().kind == TokKind::StringText {
             let text = self.next();
             Some(StrText {
@@ -321,9 +323,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_char(&mut self) -> Result<CharLit> {
-        let tok = self.next();
-        debug_assert!(matches!(tok.kind, TokKind::CharStart));
-
+        let tok = self.expect(TokKind::CharStart)?;
         let text = if self.peek1().kind == TokKind::CharText {
             let text = self.next();
             Some(CharText {
@@ -363,14 +363,13 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_ident(&mut self) -> Ident {
-        let tok = self.next();
-        debug_assert_eq!(tok.kind, TokKind::Ident);
+    fn parse_ident(&mut self) -> Result<Ident> {
+        let tok = self.expect(TokKind::Ident)?;
 
-        Ident {
+        Ok(Ident {
             raw: tok.slice.into(),
             span: tok.span,
-        }
+        })
     }
 
     /// Parses a series of comma separated `T`, with a trailing comma allowed.
@@ -482,7 +481,7 @@ mod tests {
     fn parses_int() {
         let parse_int = |inp: &str, out: I64Lit| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
-            assert_eq!(parser.parse_i64(), out);
+            assert_eq!(parser.parse_i64(), Ok(out));
         };
 
         parse_int("123", int("123", I64Base::Dec, 0, 3));
@@ -504,14 +503,14 @@ mod tests {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
             assert_eq!(
                 parser.parse_f64(),
-                F64Lit {
+                Ok(F64Lit {
                     value: inp.into(),
                     span: Span {
                         start: 0,
                         end: inp.len(),
                         file: FileId(0),
                     }
-                }
+                })
             );
         };
 
@@ -532,14 +531,14 @@ mod tests {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
             assert_eq!(
                 parser.parse_bool(),
-                BoolLit {
+                Ok(BoolLit {
                     value: inp.parse().unwrap(),
                     span: Span {
                         start: 0,
                         end: inp.len(),
                         file: FileId(0),
                     }
-                }
+                })
             );
         };
 
@@ -552,13 +551,13 @@ mod tests {
         let mut parser = Parser::new("nil".as_bytes(), FileId(0));
         assert_eq!(
             parser.parse_nil(),
-            NilLit {
+            Ok(NilLit {
                 span: Span {
                     start: 0,
                     end: 3,
                     file: FileId(0),
                 }
-            }
+            })
         );
     }
 
@@ -665,14 +664,14 @@ mod tests {
             let mut parser = Parser::new(ident.as_bytes(), FileId(0));
             assert_eq!(
                 parser.parse_ident(),
-                Ident {
+                Ok(Ident {
                     raw: ident.into(),
                     span: Span {
                         file: FileId(0),
                         start: 0,
                         end: ident.len(),
                     }
-                }
+                })
             )
         };
 
