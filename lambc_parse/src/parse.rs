@@ -1,6 +1,6 @@
 use crate::{
-    BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base,
-    I64Lit, Ident, Lexer, List, NilLit, Span, Statement, StrLit, StrText, TokKind, Token,
+    Block, BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef, Group,
+    I64Base, I64Lit, Ident, Lexer, List, NilLit, Span, Statement, StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -91,12 +91,59 @@ impl<'a> Parser<'a> {
     fn parse_atom(&mut self) -> Result<Expr> {
         let tok = self.peek1();
         Ok(match tok.kind {
+            TokKind::OpenBrace => self.parse_block()?,
             TokKind::OpenBrack => self.parse_list()?,
             TokKind::OpenParen => self.parse_group()?,
             TokKind::Fn => self.parse_fn_def(false)?,
             TokKind::Rec => self.parse_fn_def(true)?,
             _ => self.parse_literal()?,
         })
+    }
+
+    /// Parses a list statements and an optional expression for the blocks value, which are delimited by braces.
+    /// ```text
+    /// Grammar:
+    ///
+    ///     block_expr := '{' stat* expr? '}'
+    /// ```
+    fn parse_block(&mut self) -> Result<Expr> {
+        let open = self.expect(TokKind::OpenBrace)?;
+        let mut stmts = Vec::new();
+        let (value, close) = loop {
+            if self.peek2().kind == TokKind::Assign {
+                let stmt = self.parse_stmt()?;
+                stmts.push(stmt);
+            } else if self.peek1().kind == TokKind::CloseBrace {
+                break (None, self.next());
+            } else {
+                let expr = self.parse_expr()?;
+                let peek1 = self.peek1();
+                if peek1.kind == TokKind::Semi {
+                    let semi = self.next();
+                    let span = expr.span();
+                    let stmt = Statement::Expr(ExprStatement {
+                        expr,
+                        span: Span::connect(span, semi.span),
+                    });
+
+                    stmts.push(stmt);
+                } else if peek1.kind == TokKind::CloseBrace {
+                    break (Some(expr), self.next());
+                } else {
+                    let err_tok = self.next();
+                    return Err(Error {
+                        message: format!("Expected a ';' or '}}', but found '{}'", err_tok.slice),
+                        span: err_tok.span,
+                    });
+                }
+            }
+        };
+
+        Ok(Expr::Block(Box::new(Block {
+            statements: stmts,
+            value,
+            span: Span::connect(open.span, close.span),
+        })))
     }
 
     /// Parses a list expression, which is a comma separated list of expressions followed by and
@@ -460,8 +507,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef, Group,
-        I64Base, I64Lit, Ident, List, NilLit, Parser, Span, Statement, StrLit, StrText,
+        Block, BoolLit, CharLit, CharText, Define, Expr, ExprStatement, F64Lit, FileId, FnDef,
+        Group, I64Base, I64Lit, Ident, List, NilLit, Parser, Span, Statement, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -963,6 +1010,29 @@ mod tests {
                 span: Span::new(0, 17, file),
             }))),
         );
+
+        atom(
+            "{ x := 2; x }",
+            Ok(Expr::Block(Box::new(Block {
+                statements: vec![Statement::Define(Define {
+                    ident: Ident {
+                        raw: "x".into(),
+                        span: Span::new(2, 3, file),
+                    },
+                    value: Expr::I64(I64Lit {
+                        base: I64Base::Dec,
+                        value: "2".into(),
+                        span: Span::new(7, 8, file),
+                    }),
+                    span: Span::new(2, 9, file),
+                })],
+                value: Some(Expr::Ident(Ident {
+                    raw: "x".into(),
+                    span: Span::new(10, 11, file),
+                })),
+                span: Span::new(0, 13, file),
+            }))),
+        );
     }
 
     #[test]
@@ -1127,6 +1197,86 @@ mod tests {
                 })),
                 span: Span::new(0, 38, file),
             })),
+        );
+    }
+
+    #[test]
+    fn parse_nested_blocks() {
+        let file = FileId(0);
+        let atom = |atom: &str, out| {
+            let mut parser = Parser::new(atom.as_bytes(), file);
+            assert_eq!(parser.parse_atom(), out)
+        };
+
+        atom(
+            "{ { { } } }",
+            Ok(Expr::Block(Box::new(Block {
+                statements: vec![],
+                value: Some(Expr::Block(Box::new(Block {
+                    statements: vec![],
+                    value: Some(Expr::Block(Box::new(Block {
+                        statements: vec![],
+                        value: None,
+                        span: Span::new(4, 7, file),
+                    }))),
+                    span: Span::new(2, 9, file),
+                }))),
+                span: Span::new(0, 11, file),
+            }))),
+        );
+
+        atom(
+            "{ x := 2; { x := 2; { x := { 2 }; } } }",
+            Ok(Expr::Block(Box::new(Block {
+                statements: vec![Statement::Define(Define {
+                    ident: Ident {
+                        raw: "x".into(),
+                        span: Span::new(2, 3, file),
+                    },
+                    value: Expr::I64(I64Lit {
+                        base: I64Base::Dec,
+                        value: "2".into(),
+                        span: Span::new(7, 8, file),
+                    }),
+                    span: Span::new(2, 9, file),
+                })],
+                value: Some(Expr::Block(Box::new(Block {
+                    statements: vec![Statement::Define(Define {
+                        ident: Ident {
+                            raw: "x".into(),
+                            span: Span::new(12, 13, file),
+                        },
+                        value: Expr::I64(I64Lit {
+                            base: I64Base::Dec,
+                            value: "2".into(),
+                            span: Span::new(17, 18, file),
+                        }),
+                        span: Span::new(12, 19, file),
+                    })],
+                    value: Some(Expr::Block(Box::new(Block {
+                        statements: vec![Statement::Define(Define {
+                            ident: Ident {
+                                raw: "x".into(),
+                                span: Span::new(22, 23, file),
+                            },
+                            value: Expr::Block(Box::new(Block {
+                                statements: vec![],
+                                value: Some(Expr::I64(I64Lit {
+                                    base: I64Base::Dec,
+                                    value: "2".into(),
+                                    span: Span::new(29, 30, file),
+                                })),
+                                span: Span::new(27, 32, file),
+                            })),
+                            span: Span::new(22, 33, file),
+                        })],
+                        value: None,
+                        span: Span::new(20, 35, file),
+                    }))),
+                    span: Span::new(10, 37, file),
+                }))),
+                span: Span::new(0, 39, file),
+            }))),
         );
     }
 }

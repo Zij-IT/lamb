@@ -83,6 +83,13 @@ pub struct FnDef {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Block {
+    pub statements: Vec<Statement>,
+    pub value: Option<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -94,6 +101,7 @@ pub enum Expr {
     List(List),
     Group(Box<Group>),
     FnDef(Box<FnDef>),
+    Block(Box<Block>),
 }
 
 impl Expr {
@@ -109,6 +117,7 @@ impl Expr {
             Expr::List(e) => e.span,
             Expr::Group(e) => e.span,
             Expr::FnDef(e) => e.span,
+            Expr::Block(e) => e.span,
         }
     }
 }
