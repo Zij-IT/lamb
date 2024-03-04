@@ -18,14 +18,16 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
-    peeked: Option<Token<'a>>,
+    peek1: Option<Token<'a>>,
+    peek2: Option<Token<'a>>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a [u8], file: FileId) -> Self {
         Self {
             lexer: Lexer::new(input, file),
-            peeked: None,
+            peek1: None,
+            peek2: None,
         }
     }
 
@@ -36,21 +38,20 @@ impl<'a> Parser<'a> {
     ///     stmt := ident ':=' expr ';'
     ///           | expr  ';'
     /// ```
-    pub fn parse_stmt(&mut self, tok: Token<'a>) -> Result<Statement> {
-        let peek = self.peek();
-        if peek.kind == TokKind::Assign {
-            if tok.kind != TokKind::Ident {
+    pub fn parse_stmt(&mut self) -> Result<Statement> {
+        if self.peek2().kind == TokKind::Assign {
+            let peek1 = self.peek1();
+            if peek1.kind != TokKind::Ident {
                 return Err(Error {
-                    message: format!("Expected identifier, found '{}'", tok.slice),
-                    span: tok.span,
+                    message: format!("Expected identifier, found '{}'", peek1.slice),
+                    span: peek1.span,
                 });
             }
 
-            let span = tok.span;
-            let ident = self.parse_ident(tok);
+            let span = peek1.span;
+            let ident = self.parse_ident();
             self.expect(TokKind::Assign)?;
-            let next = self.next();
-            let value = self.parse_expr(next)?;
+            let value = self.parse_expr()?;
             let semi = self.expect(TokKind::Semi)?;
 
             Ok(Statement::Define(Define {
@@ -59,8 +60,8 @@ impl<'a> Parser<'a> {
                 span: Span::connect(span, semi.span),
             }))
         } else {
-            let span = tok.span;
-            let expr = self.parse_expr(tok)?;
+            let expr = self.parse_expr()?;
+            let span = expr.span();
             let semi = self.expect(TokKind::Semi)?;
 
             Ok(Statement::Expr(ExprStatement {
@@ -71,8 +72,8 @@ impl<'a> Parser<'a> {
     }
 
     /// TODO: Define the grammar for an expression
-    pub fn parse_expr(&mut self, tok: Token<'a>) -> Result<Expr> {
-        self.parse_atom(tok)
+    pub fn parse_expr(&mut self) -> Result<Expr> {
+        self.parse_atom()
     }
 
     /// Parses the items that can make up an expression without any operators
@@ -87,13 +88,14 @@ impl<'a> Parser<'a> {
     ///           | if
     ///           | literal
     /// ```
-    fn parse_atom(&mut self, tok: Token<'a>) -> Result<Expr> {
+    fn parse_atom(&mut self) -> Result<Expr> {
+        let tok = self.peek1();
         Ok(match tok.kind {
-            TokKind::OpenBrack => self.parse_list(tok)?,
-            TokKind::OpenParen => self.parse_group(tok)?,
-            TokKind::Fn => self.parse_fn_def(tok, false)?,
-            TokKind::Rec => self.parse_fn_def(tok, true)?,
-            _ => self.parse_literal(tok)?,
+            TokKind::OpenBrack => self.parse_list()?,
+            TokKind::OpenParen => self.parse_group()?,
+            TokKind::Fn => self.parse_fn_def(false)?,
+            TokKind::Rec => self.parse_fn_def(true)?,
+            _ => self.parse_literal()?,
         })
     }
 
@@ -105,11 +107,11 @@ impl<'a> Parser<'a> {
     ///     list_expr := '[' expr (',' expr )* ','? ']'
     ///                | '[' ']'
     /// ```
-    fn parse_list(&mut self, tok: Token<'a>) -> Result<Expr> {
+    fn parse_list(&mut self) -> Result<Expr> {
+        let tok = self.next();
         debug_assert_eq!(tok.kind, TokKind::OpenBrack);
-        let next = self.next();
         let (values, end_tok) =
-            self.parse_node_list(next, TokKind::CloseBrack, |tok, this| this.parse_expr(tok))?;
+            self.parse_node_list(TokKind::CloseBrack, |this| this.parse_expr())?;
 
         Ok(Expr::List(List {
             values,
@@ -123,10 +125,10 @@ impl<'a> Parser<'a> {
     ///
     ///     grouped_expr := '(' expr ')'
     /// ```
-    fn parse_group(&mut self, tok: Token<'a>) -> Result<Expr> {
+    fn parse_group(&mut self) -> Result<Expr> {
+        let tok = self.next();
         debug_assert_eq!(tok.kind, TokKind::OpenParen);
-        let next = self.next();
-        let value = self.parse_expr(next)?;
+        let value = self.parse_expr()?;
 
         let next = self.next();
         if next.kind != TokKind::CloseParen {
@@ -150,17 +152,18 @@ impl<'a> Parser<'a> {
     ///
     ///     arg_list := ident (',' ident )* ','?
     /// ```
-    fn parse_fn_def(&mut self, tok: Token<'a>, is_recursive: bool) -> Result<Expr> {
+    fn parse_fn_def(&mut self, is_recursive: bool) -> Result<Expr> {
+        let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::Rec | TokKind::Fn));
         if tok.kind == TokKind::Rec {
             self.expect(TokKind::Fn)?;
         }
 
         self.expect(TokKind::OpenParen)?;
-        let next = self.next();
-        let (args, _) = self.parse_node_list(next, TokKind::CloseParen, |next, this| {
+        let (args, _) = self.parse_node_list(TokKind::CloseParen, |this| {
+            let next = this.peek1();
             if next.kind == TokKind::Ident {
-                Ok(this.parse_ident(next))
+                Ok(this.parse_ident())
             } else {
                 Err(Error {
                     message: format!("Expected identifier or ')', found '{}'", next.slice),
@@ -171,8 +174,7 @@ impl<'a> Parser<'a> {
 
         self.expect(TokKind::Arrow)?;
 
-        let next = self.next();
-        let value = self.parse_expr(next)?;
+        let value = self.parse_expr()?;
         let span = value.span();
 
         Ok(Expr::FnDef(Box::new(FnDef {
@@ -194,17 +196,18 @@ impl<'a> Parser<'a> {
     ///          | char
     ///          | ident
     /// ```
-    fn parse_literal(&mut self, tok: Token<'a>) -> Result<Expr> {
+    fn parse_literal(&mut self) -> Result<Expr> {
+        let tok = self.peek1();
         Ok(match tok.kind {
-            TokKind::Ident => Expr::Ident(self.parse_ident(tok)),
-            TokKind::Nil => Expr::Nil(self.parse_nil(tok)),
+            TokKind::Ident => Expr::Ident(self.parse_ident()),
+            TokKind::Nil => Expr::Nil(self.parse_nil()),
             TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
-                Expr::I64(self.parse_i64(tok))
+                Expr::I64(self.parse_i64())
             }
-            TokKind::CharStart => Expr::Char(self.parse_char(tok)?),
-            TokKind::F64 => Expr::F64(self.parse_f64(tok)),
-            TokKind::True | TokKind::False => Expr::Bool(self.parse_bool(tok)),
-            TokKind::StringStart => Expr::String(self.parse_string(tok)?),
+            TokKind::CharStart => Expr::Char(self.parse_char()?),
+            TokKind::F64 => Expr::F64(self.parse_f64()),
+            TokKind::True | TokKind::False => Expr::Bool(self.parse_bool()),
+            TokKind::StringStart => Expr::String(self.parse_string()?),
             TokKind::CharText
             | TokKind::CharEnd
             | TokKind::StringText
@@ -225,7 +228,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_i64(&mut self, tok: Token<'a>) -> I64Lit {
+    fn parse_i64(&mut self) -> I64Lit {
+        let tok = self.next();
         debug_assert!(matches!(
             tok.kind,
             TokKind::DecI64 | TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64
@@ -246,7 +250,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_f64(&mut self, tok: Token<'a>) -> F64Lit {
+    fn parse_f64(&mut self) -> F64Lit {
+        let tok = self.next();
         debug_assert_eq!(tok.kind, TokKind::F64);
 
         F64Lit {
@@ -255,7 +260,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_bool(&mut self, tok: Token<'a>) -> BoolLit {
+    fn parse_bool(&mut self) -> BoolLit {
+        let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::True | TokKind::False));
 
         BoolLit {
@@ -264,16 +270,18 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_nil(&mut self, tok: Token<'a>) -> NilLit {
+    fn parse_nil(&mut self) -> NilLit {
+        let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::Nil));
 
         NilLit { span: tok.span }
     }
 
-    fn parse_string(&mut self, tok: Token<'a>) -> Result<StrLit> {
+    fn parse_string(&mut self) -> Result<StrLit> {
+        let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::StringStart));
 
-        let text = if self.peek().kind == TokKind::StringText {
+        let text = if self.peek1().kind == TokKind::StringText {
             let text = self.next();
             Some(StrText {
                 inner: text.slice.into_owned(),
@@ -312,10 +320,11 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_char(&mut self, tok: Token<'a>) -> Result<CharLit> {
+    fn parse_char(&mut self) -> Result<CharLit> {
+        let tok = self.next();
         debug_assert!(matches!(tok.kind, TokKind::CharStart));
 
-        let text = if self.peek().kind == TokKind::CharText {
+        let text = if self.peek1().kind == TokKind::CharText {
             let text = self.next();
             Some(CharText {
                 inner: text.slice.into_owned(),
@@ -354,7 +363,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_ident(&mut self, tok: Token<'a>) -> Ident {
+    fn parse_ident(&mut self) -> Ident {
+        let tok = self.next();
         debug_assert_eq!(tok.kind, TokKind::Ident);
 
         Ident {
@@ -366,49 +376,60 @@ impl<'a> Parser<'a> {
     /// Parses a series of comma separated `T`, with a trailing comma allowed.
     fn parse_node_list<T, F>(
         &mut self,
-        tok: Token<'a>,
         end_kind: TokKind,
         parse_elem: F,
     ) -> Result<(Vec<T>, Token<'a>)>
     where
-        F: Fn(Token<'a>, &mut Self) -> Result<T>,
+        F: Fn(&mut Self) -> Result<T>,
     {
         let mut values = Vec::new();
+        let tok = self.peek1();
         if tok.kind == end_kind {
-            return Ok((values, tok));
+            return Ok((values, self.next()));
         }
 
         let span = tok.span;
-        let mut next = tok;
-        loop {
-            values.push(parse_elem(next, self)?);
-            next = self.next();
+        let end_token = loop {
+            values.push(parse_elem(self)?);
 
+            let next = self.next();
             if next.kind == TokKind::Comma {
-                next = self.next();
+                let next = self.peek1();
                 if next.kind == end_kind {
-                    break;
+                    break self.next();
                 }
             } else if next.kind == end_kind {
-                break;
+                break next;
             } else {
                 return Err(Error {
                     message: format!("Expected {:?}, found '{}'", end_kind, next.slice),
                     span: Span::connect(span, next.span),
                 });
             }
-        }
+        };
 
-        Ok((values, next))
+        Ok((values, end_token))
     }
 
     /// Returns a reference to the next token non-comment token in the input
-    fn peek(&mut self) -> &Token<'a> {
-        match self.peeked {
+    fn peek1(&mut self) -> &Token<'a> {
+        match self.peek1 {
             Some(ref t) => t,
             None => {
-                self.peeked = Some(self.next());
-                self.peeked.as_ref().unwrap()
+                self.peek1 = self.peek2.take().or_else(|| Some(self.next()));
+                self.peek1.as_ref().unwrap()
+            }
+        }
+    }
+
+    /// Returns a reference to the next token non-comment token in the input
+    fn peek2(&mut self) -> &Token<'a> {
+        self.peek1();
+        match self.peek2 {
+            Some(ref t) => t,
+            None => {
+                self.peek2 = Some(self.lexer.next_nontrival_token());
+                self.peek2.as_ref().unwrap()
             }
         }
     }
@@ -416,16 +437,11 @@ impl<'a> Parser<'a> {
     /// Returns the next token in the input, consuming the last peeked token if
     /// present.
     fn next(&mut self) -> Token<'a> {
-        loop {
-            let token = self
-                .peeked
-                .take()
-                .unwrap_or_else(|| self.lexer.next_token());
+        let p1 = self.peek1.take();
+        let p2 = self.peek2.take();
+        self.peek1 = p2;
 
-            if token.kind != TokKind::Comment {
-                break token;
-            }
-        }
+        p1.unwrap_or_else(|| self.lexer.next_nontrival_token())
     }
 
     fn expect(&mut self, kind: TokKind) -> Result<Token<'a>> {
@@ -466,8 +482,7 @@ mod tests {
     fn parses_int() {
         let parse_int = |inp: &str, out: I64Lit| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
-            let tok = parser.next();
-            assert_eq!(parser.parse_i64(tok), out);
+            assert_eq!(parser.parse_i64(), out);
         };
 
         parse_int("123", int("123", I64Base::Dec, 0, 3));
@@ -487,9 +502,8 @@ mod tests {
     fn parses_f64() {
         let parse_f64 = |inp: &str| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
-            let tok = parser.next();
             assert_eq!(
-                parser.parse_f64(tok),
+                parser.parse_f64(),
                 F64Lit {
                     value: inp.into(),
                     span: Span {
@@ -516,9 +530,8 @@ mod tests {
     fn parses_bool() {
         let parse_bool = |inp: &str| {
             let mut parser = Parser::new(inp.as_bytes(), FileId(0));
-            let tok = parser.next();
             assert_eq!(
-                parser.parse_bool(tok),
+                parser.parse_bool(),
                 BoolLit {
                     value: inp.parse().unwrap(),
                     span: Span {
@@ -537,9 +550,8 @@ mod tests {
     #[test]
     fn parses_nil() {
         let mut parser = Parser::new("nil".as_bytes(), FileId(0));
-        let tok = parser.next();
         assert_eq!(
-            parser.parse_nil(tok),
+            parser.parse_nil(),
             NilLit {
                 span: Span {
                     start: 0,
@@ -554,9 +566,8 @@ mod tests {
     fn parses_string() {
         let input = r#""""#;
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
-        let tok = parser.next();
         assert_eq!(
-            parser.parse_string(tok),
+            parser.parse_string(),
             Ok(StrLit {
                 text: None,
                 span: Span {
@@ -569,9 +580,8 @@ mod tests {
 
         let input = r#""hello""#;
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
-        let tok = parser.next();
         assert_eq!(
-            parser.parse_string(tok),
+            parser.parse_string(),
             Ok(StrLit {
                 text: Some(StrText {
                     inner: String::from(input.trim_matches('"')),
@@ -594,9 +604,8 @@ mod tests {
     fn parses_char() {
         let input = "''";
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
-        let tok = parser.next();
         assert_eq!(
-            parser.parse_char(tok),
+            parser.parse_char(),
             Ok(CharLit {
                 text: None,
                 span: Span {
@@ -609,9 +618,8 @@ mod tests {
 
         let input = "'hello'";
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
-        let tok = parser.next();
         assert_eq!(
-            parser.parse_char(tok),
+            parser.parse_char(),
             Ok(CharLit {
                 text: Some(CharText {
                     inner: String::from(input.trim_matches('\'')),
@@ -631,9 +639,8 @@ mod tests {
 
         let input = "'ä'";
         let mut parser = Parser::new(input.as_bytes(), FileId(0));
-        let tok = parser.next();
         assert_eq!(
-            parser.parse_char(tok),
+            parser.parse_char(),
             Ok(CharLit {
                 text: Some(CharText {
                     inner: String::from(input.trim_matches('\'')),
@@ -656,9 +663,8 @@ mod tests {
     fn parses_ident() {
         let ident = |ident: &str| {
             let mut parser = Parser::new(ident.as_bytes(), FileId(0));
-            let tok = parser.next();
             assert_eq!(
-                parser.parse_ident(tok),
+                parser.parse_ident(),
                 Ident {
                     raw: ident.into(),
                     span: Span {
@@ -682,8 +688,7 @@ mod tests {
         let file = FileId(0);
         let literal = |literal: &str, out| {
             let mut parser = Parser::new(literal.as_bytes(), file);
-            let tok = parser.next();
-            assert_eq!(parser.parse_literal(tok), out)
+            assert_eq!(parser.parse_literal(), out)
         };
 
         literal(
@@ -770,8 +775,7 @@ mod tests {
         let file = FileId(0);
         let atom = |atom: &str, out| {
             let mut parser = Parser::new(atom.as_bytes(), file);
-            let tok = parser.next();
-            assert_eq!(parser.parse_atom(tok), out)
+            assert_eq!(parser.parse_atom(), out)
         };
 
         atom(
@@ -902,8 +906,7 @@ mod tests {
         let file = FileId(0);
         let atom = |atom: &str, out| {
             let mut parser = Parser::new(atom.as_bytes(), file);
-            let tok = parser.next();
-            assert_eq!(parser.parse_atom(tok), out)
+            assert_eq!(parser.parse_atom(), out)
         };
 
         atom(
@@ -968,8 +971,7 @@ mod tests {
         let file = FileId(0);
         let atom = |atom: &str, out| {
             let mut parser = Parser::new(atom.as_bytes(), file);
-            let tok = parser.next();
-            assert_eq!(parser.parse_atom(tok), out)
+            assert_eq!(parser.parse_atom(), out)
         };
 
         atom(
@@ -999,8 +1001,7 @@ mod tests {
         let file = FileId(0);
         let atom = |atom: &str, out| {
             let mut parser = Parser::new(atom.as_bytes(), file);
-            let tok = parser.next();
-            assert_eq!(parser.parse_atom(tok), out)
+            assert_eq!(parser.parse_atom(), out)
         };
 
         atom(
@@ -1052,8 +1053,7 @@ mod tests {
         let file = FileId(0);
         let stmt = |stmt: &str, out| {
             let mut parser = Parser::new(stmt.as_bytes(), file);
-            let tok = parser.next();
-            assert_eq!(parser.parse_stmt(tok), out)
+            assert_eq!(parser.parse_stmt(), out)
         };
 
         stmt(

@@ -183,11 +183,24 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Returns the next [`Token`] in the input that isn't whitespace or a comment. If the lexer
+    /// has reached the end of the input, it will return [`TokKind::End`]
+    ///
+    /// All tokens inherit the [`FileId`] from `self`.
+    pub fn next_nontrival_token(&mut self) -> Token<'a> {
+        let mut next = self.next_token();
+        while next.kind == TokKind::Comment {
+            next = self.next_token();
+        }
+
+        next
+    }
+
     /// Returns the next [`Token`] in the input. If the lexer
     /// has reached the end of the input, it will return [`TokKind::End`]
     ///
     /// All tokens inherit the [`FileId`] from `self`.
-    pub fn next_token(&mut self) -> Token<'a> {
+    fn next_token(&mut self) -> Token<'a> {
         match self.state {
             State::Default => self.default_token(),
             State::Char => self.char_token(),
