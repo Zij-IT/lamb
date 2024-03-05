@@ -1690,55 +1690,15 @@ mod tests {
 
     #[test]
     fn parses_ident_pattern() {
-        let file = FileId(0);
-        let pat = |pat: &str, out| {
-            let mut parser = Parser::new(pat.as_bytes(), file);
-            let lit = parser.parse_ident_pattern();
-            assert_eq!(lit, Ok(InnerPattern::Ident(Box::new(out))));
-        };
+        macro_rules! pat {
+            ($pat:expr) => {
+                let mut parser = Parser::new($pat.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_ident_pattern());
+            };
+        }
 
-        pat(
-            "i",
-            IdentPattern {
-                ident: Ident {
-                    raw: "i".into(),
-                    span: span(0, 1),
-                },
-                bound: None,
-                span: span(0, 1),
-            },
-        );
-
-        pat(
-            "i @ 1",
-            IdentPattern {
-                ident: Ident {
-                    raw: "i".into(),
-                    span: span(0, 1),
-                },
-                bound: Some(Box::new(InnerPattern::Literal(Box::new(
-                    LiteralPattern::I64(I64Lit {
-                        base: I64Base::Dec,
-                        value: "1".into(),
-                        span: span(4, 5),
-                    }),
-                )))),
-                span: span(0, 5),
-            },
-        );
-
-        pat(
-            "i @ ..",
-            IdentPattern {
-                ident: Ident {
-                    raw: "i".into(),
-                    span: span(0, 1),
-                },
-                bound: Some(Box::new(InnerPattern::Rest(Box::new(RestPattern {
-                    span: span(4, 6),
-                })))),
-                span: span(0, 6),
-            },
-        );
+        pat!("i");
+        pat!("i @ 1");
+        pat!("i @ ..");
     }
 }
