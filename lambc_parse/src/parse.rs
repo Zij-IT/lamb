@@ -1236,4 +1236,17 @@ mod tests {
         expr!("2(one, two)(three)");
         expr!("2(one)(two, three)(four)");
     }
+
+    #[test]
+    fn parses_interlaced_calls_and_index() {
+        macro_rules! expr {
+            ($expr:expr) => {
+                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_expr());
+            };
+        }
+
+        expr!("2(one, two)[three](four)");
+        expr!("2[one](two, three)[four]");
+    }
 }
