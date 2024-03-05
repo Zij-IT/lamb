@@ -134,6 +134,8 @@ pub enum TokKind {
     Bind,
     /// '->'
     Arrow,
+    /// '..'
+    DotDot,
 
     // Meta
     /// Used to indicate a comment
@@ -561,6 +563,7 @@ impl<'a> Lexer<'a> {
         let start = self.at;
         match self.next() {
             b'>' => self.token_from(start, start + 2, TokKind::Cpsr),
+            b'.' => self.token_from(start, start + 2, TokKind::DotDot),
             b'0'..=b'9' => self.dec_number(),
             _ => self.token_from(start, start + 1, TokKind::Invalid),
         }
@@ -796,10 +799,11 @@ mod tests {
     #[test]
     fn lexes_dot_start() {
         lex_one(".>", TokKind::Cpsr);
+        lex_one("..", TokKind::DotDot);
         lex_one(".", TokKind::Invalid);
 
-        let input = ".>.";
-        let kinds = [TokKind::Cpsr, TokKind::Invalid];
+        let input = ".>...";
+        let kinds = [TokKind::Cpsr, TokKind::DotDot, TokKind::Invalid];
         lex_mult(input, &kinds);
     }
 
