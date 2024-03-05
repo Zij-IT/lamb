@@ -1623,69 +1623,16 @@ mod tests {
 
     #[test]
     fn parses_array_pattern() {
-        let file = FileId(0);
-        let pat = |pat: &str, out| {
-            let mut parser = Parser::new(pat.as_bytes(), file);
-            let lit = parser.parse_array_pattern();
-            assert_eq!(lit, Ok(InnerPattern::Array(Box::new(out))));
-        };
+        macro_rules! pat {
+            ($pat:expr) => {
+                let mut parser = Parser::new($pat.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_array_pattern());
+            };
+        }
 
-        pat(
-            "[]",
-            ArrayPattern {
-                patterns: vec![],
-                span: span(0, 2),
-            },
-        );
-
-        pat(
-            "[1, 2]",
-            ArrayPattern {
-                patterns: vec![
-                    Pattern {
-                        inner: vec![InnerPattern::Literal(Box::new(LiteralPattern::I64(
-                            I64Lit {
-                                base: I64Base::Dec,
-                                value: "1".into(),
-                                span: span(1, 2),
-                            },
-                        )))],
-                        span: span(1, 2),
-                    },
-                    Pattern {
-                        inner: vec![InnerPattern::Literal(Box::new(LiteralPattern::I64(
-                            I64Lit {
-                                base: I64Base::Dec,
-                                value: "2".into(),
-                                span: span(4, 5),
-                            },
-                        )))],
-                        span: span(4, 5),
-                    },
-                ],
-                span: span(0, 6),
-            },
-        );
-
-        pat(
-            "[[[]]]",
-            ArrayPattern {
-                patterns: vec![Pattern {
-                    inner: vec![InnerPattern::Array(Box::new(ArrayPattern {
-                        patterns: vec![Pattern {
-                            inner: vec![InnerPattern::Array(Box::new(ArrayPattern {
-                                patterns: vec![],
-                                span: span(2, 4),
-                            }))],
-                            span: span(2, 4),
-                        }],
-                        span: span(1, 5),
-                    }))],
-                    span: span(1, 5),
-                }],
-                span: span(0, 6),
-            },
-        );
+        pat!("[]");
+        pat!("[1, 2]");
+        pat!("[[[]]]");
     }
 
     #[test]
