@@ -189,6 +189,13 @@ pub struct ArrayPattern {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Index {
+    pub lhs: Expr,
+    pub rhs: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -203,6 +210,7 @@ pub enum Expr {
     Block(Box<Block>),
     If(Box<If>),
     Case(Box<Case>),
+    Index(Box<Index>),
 }
 
 impl Expr {
@@ -221,6 +229,7 @@ impl Expr {
             Expr::Block(e) => e.span,
             Expr::If(e) => e.span,
             Expr::Case(e) => e.span,
+            Expr::Index(e) => e.span,
         }
     }
 
@@ -234,6 +243,7 @@ impl Expr {
             | Expr::I64(_)
             | Expr::F64(_)
             | Expr::List(_)
+            | Expr::Index(_)
             | Expr::Group(_) => false,
             Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
             Expr::FnDef(f) => f.body.ends_with_block(),

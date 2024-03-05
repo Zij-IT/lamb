@@ -1,8 +1,8 @@
 use crate::{
     ArrayPattern, Block, BoolLit, Case, CaseArm, CharLit, CharText, Define, Else, Expr,
     ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
-    InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern, Span, Statement,
-    StrLit, StrText, TokKind, Token,
+    Index, InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern, Span,
+    Statement, StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -73,9 +73,41 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// TODO: Define the grammar for an expression
+    /// ```text
+    /// Grammar:
+    ///
+    ///    expr := expr op expr
+    ///          | expr '[' expr ']'
+    ///          | expr '(' expr ')'
+    /// ```
     pub fn parse_expr(&mut self) -> Result<Expr> {
-        self.parse_atom()
+        self.parse_chained_expr()
+    }
+
+    pub fn parse_chained_expr(&mut self) -> Result<Expr> {
+        let mut res = self.parse_atom()?;
+
+        Ok(loop {
+            if res.ends_with_block() {
+                break res;
+            }
+
+            let peek = self.peek1();
+            match peek.kind {
+                TokKind::OpenBrack => {
+                    self.next();
+                    let index = self.parse_expr()?;
+                    let close = self.expect(TokKind::CloseBrack)?;
+                    let span = Span::connect(res.span(), close.span);
+                    res = Expr::Index(Box::new(Index {
+                        lhs: res,
+                        rhs: index,
+                        span,
+                    }));
+                }
+                _ => break res,
+            }
+        })
     }
 
     /// Parses the items that can make up an expression without any operators
@@ -1163,5 +1195,19 @@ mod tests {
         pat!("i");
         pat!("i @ 1");
         pat!("i @ ..");
+    }
+
+    #[test]
+    fn parses_index() {
+        macro_rules! expr {
+            ($expr:expr) => {
+                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_expr());
+            };
+        }
+
+        expr!("2[one]");
+        expr!("2[one][two]");
+        expr!("2[one][two][three]");
     }
 }
