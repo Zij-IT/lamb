@@ -1,0 +1,51 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    If(
+        If {
+            cond: IfCond {
+                cond: Bool(
+                    BoolLit {
+                        value: true,
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 3,
+                            end: 7,
+                        },
+                    },
+                ),
+                body: Block {
+                    statements: [],
+                    value: None,
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 8,
+                        end: 11,
+                    },
+                },
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 0,
+                    end: 11,
+                },
+            },
+            elif: [],
+            els_: None,
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 11,
+            },
+        },
+    ),
+)

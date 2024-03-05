@@ -1,0 +1,67 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    Block(
+        Block {
+            statements: [
+                Define(
+                    Define {
+                        ident: Ident {
+                            raw: "x",
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 2,
+                                end: 3,
+                            },
+                        },
+                        value: I64(
+                            I64Lit {
+                                base: Dec,
+                                value: "2",
+                                span: Span {
+                                    file: FileId(
+                                        0,
+                                    ),
+                                    start: 7,
+                                    end: 8,
+                                },
+                            },
+                        ),
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 2,
+                            end: 9,
+                        },
+                    },
+                ),
+            ],
+            value: Some(
+                Ident(
+                    Ident {
+                        raw: "x",
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 10,
+                            end: 11,
+                        },
+                    },
+                ),
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 13,
+            },
+        },
+    ),
+)

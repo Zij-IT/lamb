@@ -1,0 +1,137 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    If(
+        If {
+            cond: IfCond {
+                cond: Bool(
+                    BoolLit {
+                        value: true,
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 3,
+                            end: 7,
+                        },
+                    },
+                ),
+                body: Block {
+                    statements: [],
+                    value: None,
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 8,
+                        end: 11,
+                    },
+                },
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 0,
+                    end: 11,
+                },
+            },
+            elif: [
+                IfCond {
+                    cond: Bool(
+                        BoolLit {
+                            value: false,
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 17,
+                                end: 22,
+                            },
+                        },
+                    ),
+                    body: Block {
+                        statements: [],
+                        value: None,
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 23,
+                            end: 26,
+                        },
+                    },
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 12,
+                        end: 26,
+                    },
+                },
+                IfCond {
+                    cond: Bool(
+                        BoolLit {
+                            value: false,
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 32,
+                                end: 37,
+                            },
+                        },
+                    ),
+                    body: Block {
+                        statements: [],
+                        value: None,
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 38,
+                            end: 41,
+                        },
+                    },
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 27,
+                        end: 41,
+                    },
+                },
+            ],
+            els_: Some(
+                Else {
+                    body: Block {
+                        statements: [],
+                        value: None,
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 47,
+                            end: 50,
+                        },
+                    },
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 42,
+                        end: 50,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 50,
+            },
+        },
+    ),
+)

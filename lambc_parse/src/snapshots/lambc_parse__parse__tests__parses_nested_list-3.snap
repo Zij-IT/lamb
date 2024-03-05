@@ -1,0 +1,41 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    FnDef(
+        FnDef {
+            args: [
+                Ident {
+                    raw: "a",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 7,
+                        end: 8,
+                    },
+                },
+            ],
+            body: Nil(
+                NilLit {
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 14,
+                        end: 17,
+                    },
+                },
+            ),
+            recursive: true,
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 17,
+            },
+        },
+    ),
+)

@@ -1,0 +1,79 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    List(
+        List {
+            values: [
+                Nil(
+                    NilLit {
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 1,
+                            end: 4,
+                        },
+                    },
+                ),
+                List(
+                    List {
+                        values: [],
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 6,
+                            end: 8,
+                        },
+                    },
+                ),
+                List(
+                    List {
+                        values: [
+                            Nil(
+                                NilLit {
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 11,
+                                        end: 14,
+                                    },
+                                },
+                            ),
+                            I64(
+                                I64Lit {
+                                    base: Dec,
+                                    value: "2",
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 16,
+                                        end: 17,
+                                    },
+                                },
+                            ),
+                        ],
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 10,
+                            end: 19,
+                        },
+                    },
+                ),
+            ],
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 21,
+            },
+        },
+    ),
+)
