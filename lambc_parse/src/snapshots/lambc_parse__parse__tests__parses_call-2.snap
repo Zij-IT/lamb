@@ -1,0 +1,81 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_expr()
+---
+Ok(
+    Call(
+        Call {
+            callee: Call(
+                Call {
+                    callee: I64(
+                        I64Lit {
+                            base: Dec,
+                            value: "2",
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 0,
+                                end: 1,
+                            },
+                        },
+                    ),
+                    args: [
+                        Ident(
+                            Ident {
+                                raw: "one",
+                                span: Span {
+                                    file: FileId(
+                                        0,
+                                    ),
+                                    start: 2,
+                                    end: 5,
+                                },
+                            },
+                        ),
+                        Ident(
+                            Ident {
+                                raw: "two",
+                                span: Span {
+                                    file: FileId(
+                                        0,
+                                    ),
+                                    start: 7,
+                                    end: 10,
+                                },
+                            },
+                        ),
+                    ],
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 0,
+                        end: 11,
+                    },
+                },
+            ),
+            args: [
+                Ident(
+                    Ident {
+                        raw: "three",
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 12,
+                            end: 17,
+                        },
+                    },
+                ),
+            ],
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 18,
+            },
+        },
+    ),
+)

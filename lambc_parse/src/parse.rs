@@ -1,5 +1,5 @@
 use crate::{
-    ArrayPattern, Block, BoolLit, Case, CaseArm, CharLit, CharText, Define, Else, Expr,
+    ArrayPattern, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define, Else, Expr,
     ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
     Index, InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern, Span,
     Statement, StrLit, StrText, TokKind, Token,
@@ -102,6 +102,18 @@ impl<'a> Parser<'a> {
                     res = Expr::Index(Box::new(Index {
                         lhs: res,
                         rhs: index,
+                        span,
+                    }));
+                }
+                TokKind::OpenParen => {
+                    self.next();
+                    let (args, end_tok) =
+                        self.parse_node_list(TokKind::CloseParen, |this| this.parse_expr())?;
+
+                    let span = Span::connect(res.span(), end_tok.span);
+                    res = Expr::Call(Box::new(Call {
+                        callee: res,
+                        args,
                         span,
                     }));
                 }
@@ -1209,5 +1221,19 @@ mod tests {
         expr!("2[one]");
         expr!("2[one][two]");
         expr!("2[one][two][three]");
+    }
+
+    #[test]
+    fn parses_call() {
+        macro_rules! expr {
+            ($expr:expr) => {
+                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_expr());
+            };
+        }
+
+        expr!("2(one)");
+        expr!("2(one, two)(three)");
+        expr!("2(one)(two, three)(four)");
     }
 }

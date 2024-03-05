@@ -196,6 +196,13 @@ pub struct Index {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Call {
+    pub callee: Expr,
+    pub args: Vec<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -211,6 +218,7 @@ pub enum Expr {
     If(Box<If>),
     Case(Box<Case>),
     Index(Box<Index>),
+    Call(Box<Call>),
 }
 
 impl Expr {
@@ -230,6 +238,7 @@ impl Expr {
             Expr::If(e) => e.span,
             Expr::Case(e) => e.span,
             Expr::Index(e) => e.span,
+            Expr::Call(e) => e.span,
         }
     }
 
@@ -244,6 +253,7 @@ impl Expr {
             | Expr::F64(_)
             | Expr::List(_)
             | Expr::Index(_)
+            | Expr::Call(_)
             | Expr::Group(_) => false,
             Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
             Expr::FnDef(f) => f.body.ends_with_block(),
