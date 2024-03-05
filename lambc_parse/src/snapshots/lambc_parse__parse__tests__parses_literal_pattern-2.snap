@@ -1,0 +1,31 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_literal_pattern()
+---
+Ok(
+    Literal(
+        String(
+            StrLit {
+                text: Some(
+                    StrText {
+                        inner: "hello",
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 1,
+                            end: 6,
+                        },
+                    },
+                ),
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 0,
+                    end: 7,
+                },
+            },
+        ),
+    ),
+)

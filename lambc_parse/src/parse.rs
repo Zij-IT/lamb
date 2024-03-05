@@ -1579,46 +1579,18 @@ mod tests {
 
     #[test]
     fn parses_literal_pattern() {
-        let file = FileId(0);
-        let pat = |pat: &str, out| {
-            let mut parser = Parser::new(pat.as_bytes(), file);
-            let lit = parser.parse_literal_pattern();
-            assert_eq!(lit, Ok(InnerPattern::Literal(Box::new(out))));
-        };
+        macro_rules! pat {
+            ($pat:expr) => {
+                let mut parser = Parser::new($pat.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_literal_pattern());
+            };
+        }
 
-        pat("2", LiteralPattern::I64(int("2", I64Base::Dec, 0, 1)));
-
-        pat(
-            "\"hello\"",
-            LiteralPattern::String(StrLit {
-                text: Some(StrText {
-                    inner: "hello".into(),
-                    span: span(1, 6),
-                }),
-                span: span(0, 7),
-            }),
-        );
-
-        pat(
-            "'h'",
-            LiteralPattern::Char(CharLit {
-                text: Some(CharText {
-                    inner: "h".into(),
-                    span: span(1, 2),
-                }),
-                span: span(0, 3),
-            }),
-        );
-
-        pat(
-            "true",
-            LiteralPattern::Bool(BoolLit {
-                value: true,
-                span: span(0, 4),
-            }),
-        );
-
-        pat("nil", LiteralPattern::Nil(NilLit { span: span(0, 3) }));
+        pat!("2");
+        pat!("\"hello\"");
+        pat!("'h'");
+        pat!("true");
+        pat!("nil");
     }
 
     #[test]

@@ -1,0 +1,19 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_literal_pattern()
+---
+Ok(
+    Literal(
+        Nil(
+            NilLit {
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 0,
+                    end: 3,
+                },
+            },
+        ),
+    ),
+)
