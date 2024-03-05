@@ -96,8 +96,8 @@ impl<'a> Parser<'a> {
             TokKind::OpenBrace => self.parse_block()?,
             TokKind::OpenBrack => self.parse_list()?,
             TokKind::OpenParen => self.parse_group()?,
-            TokKind::Fn => self.parse_fn_def(false)?,
-            TokKind::Rec => self.parse_fn_def(true)?,
+            TokKind::Fn => self.parse_fn_def()?,
+            TokKind::Rec => self.parse_fn_def()?,
             TokKind::If => self.parse_if()?,
             TokKind::Case => self.parse_case()?,
             _ => self.parse_literal()?,
@@ -121,8 +121,8 @@ impl<'a> Parser<'a> {
             if self.peek2().kind == TokKind::Assign {
                 let stmt = self.parse_stmt()?;
                 stmts.push(stmt);
-            } else if self.peek1().kind == TokKind::CloseBrace {
-                break (None, self.next());
+            } else if let Some(close) = self.eat(TokKind::CloseBrace) {
+                break (None, close);
             } else {
                 let expr = self.parse_expr()?;
                 let peek1 = self.peek1();
@@ -205,11 +205,10 @@ impl<'a> Parser<'a> {
     ///
     ///     arg_list := ident (',' ident )* ','?
     /// ```
-    fn parse_fn_def(&mut self, is_recursive: bool) -> Result<Expr> {
-        let tok = if is_recursive {
-            let tok = self.expect(TokKind::Rec)?;
+    fn parse_fn_def(&mut self) -> Result<Expr> {
+        let tok = if let Some(rec) = self.eat(TokKind::Rec) {
             self.expect(TokKind::Fn)?;
-            tok
+            rec
         } else {
             self.expect(TokKind::Fn)?
         };
@@ -235,7 +234,7 @@ impl<'a> Parser<'a> {
         Ok(Expr::FnDef(Box::new(FnDef {
             args,
             body: value,
-            recursive: is_recursive,
+            recursive: tok.kind == TokKind::Rec,
             span: Span::connect(tok.span, span),
         })))
     }
@@ -251,8 +250,7 @@ impl<'a> Parser<'a> {
 
         // Vec<Elif>
         let mut elifs = Vec::new();
-        while self.peek1().kind == TokKind::Elif {
-            let elif = self.next();
+        while let Some(elif) = self.eat(TokKind::Elif) {
             let cond = self.parse_expr()?;
             let body = self.parse_raw_block()?;
             let span = Span::connect(elif.span, body.span);
@@ -260,8 +258,7 @@ impl<'a> Parser<'a> {
             elifs.push(IfCond { cond, body, span });
         }
 
-        let els_ = if self.peek1().kind == TokKind::Else {
-            let els_ = self.next();
+        let els_ = if let Some(els_) = self.eat(TokKind::Else) {
             let body = self.parse_raw_block()?;
             let span = Span::connect(els_.span, body.span);
             end_span = span;
@@ -311,11 +308,7 @@ impl<'a> Parser<'a> {
         let end_span = if !value.ends_with_block() {
             self.expect(TokKind::Comma)?.span
         } else {
-            // Eat optional comma
-            if self.peek1().kind == TokKind::Comma {
-                self.next();
-            }
-
+            self.eat(TokKind::Comma);
             value.span()
         };
 
@@ -334,11 +327,10 @@ impl<'a> Parser<'a> {
         let mut patterns = vec![first];
 
         loop {
-            if self.peek1().kind != TokKind::Bor {
+            if self.eat(TokKind::Bor).is_none() {
                 break;
             }
 
-            self.expect(TokKind::Bor)?;
             let pat = self.parse_inner_pattern()?;
             last_span = pat.span();
             patterns.push(pat);
@@ -378,8 +370,7 @@ impl<'a> Parser<'a> {
 
     fn parse_ident_pattern(&mut self) -> Result<InnerPattern> {
         let ident = self.parse_ident()?;
-        let (bound, span) = if self.peek1().kind == TokKind::Bind {
-            self.next();
+        let (bound, span) = if self.eat(TokKind::Bind).is_some() {
             let bound = self.parse_inner_pattern()?;
             let end_span = bound.span();
             (Some(Box::new(bound)), end_span)
@@ -523,8 +514,7 @@ impl<'a> Parser<'a> {
 
     fn parse_string(&mut self) -> Result<StrLit> {
         let tok = self.expect(TokKind::StringStart)?;
-        let text = if self.peek1().kind == TokKind::StringText {
-            let text = self.next();
+        let text = if let Some(text) = self.eat(TokKind::StringText) {
             Some(StrText {
                 inner: text.slice.into_owned(),
                 span: text.span,
@@ -564,8 +554,7 @@ impl<'a> Parser<'a> {
 
     fn parse_char(&mut self) -> Result<CharLit> {
         let tok = self.expect(TokKind::CharStart)?;
-        let text = if self.peek1().kind == TokKind::CharText {
-            let text = self.next();
+        let text = if let Some(text) = self.eat(TokKind::CharText) {
             Some(CharText {
                 inner: text.slice.into_owned(),
                 span: text.span,
@@ -633,9 +622,8 @@ impl<'a> Parser<'a> {
 
             let next = self.next();
             if next.kind == TokKind::Comma {
-                let next = self.peek1();
-                if next.kind == end_kind {
-                    break self.next();
+                if let Some(close) = self.eat(end_kind) {
+                    break close;
                 }
             } else if next.kind == end_kind {
                 break next;
@@ -681,6 +669,14 @@ impl<'a> Parser<'a> {
         self.peek1 = p2;
 
         p1.unwrap_or_else(|| self.lexer.next_nontrival_token())
+    }
+
+    fn eat(&mut self, kind: TokKind) -> Option<Token<'a>> {
+        if self.peek1().kind == kind {
+            return Some(self.next());
+        }
+
+        None
     }
 
     fn expect(&mut self, kind: TokKind) -> Result<Token<'a>> {
