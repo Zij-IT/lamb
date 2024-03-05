@@ -700,9 +700,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ArrayPattern, Block, BoolLit, CharLit, CharText, Define, Else, Expr, ExprStatement, F64Lit,
-        FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond, InnerPattern, List,
-        LiteralPattern, NilLit, Parser, Pattern, RestPattern, Span, Statement, StrLit, StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, NilLit, Parser,
+        Span, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -1078,313 +1077,65 @@ mod tests {
 
     #[test]
     fn parses_nested_group() {
-        let file = FileId(0);
-        let atom = |atom: &str, out| {
-            let mut parser = Parser::new(atom.as_bytes(), file);
-            assert_eq!(parser.parse_atom(), out)
-        };
+        macro_rules! atom {
+            ($atom:expr) => {
+                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_atom());
+            };
+        }
 
-        atom(
-            "((((1))))",
-            Ok(Expr::Group(Box::new(Group {
-                value: Expr::Group(Box::new(Group {
-                    value: Expr::Group(Box::new(Group {
-                        value: Expr::Group(Box::new(Group {
-                            value: Expr::I64(I64Lit {
-                                base: I64Base::Dec,
-                                value: "1".into(),
-                                span: Span::new(4, 5, file),
-                            }),
-                            span: Span::new(3, 6, file),
-                        })),
-                        span: Span::new(2, 7, file),
-                    })),
-                    span: Span::new(1, 8, file),
-                })),
-                span: Span::new(0, 9, file),
-            }))),
-        );
+        atom!("((((1))))");
     }
 
     #[test]
     fn parses_nested_fn_def() {
-        let file = FileId(0);
-        let atom = |atom: &str, out| {
-            let mut parser = Parser::new(atom.as_bytes(), file);
-            assert_eq!(parser.parse_atom(), out)
-        };
+        macro_rules! atom {
+            ($atom:expr) => {
+                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_atom());
+            };
+        }
 
-        atom(
-            "fn(a, b) -> fn(c) -> fn(d, e,) -> nil",
-            Ok(Expr::FnDef(Box::new(FnDef {
-                args: vec![
-                    Ident {
-                        raw: "a".into(),
-                        span: Span::new(3, 4, file),
-                    },
-                    Ident {
-                        raw: "b".into(),
-                        span: Span::new(6, 7, file),
-                    },
-                ],
-                body: Expr::FnDef(Box::new(FnDef {
-                    args: vec![Ident {
-                        raw: "c".into(),
-                        span: Span::new(15, 16, file),
-                    }],
-                    body: Expr::FnDef(Box::new(FnDef {
-                        args: vec![
-                            Ident {
-                                raw: "d".into(),
-                                span: Span::new(24, 25, file),
-                            },
-                            Ident {
-                                raw: "e".into(),
-                                span: Span::new(27, 28, file),
-                            },
-                        ],
-                        body: Expr::Nil(NilLit {
-                            span: Span::new(34, 37, file),
-                        }),
-                        recursive: false,
-                        span: Span::new(21, 37, file),
-                    })),
-                    recursive: false,
-                    span: Span::new(12, 37, file),
-                })),
-                recursive: false,
-                span: Span::new(0, 37, file),
-            }))),
-        );
+        atom!("fn(a, b) -> fn(c) -> fn(d, e,) -> nil");
     }
 
     #[test]
     fn parses_statement() {
-        let file = FileId(0);
-        let stmt = |stmt: &str, out| {
-            let mut parser = Parser::new(stmt.as_bytes(), file);
-            assert_eq!(parser.parse_stmt(), out)
-        };
+        macro_rules! stmt {
+            ($stmt:expr) => {
+                let mut parser = Parser::new($stmt.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_stmt());
+            };
+        }
 
-        stmt(
-            "x := 2;",
-            Ok(Statement::Define(Define {
-                ident: Ident {
-                    raw: "x".into(),
-                    span: Span::new(0, 1, file),
-                },
-                value: Expr::I64(I64Lit {
-                    base: I64Base::Dec,
-                    value: "2".into(),
-                    span: Span::new(5, 6, file),
-                }),
-                span: Span::new(0, 7, file),
-            })),
-        );
-
-        stmt(
-            "2;",
-            Ok(Statement::Expr(ExprStatement {
-                expr: Expr::I64(I64Lit {
-                    base: I64Base::Dec,
-                    value: "2".into(),
-                    span: Span::new(0, 1, file),
-                }),
-                span: Span::new(0, 2, file),
-            })),
-        );
-
-        stmt(
-            "fn(a, b) -> fn(c) -> fn(d, e,) -> nil;",
-            Ok(Statement::Expr(ExprStatement {
-                expr: Expr::FnDef(Box::new(FnDef {
-                    args: vec![
-                        Ident {
-                            raw: "a".into(),
-                            span: Span::new(3, 4, file),
-                        },
-                        Ident {
-                            raw: "b".into(),
-                            span: Span::new(6, 7, file),
-                        },
-                    ],
-                    body: Expr::FnDef(Box::new(FnDef {
-                        args: vec![Ident {
-                            raw: "c".into(),
-                            span: Span::new(15, 16, file),
-                        }],
-                        body: Expr::FnDef(Box::new(FnDef {
-                            args: vec![
-                                Ident {
-                                    raw: "d".into(),
-                                    span: Span::new(24, 25, file),
-                                },
-                                Ident {
-                                    raw: "e".into(),
-                                    span: Span::new(27, 28, file),
-                                },
-                            ],
-                            body: Expr::Nil(NilLit {
-                                span: Span::new(34, 37, file),
-                            }),
-                            recursive: false,
-                            span: Span::new(21, 37, file),
-                        })),
-                        recursive: false,
-                        span: Span::new(12, 37, file),
-                    })),
-                    recursive: false,
-                    span: Span::new(0, 37, file),
-                })),
-                span: Span::new(0, 38, file),
-            })),
-        );
+        stmt!("x := 2;");
+        stmt!("2;");
+        stmt!("fn(a, b) -> fn(c) -> fn(d, e,) -> nil;");
     }
 
     #[test]
     fn parse_nested_blocks() {
-        let file = FileId(0);
-        let atom = |atom: &str, out| {
-            let mut parser = Parser::new(atom.as_bytes(), file);
-            assert_eq!(parser.parse_atom(), out)
-        };
+        macro_rules! atom {
+            ($atom:expr) => {
+                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_atom());
+            };
+        }
 
-        atom(
-            "{ { { } } }",
-            Ok(Expr::Block(Box::new(Block {
-                statements: vec![],
-                value: Some(Expr::Block(Box::new(Block {
-                    statements: vec![],
-                    value: Some(Expr::Block(Box::new(Block {
-                        statements: vec![],
-                        value: None,
-                        span: Span::new(4, 7, file),
-                    }))),
-                    span: Span::new(2, 9, file),
-                }))),
-                span: Span::new(0, 11, file),
-            }))),
-        );
-
-        atom(
-            "{ x := 2; { x := 2; { x := { 2 }; } } }",
-            Ok(Expr::Block(Box::new(Block {
-                statements: vec![Statement::Define(Define {
-                    ident: Ident {
-                        raw: "x".into(),
-                        span: Span::new(2, 3, file),
-                    },
-                    value: Expr::I64(I64Lit {
-                        base: I64Base::Dec,
-                        value: "2".into(),
-                        span: Span::new(7, 8, file),
-                    }),
-                    span: Span::new(2, 9, file),
-                })],
-                value: Some(Expr::Block(Box::new(Block {
-                    statements: vec![Statement::Define(Define {
-                        ident: Ident {
-                            raw: "x".into(),
-                            span: Span::new(12, 13, file),
-                        },
-                        value: Expr::I64(I64Lit {
-                            base: I64Base::Dec,
-                            value: "2".into(),
-                            span: Span::new(17, 18, file),
-                        }),
-                        span: Span::new(12, 19, file),
-                    })],
-                    value: Some(Expr::Block(Box::new(Block {
-                        statements: vec![Statement::Define(Define {
-                            ident: Ident {
-                                raw: "x".into(),
-                                span: Span::new(22, 23, file),
-                            },
-                            value: Expr::Block(Box::new(Block {
-                                statements: vec![],
-                                value: Some(Expr::I64(I64Lit {
-                                    base: I64Base::Dec,
-                                    value: "2".into(),
-                                    span: Span::new(29, 30, file),
-                                })),
-                                span: Span::new(27, 32, file),
-                            })),
-                            span: Span::new(22, 33, file),
-                        })],
-                        value: None,
-                        span: Span::new(20, 35, file),
-                    }))),
-                    span: Span::new(10, 37, file),
-                }))),
-                span: Span::new(0, 39, file),
-            }))),
-        );
+        atom!("{ { { } } }");
+        atom!("{ x := 2; { x := 2; { x := { 2 }; } } }");
     }
 
     #[test]
     fn parses_nested_ifs() {
-        let file = FileId(0);
-        let atom = |atom: &str, out| {
-            let mut parser = Parser::new(atom.as_bytes(), file);
-            assert_eq!(parser.parse_atom(), out)
-        };
+        macro_rules! atom {
+            ($atom:expr) => {
+                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_atom());
+            };
+        }
 
-        atom(
-            "if true { if true { } } elif false { } elif false { } else { }",
-            Ok(Expr::If(Box::new(If {
-                cond: IfCond {
-                    cond: Expr::Bool(bool(true, 3, 7)),
-                    body: Block {
-                        statements: vec![],
-                        value: Some(Expr::If(Box::new(If {
-                            cond: IfCond {
-                                cond: Expr::Bool(bool(true, 13, 17)),
-                                body: Block {
-                                    statements: vec![],
-                                    value: None,
-                                    span: span(18, 21),
-                                },
-                                span: span(10, 21),
-                            },
-                            elif: vec![],
-                            els_: None,
-                            span: span(10, 21),
-                        }))),
-                        span: span(8, 23),
-                    },
-                    span: span(0, 23),
-                },
-                elif: vec![
-                    IfCond {
-                        cond: Expr::Bool(bool(false, 29, 34)),
-                        body: Block {
-                            statements: vec![],
-                            value: None,
-                            span: span(35, 38),
-                        },
-                        span: span(24, 38),
-                    },
-                    IfCond {
-                        cond: Expr::Bool(bool(false, 44, 49)),
-                        body: Block {
-                            statements: vec![],
-                            value: None,
-                            span: span(50, 53),
-                        },
-                        span: span(39, 53),
-                    },
-                ],
-                els_: Some(Else {
-                    body: Block {
-                        statements: vec![],
-                        value: None,
-                        span: span(59, 62),
-                    },
-                    span: span(54, 62),
-                }),
-                span: span(0, 62),
-            }))),
-        );
+        atom!("if true { if true { } } elif false { } elif false { } else { }");
     }
 
     #[test]

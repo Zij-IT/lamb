@@ -1,0 +1,47 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    Block(
+        Block {
+            statements: [],
+            value: Some(
+                Block(
+                    Block {
+                        statements: [],
+                        value: Some(
+                            Block(
+                                Block {
+                                    statements: [],
+                                    value: None,
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 4,
+                                        end: 7,
+                                    },
+                                },
+                            ),
+                        ),
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 2,
+                            end: 9,
+                        },
+                    },
+                ),
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 11,
+            },
+        },
+    ),
+)

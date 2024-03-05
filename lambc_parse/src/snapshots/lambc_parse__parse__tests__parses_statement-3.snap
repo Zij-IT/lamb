@@ -1,0 +1,120 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_stmt()
+---
+Ok(
+    Expr(
+        ExprStatement {
+            expr: FnDef(
+                FnDef {
+                    args: [
+                        Ident {
+                            raw: "a",
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 3,
+                                end: 4,
+                            },
+                        },
+                        Ident {
+                            raw: "b",
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 6,
+                                end: 7,
+                            },
+                        },
+                    ],
+                    body: FnDef(
+                        FnDef {
+                            args: [
+                                Ident {
+                                    raw: "c",
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 15,
+                                        end: 16,
+                                    },
+                                },
+                            ],
+                            body: FnDef(
+                                FnDef {
+                                    args: [
+                                        Ident {
+                                            raw: "d",
+                                            span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 24,
+                                                end: 25,
+                                            },
+                                        },
+                                        Ident {
+                                            raw: "e",
+                                            span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 27,
+                                                end: 28,
+                                            },
+                                        },
+                                    ],
+                                    body: Nil(
+                                        NilLit {
+                                            span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 34,
+                                                end: 37,
+                                            },
+                                        },
+                                    ),
+                                    recursive: false,
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 21,
+                                        end: 37,
+                                    },
+                                },
+                            ),
+                            recursive: false,
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 12,
+                                end: 37,
+                            },
+                        },
+                    ),
+                    recursive: false,
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 0,
+                        end: 37,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 38,
+            },
+        },
+    ),
+)

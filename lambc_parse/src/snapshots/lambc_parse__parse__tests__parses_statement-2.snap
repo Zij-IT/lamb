@@ -1,0 +1,30 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_stmt()
+---
+Ok(
+    Expr(
+        ExprStatement {
+            expr: I64(
+                I64Lit {
+                    base: Dec,
+                    value: "2",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 0,
+                        end: 1,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 2,
+            },
+        },
+    ),
+)
