@@ -1,7 +1,8 @@
 use crate::{
-    Block, BoolLit, CharLit, CharText, Define, Else, Expr, ExprStatement, F64Lit, FileId, FnDef,
-    Group, I64Base, I64Lit, Ident, If, IfCond, Lexer, List, NilLit, Span, Statement, StrLit,
-    StrText, TokKind, Token,
+    ArrayPattern, Block, BoolLit, Case, CaseArm, CharLit, CharText, Define, Else, Expr,
+    ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
+    InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern, Span, Statement,
+    StrLit, StrText, TokKind, Token,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -98,6 +99,7 @@ impl<'a> Parser<'a> {
             TokKind::Fn => self.parse_fn_def(false)?,
             TokKind::Rec => self.parse_fn_def(true)?,
             TokKind::If => self.parse_if()?,
+            TokKind::Case => self.parse_case()?,
             _ => self.parse_literal()?,
         })
     }
@@ -275,6 +277,152 @@ impl<'a> Parser<'a> {
             els_,
             span,
         })))
+    }
+
+    fn parse_case(&mut self) -> Result<Expr> {
+        let case = self.expect(TokKind::Case)?;
+        let scrutinee = self.parse_expr()?;
+        self.expect(TokKind::OpenBrace)?;
+
+        let mut arms = Vec::new();
+        while self.peek1().kind != TokKind::CloseBrace {
+            arms.push(self.parse_case_arm()?);
+        }
+
+        let close = self.expect(TokKind::CloseBrace)?;
+        Ok(Expr::Case(Box::new(Case {
+            scrutinee,
+            arms,
+            span: Span::connect(case.span, close.span),
+        })))
+    }
+
+    /// Parses any value literal, such as that of a string or number, as well as an identifier.
+    /// ```text
+    /// Grammar:
+    ///
+    /// case_arm := pattern '->' block_expr
+    ///           | pattern '->' expr ','
+    /// ```
+    fn parse_case_arm(&mut self) -> Result<CaseArm> {
+        let pattern = self.parse_pattern()?;
+        self.expect(TokKind::Arrow)?;
+        let value = self.parse_expr()?;
+        let end_span = if !value.ends_with_block() {
+            self.expect(TokKind::Comma)?.span
+        } else {
+            // Eat optional comma
+            if self.peek1().kind == TokKind::Comma {
+                self.next();
+            }
+
+            value.span()
+        };
+
+        let span = pattern.span;
+        Ok(CaseArm {
+            pattern,
+            body: value,
+            span: Span::connect(span, end_span),
+        })
+    }
+
+    fn parse_pattern(&mut self) -> Result<Pattern> {
+        let first = self.parse_inner_pattern()?;
+        let first_span = first.span();
+        let mut last_span = first_span;
+        let mut patterns = vec![first];
+
+        loop {
+            if self.peek1().kind != TokKind::Bor {
+                break;
+            }
+
+            self.expect(TokKind::Bor)?;
+            let pat = self.parse_inner_pattern()?;
+            last_span = pat.span();
+            patterns.push(pat);
+        }
+
+        Ok(Pattern {
+            inner: patterns,
+            span: Span::connect(first_span, last_span),
+        })
+    }
+
+    fn parse_inner_pattern(&mut self) -> Result<InnerPattern> {
+        let peek1 = self.peek1();
+        match peek1.kind {
+            TokKind::OpenBrack => self.parse_array_pattern(),
+            TokKind::DotDot => self.parse_rest_pattern(),
+            TokKind::Ident => self.parse_ident_pattern(),
+            _ => self.parse_literal_pattern(),
+        }
+    }
+
+    fn parse_array_pattern(&mut self) -> Result<InnerPattern> {
+        let start = self.expect(TokKind::OpenBrack)?.span;
+        let (patterns, end) =
+            self.parse_node_list(TokKind::CloseBrack, |this| this.parse_pattern())?;
+
+        Ok(InnerPattern::Array(Box::new(ArrayPattern {
+            patterns,
+            span: Span::connect(start, end.span),
+        })))
+    }
+
+    fn parse_rest_pattern(&mut self) -> Result<InnerPattern> {
+        let span = self.expect(TokKind::DotDot)?.span;
+        Ok(InnerPattern::Rest(Box::new(RestPattern { span })))
+    }
+
+    fn parse_ident_pattern(&mut self) -> Result<InnerPattern> {
+        let ident = self.parse_ident()?;
+        let (bound, span) = if self.peek1().kind == TokKind::Bind {
+            self.next();
+            let bound = self.parse_inner_pattern()?;
+            let end_span = bound.span();
+            (Some(Box::new(bound)), end_span)
+        } else {
+            (None, ident.span)
+        };
+
+        let span = Span::connect(ident.span, span);
+        Ok(InnerPattern::Ident(Box::new(IdentPattern {
+            ident,
+            bound,
+            span,
+        })))
+    }
+
+    fn parse_literal_pattern(&mut self) -> Result<InnerPattern> {
+        let tok = self.peek1();
+        let lit = match tok.kind {
+            TokKind::Nil => LiteralPattern::Nil(self.parse_nil()?),
+            TokKind::StringStart => LiteralPattern::String(self.parse_string()?),
+            TokKind::CharStart => LiteralPattern::Char(self.parse_char()?),
+            TokKind::True | TokKind::False => LiteralPattern::Bool(self.parse_bool()?),
+            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
+                LiteralPattern::I64(self.parse_i64()?)
+            }
+            // Parse a negative number literal
+            TokKind::Sub => {
+                let neg = self.next();
+                let mut num = self.parse_i64()?;
+                let spaces = " ".repeat((num.span.start - neg.span.end).saturating_sub(1));
+                num.value = format!("-{}{}", spaces, num.value);
+                num.span = Span::connect(neg.span, num.span);
+                LiteralPattern::I64(num)
+            }
+            _ => {
+                return Err(Error {
+                    message: format!("Expected pattern, but found '{}'", tok.slice),
+                    span: tok.span,
+                })
+            }
+        };
+
+        Ok(InnerPattern::Literal(Box::new(lit)))
     }
 
     /// Parses any value literal, such as that of a string or number, as well as an identifier.
@@ -552,9 +700,9 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Block, BoolLit, CharLit, CharText, Define, Else, Expr, ExprStatement, F64Lit, FileId,
-        FnDef, Group, I64Base, I64Lit, Ident, If, IfCond, List, NilLit, Parser, Span, Statement,
-        StrLit, StrText,
+        ArrayPattern, Block, BoolLit, CharLit, CharText, Define, Else, Expr, ExprStatement, F64Lit,
+        FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond, InnerPattern, List,
+        LiteralPattern, NilLit, Parser, Pattern, RestPattern, Span, Statement, StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -1004,6 +1152,20 @@ mod tests {
                 span: Span::new(0, 3, file),
             }))),
         );
+
+        let input = r#"
+            case nil {
+                [] | [one] -> fn() -> {}
+                [[[[]]]] -> {}
+                [2, .., "hi"] -> if true {} elif false {}
+                hik @ 2 -> 2,
+                -2 -> 2,
+            }
+        "#;
+
+        // TODO: Replace this with a snapshot test
+        let mut parser = Parser::new(input.as_bytes(), file);
+        assert!(parser.parse_case().is_ok());
     }
 
     #[test]
@@ -1523,6 +1685,171 @@ mod tests {
                 }),
                 span: span(0, 62),
             }))),
+        );
+    }
+
+    #[test]
+    fn parses_literal_pattern() {
+        let file = FileId(0);
+        let pat = |pat: &str, out| {
+            let mut parser = Parser::new(pat.as_bytes(), file);
+            let lit = parser.parse_literal_pattern();
+            assert_eq!(lit, Ok(InnerPattern::Literal(Box::new(out))));
+        };
+
+        pat("2", LiteralPattern::I64(int("2", I64Base::Dec, 0, 1)));
+
+        pat(
+            "\"hello\"",
+            LiteralPattern::String(StrLit {
+                text: Some(StrText {
+                    inner: "hello".into(),
+                    span: span(1, 6),
+                }),
+                span: span(0, 7),
+            }),
+        );
+
+        pat(
+            "'h'",
+            LiteralPattern::Char(CharLit {
+                text: Some(CharText {
+                    inner: "h".into(),
+                    span: span(1, 2),
+                }),
+                span: span(0, 3),
+            }),
+        );
+
+        pat(
+            "true",
+            LiteralPattern::Bool(BoolLit {
+                value: true,
+                span: span(0, 4),
+            }),
+        );
+
+        pat("nil", LiteralPattern::Nil(NilLit { span: span(0, 3) }));
+    }
+
+    #[test]
+    fn parses_array_pattern() {
+        let file = FileId(0);
+        let pat = |pat: &str, out| {
+            let mut parser = Parser::new(pat.as_bytes(), file);
+            let lit = parser.parse_array_pattern();
+            assert_eq!(lit, Ok(InnerPattern::Array(Box::new(out))));
+        };
+
+        pat(
+            "[]",
+            ArrayPattern {
+                patterns: vec![],
+                span: span(0, 2),
+            },
+        );
+
+        pat(
+            "[1, 2]",
+            ArrayPattern {
+                patterns: vec![
+                    Pattern {
+                        inner: vec![InnerPattern::Literal(Box::new(LiteralPattern::I64(
+                            I64Lit {
+                                base: I64Base::Dec,
+                                value: "1".into(),
+                                span: span(1, 2),
+                            },
+                        )))],
+                        span: span(1, 2),
+                    },
+                    Pattern {
+                        inner: vec![InnerPattern::Literal(Box::new(LiteralPattern::I64(
+                            I64Lit {
+                                base: I64Base::Dec,
+                                value: "2".into(),
+                                span: span(4, 5),
+                            },
+                        )))],
+                        span: span(4, 5),
+                    },
+                ],
+                span: span(0, 6),
+            },
+        );
+
+        pat(
+            "[[[]]]",
+            ArrayPattern {
+                patterns: vec![Pattern {
+                    inner: vec![InnerPattern::Array(Box::new(ArrayPattern {
+                        patterns: vec![Pattern {
+                            inner: vec![InnerPattern::Array(Box::new(ArrayPattern {
+                                patterns: vec![],
+                                span: span(2, 4),
+                            }))],
+                            span: span(2, 4),
+                        }],
+                        span: span(1, 5),
+                    }))],
+                    span: span(1, 5),
+                }],
+                span: span(0, 6),
+            },
+        );
+    }
+
+    #[test]
+    fn parses_ident_pattern() {
+        let file = FileId(0);
+        let pat = |pat: &str, out| {
+            let mut parser = Parser::new(pat.as_bytes(), file);
+            let lit = parser.parse_ident_pattern();
+            assert_eq!(lit, Ok(InnerPattern::Ident(Box::new(out))));
+        };
+
+        pat(
+            "i",
+            IdentPattern {
+                ident: Ident {
+                    raw: "i".into(),
+                    span: span(0, 1),
+                },
+                bound: None,
+                span: span(0, 1),
+            },
+        );
+
+        pat(
+            "i @ 1",
+            IdentPattern {
+                ident: Ident {
+                    raw: "i".into(),
+                    span: span(0, 1),
+                },
+                bound: Some(Box::new(InnerPattern::Literal(Box::new(
+                    LiteralPattern::I64(I64Lit {
+                        base: I64Base::Dec,
+                        value: "1".into(),
+                        span: span(4, 5),
+                    }),
+                )))),
+                span: span(0, 5),
+            },
+        );
+
+        pat(
+            "i @ ..",
+            IdentPattern {
+                ident: Ident {
+                    raw: "i".into(),
+                    span: span(0, 1),
+                },
+                bound: Some(Box::new(InnerPattern::Rest(Box::new(RestPattern {
+                    span: span(4, 6),
+                })))),
+                span: span(0, 6),
+            },
         );
     }
 }

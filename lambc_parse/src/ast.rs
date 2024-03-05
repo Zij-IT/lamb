@@ -111,6 +111,84 @@ pub struct If {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Case {
+    pub scrutinee: Expr,
+    pub arms: Vec<CaseArm>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CaseArm {
+    pub pattern: Pattern,
+    pub body: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Pattern {
+    pub inner: Vec<InnerPattern>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum InnerPattern {
+    Literal(Box<LiteralPattern>),
+    Array(Box<ArrayPattern>),
+    Ident(Box<IdentPattern>),
+    Rest(Box<RestPattern>),
+}
+
+impl InnerPattern {
+    pub fn span(&self) -> Span {
+        match self {
+            InnerPattern::Literal(p) => p.span(),
+            InnerPattern::Array(p) => p.span,
+            InnerPattern::Ident(p) => p.span,
+            InnerPattern::Rest(p) => p.span,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct RestPattern {
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum LiteralPattern {
+    String(StrLit),
+    Bool(BoolLit),
+    Char(CharLit),
+    I64(I64Lit),
+    Nil(NilLit),
+}
+
+impl LiteralPattern {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::String(p) => p.span,
+            Self::Bool(p) => p.span,
+            Self::Char(p) => p.span,
+            Self::I64(p) => p.span,
+            Self::Nil(p) => p.span,
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct IdentPattern {
+    pub ident: Ident,
+    pub bound: Option<Box<InnerPattern>>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ArrayPattern {
+    pub patterns: Vec<Pattern>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -124,6 +202,7 @@ pub enum Expr {
     FnDef(Box<FnDef>),
     Block(Box<Block>),
     If(Box<If>),
+    Case(Box<Case>),
 }
 
 impl Expr {
@@ -141,6 +220,23 @@ impl Expr {
             Expr::FnDef(e) => e.span,
             Expr::Block(e) => e.span,
             Expr::If(e) => e.span,
+            Expr::Case(e) => e.span,
+        }
+    }
+
+    pub fn ends_with_block(&self) -> bool {
+        match self {
+            Expr::Ident(_)
+            | Expr::Char(_)
+            | Expr::String(_)
+            | Expr::Bool(_)
+            | Expr::Nil(_)
+            | Expr::I64(_)
+            | Expr::F64(_)
+            | Expr::List(_)
+            | Expr::Group(_) => false,
+            Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
+            Expr::FnDef(f) => f.body.ends_with_block(),
         }
     }
 }
