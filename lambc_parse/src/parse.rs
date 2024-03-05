@@ -713,19 +713,6 @@ mod tests {
         }
     }
 
-    fn nil(start: usize, end: usize) -> NilLit {
-        NilLit {
-            span: span(start, end),
-        }
-    }
-
-    fn bool(value: bool, start: usize, end: usize) -> BoolLit {
-        BoolLit {
-            value,
-            span: span(start, end),
-        }
-    }
-
     fn span(start: usize, end: usize) -> Span {
         Span::new(start, end, FileId(0))
     }
