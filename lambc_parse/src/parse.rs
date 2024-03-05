@@ -109,43 +109,7 @@ impl<'a> Parser<'a> {
     ///     block_expr := '{' stat* expr? '}'
     /// ```
     fn parse_block(&mut self) -> Result<Expr> {
-        let open = self.expect(TokKind::OpenBrace)?;
-        let mut stmts = Vec::new();
-        let (value, close) = loop {
-            if self.peek2().kind == TokKind::Assign {
-                let stmt = self.parse_stmt()?;
-                stmts.push(stmt);
-            } else if self.peek1().kind == TokKind::CloseBrace {
-                break (None, self.next());
-            } else {
-                let expr = self.parse_expr()?;
-                let peek1 = self.peek1();
-                if peek1.kind == TokKind::Semi {
-                    let semi = self.next();
-                    let span = expr.span();
-                    let stmt = Statement::Expr(ExprStatement {
-                        expr,
-                        span: Span::connect(span, semi.span),
-                    });
-
-                    stmts.push(stmt);
-                } else if peek1.kind == TokKind::CloseBrace {
-                    break (Some(expr), self.next());
-                } else {
-                    let err_tok = self.next();
-                    return Err(Error {
-                        message: format!("Expected a ';' or '}}', but found '{}'", err_tok.slice),
-                        span: err_tok.span,
-                    });
-                }
-            }
-        };
-
-        Ok(Expr::Block(Box::new(Block {
-            statements: stmts,
-            value,
-            span: Span::connect(open.span, close.span),
-        })))
+        Ok(Expr::Block(Box::new(self.parse_raw_block()?)))
     }
 
     fn parse_raw_block(&mut self) -> Result<Block> {
