@@ -1,0 +1,30 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    Group(
+        Group {
+            value: I64(
+                I64Lit {
+                    base: Dec,
+                    value: "1",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 1,
+                        end: 2,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 3,
+            },
+        },
+    ),
+)

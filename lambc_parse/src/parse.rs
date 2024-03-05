@@ -1025,135 +1025,27 @@ mod tests {
 
     #[test]
     fn parses_atom() {
-        let file = FileId(0);
-        let atom = |atom: &str, out| {
-            let mut parser = Parser::new(atom.as_bytes(), file);
-            assert_eq!(parser.parse_atom(), out)
-        };
+        macro_rules! atom {
+            ($atom:expr) => {
+                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_atom());
+            };
+        }
 
-        atom(
-            "true",
-            Ok(Expr::Bool(BoolLit {
-                value: true,
-                span: Span::new(0, 4, file),
-            })),
-        );
-
-        atom(
-            "false",
-            Ok(Expr::Bool(BoolLit {
-                value: false,
-                span: Span::new(0, 5, file),
-            })),
-        );
-
-        atom(
-            "2.0e2",
-            Ok(Expr::F64(F64Lit {
-                value: "2.0e2".into(),
-                span: Span::new(0, 5, file),
-            })),
-        );
-
-        atom(
-            "nil",
-            Ok(Expr::Nil(NilLit {
-                span: Span::new(0, 3, file),
-            })),
-        );
-
-        atom(
-            "42",
-            Ok(Expr::I64(I64Lit {
-                base: I64Base::Dec,
-                value: "42".into(),
-                span: Span::new(0, 2, file),
-            })),
-        );
-
-        atom(
-            "\"\"",
-            Ok(Expr::String(StrLit {
-                text: None,
-                span: Span::new(0, 2, file),
-            })),
-        );
-
-        atom(
-            "\"hello:nworld\"",
-            Ok(Expr::String(StrLit {
-                text: Some(StrText {
-                    inner: "hello\nworld".into(),
-                    span: Span::new(1, 13, file),
-                }),
-                span: Span::new(0, 14, file),
-            })),
-        );
-
-        atom(
-            "''",
-            Ok(Expr::Char(CharLit {
-                text: None,
-                span: Span::new(0, 2, file),
-            })),
-        );
-
-        atom(
-            "'hello:nworld'",
-            Ok(Expr::Char(CharLit {
-                text: Some(CharText {
-                    inner: "hello\nworld".into(),
-                    span: Span::new(1, 13, file),
-                }),
-                span: Span::new(0, 14, file),
-            })),
-        );
-
-        atom(
-            "[]",
-            Ok(Expr::List(List {
-                values: vec![],
-                span: Span::new(0, 2, file),
-            })),
-        );
-
-        atom(
-            "[nil, 2, \"hello\"]",
-            Ok(Expr::List(List {
-                values: vec![
-                    Expr::Nil(NilLit {
-                        span: Span::new(1, 4, file),
-                    }),
-                    Expr::I64(I64Lit {
-                        base: I64Base::Dec,
-                        value: "2".into(),
-                        span: Span::new(6, 7, file),
-                    }),
-                    Expr::String(StrLit {
-                        text: Some(StrText {
-                            inner: "hello".into(),
-                            span: Span::new(10, 15, file),
-                        }),
-                        span: Span::new(9, 16, file),
-                    }),
-                ],
-                span: Span::new(0, 17, file),
-            })),
-        );
-
-        atom(
-            "(1)",
-            Ok(Expr::Group(Box::new(Group {
-                value: Expr::I64(I64Lit {
-                    base: I64Base::Dec,
-                    value: "1".into(),
-                    span: Span::new(1, 2, file),
-                }),
-                span: Span::new(0, 3, file),
-            }))),
-        );
-
-        let input = r#"
+        atom!("true");
+        atom!("false");
+        atom!("2.0e2");
+        atom!("nil");
+        atom!("42");
+        atom!("\"\"");
+        atom!("\"hello:nworld\"");
+        atom!("''");
+        atom!("'hello:nworld'");
+        atom!("[]");
+        atom!("[nil, 2, \"hello\"]");
+        atom!("(1)");
+        atom!(
+            r#"
             case nil {
                 [] | [one] -> fn() -> {}
                 [[[[]]]] -> {}
@@ -1161,11 +1053,8 @@ mod tests {
                 hik @ 2 -> 2,
                 -2 -> 2,
             }
-        "#;
-
-        // TODO: Replace this with a snapshot test
-        let mut parser = Parser::new(input.as_bytes(), file);
-        assert!(parser.parse_case().is_ok());
+        "#
+        );
     }
 
     #[test]

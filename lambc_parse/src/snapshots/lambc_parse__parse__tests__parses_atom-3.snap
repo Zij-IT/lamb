@@ -1,0 +1,18 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    F64(
+        F64Lit {
+            value: "2.0e2",
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 5,
+            },
+        },
+    ),
+)

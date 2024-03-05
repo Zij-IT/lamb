@@ -1,0 +1,18 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    String(
+        StrLit {
+            text: None,
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 2,
+            },
+        },
+    ),
+)

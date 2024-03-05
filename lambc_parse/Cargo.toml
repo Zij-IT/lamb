@@ -10,4 +10,5 @@ miette = "7.0.0"
 thiserror = "1.0.56"
 
 [dev-dependencies]
+insta = "1.36.1"
 pretty_assertions = "1.4.0"

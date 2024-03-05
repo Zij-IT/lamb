@@ -1,0 +1,19 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_atom()
+---
+Ok(
+    I64(
+        I64Lit {
+            base: Dec,
+            value: "42",
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 2,
+            },
+        },
+    ),
+)
