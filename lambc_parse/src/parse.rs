@@ -1,8 +1,8 @@
 use crate::{
-    ArrayPattern, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define, Else, Expr,
-    ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
-    Index, InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern, Span,
-    Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+    ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
+    Else, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern,
+    If, IfCond, Index, InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern,
+    Span, Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -86,7 +86,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_expr_pratt(&mut self, min_bp: u8) -> Result<Expr> {
         let peek = self.peek1();
-        let lhs = match peek.kind {
+        let mut lhs = match peek.kind {
             TokKind::Sub | TokKind::Bneg | TokKind::Lnot => {
                 let tok = self.next();
                 let op = UnaryOp::from(tok.kind);
@@ -101,6 +101,47 @@ impl<'a> Parser<'a> {
             }
             _ => self.parse_chained_expr()?,
         };
+
+        loop {
+            let op = match self.peek1().kind {
+                TokKind::Add => BinaryOp::Add,
+                TokKind::Sub => BinaryOp::Sub,
+                TokKind::Mul => BinaryOp::Mul,
+                TokKind::Div => BinaryOp::Div,
+                TokKind::Mod => BinaryOp::Mod,
+                TokKind::Appl => BinaryOp::Appl,
+                TokKind::Appr => BinaryOp::Appr,
+                TokKind::Cpsl => BinaryOp::Cpsl,
+                TokKind::Cpsr => BinaryOp::Cpsr,
+                TokKind::Land => BinaryOp::Land,
+                TokKind::Lor => BinaryOp::Lor,
+                TokKind::Eq => BinaryOp::Eq,
+                TokKind::Ne => BinaryOp::Ne,
+                TokKind::Ge => BinaryOp::Ge,
+                TokKind::Gt => BinaryOp::Gt,
+                TokKind::Le => BinaryOp::Le,
+                TokKind::Lt => BinaryOp::Lt,
+                TokKind::Bor => BinaryOp::Bor,
+                TokKind::Xor => BinaryOp::Bxor,
+                TokKind::Band => BinaryOp::Band,
+                _ => break,
+            };
+
+            let (lbp, rbp) = op.infix_bp();
+            if lbp < min_bp {
+                break;
+            }
+
+            let op_tok = self.next();
+            let rhs = self.parse_expr_pratt(rbp)?;
+            lhs = Expr::Binary(Box::new(Binary {
+                span: Span::connect(lhs.span(), rhs.span()),
+                op_span: op_tok.span,
+                lhs,
+                rhs,
+                op,
+            }));
+        }
 
         Ok(lhs)
     }
@@ -1283,5 +1324,7 @@ mod tests {
         expr!("- - - - -2");
         expr!("!!true");
         expr!("-hello[there][people]");
+        expr!("2 + hello[0] * 4");
+        expr!("me $> improvise .> adapt .> overcome");
     }
 }

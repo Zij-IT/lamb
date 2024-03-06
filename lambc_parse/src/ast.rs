@@ -203,6 +203,70 @@ pub struct Call {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Binary {
+    pub lhs: Expr,
+    pub op: BinaryOp,
+    pub rhs: Expr,
+    pub span: Span,
+    // Must be a subspan of `span`
+    pub op_span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum BinaryOp {
+    Appl,
+    Appr,
+    Cpsl,
+    Cpsr,
+    Land,
+    Lor,
+    Eq,
+    Ne,
+    Ge,
+    Gt,
+    Le,
+    Lt,
+    Bor,
+    Bxor,
+    Band,
+    Shr,
+    Shl,
+    Add,
+    Sub,
+    Div,
+    Mod,
+    Mul,
+}
+
+impl BinaryOp {
+    pub fn infix_bp(self) -> (u8, u8) {
+        match self {
+            BinaryOp::Appl => (1, 2),
+            BinaryOp::Appr => (1, 2),
+            BinaryOp::Cpsl => (2, 3),
+            BinaryOp::Cpsr => (2, 3),
+            BinaryOp::Land => (3, 4),
+            BinaryOp::Lor => (4, 5),
+            BinaryOp::Eq => (5, 6),
+            BinaryOp::Ne => (5, 6),
+            BinaryOp::Ge => (5, 6),
+            BinaryOp::Gt => (5, 6),
+            BinaryOp::Le => (5, 6),
+            BinaryOp::Lt => (5, 6),
+            BinaryOp::Bor => (6, 7),
+            BinaryOp::Bxor => (7, 8),
+            BinaryOp::Band => (8, 9),
+            BinaryOp::Shr => (9, 10),
+            BinaryOp::Shl => (9, 10),
+            BinaryOp::Add => (10, 11),
+            BinaryOp::Sub => (10, 11),
+            BinaryOp::Div => (11, 12),
+            BinaryOp::Mod => (11, 12),
+            BinaryOp::Mul => (11, 12),
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Unary {
     pub rhs: Expr,
@@ -221,7 +285,9 @@ pub enum UnaryOp {
 
 impl UnaryOp {
     pub(crate) fn rbp(&self) -> u8 {
-        todo!()
+        match self {
+            UnaryOp::Nneg | UnaryOp::Lnot | UnaryOp::Bneg => 11,
+        }
     }
 }
 
@@ -254,6 +320,7 @@ pub enum Expr {
     Index(Box<Index>),
     Call(Box<Call>),
     Unary(Box<Unary>),
+    Binary(Box<Binary>),
 }
 
 impl Expr {
@@ -275,6 +342,7 @@ impl Expr {
             Expr::Index(e) => e.span,
             Expr::Call(e) => e.span,
             Expr::Unary(e) => e.span,
+            Expr::Binary(e) => e.span,
         }
     }
 
@@ -293,6 +361,7 @@ impl Expr {
             | Expr::Unary(_)
             | Expr::Group(_) => false,
             Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
+            Expr::Binary(b) => b.rhs.ends_with_block(),
             Expr::FnDef(f) => f.body.ends_with_block(),
         }
     }

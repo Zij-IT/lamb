@@ -1,0 +1,111 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_expr()
+---
+Ok(
+    Binary(
+        Binary {
+            lhs: Ident(
+                Ident {
+                    raw: "me",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 0,
+                        end: 2,
+                    },
+                },
+            ),
+            op: Appr,
+            rhs: Binary(
+                Binary {
+                    lhs: Binary(
+                        Binary {
+                            lhs: Ident(
+                                Ident {
+                                    raw: "improvise",
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 6,
+                                        end: 15,
+                                    },
+                                },
+                            ),
+                            op: Cpsr,
+                            rhs: Ident(
+                                Ident {
+                                    raw: "adapt",
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 19,
+                                        end: 24,
+                                    },
+                                },
+                            ),
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 6,
+                                end: 24,
+                            },
+                            op_span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 16,
+                                end: 18,
+                            },
+                        },
+                    ),
+                    op: Cpsr,
+                    rhs: Ident(
+                        Ident {
+                            raw: "overcome",
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 28,
+                                end: 36,
+                            },
+                        },
+                    ),
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 6,
+                        end: 36,
+                    },
+                    op_span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 25,
+                        end: 27,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 36,
+            },
+            op_span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 3,
+                end: 5,
+            },
+        },
+    ),
+)
