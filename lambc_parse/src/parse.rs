@@ -2,7 +2,7 @@ use crate::{
     ArrayPattern, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define, Else, Expr,
     ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
     Index, InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern, Span,
-    Statement, StrLit, StrText, TokKind, Token,
+    Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -81,7 +81,28 @@ impl<'a> Parser<'a> {
     ///          | expr '(' expr ')'
     /// ```
     pub fn parse_expr(&mut self) -> Result<Expr> {
-        self.parse_chained_expr()
+        self.parse_expr_pratt(0)
+    }
+
+    pub fn parse_expr_pratt(&mut self, min_bp: u8) -> Result<Expr> {
+        let peek = self.peek1();
+        let lhs = match peek.kind {
+            TokKind::Sub | TokKind::Bneg | TokKind::Lnot => {
+                let tok = self.next();
+                let op = UnaryOp::from(tok.kind);
+                let rhs = self.parse_expr_pratt(op.rbp())?;
+
+                Expr::Unary(Box::new(Unary {
+                    span: Span::connect(tok.span, rhs.span()),
+                    op_span: tok.span,
+                    rhs,
+                    op,
+                }))
+            }
+            _ => self.parse_chained_expr()?,
+        };
+
+        Ok(lhs)
     }
 
     pub fn parse_chained_expr(&mut self) -> Result<Expr> {
@@ -1248,5 +1269,19 @@ mod tests {
 
         expr!("2(one, two)[three](four)");
         expr!("2[one](two, three)[four]");
+    }
+
+    #[test]
+    fn parses_pratt_expressions() {
+        macro_rules! expr {
+            ($expr:expr) => {
+                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_expr())
+            };
+        }
+
+        expr!("- - - - -2");
+        expr!("!!true");
+        expr!("-hello[there][people]");
     }
 }

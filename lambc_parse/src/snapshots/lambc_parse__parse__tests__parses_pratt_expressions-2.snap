@@ -1,0 +1,56 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_expr()
+---
+Ok(
+    Unary(
+        Unary {
+            rhs: Unary(
+                Unary {
+                    rhs: Bool(
+                        BoolLit {
+                            value: true,
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 2,
+                                end: 6,
+                            },
+                        },
+                    ),
+                    op: Lnot,
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 1,
+                        end: 6,
+                    },
+                    op_span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 1,
+                        end: 2,
+                    },
+                },
+            ),
+            op: Lnot,
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 6,
+            },
+            op_span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 1,
+            },
+        },
+    ),
+)

@@ -1,4 +1,4 @@
-use crate::Span;
+use crate::{Span, TokKind};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum I64Base {
@@ -203,6 +203,40 @@ pub struct Call {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
+pub struct Unary {
+    pub rhs: Expr,
+    pub op: UnaryOp,
+    pub span: Span,
+    // Must be a subspan of `span`
+    pub op_span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum UnaryOp {
+    Nneg,
+    Lnot,
+    Bneg,
+}
+
+impl UnaryOp {
+    pub(crate) fn rbp(&self) -> u8 {
+        todo!()
+    }
+}
+
+impl From<TokKind> for UnaryOp {
+    fn from(value: TokKind) -> Self {
+        match value {
+            TokKind::Sub => UnaryOp::Nneg,
+            TokKind::Bneg => UnaryOp::Bneg,
+            TokKind::Lnot => UnaryOp::Lnot,
+            _ => unimplemented!("Bad compiler."),
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -219,6 +253,7 @@ pub enum Expr {
     Case(Box<Case>),
     Index(Box<Index>),
     Call(Box<Call>),
+    Unary(Box<Unary>),
 }
 
 impl Expr {
@@ -239,6 +274,7 @@ impl Expr {
             Expr::Case(e) => e.span,
             Expr::Index(e) => e.span,
             Expr::Call(e) => e.span,
+            Expr::Unary(e) => e.span,
         }
     }
 
@@ -254,6 +290,7 @@ impl Expr {
             | Expr::List(_)
             | Expr::Index(_)
             | Expr::Call(_)
+            | Expr::Unary(_)
             | Expr::Group(_) => false,
             Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
             Expr::FnDef(f) => f.body.ends_with_block(),

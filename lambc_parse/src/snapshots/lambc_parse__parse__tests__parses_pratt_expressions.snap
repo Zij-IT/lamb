@@ -1,0 +1,114 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_expr()
+---
+Ok(
+    Unary(
+        Unary {
+            rhs: Unary(
+                Unary {
+                    rhs: Unary(
+                        Unary {
+                            rhs: Unary(
+                                Unary {
+                                    rhs: Unary(
+                                        Unary {
+                                            rhs: I64(
+                                                I64Lit {
+                                                    base: Dec,
+                                                    value: "2",
+                                                    span: Span {
+                                                        file: FileId(
+                                                            0,
+                                                        ),
+                                                        start: 9,
+                                                        end: 10,
+                                                    },
+                                                },
+                                            ),
+                                            op: Nneg,
+                                            span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 8,
+                                                end: 10,
+                                            },
+                                            op_span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 8,
+                                                end: 9,
+                                            },
+                                        },
+                                    ),
+                                    op: Nneg,
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 6,
+                                        end: 10,
+                                    },
+                                    op_span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 6,
+                                        end: 7,
+                                    },
+                                },
+                            ),
+                            op: Nneg,
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 4,
+                                end: 10,
+                            },
+                            op_span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 4,
+                                end: 5,
+                            },
+                        },
+                    ),
+                    op: Nneg,
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 2,
+                        end: 10,
+                    },
+                    op_span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 2,
+                        end: 3,
+                    },
+                },
+            ),
+            op: Nneg,
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 10,
+            },
+            op_span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 1,
+            },
+        },
+    ),
+)
