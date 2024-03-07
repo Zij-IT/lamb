@@ -1,0 +1,170 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_module()
+---
+Ok(
+    Module {
+        statements: [
+            Define(
+                Define {
+                    ident: Ident {
+                        raw: "id",
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 17,
+                            end: 19,
+                        },
+                    },
+                    value: FnDef(
+                        FnDef {
+                            args: [
+                                Ident {
+                                    raw: "x",
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 26,
+                                        end: 27,
+                                    },
+                                },
+                            ],
+                            body: Ident(
+                                Ident {
+                                    raw: "x",
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 32,
+                                        end: 33,
+                                    },
+                                },
+                            ),
+                            recursive: false,
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 23,
+                                end: 33,
+                            },
+                        },
+                    ),
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 17,
+                        end: 34,
+                    },
+                },
+            ),
+            Expr(
+                ExprStatement {
+                    expr: Group(
+                        Group {
+                            value: Binary(
+                                Binary {
+                                    lhs: Binary(
+                                        Binary {
+                                            lhs: Ident(
+                                                Ident {
+                                                    raw: "id",
+                                                    span: Span {
+                                                        file: FileId(
+                                                            0,
+                                                        ),
+                                                        start: 52,
+                                                        end: 54,
+                                                    },
+                                                },
+                                            ),
+                                            op: Cpsr,
+                                            rhs: Ident(
+                                                Ident {
+                                                    raw: "id",
+                                                    span: Span {
+                                                        file: FileId(
+                                                            0,
+                                                        ),
+                                                        start: 58,
+                                                        end: 60,
+                                                    },
+                                                },
+                                            ),
+                                            span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 52,
+                                                end: 60,
+                                            },
+                                            op_span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 55,
+                                                end: 57,
+                                            },
+                                        },
+                                    ),
+                                    op: Cpsr,
+                                    rhs: Ident(
+                                        Ident {
+                                            raw: "id",
+                                            span: Span {
+                                                file: FileId(
+                                                    0,
+                                                ),
+                                                start: 64,
+                                                end: 66,
+                                            },
+                                        },
+                                    ),
+                                    span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 52,
+                                        end: 66,
+                                    },
+                                    op_span: Span {
+                                        file: FileId(
+                                            0,
+                                        ),
+                                        start: 61,
+                                        end: 63,
+                                    },
+                                },
+                            ),
+                            span: Span {
+                                file: FileId(
+                                    0,
+                                ),
+                                start: 51,
+                                end: 67,
+                            },
+                        },
+                    ),
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 51,
+                        end: 68,
+                    },
+                },
+            ),
+        ],
+        span: Span {
+            file: FileId(
+                0,
+            ),
+            start: 0,
+            end: 81,
+        },
+    },
+)

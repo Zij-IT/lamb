@@ -385,3 +385,9 @@ pub enum Statement {
     Define(Define),
     Expr(ExprStatement),
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Module {
+    pub statements: Vec<Statement>,
+    pub span: Span,
+}

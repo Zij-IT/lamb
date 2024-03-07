@@ -1,8 +1,8 @@
 use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
     Else, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern,
-    If, IfCond, Index, InnerPattern, Lexer, List, LiteralPattern, NilLit, Pattern, RestPattern,
-    Span, Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+    If, IfCond, Index, InnerPattern, Lexer, List, LiteralPattern, Module, NilLit, Pattern,
+    RestPattern, Span, Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -31,6 +31,23 @@ impl<'a> Parser<'a> {
             peek1: None,
             peek2: None,
         }
+    }
+
+    pub fn parse_module(&mut self) -> Result<Module> {
+        let mut stmts = Vec::new();
+        let end = loop {
+            if let Some(end) = self.eat(TokKind::End) {
+                break end;
+            }
+
+            stmts.push(self.parse_stmt()?);
+        };
+
+        let span = Span::new(0, end.span.end, end.span.file);
+        Ok(Module {
+            statements: stmts,
+            span,
+        })
     }
 
     /// Parses a statement as defined by the following grammar
@@ -1326,5 +1343,50 @@ mod tests {
         expr!("-hello[there][people]");
         expr!("2 + hello[0] * 4");
         expr!("me $> improvise .> adapt .> overcome");
+    }
+
+    #[test]
+    fn parses_module() {
+        macro_rules! module {
+            ($module:expr) => {
+                let mut parser = Parser::new($module.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_module())
+            };
+        }
+
+        module! {
+            r#"
+                id := fn(x) -> x;
+                (id .> id .> id);
+            "#
+        }
+
+        module! {
+            r#"
+                part_one := rec fn(xs) -> case xs {
+                  ['(', rest @ ..] -> 1 + part_one(rest),
+                  [')', rest @ ..] -> -1 + part_one(rest),
+                  [] -> 0,
+                };
+
+                part_two := fn(xs) -> {
+                  inner := rec fn(xs, n, sum) -> case sum {
+                    -1 -> n,
+                    _  -> case xs {
+                      ['(', rest @ ..] -> inner(rest, n + 1, sum + 1),
+                      [')', rest @ ..] -> inner(rest, n + 1, sum - 1),
+                    },
+                  };
+
+                  inner(xs, 0, 0)
+                };
+
+                print("Part One:: ");
+                input $> part_one .> println;
+
+                print("Part Two:: ");
+                input $> part_two .> println;
+            "#
+        }
     }
 }
