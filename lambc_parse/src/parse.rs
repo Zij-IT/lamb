@@ -38,9 +38,7 @@ impl<'a> Parser<'a> {
     /// ```text
     /// Grammar:
     ///
-    ///    module := import module
-    ///              export module
-    ///              stat* export?
+    ///    module := export? import* stat*
     /// ```
     ///
     pub fn parse_module(&mut self) -> Result<Module> {
