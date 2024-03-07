@@ -1,8 +1,9 @@
 use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
-    Else, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern,
-    If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List, LiteralPattern, Module,
-    NilLit, Pattern, RestPattern, Span, Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+    Else, Export, ExportItem, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit,
+    Ident, IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List,
+    LiteralPattern, Module, NilLit, Pattern, RestPattern, Span, Statement, StrLit, StrText,
+    TokKind, Token, Unary, UnaryOp,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -121,6 +122,29 @@ impl<'a> Parser<'a> {
             items,
             star,
             span: Span::connect(start.span, semi.span),
+        })
+    }
+
+    pub fn parse_export(&mut self) -> Result<Export> {
+        let export = self.expect_ident("export")?;
+        self.expect(TokKind::OpenParen)?;
+        let (items, _) = self.parse_node_list(TokKind::CloseParen, |this| {
+            let item = this.parse_ident()?;
+            let (alias, span) = if this.eat_ident("as").is_some() {
+                let alias = this.parse_ident()?;
+                let span = alias.span;
+                (Some(alias), span)
+            } else {
+                (None, item.span)
+            };
+
+            Ok(ExportItem { item, alias, span })
+        })?;
+
+        let end = self.expect(TokKind::Semi)?;
+        Ok(Export {
+            items,
+            span: Span::connect(export.span, end.span),
         })
     }
 
@@ -1523,6 +1547,36 @@ mod tests {
 
         import! {
             r#"from "my-path" as alias import (one as i1, two as i2, three);"#
+        }
+    }
+
+    #[test]
+    fn parses_export() {
+        macro_rules! import {
+            ($import:expr) => {
+                let mut parser = Parser::new($import.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_export())
+            };
+        }
+
+        import! {
+            r#"export ();"#
+        }
+
+        import! {
+            r#"export(one);"#
+        }
+
+        import! {
+            r#"export(one, two);"#
+        }
+
+        import! {
+            r#"export(one as e1, two as e2);"#
+        }
+
+        import! {
+            r#"export(one as e1, two as e2, three);"#
         }
     }
 }

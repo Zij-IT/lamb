@@ -1,0 +1,16 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_export()
+---
+Ok(
+    Export {
+        items: [],
+        span: Span {
+            file: FileId(
+                0,
+            ),
+            start: 0,
+            end: 10,
+        },
+    },
+)

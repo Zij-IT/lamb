@@ -392,13 +392,25 @@ pub struct ImportItem {
     pub alias: Option<Ident>,
     pub span: Span,
 }
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct Import {
     pub file: StrLit,
     pub name: Option<Ident>,
     pub items: Vec<ImportItem>,
     pub star: bool,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ExportItem {
+    pub item: Ident,
+    pub alias: Option<Ident>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Export {
+    pub items: Vec<ExportItem>,
     pub span: Span,
 }
 
