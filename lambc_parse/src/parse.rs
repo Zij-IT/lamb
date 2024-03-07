@@ -86,26 +86,31 @@ impl<'a> Parser<'a> {
             None
         };
 
-        self.expect_ident("import")?;
+        let (items, star) = if self.eat_ident("import").is_some() {
+            // from path [as alias] import *
+            if self.eat(TokKind::Mul).is_some() {
+                (vec![], true)
+            } else {
+                // from path [as alias] import (items)
+                self.expect(TokKind::OpenParen)?;
+                let (items, _) = self.parse_node_list(TokKind::CloseParen, |this| {
+                    let item = this.parse_ident()?;
+                    let (alias, span) = if this.eat_ident("as").is_some() {
+                        let alias = this.parse_ident()?;
+                        let span = alias.span;
+                        (Some(alias), span)
+                    } else {
+                        (None, item.span)
+                    };
 
-        let (items, star) = if self.eat(TokKind::Mul).is_some() {
-            (vec![], true)
+                    Ok(ImportItem { item, alias, span })
+                })?;
+
+                (items, false)
+            }
         } else {
-            self.expect(TokKind::OpenParen)?;
-            let (items, _) = self.parse_node_list(TokKind::CloseParen, |this| {
-                let item = this.parse_ident()?;
-                let (alias, span) = if this.eat_ident("as").is_some() {
-                    let alias = this.parse_ident()?;
-                    let span = alias.span;
-                    (Some(alias), span)
-                } else {
-                    (None, item.span)
-                };
-
-                Ok(ImportItem { item, alias, span })
-            })?;
-
-            (items, false)
+            // from path [as name]
+            (vec![], false)
         };
 
         let semi = self.expect(TokKind::Semi)?;
@@ -1494,6 +1499,10 @@ mod tests {
                 let mut parser = Parser::new($import.as_bytes(), FileId(0));
                 insta::assert_debug_snapshot!(parser.parse_import())
             };
+        }
+
+        import! {
+            r#"from "my-path" as my_path;"#
         }
 
         import! {

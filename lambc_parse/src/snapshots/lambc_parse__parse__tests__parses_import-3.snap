@@ -25,50 +25,20 @@ Ok(
                 end: 14,
             },
         },
-        name: None,
-        items: [
-            ImportItem {
-                item: Ident {
-                    raw: "one",
-                    span: Span {
-                        file: FileId(
-                            0,
-                        ),
-                        start: 23,
-                        end: 26,
-                    },
-                },
-                alias: None,
+        name: Some(
+            Ident {
+                raw: "alias",
                 span: Span {
                     file: FileId(
                         0,
                     ),
-                    start: 23,
-                    end: 26,
+                    start: 18,
+                    end: 23,
                 },
             },
-            ImportItem {
-                item: Ident {
-                    raw: "two",
-                    span: Span {
-                        file: FileId(
-                            0,
-                        ),
-                        start: 28,
-                        end: 31,
-                    },
-                },
-                alias: None,
-                span: Span {
-                    file: FileId(
-                        0,
-                    ),
-                    start: 28,
-                    end: 31,
-                },
-            },
-        ],
-        star: false,
+        ),
+        items: [],
+        star: true,
         span: Span {
             file: FileId(
                 0,

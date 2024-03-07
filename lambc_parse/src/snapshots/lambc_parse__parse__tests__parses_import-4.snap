@@ -38,24 +38,13 @@ Ok(
                         end: 26,
                     },
                 },
-                alias: Some(
-                    Ident {
-                        raw: "i1",
-                        span: Span {
-                            file: FileId(
-                                0,
-                            ),
-                            start: 30,
-                            end: 32,
-                        },
-                    },
-                ),
+                alias: None,
                 span: Span {
                     file: FileId(
                         0,
                     ),
-                    start: 30,
-                    end: 32,
+                    start: 23,
+                    end: 26,
                 },
             },
             ImportItem {
@@ -65,39 +54,8 @@ Ok(
                         file: FileId(
                             0,
                         ),
-                        start: 34,
-                        end: 37,
-                    },
-                },
-                alias: Some(
-                    Ident {
-                        raw: "i2",
-                        span: Span {
-                            file: FileId(
-                                0,
-                            ),
-                            start: 41,
-                            end: 43,
-                        },
-                    },
-                ),
-                span: Span {
-                    file: FileId(
-                        0,
-                    ),
-                    start: 41,
-                    end: 43,
-                },
-            },
-            ImportItem {
-                item: Ident {
-                    raw: "three",
-                    span: Span {
-                        file: FileId(
-                            0,
-                        ),
-                        start: 45,
-                        end: 50,
+                        start: 28,
+                        end: 31,
                     },
                 },
                 alias: None,
@@ -105,8 +63,8 @@ Ok(
                     file: FileId(
                         0,
                     ),
-                    start: 45,
-                    end: 50,
+                    start: 28,
+                    end: 31,
                 },
             },
         ],
@@ -116,7 +74,7 @@ Ok(
                 0,
             ),
             start: 0,
-            end: 52,
+            end: 33,
         },
     },
 )

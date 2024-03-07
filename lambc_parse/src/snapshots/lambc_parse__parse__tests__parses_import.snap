@@ -25,15 +25,26 @@ Ok(
                 end: 14,
             },
         },
-        name: None,
+        name: Some(
+            Ident {
+                raw: "my_path",
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 18,
+                    end: 25,
+                },
+            },
+        ),
         items: [],
-        star: true,
+        star: false,
         span: Span {
             file: FileId(
                 0,
             ),
             start: 0,
-            end: 24,
+            end: 26,
         },
     },
 )

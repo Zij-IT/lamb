@@ -25,18 +25,7 @@ Ok(
                 end: 14,
             },
         },
-        name: Some(
-            Ident {
-                raw: "alias",
-                span: Span {
-                    file: FileId(
-                        0,
-                    ),
-                    start: 18,
-                    end: 23,
-                },
-            },
-        ),
+        name: None,
         items: [],
         star: true,
         span: Span {
@@ -44,7 +33,7 @@ Ok(
                 0,
             ),
             start: 0,
-            end: 33,
+            end: 24,
         },
     },
 )
