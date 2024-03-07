@@ -303,6 +303,12 @@ impl From<TokKind> for UnaryOp {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Return {
+    pub value: Option<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -321,6 +327,7 @@ pub enum Expr {
     Call(Box<Call>),
     Unary(Box<Unary>),
     Binary(Box<Binary>),
+    Return(Box<Return>),
 }
 
 impl Expr {
@@ -343,6 +350,7 @@ impl Expr {
             Expr::Call(e) => e.span,
             Expr::Unary(e) => e.span,
             Expr::Binary(e) => e.span,
+            Expr::Return(e) => e.span,
         }
     }
 
@@ -358,11 +366,12 @@ impl Expr {
             | Expr::List(_)
             | Expr::Index(_)
             | Expr::Call(_)
-            | Expr::Unary(_)
             | Expr::Group(_) => false,
-            Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
+            Expr::Return(r) => r.value.as_ref().map_or(false, |e| e.ends_with_block()),
+            Expr::Unary(u) => u.rhs.ends_with_block(),
             Expr::Binary(b) => b.rhs.ends_with_block(),
             Expr::FnDef(f) => f.body.ends_with_block(),
+            Expr::Block(_) | Expr::If(_) | Expr::Case(_) => true,
         }
     }
 }

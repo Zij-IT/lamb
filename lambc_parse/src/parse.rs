@@ -2,7 +2,7 @@ use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
     Else, Export, ExportItem, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit,
     Ident, IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List,
-    LiteralPattern, Module, NilLit, Pattern, RestPattern, Span, Statement, StrLit, StrText,
+    LiteralPattern, Module, NilLit, Pattern, RestPattern, Return, Span, Statement, StrLit, StrText,
     TokKind, Token, Unary, UnaryOp,
 };
 use miette::Diagnostic;
@@ -333,6 +333,7 @@ impl<'a> Parser<'a> {
             TokKind::Rec => self.parse_fn_def()?,
             TokKind::If => self.parse_if()?,
             TokKind::Case => self.parse_case()?,
+            TokKind::Return => self.parse_return()?,
             _ => self.parse_literal()?,
         })
     }
@@ -525,6 +526,27 @@ impl<'a> Parser<'a> {
             arms,
             span: Span::connect(case.span, close.span),
         })))
+    }
+
+    fn parse_return(&mut self) -> Result<Expr> {
+        let ret = self.expect(TokKind::Return)?;
+        let peek = self.peek1();
+        let (span, value) = match peek.kind {
+            // These tokens are tokens that indicate the end of an expression.
+            TokKind::CloseBrace
+            | TokKind::CloseBrack
+            | TokKind::CloseParen
+            | TokKind::Comma
+            | TokKind::Semi
+            | TokKind::End
+            | TokKind::Invalid => (ret.span, None),
+            _ => {
+                let expr = self.parse_expr()?;
+                (expr.span(), Some(expr))
+            }
+        };
+
+        Ok(Expr::Return(Box::new(Return { value, span })))
     }
 
     /// Parses any value literal, such as that of a string or number, as well as an identifier.
@@ -1589,6 +1611,51 @@ mod tests {
 
         import! {
             r#"export(one as e1, two as e2, three);"#
+        }
+    }
+
+    #[test]
+    fn parses_return() {
+        macro_rules! return_expr {
+            ($ret:expr) => {
+                let mut parser = Parser::new($ret.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_return())
+            };
+        }
+
+        macro_rules! return_in_expr {
+            ($ret:expr) => {
+                let mut parser = Parser::new($ret.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_expr())
+            };
+        }
+
+        return_expr! {
+            r#"return"#
+        }
+
+        return_expr! {
+            r#"return 2"#
+        }
+
+        return_expr! {
+            r#"return return 2"#
+        }
+
+        return_in_expr! {
+            r#"case nil { nil -> return, }"#
+        }
+
+        return_in_expr! {
+            r#"[return,]"#
+        }
+
+        return_in_expr! {
+            r#"(return)"#
+        }
+
+        return_in_expr! {
+            r#"{ return }"#
         }
     }
 }

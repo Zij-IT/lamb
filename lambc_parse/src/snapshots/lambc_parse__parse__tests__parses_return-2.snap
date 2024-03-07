@@ -1,0 +1,32 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_return()
+---
+Ok(
+    Return(
+        Return {
+            value: Some(
+                I64(
+                    I64Lit {
+                        base: Dec,
+                        value: "2",
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 7,
+                            end: 8,
+                        },
+                    },
+                ),
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 7,
+                end: 8,
+            },
+        },
+    ),
+)

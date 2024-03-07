@@ -1,0 +1,31 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_expr()
+---
+Ok(
+    List(
+        List {
+            values: [
+                Return(
+                    Return {
+                        value: None,
+                        span: Span {
+                            file: FileId(
+                                0,
+                            ),
+                            start: 1,
+                            end: 7,
+                        },
+                    },
+                ),
+            ],
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 0,
+                end: 9,
+            },
+        },
+    ),
+)
