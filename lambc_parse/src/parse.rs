@@ -43,6 +43,16 @@ impl<'a> Parser<'a> {
     /// ```
     ///
     pub fn parse_module(&mut self) -> Result<Module> {
+        let mut imports = Vec::new();
+        loop {
+            let peek = self.peek1();
+            if peek.kind == TokKind::Ident && peek.slice == "from" {
+                imports.push(self.parse_import()?);
+            } else {
+                break;
+            }
+        }
+
         let mut stmts = Vec::new();
         let end = loop {
             if let Some(end) = self.eat(TokKind::End) {
@@ -54,6 +64,7 @@ impl<'a> Parser<'a> {
 
         let span = Span::new(0, end.span.end, end.span.file);
         Ok(Module {
+            imports,
             statements: stmts,
             span,
         })
@@ -1465,6 +1476,13 @@ mod tests {
 
                 print("Part Two:: ");
                 input $> part_two .> println;
+            "#
+        }
+
+        module! {
+            r#"
+            from "my-path" import *;
+            call(fn(x) -> x, 1) $> println;
             "#
         }
     }

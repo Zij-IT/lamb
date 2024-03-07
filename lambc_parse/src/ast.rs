@@ -404,6 +404,7 @@ pub struct Import {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Module {
+    pub imports: Vec<Import>,
     pub statements: Vec<Statement>,
     pub span: Span,
 }

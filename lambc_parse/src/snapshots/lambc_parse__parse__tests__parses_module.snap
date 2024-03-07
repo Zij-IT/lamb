@@ -4,6 +4,7 @@ expression: parser.parse_module()
 ---
 Ok(
     Module {
+        imports: [],
         statements: [
             Define(
                 Define {
