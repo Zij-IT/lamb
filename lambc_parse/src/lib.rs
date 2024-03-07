@@ -43,3 +43,9 @@ impl From<Span> for SourceSpan {
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub struct FileId(usize);
+
+impl FileId {
+    pub fn dummy() -> Self {
+        Self(usize::MAX)
+    }
+}
