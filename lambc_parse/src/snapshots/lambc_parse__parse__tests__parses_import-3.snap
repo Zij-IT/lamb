@@ -1,0 +1,80 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_import()
+---
+Ok(
+    Import {
+        file: StrLit {
+            text: Some(
+                StrText {
+                    inner: "my-path",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 6,
+                        end: 13,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 5,
+                end: 14,
+            },
+        },
+        name: None,
+        items: [
+            ImportItem {
+                item: Ident {
+                    raw: "one",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 23,
+                        end: 26,
+                    },
+                },
+                alias: None,
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 23,
+                    end: 26,
+                },
+            },
+            ImportItem {
+                item: Ident {
+                    raw: "two",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 28,
+                        end: 31,
+                    },
+                },
+                alias: None,
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 28,
+                    end: 31,
+                },
+            },
+        ],
+        star: false,
+        span: Span {
+            file: FileId(
+                0,
+            ),
+            start: 0,
+            end: 33,
+        },
+    },
+)

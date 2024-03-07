@@ -1,8 +1,8 @@
 use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
     Else, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern,
-    If, IfCond, Index, InnerPattern, Lexer, List, LiteralPattern, Module, NilLit, Pattern,
-    RestPattern, Span, Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+    If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List, LiteralPattern, Module,
+    NilLit, Pattern, RestPattern, Span, Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -33,6 +33,15 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses a module as defined by the following grammar
+    /// ```text
+    /// Grammar:
+    ///
+    ///    module := import module
+    ///              export module
+    ///              stat* export?
+    /// ```
+    ///
     pub fn parse_module(&mut self) -> Result<Module> {
         let mut stmts = Vec::new();
         let end = loop {
@@ -47,6 +56,55 @@ impl<'a> Parser<'a> {
         Ok(Module {
             statements: stmts,
             span,
+        })
+    }
+
+    /// Parses an import declaration as defined by the following grammar
+    /// ```text
+    /// Grammar:
+    ///
+    ///     import := 'from' string ('as' ident)? 'import' ('*'? | '(' ident_list ')') ';'
+    /// ```
+    pub fn parse_import(&mut self) -> Result<Import> {
+        // 'from' is not a keyword, and because of this we check the slice
+        let start = self.expect_ident("from")?;
+        let path = self.parse_string()?;
+        let name = if self.eat_ident("as").is_some() {
+            Some(self.parse_ident()?)
+        } else {
+            None
+        };
+
+        self.expect_ident("import")?;
+
+        let (items, star) = if self.eat(TokKind::Mul).is_some() {
+            (vec![], true)
+        } else {
+            self.expect(TokKind::OpenParen)?;
+            let (items, _) = self.parse_node_list(TokKind::CloseParen, |this| {
+                let item = this.parse_ident()?;
+                let (alias, span) = if this.eat_ident("as").is_some() {
+                    let alias = this.parse_ident()?;
+                    let span = alias.span;
+                    (Some(alias), span)
+                } else {
+                    (None, item.span)
+                };
+
+                Ok(ImportItem { item, alias, span })
+            })?;
+
+            (items, false)
+        };
+
+        let semi = self.expect(TokKind::Semi)?;
+
+        Ok(Import {
+            file: path,
+            name,
+            items,
+            star,
+            span: Span::connect(start.span, semi.span),
         })
     }
 
@@ -802,6 +860,15 @@ impl<'a> Parser<'a> {
         None
     }
 
+    fn eat_ident<'b>(&mut self, ident: &'b str) -> Option<Token<'a>> {
+        let peek = self.peek1();
+        if peek.kind == TokKind::Ident && peek.slice == ident {
+            Some(self.next())
+        } else {
+            None
+        }
+    }
+
     fn expect(&mut self, kind: TokKind) -> Result<Token<'a>> {
         let next = self.next();
         if next.kind == kind {
@@ -813,6 +880,18 @@ impl<'a> Parser<'a> {
             message: format!("Expected {:?}, but found '{}'", kind, next.slice),
             span: next.span,
         })
+    }
+
+    fn expect_ident<'b>(&mut self, ident: &'b str) -> Result<Token<'a>> {
+        let next = self.next();
+        if next.kind == TokKind::Ident && next.slice == ident {
+            Ok(next)
+        } else {
+            Err(Error {
+                message: format!("Expected 'from', but found '{}'", next.slice),
+                span: next.span,
+            })
+        }
     }
 }
 
@@ -1387,6 +1466,36 @@ mod tests {
                 print("Part Two:: ");
                 input $> part_two .> println;
             "#
+        }
+    }
+
+    #[test]
+    fn parses_import() {
+        macro_rules! import {
+            ($import:expr) => {
+                let mut parser = Parser::new($import.as_bytes(), FileId(0));
+                insta::assert_debug_snapshot!(parser.parse_import())
+            };
+        }
+
+        import! {
+            r#"from "my-path" import *;"#
+        }
+
+        import! {
+            r#"from "my-path" as alias import *;"#
+        }
+
+        import! {
+            r#"from "my-path" import (one, two);"#
+        }
+
+        import! {
+            r#"from "my-path" import (one as i1, two as i2, three);"#
+        }
+
+        import! {
+            r#"from "my-path" as alias import (one as i1, two as i2, three);"#
         }
     }
 }

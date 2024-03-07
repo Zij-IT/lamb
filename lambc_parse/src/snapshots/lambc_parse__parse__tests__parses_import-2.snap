@@ -1,0 +1,50 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_import()
+---
+Ok(
+    Import {
+        file: StrLit {
+            text: Some(
+                StrText {
+                    inner: "my-path",
+                    span: Span {
+                        file: FileId(
+                            0,
+                        ),
+                        start: 6,
+                        end: 13,
+                    },
+                },
+            ),
+            span: Span {
+                file: FileId(
+                    0,
+                ),
+                start: 5,
+                end: 14,
+            },
+        },
+        name: Some(
+            Ident {
+                raw: "alias",
+                span: Span {
+                    file: FileId(
+                        0,
+                    ),
+                    start: 18,
+                    end: 23,
+                },
+            },
+        ),
+        items: [],
+        star: true,
+        span: Span {
+            file: FileId(
+                0,
+            ),
+            start: 0,
+            end: 33,
+        },
+    },
+)
