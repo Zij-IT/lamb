@@ -416,6 +416,7 @@ pub struct Export {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Module {
+    pub exports: Vec<Export>,
     pub imports: Vec<Import>,
     pub statements: Vec<Statement>,
     pub span: Span,

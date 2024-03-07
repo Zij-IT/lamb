@@ -44,6 +44,18 @@ impl<'a> Parser<'a> {
     /// ```
     ///
     pub fn parse_module(&mut self) -> Result<Module> {
+        // Only a singular export is expected, however this is a simple way to catch
+        // when the user writes multiple
+        let mut exports = Vec::new();
+        loop {
+            let peek = self.peek1();
+            if peek.kind == TokKind::Ident && peek.slice == "export" {
+                exports.push(self.parse_export()?);
+            } else {
+                break;
+            }
+        }
+
         let mut imports = Vec::new();
         loop {
             let peek = self.peek1();
@@ -55,16 +67,18 @@ impl<'a> Parser<'a> {
         }
 
         let mut stmts = Vec::new();
-        let end = loop {
-            if let Some(end) = self.eat(TokKind::End) {
-                break end;
+        loop {
+            if self.eat(TokKind::End).is_some() {
+                break;
             }
 
             stmts.push(self.parse_stmt()?);
-        };
+        }
 
+        let end = self.expect(TokKind::End)?;
         let span = Span::new(0, end.span.end, end.span.file);
         Ok(Module {
+            exports,
             imports,
             statements: stmts,
             span,
