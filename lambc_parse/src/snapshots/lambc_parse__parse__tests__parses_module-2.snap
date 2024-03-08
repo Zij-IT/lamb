@@ -1181,6 +1181,7 @@ Ok(
                 },
             ),
         ],
+        path: "",
         span: Span {
             start: 0,
             end: 804,

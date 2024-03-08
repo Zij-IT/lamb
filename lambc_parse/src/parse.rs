@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
     Else, Export, ExportItem, Expr, ExprStatement, F64Lit, FnDef, Group, I64Base, I64Lit, Ident,
@@ -20,17 +22,19 @@ pub struct Error {
 pub type Result<T> = core::result::Result<T, Error>;
 
 pub struct Parser<'a> {
+    file: PathBuf,
     lexer: Lexer<'a>,
     peek1: Option<Token<'a>>,
     peek2: Option<Token<'a>>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(input: &'a [u8]) -> Self {
+    pub fn new<P: Into<PathBuf>>(input: &'a [u8], file: P) -> Self {
         Self {
             lexer: Lexer::new(input),
             peek1: None,
             peek2: None,
+            file: file.into(),
         }
     }
 
@@ -79,6 +83,7 @@ impl<'a> Parser<'a> {
             exports,
             imports,
             statements: stmts,
+            path: self.file.clone(),
             span,
         })
     }
@@ -988,7 +993,7 @@ mod tests {
     #[test]
     fn parses_int() {
         let parse_int = |inp: &str, out: I64Lit| {
-            let mut parser = Parser::new(inp.as_bytes());
+            let mut parser = Parser::new(inp.as_bytes(), "");
             assert_eq!(parser.parse_i64(), Ok(out));
         };
 
@@ -1008,7 +1013,7 @@ mod tests {
     #[test]
     fn parses_f64() {
         let parse_f64 = |inp: &str| {
-            let mut parser = Parser::new(inp.as_bytes());
+            let mut parser = Parser::new(inp.as_bytes(), "");
             assert_eq!(
                 parser.parse_f64(),
                 Ok(F64Lit {
@@ -1035,7 +1040,7 @@ mod tests {
     #[test]
     fn parses_bool() {
         let parse_bool = |inp: &str| {
-            let mut parser = Parser::new(inp.as_bytes());
+            let mut parser = Parser::new(inp.as_bytes(), "");
             assert_eq!(
                 parser.parse_bool(),
                 Ok(BoolLit {
@@ -1054,7 +1059,7 @@ mod tests {
 
     #[test]
     fn parses_nil() {
-        let mut parser = Parser::new("nil".as_bytes());
+        let mut parser = Parser::new("nil".as_bytes(), "");
         assert_eq!(
             parser.parse_nil(),
             Ok(NilLit {
@@ -1066,7 +1071,7 @@ mod tests {
     #[test]
     fn parses_string() {
         let input = r#""""#;
-        let mut parser = Parser::new(input.as_bytes());
+        let mut parser = Parser::new(input.as_bytes(), "");
         assert_eq!(
             parser.parse_string(),
             Ok(StrLit {
@@ -1079,7 +1084,7 @@ mod tests {
         );
 
         let input = r#""hello""#;
-        let mut parser = Parser::new(input.as_bytes());
+        let mut parser = Parser::new(input.as_bytes(), "");
         assert_eq!(
             parser.parse_string(),
             Ok(StrLit {
@@ -1095,7 +1100,7 @@ mod tests {
     #[test]
     fn parses_char() {
         let input = "''";
-        let mut parser = Parser::new(input.as_bytes());
+        let mut parser = Parser::new(input.as_bytes(), "");
         assert_eq!(
             parser.parse_char(),
             Ok(CharLit {
@@ -1108,7 +1113,7 @@ mod tests {
         );
 
         let input = "'hello'";
-        let mut parser = Parser::new(input.as_bytes());
+        let mut parser = Parser::new(input.as_bytes(), "");
         assert_eq!(
             parser.parse_char(),
             Ok(CharLit {
@@ -1121,7 +1126,7 @@ mod tests {
         );
 
         let input = "'ä'";
-        let mut parser = Parser::new(input.as_bytes());
+        let mut parser = Parser::new(input.as_bytes(), "");
         assert_eq!(
             parser.parse_char(),
             Ok(CharLit {
@@ -1137,7 +1142,7 @@ mod tests {
     #[test]
     fn parses_ident() {
         let ident = |ident: &str| {
-            let mut parser = Parser::new(ident.as_bytes());
+            let mut parser = Parser::new(ident.as_bytes(), "");
             assert_eq!(
                 parser.parse_ident(),
                 Ok(Ident {
@@ -1160,7 +1165,7 @@ mod tests {
     #[test]
     fn parses_literal() {
         let literal = |literal: &str, out| {
-            let mut parser = Parser::new(literal.as_bytes());
+            let mut parser = Parser::new(literal.as_bytes(), "");
             assert_eq!(parser.parse_literal(), out)
         };
 
@@ -1247,7 +1252,7 @@ mod tests {
     fn parses_atom() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes());
+                let mut parser = Parser::new($atom.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1281,7 +1286,7 @@ mod tests {
     fn parses_nested_list() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes());
+                let mut parser = Parser::new($atom.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1300,7 +1305,7 @@ mod tests {
     fn parses_nested_group() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes());
+                let mut parser = Parser::new($atom.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1312,7 +1317,7 @@ mod tests {
     fn parses_nested_fn_def() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes());
+                let mut parser = Parser::new($atom.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1324,7 +1329,7 @@ mod tests {
     fn parses_statement() {
         macro_rules! stmt {
             ($stmt:expr) => {
-                let mut parser = Parser::new($stmt.as_bytes());
+                let mut parser = Parser::new($stmt.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_stmt());
             };
         }
@@ -1338,7 +1343,7 @@ mod tests {
     fn parse_nested_blocks() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes());
+                let mut parser = Parser::new($atom.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1351,7 +1356,7 @@ mod tests {
     fn parses_nested_ifs() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes());
+                let mut parser = Parser::new($atom.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1363,7 +1368,7 @@ mod tests {
     fn parses_literal_pattern() {
         macro_rules! pat {
             ($pat:expr) => {
-                let mut parser = Parser::new($pat.as_bytes());
+                let mut parser = Parser::new($pat.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_literal_pattern());
             };
         }
@@ -1379,7 +1384,7 @@ mod tests {
     fn parses_array_pattern() {
         macro_rules! pat {
             ($pat:expr) => {
-                let mut parser = Parser::new($pat.as_bytes());
+                let mut parser = Parser::new($pat.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_array_pattern());
             };
         }
@@ -1393,7 +1398,7 @@ mod tests {
     fn parses_ident_pattern() {
         macro_rules! pat {
             ($pat:expr) => {
-                let mut parser = Parser::new($pat.as_bytes());
+                let mut parser = Parser::new($pat.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_ident_pattern());
             };
         }
@@ -1407,7 +1412,7 @@ mod tests {
     fn parses_index() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes());
+                let mut parser = Parser::new($expr.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_expr());
             };
         }
@@ -1421,7 +1426,7 @@ mod tests {
     fn parses_call() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes());
+                let mut parser = Parser::new($expr.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_expr());
             };
         }
@@ -1435,7 +1440,7 @@ mod tests {
     fn parses_interlaced_calls_and_index() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes());
+                let mut parser = Parser::new($expr.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_expr());
             };
         }
@@ -1448,7 +1453,7 @@ mod tests {
     fn parses_pratt_expressions() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes());
+                let mut parser = Parser::new($expr.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_expr())
             };
         }
@@ -1464,7 +1469,7 @@ mod tests {
     fn parses_module() {
         macro_rules! module {
             ($module:expr) => {
-                let mut parser = Parser::new($module.as_bytes());
+                let mut parser = Parser::new($module.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_module())
             };
         }
@@ -1516,7 +1521,7 @@ mod tests {
     fn parses_import() {
         macro_rules! import {
             ($import:expr) => {
-                let mut parser = Parser::new($import.as_bytes());
+                let mut parser = Parser::new($import.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_import())
             };
         }
@@ -1550,7 +1555,7 @@ mod tests {
     fn parses_export() {
         macro_rules! import {
             ($import:expr) => {
-                let mut parser = Parser::new($import.as_bytes());
+                let mut parser = Parser::new($import.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_export())
             };
         }
@@ -1580,14 +1585,14 @@ mod tests {
     fn parses_return() {
         macro_rules! return_expr {
             ($ret:expr) => {
-                let mut parser = Parser::new($ret.as_bytes());
+                let mut parser = Parser::new($ret.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_return())
             };
         }
 
         macro_rules! return_in_expr {
             ($ret:expr) => {
-                let mut parser = Parser::new($ret.as_bytes());
+                let mut parser = Parser::new($ret.as_bytes(), "");
                 insta::assert_debug_snapshot!(parser.parse_expr())
             };
         }

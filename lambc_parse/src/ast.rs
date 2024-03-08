@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{Span, TokKind};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -428,5 +430,6 @@ pub struct Module {
     pub exports: Vec<Export>,
     pub imports: Vec<Import>,
     pub statements: Vec<Statement>,
+    pub path: PathBuf,
     pub span: Span,
 }
