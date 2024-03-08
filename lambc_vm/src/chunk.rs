@@ -57,9 +57,9 @@ pub enum Op {
 impl From<UnaryOp> for Op {
     fn from(value: UnaryOp) -> Self {
         match value {
-            UnaryOp::NumNeg => Op::NumNeg,
-            UnaryOp::LogNot => Op::LogNeg,
-            UnaryOp::BinNot => Op::BinNeg,
+            UnaryOp::Nneg => Op::NumNeg,
+            UnaryOp::Lnot => Op::LogNeg,
+            UnaryOp::Bneg => Op::BinNeg,
         }
     }
 }
@@ -80,11 +80,11 @@ impl TryFrom<BinaryOp> for Op {
             BinaryOp::Le => Op::Le,
             BinaryOp::Eq => Op::Eq,
             BinaryOp::Ne => Op::Ne,
-            BinaryOp::BinOr => Op::BinOr,
-            BinaryOp::BinAnd => Op::BinAnd,
-            BinaryOp::BinXor => Op::BinXor,
-            BinaryOp::RShift => Op::RShift,
-            BinaryOp::LShift => Op::LShift,
+            BinaryOp::Bor => Op::BinOr,
+            BinaryOp::Band => Op::BinAnd,
+            BinaryOp::Bxor => Op::BinXor,
+            BinaryOp::Shr => Op::RShift,
+            BinaryOp::Shl => Op::LShift,
             _ => return Err(value),
         })
     }
