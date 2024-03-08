@@ -4,7 +4,7 @@ mod tokenize;
 
 pub use ast::*;
 use miette::SourceSpan;
-pub use parse::Parser;
+pub use parse::{Error, Parser};
 use tokenize::Lexer;
 pub use tokenize::{TokKind, Token};
 

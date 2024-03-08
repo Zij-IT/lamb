@@ -1,6 +1,6 @@
 mod module;
 
-use lambc_parse::{Ident, Import, Script};
+use lambc_parse::{Ident, Import, Module as ParsedModule, Parser};
 use std::{cmp::Ordering, collections::HashMap, convert::identity, ops, path::Path};
 
 use crate::{
@@ -66,6 +66,9 @@ pub enum Error {
 
     #[error("Syntax Errors in import. File: '{0}'")]
     SyntaxErrorInImport(String),
+
+    #[error("Syntax Error: {0}")]
+    Syntax(#[from] lambc_parse::Error),
 }
 
 macro_rules! num_bin_op {
@@ -168,7 +171,11 @@ impl Vm {
     //
     // Also, figure out how to get good error messages to this place. Perhaps a script
     // shouldn't be all the scripts like this...
-    pub fn load_script<P: AsRef<Path>>(&mut self, script: &Script, script_path: P) -> Result<()> {
+    pub fn load_script<P: AsRef<Path>>(
+        &mut self,
+        script: &ParsedModule,
+        script_path: P,
+    ) -> Result<()> {
         let script_path = script_path.as_ref().to_string_lossy();
         let name = self.gc.intern("__LAMB__SCRIPT__");
         let path = self.gc.intern(script_path.as_ref());
@@ -193,7 +200,7 @@ impl Vm {
             .as_ref()
             .parent()
             .expect("Can't execute empty file...")
-            .join(&import.path)
+            .join(import.file.text.map_or("", |text| text.inner.as_str()))
             .canonicalize()?;
 
         let module_ref = self.gc.intern(total_path.to_string_lossy());
@@ -204,49 +211,48 @@ impl Vm {
         }
 
         let module = std::fs::read_to_string(&total_path)?;
-        let script = lambc_parse::script(&module).unwrap();
+        let mut parser = Parser::new(module.as_bytes(), &total_path);
+        let script = parser.parse_module()?;
         self.load_script(&script, &total_path)?;
         self.run()?;
 
         let export = &script.exports;
         let script = self.gc.intern(script_path.as_ref().to_string_lossy());
-        if let Some(Ident(alias)) = &import.alias {
-            let alias = self.gc.intern(alias);
+        if let Some(Ident { raw, .. }) = import.name {
+            let alias = self.gc.intern(raw);
             self.modules
                 .get_mut(&script)
                 .expect("Script must have been added at this point")
                 .define_global(alias, Value::ModulePath(module_ref));
         }
 
-        if let Some(exports) = export {
+        if let Some(exports) = export.first() {
             self.modules
                 .get_mut(&module_ref)
                 .expect("Module must have been added at this point")
                 .build_exports(exports.items.iter().map(|i| ModuleExport {
-                    name: self.gc.intern(&i.name.0),
-                    alias: i.alias.as_ref().map(|i| self.gc.intern(&i.0)),
+                    name: self.gc.intern(&i.item.raw),
+                    alias: i.alias.as_ref().map(|i| self.gc.intern(&i.raw)),
                 }));
         }
 
-        if let Some(imports) = import.imports.as_ref() {
-            for Ident(ref i) in imports {
-                let gci = self.gc.intern(i);
-                let item = self
-                    .modules
-                    .get_mut(&module_ref)
-                    .expect("Module must have been added at this point")
-                    .get_export(gci);
+        for i in import.items.iter().map(|i| i.item.raw) {
+            let gci = self.gc.intern(i);
+            let item = self
+                .modules
+                .get_mut(&module_ref)
+                .expect("Module must have been added at this point")
+                .get_export(gci);
 
-                let item = match item {
-                    Some(t) => t,
-                    None => return self.error(Error::NoExportViaName(i.clone(), module.clone())),
-                };
+            let item = match item {
+                Some(t) => t,
+                None => return self.error(Error::NoExportViaName(i.clone(), module.clone())),
+            };
 
-                self.modules
-                    .get_mut(&script)
-                    .expect("Script must have been added at this point")
-                    .define_global(gci, item);
-            }
+            self.modules
+                .get_mut(&script)
+                .expect("Script must have been added at this point")
+                .define_global(gci, item);
         }
 
         Ok(())
