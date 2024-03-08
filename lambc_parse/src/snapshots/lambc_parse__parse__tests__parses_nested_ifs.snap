@@ -10,9 +10,6 @@ Ok(
                     BoolLit {
                         value: true,
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 3,
                             end: 7,
                         },
@@ -28,9 +25,6 @@ Ok(
                                         BoolLit {
                                             value: true,
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 13,
                                                 end: 17,
                                             },
@@ -40,17 +34,11 @@ Ok(
                                         statements: [],
                                         value: None,
                                         span: Span {
-                                            file: FileId(
-                                                0,
-                                            ),
                                             start: 18,
                                             end: 21,
                                         },
                                     },
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 10,
                                         end: 21,
                                     },
@@ -58,9 +46,6 @@ Ok(
                                 elif: [],
                                 els_: None,
                                 span: Span {
-                                    file: FileId(
-                                        0,
-                                    ),
                                     start: 10,
                                     end: 21,
                                 },
@@ -68,17 +53,11 @@ Ok(
                         ),
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 8,
                         end: 23,
                     },
                 },
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 0,
                     end: 23,
                 },
@@ -89,9 +68,6 @@ Ok(
                         BoolLit {
                             value: false,
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 29,
                                 end: 34,
                             },
@@ -101,17 +77,11 @@ Ok(
                         statements: [],
                         value: None,
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 35,
                             end: 38,
                         },
                     },
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 24,
                         end: 38,
                     },
@@ -121,9 +91,6 @@ Ok(
                         BoolLit {
                             value: false,
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 44,
                                 end: 49,
                             },
@@ -133,17 +100,11 @@ Ok(
                         statements: [],
                         value: None,
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 50,
                             end: 53,
                         },
                     },
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 39,
                         end: 53,
                     },
@@ -155,26 +116,17 @@ Ok(
                         statements: [],
                         value: None,
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 59,
                             end: 62,
                         },
                     },
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 54,
                         end: 62,
                     },
                 },
             ),
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 62,
             },

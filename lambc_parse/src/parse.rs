@@ -1,9 +1,9 @@
 use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
-    Else, Export, ExportItem, Expr, ExprStatement, F64Lit, FileId, FnDef, Group, I64Base, I64Lit,
-    Ident, IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List,
-    LiteralPattern, Module, NilLit, Pattern, RestPattern, Return, Span, Statement, StrLit, StrText,
-    TokKind, Token, Unary, UnaryOp,
+    Else, Export, ExportItem, Expr, ExprStatement, F64Lit, FnDef, Group, I64Base, I64Lit, Ident,
+    IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List, LiteralPattern,
+    Module, NilLit, Pattern, RestPattern, Return, Span, Statement, StrLit, StrText, TokKind, Token,
+    Unary, UnaryOp,
 };
 use miette::Diagnostic;
 use thiserror::Error as ThError;
@@ -26,9 +26,9 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(input: &'a [u8], file: FileId) -> Self {
+    pub fn new(input: &'a [u8]) -> Self {
         Self {
-            lexer: Lexer::new(input, file),
+            lexer: Lexer::new(input),
             peek1: None,
             peek2: None,
         }
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
         }
 
         let end = self.expect(TokKind::End)?;
-        let span = Span::new(0, end.span.end, end.span.file);
+        let span = Span::new(0, end.span.end);
         Ok(Module {
             exports,
             imports,
@@ -791,7 +791,6 @@ impl<'a> Parser<'a> {
                     span: Span {
                         start: err.span.start,
                         end: err.span.start,
-                        file: err.span.file,
                     },
                 });
             }
@@ -802,7 +801,6 @@ impl<'a> Parser<'a> {
             span: Span {
                 start: tok.span.start,
                 end: end.span.end,
-                file: end.span.file,
             },
         })
     }
@@ -831,7 +829,6 @@ impl<'a> Parser<'a> {
                     span: Span {
                         start: err.span.start,
                         end: err.span.start,
-                        file: err.span.file,
                     },
                 });
             }
@@ -842,7 +839,6 @@ impl<'a> Parser<'a> {
             span: Span {
                 start: tok.span.start,
                 end: end.span.end,
-                file: end.span.file,
             },
         })
     }
@@ -972,8 +968,8 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, FileId, I64Base, I64Lit, Ident, NilLit, Parser,
-        Span, StrLit, StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, I64Base, I64Lit, Ident, NilLit, Parser, Span,
+        StrLit, StrText,
     };
     use pretty_assertions::assert_eq;
 
@@ -986,13 +982,13 @@ mod tests {
     }
 
     fn span(start: usize, end: usize) -> Span {
-        Span::new(start, end, FileId(0))
+        Span::new(start, end)
     }
 
     #[test]
     fn parses_int() {
         let parse_int = |inp: &str, out: I64Lit| {
-            let mut parser = Parser::new(inp.as_bytes(), FileId(0));
+            let mut parser = Parser::new(inp.as_bytes());
             assert_eq!(parser.parse_i64(), Ok(out));
         };
 
@@ -1012,7 +1008,7 @@ mod tests {
     #[test]
     fn parses_f64() {
         let parse_f64 = |inp: &str| {
-            let mut parser = Parser::new(inp.as_bytes(), FileId(0));
+            let mut parser = Parser::new(inp.as_bytes());
             assert_eq!(
                 parser.parse_f64(),
                 Ok(F64Lit {
@@ -1020,7 +1016,6 @@ mod tests {
                     span: Span {
                         start: 0,
                         end: inp.len(),
-                        file: FileId(0),
                     }
                 })
             );
@@ -1040,7 +1035,7 @@ mod tests {
     #[test]
     fn parses_bool() {
         let parse_bool = |inp: &str| {
-            let mut parser = Parser::new(inp.as_bytes(), FileId(0));
+            let mut parser = Parser::new(inp.as_bytes());
             assert_eq!(
                 parser.parse_bool(),
                 Ok(BoolLit {
@@ -1048,7 +1043,6 @@ mod tests {
                     span: Span {
                         start: 0,
                         end: inp.len(),
-                        file: FileId(0),
                     }
                 })
             );
@@ -1060,15 +1054,11 @@ mod tests {
 
     #[test]
     fn parses_nil() {
-        let mut parser = Parser::new("nil".as_bytes(), FileId(0));
+        let mut parser = Parser::new("nil".as_bytes());
         assert_eq!(
             parser.parse_nil(),
             Ok(NilLit {
-                span: Span {
-                    start: 0,
-                    end: 3,
-                    file: FileId(0),
-                }
+                span: Span { start: 0, end: 3 }
             })
         );
     }
@@ -1076,7 +1066,7 @@ mod tests {
     #[test]
     fn parses_string() {
         let input = r#""""#;
-        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let mut parser = Parser::new(input.as_bytes());
         assert_eq!(
             parser.parse_string(),
             Ok(StrLit {
@@ -1084,29 +1074,20 @@ mod tests {
                 span: Span {
                     start: 0,
                     end: input.len(),
-                    file: FileId(0),
                 }
             })
         );
 
         let input = r#""hello""#;
-        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let mut parser = Parser::new(input.as_bytes());
         assert_eq!(
             parser.parse_string(),
             Ok(StrLit {
                 text: Some(StrText {
                     inner: String::from(input.trim_matches('"')),
-                    span: Span {
-                        start: 1,
-                        end: 6,
-                        file: FileId(0),
-                    }
+                    span: Span { start: 1, end: 6 }
                 }),
-                span: Span {
-                    start: 0,
-                    end: 7,
-                    file: FileId(0),
-                }
+                span: Span { start: 0, end: 7 }
             })
         );
     }
@@ -1114,7 +1095,7 @@ mod tests {
     #[test]
     fn parses_char() {
         let input = "''";
-        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let mut parser = Parser::new(input.as_bytes());
         assert_eq!(
             parser.parse_char(),
             Ok(CharLit {
@@ -1122,50 +1103,33 @@ mod tests {
                 span: Span {
                     start: 0,
                     end: input.len(),
-                    file: FileId(0),
                 }
             })
         );
 
         let input = "'hello'";
-        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let mut parser = Parser::new(input.as_bytes());
         assert_eq!(
             parser.parse_char(),
             Ok(CharLit {
                 text: Some(CharText {
                     inner: String::from(input.trim_matches('\'')),
-                    span: Span {
-                        start: 1,
-                        end: 6,
-                        file: FileId(0),
-                    }
+                    span: Span { start: 1, end: 6 }
                 }),
-                span: Span {
-                    start: 0,
-                    end: 7,
-                    file: FileId(0),
-                }
+                span: Span { start: 0, end: 7 }
             })
         );
 
         let input = "'ä'";
-        let mut parser = Parser::new(input.as_bytes(), FileId(0));
+        let mut parser = Parser::new(input.as_bytes());
         assert_eq!(
             parser.parse_char(),
             Ok(CharLit {
                 text: Some(CharText {
                     inner: String::from(input.trim_matches('\'')),
-                    span: Span {
-                        start: 1,
-                        end: 3,
-                        file: FileId(0),
-                    }
+                    span: Span { start: 1, end: 3 }
                 }),
-                span: Span {
-                    start: 0,
-                    end: 4,
-                    file: FileId(0),
-                }
+                span: Span { start: 0, end: 4 }
             })
         );
     }
@@ -1173,13 +1137,12 @@ mod tests {
     #[test]
     fn parses_ident() {
         let ident = |ident: &str| {
-            let mut parser = Parser::new(ident.as_bytes(), FileId(0));
+            let mut parser = Parser::new(ident.as_bytes());
             assert_eq!(
                 parser.parse_ident(),
                 Ok(Ident {
                     raw: ident.into(),
                     span: Span {
-                        file: FileId(0),
                         start: 0,
                         end: ident.len(),
                     }
@@ -1196,9 +1159,8 @@ mod tests {
 
     #[test]
     fn parses_literal() {
-        let file = FileId(0);
         let literal = |literal: &str, out| {
-            let mut parser = Parser::new(literal.as_bytes(), file);
+            let mut parser = Parser::new(literal.as_bytes());
             assert_eq!(parser.parse_literal(), out)
         };
 
@@ -1206,7 +1168,7 @@ mod tests {
             "true",
             Ok(Expr::Bool(BoolLit {
                 value: true,
-                span: Span::new(0, 4, file),
+                span: Span::new(0, 4),
             })),
         );
 
@@ -1214,7 +1176,7 @@ mod tests {
             "false",
             Ok(Expr::Bool(BoolLit {
                 value: false,
-                span: Span::new(0, 5, file),
+                span: Span::new(0, 5),
             })),
         );
 
@@ -1222,14 +1184,14 @@ mod tests {
             "2.0e2",
             Ok(Expr::F64(F64Lit {
                 value: "2.0e2".into(),
-                span: Span::new(0, 5, file),
+                span: Span::new(0, 5),
             })),
         );
 
         literal(
             "nil",
             Ok(Expr::Nil(NilLit {
-                span: Span::new(0, 3, file),
+                span: Span::new(0, 3),
             })),
         );
 
@@ -1238,7 +1200,7 @@ mod tests {
             Ok(Expr::I64(I64Lit {
                 base: I64Base::Dec,
                 value: "42".into(),
-                span: Span::new(0, 2, file),
+                span: Span::new(0, 2),
             })),
         );
 
@@ -1246,7 +1208,7 @@ mod tests {
             "\"\"",
             Ok(Expr::String(StrLit {
                 text: None,
-                span: Span::new(0, 2, file),
+                span: Span::new(0, 2),
             })),
         );
 
@@ -1255,9 +1217,9 @@ mod tests {
             Ok(Expr::String(StrLit {
                 text: Some(StrText {
                     inner: "hello\nworld".into(),
-                    span: Span::new(1, 13, file),
+                    span: Span::new(1, 13),
                 }),
-                span: Span::new(0, 14, file),
+                span: Span::new(0, 14),
             })),
         );
 
@@ -1265,7 +1227,7 @@ mod tests {
             "''",
             Ok(Expr::Char(CharLit {
                 text: None,
-                span: Span::new(0, 2, file),
+                span: Span::new(0, 2),
             })),
         );
 
@@ -1274,9 +1236,9 @@ mod tests {
             Ok(Expr::Char(CharLit {
                 text: Some(CharText {
                     inner: "hello\nworld".into(),
-                    span: Span::new(1, 13, file),
+                    span: Span::new(1, 13),
                 }),
-                span: Span::new(0, 14, file),
+                span: Span::new(0, 14),
             })),
         );
     }
@@ -1285,7 +1247,7 @@ mod tests {
     fn parses_atom() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                let mut parser = Parser::new($atom.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1319,7 +1281,7 @@ mod tests {
     fn parses_nested_list() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                let mut parser = Parser::new($atom.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1338,7 +1300,7 @@ mod tests {
     fn parses_nested_group() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                let mut parser = Parser::new($atom.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1350,7 +1312,7 @@ mod tests {
     fn parses_nested_fn_def() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                let mut parser = Parser::new($atom.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1362,7 +1324,7 @@ mod tests {
     fn parses_statement() {
         macro_rules! stmt {
             ($stmt:expr) => {
-                let mut parser = Parser::new($stmt.as_bytes(), FileId(0));
+                let mut parser = Parser::new($stmt.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_stmt());
             };
         }
@@ -1376,7 +1338,7 @@ mod tests {
     fn parse_nested_blocks() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                let mut parser = Parser::new($atom.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1389,7 +1351,7 @@ mod tests {
     fn parses_nested_ifs() {
         macro_rules! atom {
             ($atom:expr) => {
-                let mut parser = Parser::new($atom.as_bytes(), FileId(0));
+                let mut parser = Parser::new($atom.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_atom());
             };
         }
@@ -1401,7 +1363,7 @@ mod tests {
     fn parses_literal_pattern() {
         macro_rules! pat {
             ($pat:expr) => {
-                let mut parser = Parser::new($pat.as_bytes(), FileId(0));
+                let mut parser = Parser::new($pat.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_literal_pattern());
             };
         }
@@ -1417,7 +1379,7 @@ mod tests {
     fn parses_array_pattern() {
         macro_rules! pat {
             ($pat:expr) => {
-                let mut parser = Parser::new($pat.as_bytes(), FileId(0));
+                let mut parser = Parser::new($pat.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_array_pattern());
             };
         }
@@ -1431,7 +1393,7 @@ mod tests {
     fn parses_ident_pattern() {
         macro_rules! pat {
             ($pat:expr) => {
-                let mut parser = Parser::new($pat.as_bytes(), FileId(0));
+                let mut parser = Parser::new($pat.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_ident_pattern());
             };
         }
@@ -1445,7 +1407,7 @@ mod tests {
     fn parses_index() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                let mut parser = Parser::new($expr.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_expr());
             };
         }
@@ -1459,7 +1421,7 @@ mod tests {
     fn parses_call() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                let mut parser = Parser::new($expr.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_expr());
             };
         }
@@ -1473,7 +1435,7 @@ mod tests {
     fn parses_interlaced_calls_and_index() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                let mut parser = Parser::new($expr.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_expr());
             };
         }
@@ -1486,7 +1448,7 @@ mod tests {
     fn parses_pratt_expressions() {
         macro_rules! expr {
             ($expr:expr) => {
-                let mut parser = Parser::new($expr.as_bytes(), FileId(0));
+                let mut parser = Parser::new($expr.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_expr())
             };
         }
@@ -1502,7 +1464,7 @@ mod tests {
     fn parses_module() {
         macro_rules! module {
             ($module:expr) => {
-                let mut parser = Parser::new($module.as_bytes(), FileId(0));
+                let mut parser = Parser::new($module.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_module())
             };
         }
@@ -1554,7 +1516,7 @@ mod tests {
     fn parses_import() {
         macro_rules! import {
             ($import:expr) => {
-                let mut parser = Parser::new($import.as_bytes(), FileId(0));
+                let mut parser = Parser::new($import.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_import())
             };
         }
@@ -1588,7 +1550,7 @@ mod tests {
     fn parses_export() {
         macro_rules! import {
             ($import:expr) => {
-                let mut parser = Parser::new($import.as_bytes(), FileId(0));
+                let mut parser = Parser::new($import.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_export())
             };
         }
@@ -1618,14 +1580,14 @@ mod tests {
     fn parses_return() {
         macro_rules! return_expr {
             ($ret:expr) => {
-                let mut parser = Parser::new($ret.as_bytes(), FileId(0));
+                let mut parser = Parser::new($ret.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_return())
             };
         }
 
         macro_rules! return_in_expr {
             ($ret:expr) => {
-                let mut parser = Parser::new($ret.as_bytes(), FileId(0));
+                let mut parser = Parser::new($ret.as_bytes());
                 insta::assert_debug_snapshot!(parser.parse_expr())
             };
         }

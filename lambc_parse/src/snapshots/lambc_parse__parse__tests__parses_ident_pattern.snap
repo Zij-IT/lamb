@@ -8,18 +8,12 @@ Ok(
             ident: Ident {
                 raw: "i",
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 0,
                     end: 1,
                 },
             },
             bound: None,
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 1,
             },

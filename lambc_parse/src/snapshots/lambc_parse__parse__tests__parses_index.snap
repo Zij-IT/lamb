@@ -10,9 +10,6 @@ Ok(
                     base: Dec,
                     value: "2",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 0,
                         end: 1,
                     },
@@ -22,18 +19,12 @@ Ok(
                 Ident {
                     raw: "one",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 2,
                         end: 5,
                     },
                 },
             ),
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 6,
             },

@@ -6,9 +6,6 @@ Ok(
     Nil(
         NilLit {
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 3,
             },

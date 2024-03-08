@@ -10,9 +10,6 @@ Ok(
                     Return {
                         value: None,
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 1,
                             end: 7,
                         },
@@ -20,9 +17,6 @@ Ok(
                 ),
             ],
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 9,
             },

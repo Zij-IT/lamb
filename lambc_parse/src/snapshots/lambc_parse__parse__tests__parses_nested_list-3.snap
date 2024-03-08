@@ -9,9 +9,6 @@ Ok(
                 Ident {
                     raw: "a",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 7,
                         end: 8,
                     },
@@ -20,9 +17,6 @@ Ok(
             body: Nil(
                 NilLit {
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 14,
                         end: 17,
                     },
@@ -30,9 +24,6 @@ Ok(
             ),
             recursive: true,
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 17,
             },

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{FileId, Span};
+use crate::Span;
 
 /// A type representing what the `slice` field of the [`Token`] type
 /// contains.
@@ -170,25 +170,21 @@ pub struct Token<'a> {
 pub struct Lexer<'a> {
     input: &'a [u8],
     state: State,
-    file: FileId,
     at: usize,
 }
 
 impl<'a> Lexer<'a> {
-    /// Constructs a new `Lexer` with the input with the file identifier [`FileId`].
-    pub fn new(input: &'a [u8], file: FileId) -> Self {
+    /// Constructs a new `Lexer` with the input.
+    pub fn new(input: &'a [u8]) -> Self {
         Self {
             state: State::Default,
             input,
-            file,
             at: 0,
         }
     }
 
     /// Returns the next [`Token`] in the input that isn't whitespace or a comment. If the lexer
     /// has reached the end of the input, it will return [`TokKind::End`]
-    ///
-    /// All tokens inherit the [`FileId`] from `self`.
     pub fn next_nontrival_token(&mut self) -> Token<'a> {
         let mut next = self.next_token();
         while next.kind == TokKind::Comment {
@@ -200,8 +196,6 @@ impl<'a> Lexer<'a> {
 
     /// Returns the next [`Token`] in the input. If the lexer
     /// has reached the end of the input, it will return [`TokKind::End`]
-    ///
-    /// All tokens inherit the [`FileId`] from `self`.
     fn next_token(&mut self) -> Token<'a> {
         match self.state {
             State::Default => self.default_token(),
@@ -391,7 +385,7 @@ impl<'a> Lexer<'a> {
 
         Token {
             kind: TokKind::StringText,
-            span: Span::new(start, self.at, self.file),
+            span: Span::new(start, self.at),
             slice,
         }
     }
@@ -477,7 +471,7 @@ impl<'a> Lexer<'a> {
 
         Token {
             kind: TokKind::CharText,
-            span: Span::new(start, self.at, self.file),
+            span: Span::new(start, self.at),
             slice,
         }
     }
@@ -507,7 +501,7 @@ impl<'a> Lexer<'a> {
         // slice shouldn't include the prefix
         Token {
             kind,
-            span: Span::new(start - 2, self.at, self.file),
+            span: Span::new(start - 2, self.at),
             slice: self.slice(start, self.at).into(),
         }
     }
@@ -625,7 +619,7 @@ impl<'a> Lexer<'a> {
     fn token(&self, start: usize, kind: TokKind) -> Token<'a> {
         Token {
             kind,
-            span: Span::new(start, self.at, self.file),
+            span: Span::new(start, self.at),
             slice: self.slice(start, self.at).into(),
         }
     }
@@ -634,7 +628,7 @@ impl<'a> Lexer<'a> {
         self.at = end;
         Token {
             kind,
-            span: Span::new(start, end, self.file),
+            span: Span::new(start, end),
             slice: self.slice(start, end).into(),
         }
     }
@@ -668,23 +662,23 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::{Lexer, TokKind, Token};
-    use crate::{FileId, Span};
+    use crate::Span;
     use pretty_assertions::assert_eq;
 
     fn tok(kind: TokKind, start: usize, end: usize, slice: &str) -> Token {
         Token {
             kind,
-            span: Span::new(start, end, FileId(0)),
+            span: Span::new(start, end),
             slice: slice.into(),
         }
     }
 
     fn lex(input: &str) -> Lexer {
-        Lexer::new(input.as_bytes(), FileId(0))
+        Lexer::new(input.as_bytes())
     }
 
     fn lex_one(input: &str, kind: TokKind) {
-        let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+        let mut lexer = Lexer::new(input.as_bytes());
         let tok = lexer.next_token();
         assert_eq!(tok.kind, kind);
         assert_eq!(tok.slice, input);
@@ -692,7 +686,7 @@ mod tests {
     }
 
     fn lex_mult(input: &str, kinds: &[TokKind]) {
-        let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+        let mut lexer = Lexer::new(input.as_bytes());
         let mut kinds = kinds.into_iter().copied();
 
         while let (Some(kind), tok) = (kinds.next(), lexer.next_token()) {
@@ -974,7 +968,7 @@ mod tests {
     #[test]
     fn lexes_numbers() {
         let lex_prefixed = |input: &str, kind| {
-            let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+            let mut lexer = Lexer::new(input.as_bytes());
             let tok = lexer.next_token();
             assert_eq!(tok.kind, kind);
             assert_eq!(tok.slice, &input[2..]);
@@ -1009,7 +1003,7 @@ mod tests {
     #[test]
     fn lexes_with_whitespace() {
         let lex_one_trim = |input: &str, kind| {
-            let mut lexer = Lexer::new(input.as_bytes(), FileId(0));
+            let mut lexer = Lexer::new(input.as_bytes());
             let tok = lexer.next_token();
             assert_eq!(tok.kind, kind);
             assert_eq!(tok.slice, input.trim());

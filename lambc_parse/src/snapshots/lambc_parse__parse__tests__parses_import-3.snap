@@ -9,18 +9,12 @@ Ok(
                 StrText {
                     inner: "my-path",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 6,
                         end: 13,
                     },
                 },
             ),
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 5,
                 end: 14,
             },
@@ -29,9 +23,6 @@ Ok(
             Ident {
                 raw: "alias",
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 18,
                     end: 23,
                 },
@@ -40,9 +31,6 @@ Ok(
         items: [],
         star: true,
         span: Span {
-            file: FileId(
-                0,
-            ),
             start: 0,
             end: 33,
         },

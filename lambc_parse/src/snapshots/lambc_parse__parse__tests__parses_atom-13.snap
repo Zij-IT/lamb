@@ -1,6 +1,6 @@
 ---
 source: lambc_parse/src/parse.rs
-expression: parser.parse_case()
+expression: parser.parse_atom()
 ---
 Ok(
     Case(
@@ -8,9 +8,6 @@ Ok(
             scrutinee: Nil(
                 NilLit {
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 18,
                         end: 21,
                     },
@@ -24,9 +21,6 @@ Ok(
                                 ArrayPattern {
                                     patterns: [],
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 40,
                                         end: 42,
                                     },
@@ -42,18 +36,12 @@ Ok(
                                                         ident: Ident {
                                                             raw: "one",
                                                             span: Span {
-                                                                file: FileId(
-                                                                    0,
-                                                                ),
                                                                 start: 46,
                                                                 end: 49,
                                                             },
                                                         },
                                                         bound: None,
                                                         span: Span {
-                                                            file: FileId(
-                                                                0,
-                                                            ),
                                                             start: 46,
                                                             end: 49,
                                                         },
@@ -61,18 +49,12 @@ Ok(
                                                 ),
                                             ],
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 46,
                                                 end: 49,
                                             },
                                         },
                                     ],
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 45,
                                         end: 50,
                                     },
@@ -80,9 +62,6 @@ Ok(
                             ),
                         ],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 40,
                             end: 50,
                         },
@@ -95,9 +74,6 @@ Ok(
                                     statements: [],
                                     value: None,
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 62,
                                         end: 64,
                                     },
@@ -105,18 +81,12 @@ Ok(
                             ),
                             recursive: false,
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 54,
                                 end: 64,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 40,
                         end: 64,
                     },
@@ -143,9 +113,6 @@ Ok(
                                                                                             ArrayPattern {
                                                                                                 patterns: [],
                                                                                                 span: Span {
-                                                                                                    file: FileId(
-                                                                                                        0,
-                                                                                                    ),
                                                                                                     start: 84,
                                                                                                     end: 86,
                                                                                                 },
@@ -153,18 +120,12 @@ Ok(
                                                                                         ),
                                                                                     ],
                                                                                     span: Span {
-                                                                                        file: FileId(
-                                                                                            0,
-                                                                                        ),
                                                                                         start: 84,
                                                                                         end: 86,
                                                                                     },
                                                                                 },
                                                                             ],
                                                                             span: Span {
-                                                                                file: FileId(
-                                                                                    0,
-                                                                                ),
                                                                                 start: 83,
                                                                                 end: 87,
                                                                             },
@@ -172,18 +133,12 @@ Ok(
                                                                     ),
                                                                 ],
                                                                 span: Span {
-                                                                    file: FileId(
-                                                                        0,
-                                                                    ),
                                                                     start: 83,
                                                                     end: 87,
                                                                 },
                                                             },
                                                         ],
                                                         span: Span {
-                                                            file: FileId(
-                                                                0,
-                                                            ),
                                                             start: 82,
                                                             end: 88,
                                                         },
@@ -191,18 +146,12 @@ Ok(
                                                 ),
                                             ],
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 82,
                                                 end: 88,
                                             },
                                         },
                                     ],
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 81,
                                         end: 89,
                                     },
@@ -210,9 +159,6 @@ Ok(
                             ),
                         ],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 81,
                             end: 89,
                         },
@@ -222,18 +168,12 @@ Ok(
                             statements: [],
                             value: None,
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 93,
                                 end: 95,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 81,
                         end: 95,
                     },
@@ -252,9 +192,6 @@ Ok(
                                                             base: Dec,
                                                             value: "2",
                                                             span: Span {
-                                                                file: FileId(
-                                                                    0,
-                                                                ),
                                                                 start: 113,
                                                                 end: 114,
                                                             },
@@ -263,9 +200,6 @@ Ok(
                                                 ),
                                             ],
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 113,
                                                 end: 114,
                                             },
@@ -275,9 +209,6 @@ Ok(
                                                 Rest(
                                                     RestPattern {
                                                         span: Span {
-                                                            file: FileId(
-                                                                0,
-                                                            ),
                                                             start: 116,
                                                             end: 118,
                                                         },
@@ -285,9 +216,6 @@ Ok(
                                                 ),
                                             ],
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 116,
                                                 end: 118,
                                             },
@@ -301,18 +229,12 @@ Ok(
                                                                 StrText {
                                                                     inner: "hi",
                                                                     span: Span {
-                                                                        file: FileId(
-                                                                            0,
-                                                                        ),
                                                                         start: 121,
                                                                         end: 123,
                                                                     },
                                                                 },
                                                             ),
                                                             span: Span {
-                                                                file: FileId(
-                                                                    0,
-                                                                ),
                                                                 start: 120,
                                                                 end: 124,
                                                             },
@@ -321,18 +243,12 @@ Ok(
                                                 ),
                                             ],
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 120,
                                                 end: 124,
                                             },
                                         },
                                     ],
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 112,
                                         end: 125,
                                     },
@@ -340,9 +256,6 @@ Ok(
                             ),
                         ],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 112,
                             end: 125,
                         },
@@ -354,9 +267,6 @@ Ok(
                                     BoolLit {
                                         value: true,
                                         span: Span {
-                                            file: FileId(
-                                                0,
-                                            ),
                                             start: 132,
                                             end: 136,
                                         },
@@ -366,17 +276,11 @@ Ok(
                                     statements: [],
                                     value: None,
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 137,
                                         end: 139,
                                     },
                                 },
                                 span: Span {
-                                    file: FileId(
-                                        0,
-                                    ),
                                     start: 129,
                                     end: 139,
                                 },
@@ -387,9 +291,6 @@ Ok(
                                         BoolLit {
                                             value: false,
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 145,
                                                 end: 150,
                                             },
@@ -399,17 +300,11 @@ Ok(
                                         statements: [],
                                         value: None,
                                         span: Span {
-                                            file: FileId(
-                                                0,
-                                            ),
                                             start: 151,
                                             end: 153,
                                         },
                                     },
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 140,
                                         end: 153,
                                     },
@@ -417,18 +312,12 @@ Ok(
                             ],
                             els_: None,
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 129,
                                 end: 153,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 112,
                         end: 153,
                     },
@@ -441,9 +330,6 @@ Ok(
                                     ident: Ident {
                                         raw: "hik",
                                         span: Span {
-                                            file: FileId(
-                                                0,
-                                            ),
                                             start: 170,
                                             end: 173,
                                         },
@@ -455,9 +341,6 @@ Ok(
                                                     base: Dec,
                                                     value: "2",
                                                     span: Span {
-                                                        file: FileId(
-                                                            0,
-                                                        ),
                                                         start: 176,
                                                         end: 177,
                                                     },
@@ -466,9 +349,6 @@ Ok(
                                         ),
                                     ),
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 170,
                                         end: 177,
                                     },
@@ -476,9 +356,6 @@ Ok(
                             ),
                         ],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 170,
                             end: 177,
                         },
@@ -488,18 +365,12 @@ Ok(
                             base: Dec,
                             value: "2",
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 181,
                                 end: 182,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 170,
                         end: 183,
                     },
@@ -513,9 +384,6 @@ Ok(
                                         base: Dec,
                                         value: "-2",
                                         span: Span {
-                                            file: FileId(
-                                                0,
-                                            ),
                                             start: 200,
                                             end: 202,
                                         },
@@ -524,9 +392,6 @@ Ok(
                             ),
                         ],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 200,
                             end: 202,
                         },
@@ -536,27 +401,18 @@ Ok(
                             base: Dec,
                             value: "2",
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 206,
                                 end: 207,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 200,
                         end: 208,
                     },
                 },
             ],
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 13,
                 end: 222,
             },

@@ -14,9 +14,6 @@ Ok(
                                     base: Dec,
                                     value: "2",
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 0,
                                         end: 1,
                                     },
@@ -26,18 +23,12 @@ Ok(
                                 Ident {
                                     raw: "one",
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 2,
                                         end: 5,
                                     },
                                 },
                             ),
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 0,
                                 end: 6,
                             },
@@ -47,18 +38,12 @@ Ok(
                         Ident {
                             raw: "two",
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 7,
                                 end: 10,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 0,
                         end: 11,
                     },
@@ -68,18 +53,12 @@ Ok(
                 Ident {
                     raw: "three",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 12,
                         end: 17,
                     },
                 },
             ),
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 18,
             },

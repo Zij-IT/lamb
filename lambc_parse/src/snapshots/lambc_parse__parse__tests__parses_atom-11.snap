@@ -9,9 +9,6 @@ Ok(
                 Nil(
                     NilLit {
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 1,
                             end: 4,
                         },
@@ -22,9 +19,6 @@ Ok(
                         base: Dec,
                         value: "2",
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 6,
                             end: 7,
                         },
@@ -36,18 +30,12 @@ Ok(
                             StrText {
                                 inner: "hello",
                                 span: Span {
-                                    file: FileId(
-                                        0,
-                                    ),
                                     start: 10,
                                     end: 15,
                                 },
                             },
                         ),
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 9,
                             end: 16,
                         },
@@ -55,9 +43,6 @@ Ok(
                 ),
             ],
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 17,
             },

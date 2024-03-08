@@ -12,18 +12,12 @@ Ok(
                         StrText {
                             inner: "my-path",
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 19,
                                 end: 26,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 18,
                         end: 27,
                     },
@@ -32,9 +26,6 @@ Ok(
                 items: [],
                 star: true,
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 13,
                     end: 37,
                 },
@@ -51,9 +42,6 @@ Ok(
                                         Ident {
                                             raw: "call",
                                             span: Span {
-                                                file: FileId(
-                                                    0,
-                                                ),
                                                 start: 50,
                                                 end: 54,
                                             },
@@ -66,9 +54,6 @@ Ok(
                                                     Ident {
                                                         raw: "x",
                                                         span: Span {
-                                                            file: FileId(
-                                                                0,
-                                                            ),
                                                             start: 58,
                                                             end: 59,
                                                         },
@@ -78,9 +63,6 @@ Ok(
                                                     Ident {
                                                         raw: "x",
                                                         span: Span {
-                                                            file: FileId(
-                                                                0,
-                                                            ),
                                                             start: 64,
                                                             end: 65,
                                                         },
@@ -88,9 +70,6 @@ Ok(
                                                 ),
                                                 recursive: false,
                                                 span: Span {
-                                                    file: FileId(
-                                                        0,
-                                                    ),
                                                     start: 55,
                                                     end: 65,
                                                 },
@@ -101,9 +80,6 @@ Ok(
                                                 base: Dec,
                                                 value: "1",
                                                 span: Span {
-                                                    file: FileId(
-                                                        0,
-                                                    ),
                                                     start: 67,
                                                     end: 68,
                                                 },
@@ -111,9 +87,6 @@ Ok(
                                         ),
                                     ],
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 50,
                                         end: 69,
                                     },
@@ -124,34 +97,22 @@ Ok(
                                 Ident {
                                     raw: "println",
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 73,
                                         end: 80,
                                     },
                                 },
                             ),
                             span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 50,
                                 end: 80,
                             },
                             op_span: Span {
-                                file: FileId(
-                                    0,
-                                ),
                                 start: 70,
                                 end: 72,
                             },
                         },
                     ),
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 50,
                         end: 81,
                     },
@@ -159,9 +120,6 @@ Ok(
             ),
         ],
         span: Span {
-            file: FileId(
-                0,
-            ),
             start: 0,
             end: 94,
         },

@@ -10,7 +10,6 @@ pub use tokenize::{TokKind, Token};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
-    file: FileId,
     start: usize,
     end: usize,
 }
@@ -18,19 +17,16 @@ pub struct Span {
 impl Span {
     /// Creates a new `Span` for the specified `FileId`. `start` and `end` mark byte offsets in
     /// the source file.
-    pub(crate) fn new(start: usize, end: usize, file: FileId) -> Self {
-        Self { start, end, file }
+    pub(crate) fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
     }
 
     /// Helper function to join two spans from the same file. The resulting span will have the
     /// the start from `start` and end from `end`.
     pub(crate) fn connect(start: Self, end: Self) -> Self {
-        assert_eq!(start.file, end.file);
-
         Self {
             start: start.start,
             end: end.end,
-            file: start.file,
         }
     }
 }
@@ -38,14 +34,5 @@ impl Span {
 impl From<Span> for SourceSpan {
     fn from(value: Span) -> Self {
         SourceSpan::new(value.start.into(), value.end - value.start)
-    }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub struct FileId(usize);
-
-impl FileId {
-    pub fn dummy() -> Self {
-        Self(usize::MAX)
     }
 }

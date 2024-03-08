@@ -9,9 +9,6 @@ Ok(
                 Nil(
                     NilLit {
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 1,
                             end: 4,
                         },
@@ -21,9 +18,6 @@ Ok(
                     List {
                         values: [],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 6,
                             end: 8,
                         },
@@ -35,9 +29,6 @@ Ok(
                             Nil(
                                 NilLit {
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 11,
                                         end: 14,
                                     },
@@ -48,9 +39,6 @@ Ok(
                                     base: Dec,
                                     value: "2",
                                     span: Span {
-                                        file: FileId(
-                                            0,
-                                        ),
                                         start: 16,
                                         end: 17,
                                     },
@@ -58,9 +46,6 @@ Ok(
                             ),
                         ],
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 10,
                             end: 19,
                         },
@@ -68,9 +53,6 @@ Ok(
                 ),
             ],
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 0,
                 end: 21,
             },

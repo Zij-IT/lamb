@@ -9,18 +9,12 @@ Ok(
                 item: Ident {
                     raw: "one",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 7,
                         end: 10,
                     },
                 },
                 alias: None,
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 7,
                     end: 10,
                 },
@@ -29,27 +23,18 @@ Ok(
                 item: Ident {
                     raw: "two",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 12,
                         end: 15,
                     },
                 },
                 alias: None,
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 12,
                     end: 15,
                 },
             },
         ],
         span: Span {
-            file: FileId(
-                0,
-            ),
             start: 0,
             end: 17,
         },

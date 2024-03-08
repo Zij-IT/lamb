@@ -8,9 +8,6 @@ Ok(
             BoolLit {
                 value: true,
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 0,
                     end: 4,
                 },

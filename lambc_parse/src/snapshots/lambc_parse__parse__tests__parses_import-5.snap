@@ -9,18 +9,12 @@ Ok(
                 StrText {
                     inner: "my-path",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 6,
                         end: 13,
                     },
                 },
             ),
             span: Span {
-                file: FileId(
-                    0,
-                ),
                 start: 5,
                 end: 14,
             },
@@ -31,9 +25,6 @@ Ok(
                 item: Ident {
                     raw: "one",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 23,
                         end: 26,
                     },
@@ -42,18 +33,12 @@ Ok(
                     Ident {
                         raw: "i1",
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 30,
                             end: 32,
                         },
                     },
                 ),
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 30,
                     end: 32,
                 },
@@ -62,9 +47,6 @@ Ok(
                 item: Ident {
                     raw: "two",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 34,
                         end: 37,
                     },
@@ -73,18 +55,12 @@ Ok(
                     Ident {
                         raw: "i2",
                         span: Span {
-                            file: FileId(
-                                0,
-                            ),
                             start: 41,
                             end: 43,
                         },
                     },
                 ),
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 41,
                     end: 43,
                 },
@@ -93,18 +69,12 @@ Ok(
                 item: Ident {
                     raw: "three",
                     span: Span {
-                        file: FileId(
-                            0,
-                        ),
                         start: 45,
                         end: 50,
                     },
                 },
                 alias: None,
                 span: Span {
-                    file: FileId(
-                        0,
-                    ),
                     start: 45,
                     end: 50,
                 },
@@ -112,9 +82,6 @@ Ok(
         ],
         star: false,
         span: Span {
-            file: FileId(
-                0,
-            ),
             start: 0,
             end: 52,
         },
