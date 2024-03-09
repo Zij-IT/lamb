@@ -1,13 +1,11 @@
 #![warn(clippy::pedantic)]
 
-use lambc_parse::{Atom, Block, Expr, FuncCall, Ident, Script, Statement, SyntaxResult};
+use lambc_parse::{Call, Expr, ExprStatement, Ident, Module, Parser, Statement};
 use repl::Command;
 use std::{error::Error, path::Path};
 
 mod cli;
-mod optimization;
 mod repl;
-mod report;
 
 fn main() -> Result<(), Box<dyn Error>> {
     human_panic::setup_panic!();
@@ -28,13 +26,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_input<P: AsRef<Path>>(path: P, input: &str) {
-    match lambc_parse::script(input) {
+    let mut parser = Parser::new(input.as_bytes(), path.as_ref());
+    match parser.parse_module() {
         Ok(s) => {
-            if let Err(err) = lambc_vm::run_script(path, &s) {
-                println!("{err}");
+            if let Err(err) = lambc_vm::run_script(path.as_ref(), &s) {
+                println!("{}: {err}", path.as_ref().display());
             }
         }
-        Err(errs) => report::errors(input, None, &errs, "[Lamb] Syntax Errors:"),
+        Err(err) => eprintln!("{}: {err}", path.as_ref().display()),
     }
 }
 
@@ -64,8 +63,8 @@ fn run_repl() -> Result<(), repl::Error> {
                         println!("{err}");
                     }
                 }
-                Err(errs) => {
-                    report::errors(&s, None, &errs, "[Lamb] Syntax Errors:");
+                Err(err) => {
+                    eprintln!("{err}");
                     continue;
                 }
             },
@@ -75,35 +74,48 @@ fn run_repl() -> Result<(), repl::Error> {
     Ok(())
 }
 
-fn extract_script(input: &str) -> SyntaxResult<Script> {
-    match lambc_parse::script(input) {
+fn extract_script(input: &str) -> Result<Module, lambc_parse::Error> {
+    let mut parser = Parser::new(input.as_bytes(), "repl.lb");
+    match parser.parse_module() {
         Ok(script) => Ok(script),
         Err(_) => {
-            let expr = lambc_parse::expr(input)?;
+            let mut parser = Parser::new(input.as_bytes(), "repl.lb");
+            let expr = parser.parse_expr()?;
+            let span = expr.span();
             let stat = wrap_expr(expr);
-            Ok(Script {
-                exports: None,
+            Ok(Module {
+                span,
+                exports: vec![],
                 imports: vec![],
-                block: Block {
-                    stats: vec![stat],
-                    value: None,
-                },
+                path: "repl.lb".into(),
+                statements: vec![stat],
             })
         }
     }
 }
 
 fn wrap_expr(expr: Expr) -> Statement {
-    if let Expr::FuncCall(FuncCall { callee, args: _ }) = &expr {
-        if let Expr::Atom(Atom::Ident(Ident(name))) = &**callee {
-            if name == "println" || name == "print" {
-                return Statement::Expr(expr);
+    if let Expr::Call(call) = &expr {
+        if let Expr::Ident(Ident { raw, .. }) = &call.callee {
+            if raw == "println" || raw == "print" {
+                return Statement::Expr(ExprStatement {
+                    span: expr.span(),
+                    expr,
+                });
             }
         }
     }
 
-    Statement::Expr(Expr::FuncCall(FuncCall {
-        callee: Box::new(Expr::Atom(Atom::Ident(Ident("println".into())))),
-        args: vec![expr],
-    }))
+    let span = expr.span();
+    Statement::Expr(ExprStatement {
+        expr: Expr::Call(Box::new(Call {
+            callee: Expr::Ident(Ident {
+                raw: "println".into(),
+                span,
+            }),
+            args: vec![expr],
+            span,
+        })),
+        span,
+    })
 }

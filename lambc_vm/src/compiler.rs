@@ -1,9 +1,9 @@
 use std::num::NonZeroU16;
 
 use lambc_parse::{
-    ArrayPattern, Assign, Atom, Binary, BinaryOp, Block as LambBlock, Case, CaseArm, Either, Elif,
-    Else, Expr, FuncCall, FuncDef, Ident, If, Index, Literal, Pattern, PatternTop, Script,
-    Statement, Unary,
+    BinaryOp, Block as LambBlock, BoolLit, Case, CaseArm, CharLit, Define, Else, Expr, F64Lit,
+    FnDef, I64Base, I64Lit, Ident, If, IfCond, InnerPattern, List, LiteralPattern, Module, NilLit,
+    Pattern, Return, Statement, StrLit,
 };
 
 use crate::{
@@ -83,7 +83,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(&mut self, gc: &mut LambGc, script: &Script) {
+    pub fn compile(&mut self, gc: &mut LambGc, script: &Module) {
         self.compile_script(script, gc);
     }
 
@@ -136,7 +136,7 @@ impl Compiler {
         self.func.chunk.write_op(Op::UnsaveValue);
     }
 
-    fn add_arg(&mut self, gc: &mut LambGc, Ident(arg): &Ident) {
+    fn add_arg(&mut self, gc: &mut LambGc, Ident { raw: arg, .. }: &Ident) {
         let rf = gc.intern(arg);
         self.func.chunk.constants.push(Value::String(rf));
         self.add_local(arg.clone());
@@ -283,14 +283,18 @@ impl Compiler {
         self.func.chunk.patch_jmp(jmp);
     }
 
-    fn compile_script(&mut self, script: &Script, gc: &mut LambGc) {
-        for stat in &script.block.stats {
+    fn compile_script(&mut self, script: &Module, gc: &mut LambGc) {
+        for stat in &script.statements {
             self.compile_stmt(stat, gc);
         }
     }
 
     fn compile_block(&mut self, block: &LambBlock, gc: &mut LambGc) {
-        let LambBlock { stats, value } = block;
+        let LambBlock {
+            value,
+            statements: stats,
+            ..
+        } = block;
         self.start_block();
 
         for stat in stats {
@@ -313,20 +317,18 @@ impl Compiler {
 
     fn compile_stmt(&mut self, stat: &Statement, gc: &mut LambGc) {
         match stat {
-            Statement::Assign(assign) => {
-                let Assign {
-                    assignee: i @ Ident(ident),
+            Statement::Define(assign) => {
+                let Define {
+                    ident: i @ Ident { raw: ident, .. },
                     value,
+                    span: _,
                 } = assign;
 
-                if let Expr::FuncDef(
-                    f @ FuncDef {
-                        is_recursive: true, ..
-                    },
-                ) = value
-                {
-                    self.compile_rec_func_def(i, f, gc);
-                    return;
+                if let Expr::FnDef(f) = value {
+                    if f.recursive {
+                        self.compile_rec_func_def(i, f, gc);
+                        return;
+                    }
                 }
 
                 self.compile_expr(value, gc);
@@ -341,66 +343,65 @@ impl Compiler {
                 }
             }
             Statement::Expr(e) => {
-                self.compile_expr(e, gc);
+                self.compile_expr(&e.expr, gc);
                 self.write_op(Op::Pop(NZ_ONE_U16));
-            }
-            Statement::Return(Some(r)) => {
-                self.compile_expr(r, gc);
-                self.write_op(Op::Return);
-            }
-            Statement::Return(None) => {
-                self.write_const_op(Value::Nil);
-                self.write_op(Op::Return);
             }
         }
     }
 
     fn compile_expr(&mut self, value: &Expr, gc: &mut LambGc) {
         match value {
-            Expr::Unary(Unary { rhs, op }) => {
-                self.compile_expr(rhs, gc);
-                self.write_op(Op::from(*op));
+            Expr::Unary(un) => {
+                self.compile_expr(&un.rhs, gc);
+                self.write_op(Op::from(un.op));
             }
-            Expr::Binary(Binary { lhs, rhs, op }) => match Op::try_from(*op) {
+            Expr::Binary(bin) => match Op::try_from(bin.op) {
                 Ok(op) => {
-                    self.compile_expr(lhs, gc);
-                    self.compile_expr(rhs, gc);
+                    self.compile_expr(&bin.lhs, gc);
+                    self.compile_expr(&bin.rhs, gc);
                     self.write_op(op);
                 }
-                Err(BinaryOp::LogAnd) => self.compile_sc_op(lhs, rhs, Jump::IfFalse, gc),
-                Err(BinaryOp::LogOr) => self.compile_sc_op(lhs, rhs, Jump::IfTrue, gc),
-                Err(BinaryOp::LApply) => self.compile_apply(lhs, rhs, gc),
-                Err(BinaryOp::RApply) => self.compile_apply(rhs, lhs, gc),
-                Err(BinaryOp::LCompose) => self.compile_compose(lhs, rhs, gc),
-                Err(BinaryOp::RCompose) => self.compile_compose(rhs, lhs, gc),
+                Err(BinaryOp::Land) => self.compile_sc_op(&bin.lhs, &bin.rhs, Jump::IfFalse, gc),
+                Err(BinaryOp::Lor) => self.compile_sc_op(&bin.lhs, &bin.rhs, Jump::IfTrue, gc),
+                Err(BinaryOp::Appl) => self.compile_apply(&bin.lhs, &bin.rhs, gc),
+                Err(BinaryOp::Appr) => self.compile_apply(&bin.rhs, &bin.lhs, gc),
+                Err(BinaryOp::Cpsl) => self.compile_compose(&bin.lhs, &bin.rhs, gc),
+                Err(BinaryOp::Cpsr) => self.compile_compose(&bin.rhs, &bin.lhs, gc),
                 Err(_) => unreachable!("All cases are actually covered!"),
             },
-            Expr::Index(Index { indexee, index }) => {
-                self.compile_expr(indexee, gc);
-                self.compile_expr(index, gc);
+            Expr::Index(i) => {
+                self.compile_expr(&i.lhs, gc);
+                self.compile_expr(&i.rhs, gc);
                 self.write_op(Op::Index);
             }
-            Expr::FuncCall(FuncCall { callee, args }) => {
-                self.compile_expr(callee, gc);
-                for arg in args {
+            Expr::Call(call) => {
+                self.compile_expr(&call.callee, gc);
+                for arg in &call.args {
                     self.compile_expr(arg, gc);
                 }
-                self.write_op(Op::Call(args.len().try_into().unwrap()))
+                self.write_op(Op::Call(call.args.len().try_into().unwrap()))
             }
             Expr::If(if_) => self.compile_if_expr(if_, gc),
             Expr::Case(c) => self.compile_case(c, gc),
-            Expr::FuncDef(f) => self.compile_func(f, gc, "Anon Func".into()),
+            Expr::FnDef(f) => self.compile_func(f, gc, "Anon Func".into()),
             Expr::Block(block) => self.compile_block(block, gc),
-            Expr::Atom(atom) => self.compile_atom(atom, gc),
-            Expr::Path(path) => self.compile_path(path, gc),
-            Expr::Error => unimplemented!("Attempt to compile Expr::Error"),
+            Expr::Ident(i) => self.compile_ident(i, gc),
+            Expr::Char(c) => self.compile_char_literal(c),
+            Expr::String(s) => self.compile_str_literal(gc, s),
+            Expr::Bool(b) => self.compile_bool_literal(b),
+            Expr::Nil(n) => self.compile_nil_literal(n),
+            Expr::I64(i) => self.compile_i64_literal(i),
+            Expr::F64(f) => self.compile_f64_literal(f),
+            Expr::List(list) => self.compile_list(gc, list),
+            Expr::Group(gr) => self.compile_expr(&gr.value, gc),
+            Expr::Return(ret) => self.compile_return(gc, ret),
         }
     }
 
     fn compile_rec_func_def<'ast>(
         &mut self,
-        Ident(inner): &'ast Ident,
-        def: &'ast FuncDef,
+        Ident { raw: inner, .. }: &'ast Ident,
+        def: &'ast FnDef,
         gc: &mut LambGc,
     ) {
         let ident = gc.intern(inner);
@@ -432,7 +433,14 @@ impl Compiler {
         let orig_self = std::mem::replace(self, composition);
 
         self.enclosing = Some(Box::new(orig_self));
-        self.add_arg(gc, &Ident(COMPOSE_ARG.into()));
+        self.add_arg(
+            gc,
+            &Ident {
+                raw: COMPOSE_ARG.into(),
+                // TODO: Remove this span!
+                span: lhs.span(),
+            },
+        );
         self.start_block();
         self.compile_expr(lhs, gc);
         self.compile_expr(rhs, gc);
@@ -464,57 +472,44 @@ impl Compiler {
         self.patch_jump(idx);
     }
 
-    fn compile_path<'ast>(&mut self, path: &'ast lambc_parse::Path, gc: &mut LambGc) {
-        // Module::item1::item2
-        // ^^^^^^  ^^^^^  ^^^^^
-        //     |   |      |
-        //     |   |      +--> ModuleItemRef
-        //     |   |
-        //     |   +--> ModuleItemRef
-        //     |
-        //     +--> Expr
-        let (first, rest) = path.segments.split_first().unwrap();
-        self.compile_ident(first, gc);
+    // fn compile_path<'ast>(&mut self, path: &'ast lambc_parse::Path, gc: &mut LambGc) {
+    //     // Module::item1::item2
+    //     // ^^^^^^  ^^^^^  ^^^^^
+    //     //     |   |      |
+    //     //     |   |      +--> ModuleItemRef
+    //     //     |   |
+    //     //     |   +--> ModuleItemRef
+    //     //     |
+    //     //     +--> Expr
+    //     let (first, rest) = path.segments.split_first().unwrap();
+    //     self.compile_ident(first, gc);
 
-        let mut iter = rest.chunks_exact(2);
-        while let Some(&[Ident(ref left), Ident(ref right)]) = iter.next() {
-            let left = Value::ModulePath(gc.intern(left));
-            let right = Value::ModulePath(gc.intern(right));
-            self.write_const_op(left);
-            self.write_op(Op::Access);
-            self.write_const_op(right);
-        }
+    //     let mut iter = rest.chunks_exact(2);
+    //     while let Some(&[Ident(ref left), Ident(ref right)]) = iter.next() {
+    //         let left = Value::ModulePath(gc.intern(left));
+    //         let right = Value::ModulePath(gc.intern(right));
+    //         self.write_const_op(left);
+    //         self.write_op(Op::Access);
+    //         self.write_const_op(right);
+    //     }
 
-        let path = match iter.remainder() {
-            &[Ident(ref i)] => Value::ModulePath(gc.intern(i)),
-            _ => return,
-        };
+    //     let path = match iter.remainder() {
+    //         &[Ident(ref i)] => Value::ModulePath(gc.intern(i)),
+    //         _ => return,
+    //     };
 
-        self.write_const_op(path);
-        self.write_op(Op::Access);
-    }
-
-    fn compile_atom(&mut self, atom: &Atom, gc: &mut LambGc) {
-        match atom {
-            Atom::Literal(l) => self.compile_literal(l, gc),
-            Atom::Ident(i) => self.compile_ident(i, gc),
-            Atom::Array(arr) => {
-                let len = arr.len();
-                for e in arr.iter() {
-                    self.compile_expr(e, gc);
-                }
-
-                self.write_op(Op::MakeArray(len.try_into().unwrap()));
-            }
-        }
-    }
+    //     self.write_const_op(path);
+    //     self.write_op(Op::Access);
+    // }
 
     fn compile_if_expr(&mut self, if_: &If, gc: &mut LambGc) {
         let If {
-            cond,
-            block,
-            elifs,
-            els,
+            cond: IfCond {
+                cond, body: block, ..
+            },
+            elif: elifs,
+            els_: els,
+            ..
         } = if_;
 
         // <cond>
@@ -540,7 +535,10 @@ impl Compiler {
         to_elses.push(self.compile_conditional(cond, block, gc));
 
         // compile elifs
-        for Elif { cond, block } in elifs {
+        for IfCond {
+            cond, body: block, ..
+        } in elifs
+        {
             self.write_op(Op::Pop(NZ_ONE_U16));
             self.block.offset = offset;
             to_elses.push(self.compile_conditional(cond, block, gc));
@@ -548,7 +546,7 @@ impl Compiler {
 
         // compile else
         self.write_op(Op::Pop(NZ_ONE_U16));
-        if let Some(Else { block }) = els.as_deref() {
+        if let Some(Else { body: block, .. }) = els {
             self.compile_block(block, gc);
         } else {
             self.write_const_op(Value::Nil);
@@ -575,7 +573,11 @@ impl Compiler {
     }
 
     fn compile_case(&mut self, c: &Case, gc: &mut LambGc) {
-        let Case { value, arms } = c;
+        let Case {
+            arms,
+            scrutinee: value,
+            ..
+        } = c;
 
         self.compile_expr(value, gc);
 
@@ -600,7 +602,11 @@ impl Compiler {
     }
 
     fn compile_case_arm(&mut self, c: &CaseArm, gc: &mut LambGc) -> JumpIdx {
-        let CaseArm { pattern, on_match } = c;
+        let CaseArm {
+            pattern,
+            body: on_match,
+            ..
+        } = c;
 
         let offset_before_arm = self.block.offset;
         let pre_local_count = self.locals.len();
@@ -608,7 +614,7 @@ impl Compiler {
         let bindings = pattern.binding_names();
         let binding_count = bindings.len();
 
-        for Ident(i) in bindings {
+        for Ident { raw: i, .. } in bindings {
             gc.intern(i);
 
             self.write_const_op(Value::Nil);
@@ -632,11 +638,7 @@ impl Compiler {
         // If match ----->
         // Remove True
         self.write_op(Op::Pop(NZ_ONE_U16));
-        match on_match {
-            Either::Left(b) => self.compile_block(b, gc),
-            Either::Right(e) => self.compile_expr(e, gc),
-        }
-
+        self.compile_expr(on_match, gc);
         self.write_op(Op::SaveValue);
 
         // Remove scrutinee dup
@@ -679,7 +681,7 @@ impl Compiler {
     //
     //     This means that any sub-patterns must duplicate it.
     fn compile_pattern(&mut self, c: &Pattern, gc: &mut LambGc) {
-        let Pattern { pattern } = c;
+        let Pattern { inner: pattern, .. } = c;
 
         let offset = self.block.offset;
         let (first, rest) = pattern.split_first().unwrap();
@@ -704,30 +706,31 @@ impl Compiler {
         }
     }
 
-    fn compile_pattern_top(&mut self, c: &PatternTop, gc: &mut LambGc) {
+    fn compile_pattern_top(&mut self, c: &InnerPattern, gc: &mut LambGc) {
         match c {
-            PatternTop::Rest => unimplemented!("This must be handled by the parent pattern"),
-            PatternTop::Literal(lit) => {
+            InnerPattern::Rest(..) => unimplemented!("This must be handled by the parent pattern"),
+            InnerPattern::Literal(lit) => {
                 self.write_op(Op::Dup);
-                self.compile_literal(lit, gc);
+                self.compile_literal_pattern(gc, lit);
                 self.write_op(Op::Eq);
             }
-            PatternTop::Ident(Ident(i), pat) => {
+            InnerPattern::Ident(ref pat) => {
+                let i = &pat.ident.raw;
+                let pat = &pat.bound;
                 // The ident must have been declared by `compile_case`.
                 let slot = self.local_slot(i.as_str()).unwrap();
                 let _ = gc.intern(i);
                 self.write_op(Op::SetSlot(slot.try_into().unwrap()));
 
                 if let Some(pat) = pat.as_deref() {
-                    self.compile_pattern(pat, gc);
+                    self.compile_pattern_top(pat, gc);
                 } else {
                     self.write_const_op(Value::Bool(true));
                 }
             }
-            PatternTop::Array(ArrayPattern::Err) => {
-                panic!("Error in Array Pattern");
-            }
-            PatternTop::Array(ArrayPattern::Elements { head, tail, dots }) => {
+            InnerPattern::Array(pat) => {
+                let (head, tail, dots) = pat.as_parts();
+
                 // Compare the lengths. Array patterns can only be properly be
                 // tested if the lengths proper.
                 let min_len = head.len() + tail.len();
@@ -755,7 +758,7 @@ impl Compiler {
                 }
 
                 // Assign dot locals the proper patterns
-                if let Some(rest) = dots.as_deref() {
+                if let Some(rest) = dots {
                     let bindings = rest.binding_names();
                     if !bindings.is_empty() {
                         let start = head.len();
@@ -778,8 +781,8 @@ impl Compiler {
                             u16::try_from(self.func.chunk.constants.len() - 1).unwrap(),
                         ));
 
-                        for Ident(bind) in bindings {
-                            let slot = self.local_slot(bind).unwrap();
+                        for Ident { raw: bind, .. } in bindings {
+                            let slot = self.local_slot(&bind).unwrap();
                             self.write_op(Op::SetSlot(u16::try_from(slot).unwrap()))
                         }
 
@@ -814,11 +817,66 @@ impl Compiler {
         }
     }
 
-    fn compile_func(&mut self, f: &FuncDef, gc: &mut LambGc, name: String) {
-        let FuncDef {
+    fn compile_literal_pattern(&mut self, gc: &mut LambGc, lit: &LiteralPattern) {
+        match lit {
+            LiteralPattern::String(s) => self.compile_str_literal(gc, s),
+            LiteralPattern::Bool(b) => self.compile_bool_literal(b),
+            LiteralPattern::Char(c) => self.compile_char_literal(c),
+            LiteralPattern::I64(i) => self.compile_i64_literal(i),
+            LiteralPattern::Nil(n) => self.compile_nil_literal(n),
+        }
+    }
+
+    fn compile_str_literal(&mut self, gc: &mut LambGc, lit: &StrLit) {
+        let inner = lit.text.as_ref().map_or("", |l| l.inner.as_str());
+        self.write_const_op(Value::String(gc.intern(inner)))
+    }
+
+    fn compile_bool_literal(&mut self, lit: &BoolLit) {
+        self.write_const_op(Value::Bool(lit.value));
+    }
+
+    fn compile_char_literal(&mut self, lit: &CharLit) {
+        let val = lit.text.as_ref().unwrap().inner.parse().unwrap();
+        self.write_const_op(Value::Char(val));
+    }
+
+    fn compile_i64_literal(&mut self, lit: &I64Lit) {
+        let val = match lit.base {
+            I64Base::Bin => i64::from_str_radix(&lit.value, 2),
+            I64Base::Oct => i64::from_str_radix(&lit.value, 8),
+            I64Base::Dec => i64::from_str_radix(&lit.value, 10),
+            I64Base::Hex => i64::from_str_radix(&lit.value, 16),
+        }
+        .unwrap();
+
+        self.write_const_op(Value::Int(val));
+    }
+
+    fn compile_f64_literal(&mut self, lit: &F64Lit) {
+        let val = lit.value.parse().unwrap();
+        self.write_const_op(Value::Double(val))
+    }
+
+    fn compile_nil_literal(&mut self, _nil: &NilLit) {
+        self.write_const_op(Value::Nil);
+    }
+
+    fn compile_list(&mut self, gc: &mut LambGc, list: &List) {
+        let len = list.values.len();
+        for e in list.values.iter() {
+            self.compile_expr(e, gc);
+        }
+
+        self.write_op(Op::MakeArray(len.try_into().unwrap()));
+    }
+
+    fn compile_func(&mut self, f: &FnDef, gc: &mut LambGc, name: String) {
+        let FnDef {
             args,
             body,
-            is_recursive,
+            recursive: is_recursive,
+            ..
         } = f;
 
         let func_name = gc.intern(name.clone());
@@ -843,18 +901,7 @@ impl Compiler {
         self.write_closure(gc, composition.func);
     }
 
-    fn compile_literal(&mut self, l: &Literal, gc: &mut LambGc) {
-        match l {
-            Literal::Double(d) => self.write_const_op(Value::Double(d.0)),
-            Literal::Str(s) => self.write_const_op(Value::String(gc.intern(s))),
-            Literal::Num(i) => self.write_const_op(Value::Int(*i)),
-            Literal::Char(c) => self.write_const_op(Value::Char(*c)),
-            Literal::Bool(b) => self.write_const_op(Value::Bool(*b)),
-            Literal::Nil => self.write_const_op(Value::Nil),
-        }
-    }
-
-    fn compile_ident(&mut self, Ident(i): &Ident, gc: &mut LambGc) {
+    fn compile_ident(&mut self, Ident { raw: i, .. }: &Ident, gc: &mut LambGc) {
         if let Some(slot) = self.local_slot(i) {
             self.write_op(Op::GetLocal(slot.try_into().unwrap()))
         } else if let Some(slot) = self.upvalue_idx(i) {
@@ -864,6 +911,16 @@ impl Compiler {
             self.func.chunk.constants.push(Value::String(str));
             let idx = self.func.chunk.constants.len() - 1;
             self.write_op(Op::GetGlobal(idx.try_into().unwrap()))
+        }
+    }
+
+    fn compile_return(&mut self, gc: &mut LambGc, ret: &Return) {
+        if let Some(value) = &ret.value {
+            self.compile_expr(value, gc);
+            self.write_op(Op::Return);
+        } else {
+            self.write_const_op(Value::Nil);
+            self.write_op(Op::Return);
         }
     }
 }

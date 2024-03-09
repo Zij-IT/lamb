@@ -200,7 +200,13 @@ impl Vm {
             .as_ref()
             .parent()
             .expect("Can't execute empty file...")
-            .join(import.file.text.map_or("", |text| text.inner.as_str()))
+            .join(
+                import
+                    .file
+                    .text
+                    .as_ref()
+                    .map_or("", |text| text.inner.as_str()),
+            )
             .canonicalize()?;
 
         let module_ref = self.gc.intern(total_path.to_string_lossy());
@@ -218,7 +224,7 @@ impl Vm {
 
         let export = &script.exports;
         let script = self.gc.intern(script_path.as_ref().to_string_lossy());
-        if let Some(Ident { raw, .. }) = import.name {
+        if let Some(Ident { raw, .. }) = import.name.as_ref() {
             let alias = self.gc.intern(raw);
             self.modules
                 .get_mut(&script)
@@ -236,7 +242,7 @@ impl Vm {
                 }));
         }
 
-        for i in import.items.iter().map(|i| i.item.raw) {
+        for i in import.items.iter().map(|i| i.item.raw.as_str()) {
             let gci = self.gc.intern(i);
             let item = self
                 .modules
@@ -246,7 +252,7 @@ impl Vm {
 
             let item = match item {
                 Some(t) => t,
-                None => return self.error(Error::NoExportViaName(i.clone(), module.clone())),
+                None => return self.error(Error::NoExportViaName(i.to_string(), module.clone())),
             };
 
             self.modules

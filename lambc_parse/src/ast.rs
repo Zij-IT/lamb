@@ -131,6 +131,15 @@ pub struct Pattern {
     pub inner: Vec<InnerPattern>,
     pub span: Span,
 }
+impl Pattern {
+    // TODO: Get rid of this when introducing hir
+    pub fn binding_names(&self) -> Vec<&Ident> {
+        self.inner
+            .iter()
+            .flat_map(InnerPattern::binding_names)
+            .collect()
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum InnerPattern {
@@ -141,6 +150,22 @@ pub enum InnerPattern {
 }
 
 impl InnerPattern {
+    // TODO: Get rid of this when introducing hir
+    pub fn binding_names(&self) -> Vec<&Ident> {
+        match self {
+            InnerPattern::Literal(_) => vec![],
+            InnerPattern::Rest(_) => vec![],
+            InnerPattern::Array(arr) => arr
+                .patterns
+                .iter()
+                .flat_map(Pattern::binding_names)
+                .collect(),
+            InnerPattern::Ident(id) => {
+                vec![&id.ident]
+            }
+        }
+    }
+
     pub fn span(&self) -> Span {
         match self {
             InnerPattern::Literal(p) => p.span(),
@@ -188,6 +213,26 @@ pub struct IdentPattern {
 pub struct ArrayPattern {
     pub patterns: Vec<Pattern>,
     pub span: Span,
+}
+impl ArrayPattern {
+    pub fn as_parts(&self) -> (&[Pattern], &[Pattern], Option<&InnerPattern>) {
+        let mut splits = self.patterns.split(|pat| match pat.inner.as_slice() {
+            [InnerPattern::Rest(..)] => true,
+            [InnerPattern::Ident(ip)] => {
+                matches!(ip.bound.as_deref(), Some(InnerPattern::Rest(..)))
+            }
+            _ => false,
+        });
+
+        let head = splits.next().unwrap_or_default();
+        let (tail, rest) = if let Some(tail) = splits.next() {
+            (tail, self.patterns[head.len()].inner.get(0))
+        } else {
+            ([].as_slice(), None)
+        };
+
+        (head, tail, rest)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
