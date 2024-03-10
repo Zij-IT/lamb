@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic)]
 
 use lambc_parse::{Call, Expr, ExprStatement, Ident, Module, Parser, Statement};
+use miette::Report;
 use repl::Command;
 use std::{error::Error, path::Path};
 
@@ -33,7 +34,10 @@ fn run_input<P: AsRef<Path>>(path: P, input: &str) {
                 println!("{}: {err}", path.as_ref().display());
             }
         }
-        Err(err) => eprintln!("{}: {err}", path.as_ref().display()),
+        Err(err) => {
+            let report = Report::from(err).with_source_code(input.to_owned());
+            eprintln!("{report:?}");
+        }
     }
 }
 
@@ -41,7 +45,7 @@ fn run_repl() -> Result<(), repl::Error> {
     let mut lamb = repl::Repl::new()?;
     match lamb.with_history() {
         Ok(_) => (),
-        Err(err) => println!("[Lamb]: Error while loading history ({err})"),
+        Err(err) => eprintln!("[Lamb]: Error while loading history ({err})"),
     }
 
     print!("{}", repl::Repl::REPL_START);
@@ -64,7 +68,8 @@ fn run_repl() -> Result<(), repl::Error> {
                     }
                 }
                 Err(err) => {
-                    eprintln!("{err}");
+                    let report = Report::from(err).with_source_code(s);
+                    eprintln!("{report:?}");
                     continue;
                 }
             },
