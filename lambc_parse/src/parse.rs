@@ -256,6 +256,8 @@ impl<'a> Parser<'a> {
                 TokKind::Bor => BinaryOp::Bor,
                 TokKind::Xor => BinaryOp::Bxor,
                 TokKind::Band => BinaryOp::Band,
+                TokKind::Shl => BinaryOp::Shl,
+                TokKind::Shr => BinaryOp::Shr,
                 _ => break,
             };
 
