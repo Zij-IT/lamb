@@ -874,7 +874,6 @@ impl<'a> Parser<'a> {
             return Ok((values, self.next()));
         }
 
-        let span = tok.span;
         let end_token = loop {
             values.push(parse_elem(self)?);
 
@@ -887,8 +886,8 @@ impl<'a> Parser<'a> {
                 break next;
             } else {
                 return Err(Error {
-                    message: format!("Expected {:?}, found '{}'", end_kind, next.slice),
-                    span: Span::connect(span, next.span),
+                    message: format!("Expected comma or {:?}, found '{}'", end_kind, next.slice),
+                    span: next.span,
                 });
             }
         };
