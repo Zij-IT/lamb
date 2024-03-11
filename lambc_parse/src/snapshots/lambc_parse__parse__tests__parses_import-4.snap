@@ -25,35 +25,35 @@ Ok(
                 item: Ident {
                     raw: "one",
                     span: Span {
-                        start: 23,
-                        end: 26,
+                        start: 24,
+                        end: 27,
                     },
                 },
                 alias: None,
                 span: Span {
-                    start: 23,
-                    end: 26,
+                    start: 24,
+                    end: 27,
                 },
             },
             ImportItem {
                 item: Ident {
                     raw: "two",
                     span: Span {
-                        start: 28,
-                        end: 31,
+                        start: 29,
+                        end: 32,
                     },
                 },
                 alias: None,
                 span: Span {
-                    start: 28,
-                    end: 31,
+                    start: 29,
+                    end: 32,
                 },
             },
         ],
         star: false,
         span: Span {
             start: 0,
-            end: 33,
+            end: 35,
         },
     },
 )

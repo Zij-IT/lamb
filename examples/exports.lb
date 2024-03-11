@@ -1,4 +1,4 @@
-export(add, sub);
+export { add, sub };
 
 add := fn(a, b) -> a + b;
 

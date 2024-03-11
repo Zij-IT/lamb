@@ -9,50 +9,50 @@ Ok(
                 item: Ident {
                     raw: "one",
                     span: Span {
-                        start: 7,
-                        end: 10,
+                        start: 9,
+                        end: 12,
                     },
                 },
                 alias: Some(
                     Ident {
                         raw: "e1",
                         span: Span {
-                            start: 14,
-                            end: 16,
+                            start: 16,
+                            end: 18,
                         },
                     },
                 ),
                 span: Span {
-                    start: 14,
-                    end: 16,
+                    start: 16,
+                    end: 18,
                 },
             },
             ExportItem {
                 item: Ident {
                     raw: "two",
                     span: Span {
-                        start: 18,
-                        end: 21,
+                        start: 20,
+                        end: 23,
                     },
                 },
                 alias: Some(
                     Ident {
                         raw: "e2",
                         span: Span {
-                            start: 25,
-                            end: 27,
+                            start: 27,
+                            end: 29,
                         },
                     },
                 ),
                 span: Span {
-                    start: 25,
-                    end: 27,
+                    start: 27,
+                    end: 29,
                 },
             },
         ],
         span: Span {
             start: 0,
-            end: 29,
+            end: 32,
         },
     },
 )

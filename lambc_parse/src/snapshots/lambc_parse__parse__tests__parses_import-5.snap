@@ -25,65 +25,65 @@ Ok(
                 item: Ident {
                     raw: "one",
                     span: Span {
-                        start: 23,
-                        end: 26,
+                        start: 24,
+                        end: 27,
                     },
                 },
                 alias: Some(
                     Ident {
                         raw: "i1",
                         span: Span {
-                            start: 30,
-                            end: 32,
+                            start: 31,
+                            end: 33,
                         },
                     },
                 ),
                 span: Span {
-                    start: 30,
-                    end: 32,
+                    start: 31,
+                    end: 33,
                 },
             },
             ImportItem {
                 item: Ident {
                     raw: "two",
                     span: Span {
-                        start: 34,
-                        end: 37,
+                        start: 35,
+                        end: 38,
                     },
                 },
                 alias: Some(
                     Ident {
                         raw: "i2",
                         span: Span {
-                            start: 41,
-                            end: 43,
+                            start: 42,
+                            end: 44,
                         },
                     },
                 ),
                 span: Span {
-                    start: 41,
-                    end: 43,
+                    start: 42,
+                    end: 44,
                 },
             },
             ImportItem {
                 item: Ident {
                     raw: "three",
                     span: Span {
-                        start: 45,
-                        end: 50,
+                        start: 46,
+                        end: 51,
                     },
                 },
                 alias: None,
                 span: Span {
-                    start: 45,
-                    end: 50,
+                    start: 46,
+                    end: 51,
                 },
             },
         ],
         star: false,
         span: Span {
             start: 0,
-            end: 52,
+            end: 54,
         },
     },
 )

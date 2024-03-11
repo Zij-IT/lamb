@@ -9,20 +9,20 @@ Ok(
                 item: Ident {
                     raw: "one",
                     span: Span {
-                        start: 7,
-                        end: 10,
+                        start: 9,
+                        end: 12,
                     },
                 },
                 alias: None,
                 span: Span {
-                    start: 7,
-                    end: 10,
+                    start: 9,
+                    end: 12,
                 },
             },
         ],
         span: Span {
             start: 0,
-            end: 12,
+            end: 15,
         },
     },
 )

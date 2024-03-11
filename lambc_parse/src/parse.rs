@@ -110,8 +110,8 @@ impl<'a> Parser<'a> {
                 (vec![], true)
             } else {
                 // from path [as alias] import (items)
-                self.expect(TokKind::OpenParen)?;
-                let (items, _) = self.parse_node_list(TokKind::CloseParen, |this| {
+                self.expect(TokKind::OpenBrace)?;
+                let (items, _) = self.parse_node_list(TokKind::CloseBrace, |this| {
                     let item = this.parse_ident()?;
                     let (alias, span) = if this.eat_ident("as").is_some() {
                         let alias = this.parse_ident()?;
@@ -144,8 +144,8 @@ impl<'a> Parser<'a> {
 
     pub fn parse_export(&mut self) -> Result<Export> {
         let export = self.expect_ident("export")?;
-        self.expect(TokKind::OpenParen)?;
-        let (items, _) = self.parse_node_list(TokKind::CloseParen, |this| {
+        self.expect(TokKind::OpenBrace)?;
+        let (items, _) = self.parse_node_list(TokKind::CloseBrace, |this| {
             let item = this.parse_ident()?;
             let (alias, span) = if this.eat_ident("as").is_some() {
                 let alias = this.parse_ident()?;
@@ -1528,15 +1528,15 @@ mod tests {
         }
 
         import! {
-            r#"from "my-path" import (one, two);"#
+            r#"from "my-path" import { one, two };"#
         }
 
         import! {
-            r#"from "my-path" import (one as i1, two as i2, three);"#
+            r#"from "my-path" import { one as i1, two as i2, three };"#
         }
 
         import! {
-            r#"from "my-path" as alias import (one as i1, two as i2, three);"#
+            r#"from "my-path" as alias import { one as i1, two as i2, three };"#
         }
     }
 
@@ -1550,23 +1550,23 @@ mod tests {
         }
 
         import! {
-            r#"export ();"#
+            r#"export {};"#
         }
 
         import! {
-            r#"export(one);"#
+            r#"export { one };"#
         }
 
         import! {
-            r#"export(one, two);"#
+            r#"export { one, two };"#
         }
 
         import! {
-            r#"export(one as e1, two as e2);"#
+            r#"export { one as e1, two as e2 };"#
         }
 
         import! {
-            r#"export(one as e1, two as e2, three);"#
+            r#"export { one as e1, two as e2, three };"#
         }
     }
 
