@@ -107,23 +107,23 @@ impl<'a> Parser<'a> {
             .map(|_| self.parse_ident())
             .transpose()?;
 
-        let (items, star) = if self.eat_ident("import").is_some() {
-            // from path [as alias] import *
+        let mut items = Vec::new();
+        let mut is_glob = false;
+
+        if self.eat_ident("import").is_some() {
             if self.eat(TokKind::Mul).is_some() {
-                (vec![], true)
+                // from path [as alias] import *
+                is_glob = true;
             } else {
-                // from path [as alias] import (items)
-                let (_, items, _) = self.parse_node_list(
+                // from path [as alias] import '{' items '}'
+                let (_, imports, _) = self.parse_node_list(
                     TokKind::OpenBrace,
                     TokKind::CloseBrace,
                     Self::parse_import_item,
                 )?;
 
-                (items, false)
+                items = imports;
             }
-        } else {
-            // from path [as name]
-            (vec![], false)
         };
 
         let semi = self.expect(TokKind::Semi)?;
@@ -132,7 +132,7 @@ impl<'a> Parser<'a> {
             file: path,
             name,
             items,
-            star,
+            star: is_glob,
             span: Span::connect(start.span, semi.span),
         })
     }
@@ -187,26 +187,34 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn parse_stmt(&mut self) -> Result<Statement> {
         if self.peek2().kind == TokKind::Assign {
-            let ident = self.parse_ident()?;
-            self.expect(TokKind::Assign)?;
-            let value = self.parse_expr()?;
-            let semi = self.expect(TokKind::Semi)?;
-
-            Ok(Statement::Define(Define {
-                span: Span::connect(ident.span, semi.span),
-                ident,
-                value,
-            }))
+            self.parse_assign_stmt()
         } else {
-            let expr = self.parse_expr()?;
-            let span = expr.span();
-            let semi = self.expect(TokKind::Semi)?;
-
-            Ok(Statement::Expr(ExprStatement {
-                expr,
-                span: Span::connect(span, semi.span),
-            }))
+            self.parse_expr_stmt()
         }
+    }
+
+    fn parse_expr_stmt(&mut self) -> Result<Statement> {
+        let expr = self.parse_expr()?;
+        let span = expr.span();
+        let semi = self.expect(TokKind::Semi)?;
+
+        Ok(Statement::Expr(ExprStatement {
+            expr,
+            span: Span::connect(span, semi.span),
+        }))
+    }
+
+    fn parse_assign_stmt(&mut self) -> Result<Statement> {
+        let ident = self.parse_ident()?;
+        self.expect(TokKind::Assign)?;
+        let value = self.parse_expr()?;
+        let semi = self.expect(TokKind::Semi)?;
+
+        Ok(Statement::Define(Define {
+            span: Span::connect(ident.span, semi.span),
+            ident,
+            value,
+        }))
     }
 
     /// ```text
