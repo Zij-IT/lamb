@@ -74,19 +74,19 @@ impl<'a> Parser<'a> {
             }
         }
 
-        let mut stmts = Vec::new();
+        let mut statements = Vec::new();
         let span = loop {
             if let Some(end) = self.eat(TokKind::End) {
                 break Span::new(0, end.span.end);
             }
 
-            stmts.push(self.parse_stmt()?);
+            statements.push(self.parse_stmt()?);
         };
 
         Ok(Module {
             exports,
             imports,
-            statements: stmts,
+            statements,
             path: self.file.clone(),
             span,
         })
@@ -102,11 +102,10 @@ impl<'a> Parser<'a> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
-        let name = if self.eat_ident("as").is_some() {
-            Some(self.parse_ident()?)
-        } else {
-            None
-        };
+        let name = self
+            .eat_ident("as")
+            .map(|_| self.parse_ident())
+            .transpose()?;
 
         let (items, star) = if self.eat_ident("import").is_some() {
             // from path [as alias] import *
@@ -432,13 +431,7 @@ impl<'a> Parser<'a> {
     ///     arg_list := ident (',' ident )* ','?
     /// ```
     fn parse_fn_def(&mut self) -> Result<Expr> {
-        let tok = if let Some(rec) = self.eat(TokKind::Rec) {
-            self.expect(TokKind::Fn)?;
-            rec
-        } else {
-            self.expect(TokKind::Fn)?
-        };
-
+        let tok = self.eat(TokKind::Rec).unwrap_or(self.expect(TokKind::Fn)?);
         let (_, args, _) =
             self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
                 let next = this.peek1();
@@ -570,11 +563,7 @@ impl<'a> Parser<'a> {
         let mut last_span = first_span;
         let mut patterns = vec![first];
 
-        loop {
-            if self.eat(TokKind::Bor).is_none() {
-                break;
-            }
-
+        while self.eat(TokKind::Bor).is_some() {
             let pat = self.parse_inner_pattern()?;
             last_span = pat.span();
             patterns.push(pat);
@@ -672,18 +661,13 @@ impl<'a> Parser<'a> {
         Ok(match tok.kind {
             TokKind::Ident => Expr::Ident(self.parse_ident()?),
             TokKind::Nil => Expr::Nil(self.parse_nil()?),
-            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
-                Expr::I64(self.parse_i64()?)
-            }
             TokKind::CharStart => Expr::Char(self.parse_char()?),
             TokKind::F64 => Expr::F64(self.parse_f64()?),
             TokKind::True | TokKind::False => Expr::Bool(self.parse_bool()?),
             TokKind::StringStart => Expr::String(self.parse_string()?),
-            TokKind::CharText
-            | TokKind::CharEnd
-            | TokKind::StringText
-            | TokKind::StringEnd
-            | TokKind::Comment => unreachable!(),
+            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
+                Expr::I64(self.parse_i64()?)
+            }
             _ => return Err(Self::error_expected_str_found("an expression", tok)),
         })
     }
@@ -733,14 +717,10 @@ impl<'a> Parser<'a> {
 
     fn parse_string(&mut self) -> Result<StrLit> {
         let tok = self.expect(TokKind::StringStart)?;
-        let text = if let Some(text) = self.eat(TokKind::StringText) {
-            Some(StrText {
-                inner: text.slice.into_owned(),
-                span: text.span,
-            })
-        } else {
-            None
-        };
+        let text = self.eat(TokKind::StringText).map(|text| StrText {
+            inner: text.slice.into_owned(),
+            span: text.span,
+        });
 
         let end = self.expect(TokKind::StringEnd).map_err(|err| Error {
             message: "unclosed string literal".into(),
@@ -761,14 +741,10 @@ impl<'a> Parser<'a> {
 
     fn parse_char(&mut self) -> Result<CharLit> {
         let tok = self.expect(TokKind::CharStart)?;
-        let text = if let Some(text) = self.eat(TokKind::CharText) {
-            Some(CharText {
-                inner: text.slice.into_owned(),
-                span: text.span,
-            })
-        } else {
-            None
-        };
+        let text = self.eat(TokKind::CharText).map(|text| CharText {
+            inner: text.slice.into_owned(),
+            span: text.span,
+        });
 
         let end = self.expect(TokKind::CharEnd).map_err(|err| Error {
             message: "unclosed char literal".into(),
@@ -899,10 +875,10 @@ impl<'a> Parser<'a> {
     fn eat_ident<'b>(&mut self, ident: &'b str) -> Option<Token<'a>> {
         let peek = self.peek1();
         if peek.kind == TokKind::Ident && peek.slice == ident {
-            Some(self.next())
-        } else {
-            None
+            return Some(self.next());
         }
+
+        None
     }
 
     fn expect(&mut self, kind: TokKind) -> Result<Token<'a>> {
@@ -917,10 +893,10 @@ impl<'a> Parser<'a> {
     fn expect_ident<'b>(&mut self, ident: &'b str) -> Result<Token<'a>> {
         let next = self.next();
         if next.kind == TokKind::Ident && next.slice == ident {
-            Ok(next)
-        } else {
-            Err(Self::error_expected_str_found(ident, &next))
+            return Ok(next);
         }
+
+        Err(Self::error_expected_str_found(ident, &next))
     }
 
     fn error_expected_tok_found(expected: TokKind, found: &Token<'a>) -> Error {
