@@ -370,8 +370,7 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
         let (value, close) = loop {
             if self.peek2().kind == TokKind::Assign {
-                let stmt = self.parse_stmt()?;
-                stmts.push(stmt);
+                stmts.push(self.parse_assign_stmt()?);
             } else if let Some(close) = self.eat(TokKind::CloseBrace) {
                 break (None, close);
             } else {
@@ -834,6 +833,16 @@ impl<'a> Parser<'a> {
         Ok((start, values, end_token))
     }
 
+    /// Returns the next token in the input, consuming the last peeked token if
+    /// present.
+    fn next(&mut self) -> Token<'a> {
+        let p1 = self.peek1.take();
+        let p2 = self.peek2.take();
+        self.peek1 = p2;
+
+        p1.unwrap_or_else(|| self.lexer.next_nontrival_token())
+    }
+
     /// Returns a reference to the next token non-comment token in the input
     fn peek1(&mut self) -> &Token<'a> {
         match self.peek1 {
@@ -855,16 +864,6 @@ impl<'a> Parser<'a> {
                 self.peek2.as_ref().unwrap()
             }
         }
-    }
-
-    /// Returns the next token in the input, consuming the last peeked token if
-    /// present.
-    fn next(&mut self) -> Token<'a> {
-        let p1 = self.peek1.take();
-        let p2 = self.peek2.take();
-        self.peek1 = p2;
-
-        p1.unwrap_or_else(|| self.lexer.next_nontrival_token())
     }
 
     fn eat(&mut self, kind: TokKind) -> Option<Token<'a>> {
