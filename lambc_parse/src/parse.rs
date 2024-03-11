@@ -906,8 +906,14 @@ impl<'a> Parser<'a> {
     }
 
     fn error_expected_str_found(expected: &str, found: &Token<'a>) -> Error {
+        let slice = if found.kind == TokKind::Invalid {
+            found.slice.as_ref()
+        } else {
+            found.kind.desc()
+        };
+
         Error {
-            message: format!("Expected {}, but found '{}'", expected, found.slice),
+            message: format!("Expected {}, but found {}", expected, slice),
             span: found.span,
         }
     }
