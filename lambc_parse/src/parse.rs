@@ -176,10 +176,7 @@ impl<'a> Parser<'a> {
         if self.peek2().kind == TokKind::Assign {
             let peek1 = self.peek1();
             if peek1.kind != TokKind::Ident {
-                return Err(Error {
-                    message: format!("Expected identifier, found '{}'", peek1.slice),
-                    span: peek1.span,
-                });
+                return Err(Self::error_expected_tok_found(TokKind::Ident, peek1));
             }
 
             let span = peek1.span;
@@ -379,11 +376,7 @@ impl<'a> Parser<'a> {
                 } else if peek1.kind == TokKind::CloseBrace {
                     break (Some(expr), self.next());
                 } else {
-                    let err_tok = self.next();
-                    return Err(Error {
-                        message: format!("Expected a ';' or '}}', but found '{}'", err_tok.slice),
-                        span: err_tok.span,
-                    });
+                    return Err(Self::error_expected_str_found("a ';' or '}'", peek1));
                 }
             }
         };
@@ -426,10 +419,7 @@ impl<'a> Parser<'a> {
 
         let next = self.next();
         if next.kind != TokKind::CloseParen {
-            Err(Error {
-                message: format!("Expected '(', but found '{}'", next.slice),
-                span: next.span,
-            })
+            Err(Self::error_expected_tok_found(TokKind::OpenParen, &next))
         } else {
             Ok(Expr::Group(Box::new(Group {
                 value,
@@ -460,10 +450,7 @@ impl<'a> Parser<'a> {
             if next.kind == TokKind::Ident {
                 Ok(this.parse_ident()?)
             } else {
-                Err(Error {
-                    message: format!("Expected identifier or ')', found '{}'", next.slice),
-                    span: next.span,
-                })
+                Err(Self::error_expected_str_found("an identifier or ')'", next))
             }
         })?;
 
@@ -667,12 +654,7 @@ impl<'a> Parser<'a> {
                 num.span = Span::connect(neg.span, num.span);
                 LiteralPattern::I64(num)
             }
-            _ => {
-                return Err(Error {
-                    message: format!("Expected pattern, but found '{}'", tok.slice),
-                    span: tok.span,
-                })
-            }
+            _ => return Err(Self::error_expected_str_found("a pattern", tok)),
         };
 
         Ok(InnerPattern::Literal(Box::new(lit)))
@@ -706,18 +688,7 @@ impl<'a> Parser<'a> {
             | TokKind::StringText
             | TokKind::StringEnd
             | TokKind::Comment => unreachable!(),
-            TokKind::End => {
-                return Err(Error {
-                    message: "Expected an expression, instead found end of input".into(),
-                    span: tok.span,
-                })
-            }
-            _ => {
-                return Err(Error {
-                    message: format!("Expected an expression, instead found '{}'", tok.slice),
-                    span: tok.span,
-                })
-            }
+            _ => return Err(Self::error_expected_str_found("an expression", tok)),
         })
     }
 
@@ -728,12 +699,7 @@ impl<'a> Parser<'a> {
             TokKind::BinI64 => I64Base::Bin,
             TokKind::OctI64 => I64Base::Oct,
             TokKind::HexI64 => I64Base::Hex,
-            _ => {
-                return Err(Error {
-                    message: format!("Expected number, found '{}'", tok.slice),
-                    span: tok.span,
-                })
-            }
+            _ => return Err(Self::error_expected_str_found("an i64", &tok)),
         };
 
         Ok(I64Lit {
@@ -755,12 +721,7 @@ impl<'a> Parser<'a> {
         let tok = self.next();
         let tok = match tok.kind {
             TokKind::True | TokKind::False => tok,
-            _ => {
-                return Err(Error {
-                    message: format!("Expected boolean, found '{}'", tok.slice),
-                    span: tok.span,
-                })
-            }
+            _ => return Err(Self::error_expected_str_found("boolean", &tok)),
         };
 
         Ok(BoolLit {
@@ -885,10 +846,10 @@ impl<'a> Parser<'a> {
             } else if next.kind == end_kind {
                 break next;
             } else {
-                return Err(Error {
-                    message: format!("Expected comma or {:?}, found '{}'", end_kind, next.slice),
-                    span: next.span,
-                });
+                return Err(Self::error_expected_str_found(
+                    &format!("comma or {}", end_kind.desc()),
+                    &next,
+                ));
             }
         };
 
@@ -951,11 +912,7 @@ impl<'a> Parser<'a> {
             return Ok(next);
         }
 
-        // TODO: Get a unified way to do expected/found errors
-        Err(Error {
-            message: format!("Expected {:?}, but found '{}'", kind, next.slice),
-            span: next.span,
-        })
+        Err(Self::error_expected_tok_found(kind, &next))
     }
 
     fn expect_ident<'b>(&mut self, ident: &'b str) -> Result<Token<'a>> {
@@ -963,10 +920,18 @@ impl<'a> Parser<'a> {
         if next.kind == TokKind::Ident && next.slice == ident {
             Ok(next)
         } else {
-            Err(Error {
-                message: format!("Expected 'from', but found '{}'", next.slice),
-                span: next.span,
-            })
+            Err(Self::error_expected_str_found(ident, &next))
+        }
+    }
+
+    fn error_expected_tok_found(expected: TokKind, found: &Token<'a>) -> Error {
+        Self::error_expected_str_found(expected.desc(), found)
+    }
+
+    fn error_expected_str_found(expected: &str, found: &Token<'a>) -> Error {
+        Error {
+            message: format!("Expected {}, but found '{}'", expected, found.slice),
+            span: found.span,
         }
     }
 }
