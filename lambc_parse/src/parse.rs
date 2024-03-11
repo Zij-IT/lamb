@@ -110,19 +110,19 @@ impl<'a> Parser<'a> {
                 (vec![], true)
             } else {
                 // from path [as alias] import (items)
-                self.expect(TokKind::OpenBrace)?;
-                let (items, _) = self.parse_node_list(TokKind::CloseBrace, |this| {
-                    let item = this.parse_ident()?;
-                    let (alias, span) = if this.eat_ident("as").is_some() {
-                        let alias = this.parse_ident()?;
-                        let span = alias.span;
-                        (Some(alias), span)
-                    } else {
-                        (None, item.span)
-                    };
+                let (_, items, _) =
+                    self.parse_node_list(TokKind::OpenBrace, TokKind::CloseBrace, |this| {
+                        let item = this.parse_ident()?;
+                        let (alias, span) = if this.eat_ident("as").is_some() {
+                            let alias = this.parse_ident()?;
+                            let span = alias.span;
+                            (Some(alias), span)
+                        } else {
+                            (None, item.span)
+                        };
 
-                    Ok(ImportItem { item, alias, span })
-                })?;
+                        Ok(ImportItem { item, alias, span })
+                    })?;
 
                 (items, false)
             }
@@ -144,19 +144,19 @@ impl<'a> Parser<'a> {
 
     pub fn parse_export(&mut self) -> Result<Export> {
         let export = self.expect_ident("export")?;
-        self.expect(TokKind::OpenBrace)?;
-        let (items, _) = self.parse_node_list(TokKind::CloseBrace, |this| {
-            let item = this.parse_ident()?;
-            let (alias, span) = if this.eat_ident("as").is_some() {
-                let alias = this.parse_ident()?;
-                let span = alias.span;
-                (Some(alias), span)
-            } else {
-                (None, item.span)
-            };
+        let (_, items, _) =
+            self.parse_node_list(TokKind::OpenBrace, TokKind::CloseBrace, |this| {
+                let item = this.parse_ident()?;
+                let (alias, span) = if this.eat_ident("as").is_some() {
+                    let alias = this.parse_ident()?;
+                    let span = alias.span;
+                    (Some(alias), span)
+                } else {
+                    (None, item.span)
+                };
 
-            Ok(ExportItem { item, alias, span })
-        })?;
+                Ok(ExportItem { item, alias, span })
+            })?;
 
         let end = self.expect(TokKind::Semi)?;
         Ok(Export {
@@ -299,9 +299,10 @@ impl<'a> Parser<'a> {
                     }));
                 }
                 TokKind::OpenParen => {
-                    self.next();
-                    let (args, end_tok) =
-                        self.parse_node_list(TokKind::CloseParen, |this| this.parse_expr())?;
+                    let (_, args, end_tok) =
+                        self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
+                            this.parse_expr()
+                        })?;
 
                     let span = Span::connect(res.span(), end_tok.span);
                     res = Expr::Call(Box::new(Call {
@@ -398,9 +399,10 @@ impl<'a> Parser<'a> {
     ///                | '[' ']'
     /// ```
     fn parse_list(&mut self) -> Result<Expr> {
-        let tok = self.expect(TokKind::OpenBrack)?;
-        let (values, end_tok) =
-            self.parse_node_list(TokKind::CloseBrack, |this| this.parse_expr())?;
+        let (tok, values, end_tok) =
+            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, |this| {
+                this.parse_expr()
+            })?;
 
         Ok(Expr::List(List {
             values,
@@ -445,15 +447,15 @@ impl<'a> Parser<'a> {
             self.expect(TokKind::Fn)?
         };
 
-        self.expect(TokKind::OpenParen)?;
-        let (args, _) = self.parse_node_list(TokKind::CloseParen, |this| {
-            let next = this.peek1();
-            if next.kind == TokKind::Ident {
-                Ok(this.parse_ident()?)
-            } else {
-                Err(Self::error_expected_str_found("an identifier or ')'", next))
-            }
-        })?;
+        let (_, args, _) =
+            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
+                let next = this.peek1();
+                if next.kind == TokKind::Ident {
+                    Ok(this.parse_ident()?)
+                } else {
+                    Err(Self::error_expected_str_found("an identifier or ')'", next))
+                }
+            })?;
 
         self.expect(TokKind::Arrow)?;
 
@@ -603,13 +605,14 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_array_pattern(&mut self) -> Result<InnerPattern> {
-        let start = self.expect(TokKind::OpenBrack)?.span;
-        let (patterns, end) =
-            self.parse_node_list(TokKind::CloseBrack, |this| this.parse_pattern())?;
+        let (start, patterns, end) =
+            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, |this| {
+                this.parse_pattern()
+            })?;
 
         Ok(InnerPattern::Array(Box::new(ArrayPattern {
             patterns,
-            span: Span::connect(start, end.span),
+            span: Span::connect(start.span, end.span),
         })))
     }
 
@@ -845,16 +848,18 @@ impl<'a> Parser<'a> {
     /// Parses a series of comma separated `T`, with a trailing comma allowed.
     fn parse_node_list<T, F>(
         &mut self,
+        start_kind: TokKind,
         end_kind: TokKind,
         parse_elem: F,
-    ) -> Result<(Vec<T>, Token<'a>)>
+    ) -> Result<(Token<'a>, Vec<T>, Token<'a>)>
     where
         F: Fn(&mut Self) -> Result<T>,
     {
+        let start = self.expect(start_kind)?;
         let mut values = Vec::new();
         let tok = self.peek1();
         if tok.kind == end_kind {
-            return Ok((values, self.next()));
+            return Ok((start, values, self.next()));
         }
 
         let end_token = loop {
@@ -875,7 +880,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        Ok((values, end_token))
+        Ok((start, values, end_token))
     }
 
     /// Returns a reference to the next token non-comment token in the input
