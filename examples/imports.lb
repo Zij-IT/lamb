@@ -1,0 +1,4 @@
+from "./exports.lb" as E import (add);
+
+println(add(2, 3));
+println(E::sub(3, 1));
