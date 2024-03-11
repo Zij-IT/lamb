@@ -113,19 +113,11 @@ impl<'a> Parser<'a> {
                 (vec![], true)
             } else {
                 // from path [as alias] import (items)
-                let (_, items, _) =
-                    self.parse_node_list(TokKind::OpenBrace, TokKind::CloseBrace, |this| {
-                        let item = this.parse_ident()?;
-                        let (alias, span) = if this.eat_ident("as").is_some() {
-                            let alias = this.parse_ident()?;
-                            let span = alias.span;
-                            (Some(alias), span)
-                        } else {
-                            (None, item.span)
-                        };
-
-                        Ok(ImportItem { item, alias, span })
-                    })?;
+                let (_, items, _) = self.parse_node_list(
+                    TokKind::OpenBrace,
+                    TokKind::CloseBrace,
+                    Self::parse_import_item,
+                )?;
 
                 (items, false)
             }
@@ -145,27 +137,45 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_import_item(&mut self) -> Result<ImportItem> {
+        let item = self.parse_ident()?;
+        let (alias, span) = if self.eat_ident("as").is_some() {
+            let alias = self.parse_ident()?;
+            let span = alias.span;
+            (Some(alias), span)
+        } else {
+            (None, item.span)
+        };
+
+        Ok(ImportItem { item, alias, span })
+    }
+
     pub fn parse_export(&mut self) -> Result<Export> {
         let export = self.expect_ident("export")?;
-        let (_, items, _) =
-            self.parse_node_list(TokKind::OpenBrace, TokKind::CloseBrace, |this| {
-                let item = this.parse_ident()?;
-                let (alias, span) = if this.eat_ident("as").is_some() {
-                    let alias = this.parse_ident()?;
-                    let span = alias.span;
-                    (Some(alias), span)
-                } else {
-                    (None, item.span)
-                };
-
-                Ok(ExportItem { item, alias, span })
-            })?;
+        let (_, items, _) = self.parse_node_list(
+            TokKind::OpenBrace,
+            TokKind::CloseBrace,
+            Self::parse_export_item,
+        )?;
 
         let end = self.expect(TokKind::Semi)?;
         Ok(Export {
             items,
             span: Span::connect(export.span, end.span),
         })
+    }
+
+    fn parse_export_item(&mut self) -> Result<ExportItem> {
+        let item = self.parse_ident()?;
+        let (alias, span) = if self.eat_ident("as").is_some() {
+            let alias = self.parse_ident()?;
+            let span = alias.span;
+            (Some(alias), span)
+        } else {
+            (None, item.span)
+        };
+
+        Ok(ExportItem { item, alias, span })
     }
 
     /// Parses a statement as defined by the following grammar
@@ -290,9 +300,7 @@ impl<'a> Parser<'a> {
 
     fn parse_call_expr(&mut self, callee: Expr) -> Result<Expr> {
         let (_, args, end_tok) =
-            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
-                this.parse_expr()
-            })?;
+            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, Self::parse_expr)?;
 
         let span = Span::connect(callee.span(), end_tok.span);
         Ok(Expr::Call(Box::new(Call { callee, args, span })))
@@ -360,9 +368,7 @@ impl<'a> Parser<'a> {
                 break (None, close);
             } else {
                 let expr = self.parse_expr()?;
-                let peek1 = self.peek1();
-                if peek1.kind == TokKind::Semi {
-                    let semi = self.next();
+                if let Some(semi) = self.eat(TokKind::Semi) {
                     let span = expr.span();
                     let stmt = Statement::Expr(ExprStatement {
                         expr,
@@ -370,10 +376,10 @@ impl<'a> Parser<'a> {
                     });
 
                     stmts.push(stmt);
-                } else if peek1.kind == TokKind::CloseBrace {
-                    break (Some(expr), self.next());
+                } else if let Some(close) = self.eat(TokKind::CloseBrace) {
+                    break (Some(expr), close);
                 } else {
-                    return Err(Self::error_expected_str_found("a ';' or '}'", peek1));
+                    return Err(Self::error_expected_str_found("a ';' or '}'", self.peek1()));
                 }
             }
         };
@@ -395,9 +401,7 @@ impl<'a> Parser<'a> {
     /// ```
     fn parse_list(&mut self) -> Result<Expr> {
         let (tok, values, end_tok) =
-            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, |this| {
-                this.parse_expr()
-            })?;
+            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, Self::parse_expr)?;
 
         Ok(Expr::List(List {
             values,
@@ -433,14 +437,7 @@ impl<'a> Parser<'a> {
     fn parse_fn_def(&mut self) -> Result<Expr> {
         let tok = self.eat(TokKind::Rec).unwrap_or(self.expect(TokKind::Fn)?);
         let (_, args, _) =
-            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
-                let next = this.peek1();
-                if next.kind == TokKind::Ident {
-                    Ok(this.parse_ident()?)
-                } else {
-                    Err(Self::error_expected_str_found("an identifier or ')'", next))
-                }
-            })?;
+            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, Self::parse_ident)?;
 
         self.expect(TokKind::Arrow)?;
 
@@ -587,9 +584,7 @@ impl<'a> Parser<'a> {
 
     fn parse_array_pattern(&mut self) -> Result<InnerPattern> {
         let (start, patterns, end) =
-            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, |this| {
-                this.parse_pattern()
-            })?;
+            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, Self::parse_pattern)?;
 
         Ok(InnerPattern::Array(Box::new(ArrayPattern {
             patterns,
