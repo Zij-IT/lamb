@@ -51,7 +51,10 @@ impl<'a> Parser<'a> {
         let mut exports = Vec::new();
         loop {
             let peek = self.peek1();
-            if peek.kind == TokKind::Ident && peek.slice == "export" {
+            let peek_is_export = peek.kind == TokKind::Ident && peek.slice == "export";
+            let peek2_is_brace = self.peek2().kind == TokKind::OpenBrace;
+
+            if peek_is_export && peek2_is_brace {
                 exports.push(self.parse_export()?);
             } else {
                 break;
@@ -61,7 +64,10 @@ impl<'a> Parser<'a> {
         let mut imports = Vec::new();
         loop {
             let peek = self.peek1();
-            if peek.kind == TokKind::Ident && peek.slice == "from" {
+            let peek_is_import = peek.kind == TokKind::Ident && peek.slice == "from";
+            let peek2_is_brace = self.peek2().kind == TokKind::StringStart;
+
+            if peek_is_import && peek2_is_brace {
                 imports.push(self.parse_import()?);
             } else {
                 break;
@@ -69,16 +75,14 @@ impl<'a> Parser<'a> {
         }
 
         let mut stmts = Vec::new();
-        loop {
-            if self.eat(TokKind::End).is_some() {
-                break;
+        let span = loop {
+            if let Some(end) = self.eat(TokKind::End) {
+                break Span::new(0, end.span.end);
             }
 
             stmts.push(self.parse_stmt()?);
-        }
+        };
 
-        let end = self.expect(TokKind::End)?;
-        let span = Span::new(0, end.span.end);
         Ok(Module {
             exports,
             imports,
@@ -174,21 +178,15 @@ impl<'a> Parser<'a> {
     /// ```
     pub fn parse_stmt(&mut self) -> Result<Statement> {
         if self.peek2().kind == TokKind::Assign {
-            let peek1 = self.peek1();
-            if peek1.kind != TokKind::Ident {
-                return Err(Self::error_expected_tok_found(TokKind::Ident, peek1));
-            }
-
-            let span = peek1.span;
             let ident = self.parse_ident()?;
             self.expect(TokKind::Assign)?;
             let value = self.parse_expr()?;
             let semi = self.expect(TokKind::Semi)?;
 
             Ok(Statement::Define(Define {
+                span: Span::connect(ident.span, semi.span),
                 ident,
                 value,
-                span: Span::connect(span, semi.span),
             }))
         } else {
             let expr = self.parse_expr()?;
@@ -279,41 +277,39 @@ impl<'a> Parser<'a> {
 
     pub fn parse_chained_expr(&mut self) -> Result<Expr> {
         let mut res = self.parse_atom()?;
-
-        Ok(loop {
-            if res.ends_with_block() {
-                break res;
-            }
-
+        while !res.ends_with_block() {
             let peek = self.peek1();
             match peek.kind {
-                TokKind::OpenBrack => {
-                    self.next();
-                    let index = self.parse_expr()?;
-                    let close = self.expect(TokKind::CloseBrack)?;
-                    let span = Span::connect(res.span(), close.span);
-                    res = Expr::Index(Box::new(Index {
-                        lhs: res,
-                        rhs: index,
-                        span,
-                    }));
-                }
-                TokKind::OpenParen => {
-                    let (_, args, end_tok) =
-                        self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
-                            this.parse_expr()
-                        })?;
-
-                    let span = Span::connect(res.span(), end_tok.span);
-                    res = Expr::Call(Box::new(Call {
-                        callee: res,
-                        args,
-                        span,
-                    }));
-                }
-                _ => break res,
+                TokKind::OpenBrack => res = self.parse_index_expr(res)?,
+                TokKind::OpenParen => res = self.parse_call_expr(res)?,
+                _ => break,
             }
-        })
+        }
+
+        Ok(res)
+    }
+
+    fn parse_call_expr(&mut self, callee: Expr) -> Result<Expr> {
+        let (_, args, end_tok) =
+            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, |this| {
+                this.parse_expr()
+            })?;
+
+        let span = Span::connect(callee.span(), end_tok.span);
+        Ok(Expr::Call(Box::new(Call { callee, args, span })))
+    }
+
+    fn parse_index_expr(&mut self, res: Expr) -> Result<Expr> {
+        self.next();
+        let index = self.parse_expr()?;
+        let close = self.expect(TokKind::CloseBrack)?;
+        let span = Span::connect(res.span(), close.span);
+
+        Ok(Expr::Index(Box::new(Index {
+            lhs: res,
+            rhs: index,
+            span,
+        })))
     }
 
     /// Parses the items that can make up an expression without any operators
@@ -419,16 +415,12 @@ impl<'a> Parser<'a> {
     fn parse_group(&mut self) -> Result<Expr> {
         let tok = self.expect(TokKind::OpenParen)?;
         let value = self.parse_expr()?;
+        let next = self.expect(TokKind::CloseParen)?;
 
-        let next = self.next();
-        if next.kind != TokKind::CloseParen {
-            Err(Self::error_expected_tok_found(TokKind::OpenParen, &next))
-        } else {
-            Ok(Expr::Group(Box::new(Group {
-                value,
-                span: Span::connect(tok.span, next.span),
-            })))
-        }
+        Ok(Expr::Group(Box::new(Group {
+            value,
+            span: Span::connect(tok.span, next.span),
+        })))
     }
 
     /// Parses a function definition
@@ -557,11 +549,11 @@ impl<'a> Parser<'a> {
         let pattern = self.parse_pattern()?;
         self.expect(TokKind::Arrow)?;
         let value = self.parse_expr()?;
-        let end_span = if !value.ends_with_block() {
-            self.expect(TokKind::Comma)?.span
-        } else {
+        let end_span = if value.ends_with_block() {
             self.eat(TokKind::Comma);
             value.span()
+        } else {
+            self.expect(TokKind::Comma)?.span
         };
 
         let span = pattern.span;
@@ -750,23 +742,13 @@ impl<'a> Parser<'a> {
             None
         };
 
-        let end = match self.next() {
-            tok @ Token {
-                kind: TokKind::StringEnd,
-                ..
-            } => tok,
-            err => {
-                // TODO: When switching to miette diagnostics, this one should have
-                // a note that indicates where the string was started.
-                return Err(Error {
-                    message: "unclosed string literal".into(),
-                    span: Span {
-                        start: err.span.start,
-                        end: err.span.start,
-                    },
-                });
-            }
-        };
+        let end = self.expect(TokKind::StringEnd).map_err(|err| Error {
+            message: "unclosed string literal".into(),
+            span: Span {
+                start: tok.span.start,
+                end: err.span.start,
+            },
+        })?;
 
         Ok(StrLit {
             text,
@@ -788,23 +770,13 @@ impl<'a> Parser<'a> {
             None
         };
 
-        let end = match self.next() {
-            tok @ Token {
-                kind: TokKind::CharEnd,
-                ..
-            } => tok,
-            err => {
-                // TODO: When switching to miette diagnostics, this one should have
-                // a note that indicates where the string was started.
-                return Err(Error {
-                    message: "unclosed char literal".into(),
-                    span: Span {
-                        start: err.span.start,
-                        end: err.span.start,
-                    },
-                });
-            }
-        };
+        let end = self.expect(TokKind::CharEnd).map_err(|err| Error {
+            message: "unclosed char literal".into(),
+            span: Span {
+                start: tok.span.start,
+                end: err.span.start,
+            },
+        })?;
 
         Ok(CharLit {
             text,
@@ -857,8 +829,8 @@ impl<'a> Parser<'a> {
     {
         let start = self.expect(start_kind)?;
         let mut values = Vec::new();
-        let tok = self.peek1();
-        if tok.kind == end_kind {
+
+        if self.peek1().kind == end_kind {
             return Ok((start, values, self.next()));
         }
 
