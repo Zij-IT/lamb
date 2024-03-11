@@ -395,6 +395,7 @@ impl Compiler {
             Expr::List(list) => self.compile_list(gc, list),
             Expr::Group(gr) => self.compile_expr(&gr.value, gc),
             Expr::Return(ret) => self.compile_return(gc, ret),
+            Expr::Path(_) => todo!(),
         }
     }
 

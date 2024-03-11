@@ -356,6 +356,13 @@ pub struct Return {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Path {
+    pub head: Ident,
+    pub tail: Vec<Ident>,
+    pub span: Span,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Expr {
     Ident(Ident),
     Char(CharLit),
@@ -375,6 +382,7 @@ pub enum Expr {
     Unary(Box<Unary>),
     Binary(Box<Binary>),
     Return(Box<Return>),
+    Path(Box<Path>),
 }
 
 impl Expr {
@@ -398,6 +406,7 @@ impl Expr {
             Expr::Unary(e) => e.span,
             Expr::Binary(e) => e.span,
             Expr::Return(e) => e.span,
+            Expr::Path(e) => e.span,
         }
     }
 
@@ -413,6 +422,7 @@ impl Expr {
             | Expr::List(_)
             | Expr::Index(_)
             | Expr::Call(_)
+            | Expr::Path(_)
             | Expr::Group(_) => false,
             Expr::Return(r) => r.value.as_ref().map_or(false, |e| e.ends_with_block()),
             Expr::Unary(u) => u.rhs.ends_with_block(),

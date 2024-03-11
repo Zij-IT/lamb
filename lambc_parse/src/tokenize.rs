@@ -136,6 +136,8 @@ pub enum TokKind {
     Arrow,
     /// '..'
     DotDot,
+    /// '::'
+    PathSep,
 
     // Meta
     /// Used to indicate a comment
@@ -216,6 +218,7 @@ impl TokKind {
             TokKind::Bind => "a '@'",
             TokKind::Arrow => "a '->'",
             TokKind::DotDot => "the '..' pattern",
+            TokKind::PathSep => "a '::'",
             TokKind::Comment => "a comment",
             TokKind::End => "the end of the input",
             TokKind::Invalid => "an unrecognized token",
@@ -634,6 +637,7 @@ impl<'a> Lexer<'a> {
         let start = self.at;
         match self.next() {
             b'=' => self.token_from(start, start + 2, TokKind::Assign),
+            b':' => self.token_from(start, start + 2, TokKind::PathSep),
             _ => self.token_from(start, start + 1, TokKind::Invalid),
         }
     }
