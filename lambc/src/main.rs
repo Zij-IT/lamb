@@ -83,9 +83,12 @@ fn extract_script(input: &str) -> Result<Module, lambc_parse::Error> {
     let mut parser = Parser::new(input.as_bytes(), "repl.lb");
     match parser.parse_module() {
         Ok(script) => Ok(script),
-        Err(_) => {
+        Err(err) => {
             let mut parser = Parser::new(input.as_bytes(), "repl.lb");
-            let expr = parser.parse_expr()?;
+            let Ok(expr) = parser.parse_expr_end() else {
+                return Err(err);
+            };
+
             let span = expr.span();
             let stat = wrap_expr(expr);
             Ok(Module {

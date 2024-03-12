@@ -92,13 +92,20 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses an expression with no trailing input.
+    pub fn parse_expr_end(&mut self) -> Result<Expr> {
+        let expr = self.parse_expr()?;
+        self.expect(TokKind::End)?;
+        Ok(expr)
+    }
+
     /// Parses an import declaration as defined by the following grammar
     /// ```text
     /// Grammar:
     ///
     ///     import := 'from' string ('as' ident)? 'import' ('*'? | '(' ident_list ')') ';'
     /// ```
-    pub fn parse_import(&mut self) -> Result<Import> {
+    fn parse_import(&mut self) -> Result<Import> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
@@ -150,7 +157,7 @@ impl<'a> Parser<'a> {
         Ok(ImportItem { item, alias, span })
     }
 
-    pub fn parse_export(&mut self) -> Result<Export> {
+    fn parse_export(&mut self) -> Result<Export> {
         let export = self.expect_ident("export")?;
         let (_, items, _) = self.parse_node_list(
             TokKind::OpenBrace,
@@ -185,7 +192,7 @@ impl<'a> Parser<'a> {
     ///     stmt := ident ':=' expr ';'
     ///           | expr  ';'
     /// ```
-    pub fn parse_stmt(&mut self) -> Result<Statement> {
+    fn parse_stmt(&mut self) -> Result<Statement> {
         if self.peek2().kind == TokKind::Assign {
             self.parse_assign_stmt()
         } else {
@@ -224,11 +231,11 @@ impl<'a> Parser<'a> {
     ///          | expr '[' expr ']'
     ///          | expr '(' expr ')'
     /// ```
-    pub fn parse_expr(&mut self) -> Result<Expr> {
+    fn parse_expr(&mut self) -> Result<Expr> {
         self.parse_expr_pratt(0)
     }
 
-    pub fn parse_expr_pratt(&mut self, min_bp: u8) -> Result<Expr> {
+    fn parse_expr_pratt(&mut self, min_bp: u8) -> Result<Expr> {
         let peek = self.peek1();
         let mut lhs = match peek.kind {
             TokKind::Sub | TokKind::Bneg | TokKind::Lnot => {
@@ -292,7 +299,7 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    pub fn parse_chained_expr(&mut self) -> Result<Expr> {
+    fn parse_chained_expr(&mut self) -> Result<Expr> {
         let mut res = self.parse_atom()?;
         while !res.ends_with_block() {
             let peek = self.peek1();
