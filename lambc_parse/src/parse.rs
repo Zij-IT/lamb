@@ -315,7 +315,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_index_expr(&mut self, res: Expr) -> Result<Expr> {
-        self.next();
+        self.expect(TokKind::OpenBrack)?;
         let index = self.parse_expr()?;
         let close = self.expect(TokKind::CloseBrack)?;
         let span = Span::connect(res.span(), close.span);
