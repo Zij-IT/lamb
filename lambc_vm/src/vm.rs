@@ -4,8 +4,8 @@ use lambc_parse::{Ident, Import, Module as ParsedModule, Parser};
 use std::{cmp::Ordering, collections::HashMap, convert::identity, ops, path::Path};
 
 use crate::{
+    bytecode::Lowerer,
     chunk::{Chunk, Op},
-    compiler::Compiler,
     gc::{Allocable, GcRef, LambGc},
     value::{Array, Closure, NativeFunction, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
     vm::module::{Module, ModuleExport},
@@ -185,10 +185,9 @@ impl Vm {
             self.load_import(import, Path::new(script_path.as_ref()))?;
         }
 
-        let mut compiler = Compiler::new(name, path);
-        compiler.compile(&mut self.gc, script);
+        let lowerer = Lowerer::new(name, path);
+        let closure = lowerer.lower(&mut self.gc, script);
 
-        let closure = compiler.finish(&mut self.gc);
         self.stack.push(Value::Closure(closure));
         self.frames.push(CallFrame::new(path, closure, 0));
 

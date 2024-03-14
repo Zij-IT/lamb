@@ -2,8 +2,8 @@ use std::path::Path;
 
 use lambc_parse::Module;
 
+mod bytecode;
 mod chunk;
-mod compiler;
 mod gc;
 mod value;
 mod vm;
