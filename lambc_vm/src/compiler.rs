@@ -104,7 +104,7 @@ impl Compiler {
     }
 
     fn start_block(&mut self) {
-        let block = self.blocks.last().unwrap();
+        let block = self.block();
         let block = Block {
             base: block.base + block.offset,
             offset: 0,
@@ -116,22 +116,22 @@ impl Compiler {
 
     fn end_block(&mut self) {
         self.blocks.pop();
-        let parent = self.blocks.last().unwrap();
+        let depth = self.block().depth;
 
         self.func.chunk.write_op(Op::SaveValue);
         for (idx, loc) in self.locals.iter().enumerate().rev() {
-            if loc.depth <= parent.depth {
+            if loc.depth <= depth {
                 self.locals.truncate(idx + 1);
                 break;
             }
 
-            if loc.is_captured {
-                self.func.chunk.write_op(Op::CloseValue);
+            let op = if loc.is_captured {
+                Op::CloseValue
             } else {
-                self.func
-                    .chunk
-                    .write_op(Op::Pop(NonZeroU16::new(1).unwrap()));
-            }
+                Op::Pop(NZ_ONE_U16)
+            };
+
+            self.func.chunk.write_op(op);
         }
         self.func.chunk.write_op(Op::UnsaveValue);
     }
@@ -151,16 +151,20 @@ impl Compiler {
     fn local_slot(&self, name: &str) -> Option<usize> {
         let idx = self.local_idx(name)?;
         let depth = self.locals[idx].depth;
-        let mut base = None;
 
-        for block in self.blocks.iter().rev() {
-            if block.depth == depth {
-                base = Some(block.base);
-                break;
-            }
-        }
+        // This looks backwards to find the block that the local with a depth
+        // of `depth` is found. This local must be within one of the blocks,
+        // and as such we must be able to find the associated block.
+        let base = self
+            .blocks
+            .iter()
+            .rev()
+            .find(|b| b.depth == depth)
+            .map(|b| b.base)
+            .expect("The local must exist within a block of the same depth");
 
-        let base = base.expect("Block depths are strictly increasing by 1");
+        // This finds the amount of locals that wee declared in the block
+        // before the local `name`
         let predecessors = &self
             .locals
             .iter()
@@ -173,11 +177,7 @@ impl Compiler {
     }
 
     fn local_idx(&self, name: &str) -> Option<usize> {
-        self.locals
-            .iter()
-            .enumerate()
-            .rev()
-            .find_map(|(i, l)| if l.name == name { Some(i) } else { None })
+        self.locals.iter().rposition(|l| l.name == name)
     }
 
     fn upvalue_idx(&mut self, name: &str) -> Option<usize> {
@@ -583,17 +583,16 @@ impl Compiler {
         gc.intern(SCRUTINEE);
         self.add_local(SCRUTINEE.to_string());
 
-        let mut to_elses = Vec::with_capacity(arms.len());
-        for arm in arms {
-            let to_else = self.compile_case_arm(arm, gc);
-            to_elses.push(to_else);
-        }
+        let after_case = arms
+            .iter()
+            .map(|arm| self.compile_case_arm(arm, gc))
+            .collect::<Vec<_>>();
 
         // If no match arms are taken, use `Op::Pop`
         self.write_op(Op::Pop(NZ_ONE_U16));
         self.write_const_op(Value::Nil);
 
-        for jmp in to_elses {
+        for jmp in after_case {
             self.patch_jump(jmp);
         }
 
