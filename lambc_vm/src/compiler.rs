@@ -136,10 +136,10 @@ impl Compiler {
         self.func.chunk.write_op(Op::UnsaveValue);
     }
 
-    fn add_arg(&mut self, gc: &mut LambGc, Ident { raw: arg, .. }: &Ident) {
-        let rf = gc.intern(arg);
+    fn add_arg(&mut self, gc: &mut LambGc, Ident { raw, .. }: &Ident) {
+        let rf = gc.intern(raw);
         self.func.chunk.constants.push(Value::String(rf));
-        self.add_local(arg.clone());
+        self.add_local(raw.clone());
         self.func.arity += 1;
         self.block_mut().offset += 1;
     }
@@ -316,27 +316,27 @@ impl Compiler {
         match stat {
             Statement::Define(assign) => {
                 let Define {
-                    ident: i @ Ident { raw: ident, .. },
+                    ident: ident @ Ident { raw, .. },
                     value,
                     span: _,
                 } = assign;
 
                 if let Expr::FnDef(f) = value {
                     if f.recursive {
-                        self.compile_rec_func_def(i, f, gc);
+                        self.compile_rec_func_def(ident, f, gc);
                         return;
                     }
                 }
 
                 self.compile_expr(value, gc);
 
-                let ident_obj = gc.intern(ident);
+                let ident_obj = gc.intern(raw);
                 self.func.chunk.write_val(Value::String(ident_obj));
                 if self.block().depth == 0 {
                     let idx = self.func.chunk.constants.len() - 1;
                     self.write_op(Op::DefineGlobal(idx.try_into().unwrap()));
                 } else {
-                    self.add_local(ident.clone());
+                    self.add_local(raw.clone());
                 }
             }
             Statement::Expr(e) => {
@@ -398,20 +398,20 @@ impl Compiler {
 
     fn compile_rec_func_def<'ast>(
         &mut self,
-        Ident { raw: inner, .. }: &'ast Ident,
+        Ident { raw, .. }: &'ast Ident,
         def: &'ast FnDef,
         gc: &mut LambGc,
     ) {
-        let ident = gc.intern(inner);
+        let ident = gc.intern(raw);
         self.func.chunk.write_val(Value::String(ident));
         let idx = self.func.chunk.constants.len() - 1;
 
-        self.compile_func(def, gc, inner.clone());
+        self.compile_func(def, gc, raw.clone());
 
         if self.block().depth == 0 {
             self.write_op(Op::DefineGlobal(idx.try_into().unwrap()))
         } else {
-            self.add_local(inner.clone());
+            self.add_local(raw.clone());
         }
     }
 
@@ -493,7 +493,7 @@ impl Compiler {
         }
 
         let path = match iter.remainder() {
-            &[Ident { raw: ref i, .. }] => Value::ModulePath(gc.intern(i)),
+            &[Ident { ref raw, .. }] => Value::ModulePath(gc.intern(raw)),
             _ => return,
         };
 
@@ -503,11 +503,9 @@ impl Compiler {
 
     fn compile_if_expr(&mut self, if_: &If, gc: &mut LambGc) {
         let If {
-            cond: IfCond {
-                cond, body: block, ..
-            },
-            elif: elifs,
-            els_: els,
+            cond: IfCond { cond, body, .. },
+            elif,
+            els_,
             ..
         } = if_;
 
@@ -530,23 +528,20 @@ impl Compiler {
         // if the previous condition wasn't true, it isn't executed. This
         // means that the next if will run as if it was the first.
         let offset = self.block().offset;
-        let mut to_elses = Vec::with_capacity(1 + elifs.len());
-        to_elses.push(self.compile_conditional(cond, block, gc));
+        let mut to_elses = Vec::with_capacity(1 + elif.len());
+        to_elses.push(self.compile_conditional(cond, body, gc));
 
         // compile elifs
-        for IfCond {
-            cond, body: block, ..
-        } in elifs
-        {
+        for IfCond { cond, body, .. } in elif {
             self.write_op(Op::Pop(NZ_ONE_U16));
             self.block_mut().offset = offset;
-            to_elses.push(self.compile_conditional(cond, block, gc));
+            to_elses.push(self.compile_conditional(cond, body, gc));
         }
 
         // compile else
         self.write_op(Op::Pop(NZ_ONE_U16));
-        if let Some(Else { body: block, .. }) = els {
-            self.compile_block(block, gc);
+        if let Some(Else { body, .. }) = els_ {
+            self.compile_block(body, gc);
         } else {
             self.write_const_op(Value::Nil);
         }
@@ -573,12 +568,10 @@ impl Compiler {
 
     fn compile_case(&mut self, c: &Case, gc: &mut LambGc) {
         let Case {
-            arms,
-            scrutinee: value,
-            ..
+            arms, scrutinee, ..
         } = c;
 
-        self.compile_expr(value, gc);
+        self.compile_expr(scrutinee, gc);
 
         gc.intern(SCRUTINEE);
         self.add_local(SCRUTINEE.to_string());
@@ -600,11 +593,7 @@ impl Compiler {
     }
 
     fn compile_case_arm(&mut self, c: &CaseArm, gc: &mut LambGc) -> JumpIdx {
-        let CaseArm {
-            pattern,
-            body: on_match,
-            ..
-        } = c;
+        let CaseArm { pattern, body, .. } = c;
 
         let offset_before_arm = self.block().offset;
         let pre_local_count = self.locals.len();
@@ -612,16 +601,16 @@ impl Compiler {
         let bindings = pattern.binding_names();
         let binding_count = bindings.len();
 
-        for Ident { raw: i, .. } in bindings {
-            gc.intern(i);
+        for Ident { raw, .. } in bindings {
+            gc.intern(raw);
 
             self.write_const_op(Value::Nil);
             self.func
                 .chunk
                 .constants
-                .push(Value::String(gc.alloc(Str::new(i))));
+                .push(Value::String(gc.alloc(Str::new(raw))));
 
-            self.add_local(i.clone());
+            self.add_local(raw.clone());
         }
 
         self.write_op(Op::GetLocal(
@@ -636,7 +625,7 @@ impl Compiler {
         // If match ----->
         // Remove True
         self.write_op(Op::Pop(NZ_ONE_U16));
-        self.compile_expr(on_match, gc);
+        self.compile_expr(body, gc);
         self.write_op(Op::SaveValue);
 
         // Remove scrutinee dup
@@ -679,10 +668,10 @@ impl Compiler {
     //
     //     This means that any sub-patterns must duplicate it.
     fn compile_pattern(&mut self, c: &Pattern, gc: &mut LambGc) {
-        let Pattern { inner: pattern, .. } = c;
+        let Pattern { inner, .. } = c;
 
         let offset = self.block().offset;
-        let (first, rest) = pattern.split_first().unwrap();
+        let (first, rest) = inner.split_first().unwrap();
 
         let mut jumps = Vec::with_capacity(rest.len() + 1);
 
@@ -779,8 +768,8 @@ impl Compiler {
                             u16::try_from(self.func.chunk.constants.len() - 1).unwrap(),
                         ));
 
-                        for Ident { raw: bind, .. } in bindings {
-                            let slot = self.local_slot(&bind).unwrap();
+                        for Ident { raw, .. } in bindings {
+                            let slot = self.local_slot(&raw).unwrap();
                             self.write_op(Op::SetSlot(u16::try_from(slot).unwrap()))
                         }
 
@@ -873,13 +862,13 @@ impl Compiler {
         let FnDef {
             args,
             body,
-            recursive: is_recursive,
+            recursive,
             ..
         } = f;
 
         let func_name = gc.intern(name.clone());
         let mut func_comp = Compiler::new(func_name, self.module);
-        if *is_recursive {
+        if *recursive {
             func_comp.locals[0].name = name;
         }
 
@@ -899,13 +888,13 @@ impl Compiler {
         self.write_closure(gc, composition.func);
     }
 
-    fn compile_ident(&mut self, Ident { raw: i, .. }: &Ident, gc: &mut LambGc) {
-        if let Some(slot) = self.local_slot(i) {
+    fn compile_ident(&mut self, Ident { raw, .. }: &Ident, gc: &mut LambGc) {
+        if let Some(slot) = self.local_slot(raw) {
             self.write_op(Op::GetLocal(slot.try_into().unwrap()))
-        } else if let Some(slot) = self.upvalue_idx(i) {
+        } else if let Some(slot) = self.upvalue_idx(raw) {
             self.write_op(Op::GetUpvalue(slot.try_into().unwrap()))
         } else {
-            let str = gc.intern(i);
+            let str = gc.intern(raw);
             self.func.chunk.constants.push(Value::String(str));
             let idx = self.func.chunk.constants.len() - 1;
             self.write_op(Op::GetGlobal(idx.try_into().unwrap()))
