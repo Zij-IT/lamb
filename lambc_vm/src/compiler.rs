@@ -22,16 +22,14 @@ const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
 
 #[derive(Debug, Default)]
 struct Block {
-    pub enclosing: Option<Box<Block>>,
     pub base: usize,
     pub offset: usize,
     pub depth: usize,
 }
 
 impl Block {
-    fn new_for_func(enclosing: Option<Box<Block>>) -> Self {
+    fn new_for_func() -> Self {
         Self {
-            enclosing,
             base: 0,
             offset: 1,
             depth: 0,
@@ -63,7 +61,7 @@ impl Local {
 #[derive(Debug)]
 pub struct Compiler {
     module: GcRef<Str>,
-    block: Block,
+    blocks: Vec<Block>,
     locals: Vec<Local>,
     func: Function,
     enclosing: Option<Box<Compiler>>,
@@ -75,7 +73,7 @@ impl Compiler {
             module,
             enclosing: None,
             func: Function::new(name, module),
-            block: Block::new_for_func(None),
+            blocks: vec![Block::new_for_func()],
             // This local refers to the function that is currently being compiled.
             // By setting its depth to zero, we make sure it is unaccessible to
             // the user
@@ -97,30 +95,32 @@ impl Compiler {
         gc.alloc(closure)
     }
 
+    fn block(&self) -> &Block {
+        self.blocks.last().unwrap()
+    }
+
+    fn block_mut(&mut self) -> &mut Block {
+        self.blocks.last_mut().unwrap()
+    }
+
     fn start_block(&mut self) {
-        let mut block = Block {
-            enclosing: None,
-            base: self.block.base + self.block.offset,
+        let block = self.blocks.last().unwrap();
+        let block = Block {
+            base: block.base + block.offset,
             offset: 0,
-            depth: self.block.depth + 1,
+            depth: block.depth + 1,
         };
 
-        std::mem::swap(&mut self.block, &mut block);
-        self.block.enclosing = Some(Box::new(block));
+        self.blocks.push(block);
     }
 
     fn end_block(&mut self) {
-        let parent = self
-            .block
-            .enclosing
-            .take()
-            .map(|b| *b)
-            .expect("Compiler starts with a block that should never be popped");
+        self.blocks.pop();
+        let parent = self.blocks.last().unwrap();
 
         self.func.chunk.write_op(Op::SaveValue);
-        self.block = parent;
         for (idx, loc) in self.locals.iter().enumerate().rev() {
-            if loc.depth <= self.block.depth {
+            if loc.depth <= parent.depth {
                 self.locals.truncate(idx + 1);
                 break;
             }
@@ -141,11 +141,11 @@ impl Compiler {
         self.func.chunk.constants.push(Value::String(rf));
         self.add_local(arg.clone());
         self.func.arity += 1;
-        self.block.offset += 1;
+        self.block_mut().offset += 1;
     }
 
     fn add_local(&mut self, name: String) {
-        self.locals.push(Local::new(name, self.block.depth));
+        self.locals.push(Local::new(name, self.block().depth));
     }
 
     fn local_slot(&self, name: &str) -> Option<usize> {
@@ -153,14 +153,11 @@ impl Compiler {
         let depth = self.locals[idx].depth;
         let mut base = None;
 
-        let mut block = Some(&self.block);
-        while let Some(b) = block {
-            if b.depth == depth {
-                base = Some(b.base);
+        for block in self.blocks.iter().rev() {
+            if block.depth == depth {
+                base = Some(block.base);
                 break;
             }
-
-            block = b.enclosing.as_deref();
         }
 
         let base = base.expect("Block depths are strictly increasing by 1");
@@ -244,8 +241,8 @@ impl Compiler {
             | Op::Ne
             | Op::RShift
             | Op::SaveValue
-            | Op::Sub => self.block.offset -= 1,
-            Op::Pop(n) => self.block.offset -= usize::from(n.get()),
+            | Op::Sub => self.block_mut().offset -= 1,
+            Op::Pop(n) => self.block_mut().offset -= usize::from(n.get()),
             Op::Closure(_)
             | Op::Constant(_)
             | Op::Dup
@@ -254,12 +251,12 @@ impl Compiler {
             | Op::GetUpvalue(_)
             | Op::Len
             | Op::Slice(_)
-            | Op::UnsaveValue => self.block.offset += 1,
-            Op::MakeArray(0) => self.block.offset += 1,
-            Op::MakeArray(elems) => self.block.offset -= usize::from(elems) - 1,
-            Op::Call(off) => self.block.offset -= usize::from(off),
+            | Op::UnsaveValue => self.block_mut().offset += 1,
+            Op::MakeArray(0) => self.block_mut().offset += 1,
+            Op::MakeArray(elems) => self.block_mut().offset -= usize::from(elems) - 1,
+            Op::Call(off) => self.block_mut().offset -= usize::from(off),
             Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) => {
-                self.block.offset += 0;
+                self.block_mut().offset += 0;
             }
             Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
                 panic!("Jump operators must be written with Compiler::write_jump")
@@ -312,7 +309,7 @@ impl Compiler {
         // Every block leaves 1 extra value on the stack for the block above it.
         // Thus, a value is left on the stack for this block, which increases its
         // offset
-        self.block.offset += 1;
+        self.block_mut().offset += 1;
     }
 
     fn compile_stmt(&mut self, stat: &Statement, gc: &mut LambGc) {
@@ -335,7 +332,7 @@ impl Compiler {
 
                 let ident_obj = gc.intern(ident);
                 self.func.chunk.write_val(Value::String(ident_obj));
-                if self.block.depth == 0 {
+                if self.block().depth == 0 {
                     let idx = self.func.chunk.constants.len() - 1;
                     self.write_op(Op::DefineGlobal(idx.try_into().unwrap()));
                 } else {
@@ -411,7 +408,7 @@ impl Compiler {
 
         self.compile_func(def, gc, inner.clone());
 
-        if self.block.depth == 0 {
+        if self.block().depth == 0 {
             self.write_op(Op::DefineGlobal(idx.try_into().unwrap()))
         } else {
             self.add_local(inner.clone());
@@ -532,7 +529,7 @@ impl Compiler {
         // Each `compile_conditional` puts the offset at +1 item however
         // if the previous condition wasn't true, it isn't executed. This
         // means that the next if will run as if it was the first.
-        let offset = self.block.offset;
+        let offset = self.block().offset;
         let mut to_elses = Vec::with_capacity(1 + elifs.len());
         to_elses.push(self.compile_conditional(cond, block, gc));
 
@@ -542,7 +539,7 @@ impl Compiler {
         } in elifs
         {
             self.write_op(Op::Pop(NZ_ONE_U16));
-            self.block.offset = offset;
+            self.block_mut().offset = offset;
             to_elses.push(self.compile_conditional(cond, block, gc));
         }
 
@@ -610,7 +607,7 @@ impl Compiler {
             ..
         } = c;
 
-        let offset_before_arm = self.block.offset;
+        let offset_before_arm = self.block().offset;
         let pre_local_count = self.locals.len();
 
         let bindings = pattern.binding_names();
@@ -629,12 +626,12 @@ impl Compiler {
         }
 
         self.write_op(Op::GetLocal(
-            u16::try_from(self.block.base + offset_before_arm - 1).unwrap(),
+            u16::try_from(self.block().base + offset_before_arm - 1).unwrap(),
         ));
 
         self.compile_pattern(pattern, gc);
 
-        let offset_match = self.block.offset;
+        let offset_match = self.block().offset;
         let if_no_match = self.write_jump(Jump::IfFalse);
 
         // If match ----->
@@ -657,7 +654,7 @@ impl Compiler {
 
         // Only one of these are run, so we want to set the offset
         // to before the "If match" was executed.
-        self.block.offset = offset_match;
+        self.block_mut().offset = offset_match;
 
         // If no match ----->
         self.patch_jump(if_no_match);
@@ -669,7 +666,7 @@ impl Compiler {
             NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2).unwrap(),
         ));
 
-        self.block.offset = offset_before_arm;
+        self.block_mut().offset = offset_before_arm;
         self.locals.truncate(pre_local_count);
         // <----- If no match
 
@@ -685,7 +682,7 @@ impl Compiler {
     fn compile_pattern(&mut self, c: &Pattern, gc: &mut LambGc) {
         let Pattern { inner: pattern, .. } = c;
 
-        let offset = self.block.offset;
+        let offset = self.block().offset;
         let (first, rest) = pattern.split_first().unwrap();
 
         let mut jumps = Vec::with_capacity(rest.len() + 1);
@@ -699,7 +696,7 @@ impl Compiler {
             // Just like `if` and `case` all patterns must start at the
             // same stack offset and will leave one expression on the stack
             // which will result in either `true` or `false`
-            self.block.offset = offset;
+            self.block_mut().offset = offset;
             self.compile_pattern_top(pat, gc);
         }
 
