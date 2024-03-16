@@ -1,9 +1,8 @@
 #![warn(clippy::pedantic)]
 
-use lambc_parse::{Call, Expr, ExprStatement, Ident, Module, Parser, Statement};
-use miette::Report;
+use lambc_vm::{Compiler, LambGc};
 use repl::Command;
-use std::{error::Error, path::Path};
+use std::error::Error;
 
 mod cli;
 mod repl;
@@ -18,27 +17,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         path,
     } = cli::LambOptions::parse();
 
-    match path.as_ref().map(|p| (p, std::fs::read_to_string(p))) {
-        Some((path, src)) => run_input(path.canonicalize().unwrap(), &src?),
+    match path {
+        Some(path) => lambc_vm::run_script(path)?,
         None => run_repl()?,
     }
 
     Ok(())
-}
-
-fn run_input<P: AsRef<Path>>(path: P, input: &str) {
-    let mut parser = Parser::new(input.as_bytes(), path.as_ref());
-    match parser.parse_module() {
-        Ok(s) => {
-            if let Err(err) = lambc_vm::run_script(path.as_ref(), &s) {
-                println!("{}: {err}", path.as_ref().display());
-            }
-        }
-        Err(err) => {
-            let report = Report::from(err).with_source_code(input.to_owned());
-            eprintln!("{report:?}");
-        }
-    }
 }
 
 fn run_repl() -> Result<(), repl::Error> {
@@ -50,80 +34,32 @@ fn run_repl() -> Result<(), repl::Error> {
 
     print!("{}", repl::Repl::REPL_START);
 
-    let mut vm = lambc_vm::Vm::new();
-    let path = std::fs::canonicalize(".").unwrap().join("repl");
+    let mut gc = LambGc::new();
+    let mut vm = lambc_vm::Vm::new(&mut gc);
     loop {
         match lamb.read_line()? {
             Command::Quit => return Ok(()),
             Command::Run => break,
-            Command::String(s) => match extract_script(&s) {
-                Ok(script) => {
-                    if let Err(err) = vm.load_script(&script, &path) {
-                        println!("{err}");
-                        continue;
-                    }
+            Command::String(s) => {
+                let mut compiler = Compiler::new(vm.gc_mut());
+                compiler.enable_repl_exprs();
+                let Ok(exe) = compiler.build_from_source(s) else {
+                    eprintln!("Error: wait for diagnostics...");
+                    // And now I lie :D
+                    return Ok(());
+                };
 
-                    if let Err(err) = vm.run() {
-                        println!("{err}");
-                    }
-                }
-                Err(err) => {
-                    let report = Report::from(err).with_source_code(s);
-                    eprintln!("{report:?}");
+                if let Err(err) = vm.load_exe(exe) {
+                    println!("{err}");
                     continue;
                 }
-            },
-        }
-    }
 
-    Ok(())
-}
-
-fn extract_script(input: &str) -> Result<Module, lambc_parse::Error> {
-    let mut parser = Parser::new(input.as_bytes(), "repl.lb");
-    match parser.parse_module() {
-        Ok(script) => Ok(script),
-        Err(err) => {
-            let mut parser = Parser::new(input.as_bytes(), "repl.lb");
-            let Ok(expr) = parser.parse_expr_end() else {
-                return Err(err);
-            };
-
-            let span = expr.span();
-            let stat = wrap_expr(expr);
-            Ok(Module {
-                span,
-                exports: vec![],
-                imports: vec![],
-                path: "repl.lb".into(),
-                statements: vec![stat],
-            })
-        }
-    }
-}
-
-fn wrap_expr(expr: Expr) -> Statement {
-    if let Expr::Call(call) = &expr {
-        if let Expr::Ident(Ident { raw, .. }) = &call.callee {
-            if raw == "println" || raw == "print" {
-                return Statement::Expr(ExprStatement {
-                    span: expr.span(),
-                    expr,
-                });
+                if let Err(err) = vm.run() {
+                    println!("{err}");
+                }
             }
         }
     }
 
-    let span = expr.span();
-    Statement::Expr(ExprStatement {
-        expr: Expr::Call(Box::new(Call {
-            callee: Expr::Ident(Ident {
-                raw: "println".into(),
-                span,
-            }),
-            args: vec![expr],
-            span,
-        })),
-        span,
-    })
+    Ok(())
 }

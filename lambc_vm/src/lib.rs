@@ -1,18 +1,25 @@
-use std::path::Path;
-
-use lambc_parse::Module;
-
 mod bytecode;
 mod chunk;
+mod compiler;
 mod gc;
 mod value;
 mod vm;
 
+use std::path::Path;
+
+pub use compiler::Compiler;
+pub use gc::LambGc;
 pub use vm::Error;
 pub use vm::Vm;
 
-pub fn run_script<P: AsRef<Path>>(path: P, script: &Module) -> Result<(), Error> {
-    let mut vm = Vm::new();
-    vm.load_script(script, path)?;
+pub fn run_script<P: AsRef<Path>>(path: P) -> Result<(), Error> {
+    let mut gc = LambGc::new();
+    let mut compiler = Compiler::new(&mut gc);
+    let Ok(exe) = compiler.build_from_path(path.as_ref().to_path_buf()) else {
+        panic!("Whoops");
+    };
+
+    let mut vm = Vm::new(&mut gc);
+    vm.load_exe(exe)?;
     vm.run()
 }

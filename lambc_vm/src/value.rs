@@ -298,7 +298,7 @@ impl NativeFunction {
         Self { raw: f }
     }
 
-    pub fn call(&self, vm: &Vm, args: &[Value]) -> Result<Value, crate::vm::Error> {
+    pub fn call(&self, vm: &Vm<'_>, args: &[Value]) -> Result<Value, crate::vm::Error> {
         (self.raw)(vm, args)
     }
 }

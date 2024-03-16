@@ -1,17 +1,17 @@
 mod module;
 
-use lambc_parse::{Ident, Import, Module as ParsedModule, Parser};
-use std::{cmp::Ordering, collections::HashMap, convert::identity, ops, path::Path};
+use lambc_parse::Ident;
+use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
 
 use crate::{
-    bytecode::Lowerer,
     chunk::{Chunk, Op},
+    compiler::{CompiledImport, CompiledModule, Exe},
     gc::{Allocable, GcRef, LambGc},
     value::{Array, Closure, NativeFunction, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
     vm::module::{Module, ModuleExport},
 };
 
-pub type RawNative = fn(&Vm, &[Value]) -> Result<Value>;
+pub type RawNative = fn(&Vm<'_>, &[Value]) -> Result<Value>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(thiserror::Error, Debug)]
@@ -128,8 +128,8 @@ macro_rules! num_un_op {
     }};
 }
 
-pub struct Vm {
-    gc: LambGc,
+pub struct Vm<'gc> {
+    gc: &'gc mut LambGc,
     builtins: HashMap<GcRef<Str>, Value>,
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
@@ -138,16 +138,10 @@ pub struct Vm {
     open_upvalues: Vec<GcRef<ResolvedUpvalue>>,
 }
 
-impl Default for Vm {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Vm {
-    pub fn new() -> Self {
+impl<'gc> Vm<'gc> {
+    pub fn new(gc: &'gc mut LambGc) -> Self {
         let mut this = Self {
-            gc: LambGc::new(),
+            gc,
             builtins: Default::default(),
             modules: Default::default(),
             frames: Vec::with_capacity(64),
@@ -164,76 +158,62 @@ impl Vm {
         this
     }
 
-    // TODO:
-    // Current behavior: If a module was previously loaded, and we attempt to load
-    // a script with the same path, then we keep the module and basically append the
-    // changes.
-    //
-    // Also, figure out how to get good error messages to this place. Perhaps a script
-    // shouldn't be all the scripts like this...
-    pub fn load_script<P: AsRef<Path>>(
+    pub fn load_exe(&mut self, exe: Exe) -> Result<()> {
+        let main = &exe.main;
+        let modules = &exe.modules;
+
+        let module = &modules[&main];
+        self.load_module(module, &modules)
+    }
+
+    pub fn gc_mut(&mut self) -> &mut LambGc {
+        self.gc
+    }
+
+    fn load_module(
         &mut self,
-        script: &ParsedModule,
-        script_path: P,
+        module: &CompiledModule,
+        modules: &HashMap<GcRef<Str>, CompiledModule>,
     ) -> Result<()> {
-        let script_path = script_path.as_ref().to_string_lossy();
-        let name = self.gc.intern("__LAMB__SCRIPT__");
-        let path = self.gc.intern(script_path.as_ref());
-
-        self.modules.entry(path).or_insert(Module::new());
-        for import in &script.imports {
-            self.load_import(import, Path::new(script_path.as_ref()))?;
-        }
-
-        let lowerer = Lowerer::new(name, path);
-        let closure = lowerer.lower(&mut self.gc, script);
-
-        self.stack.push(Value::Closure(closure));
-        self.frames.push(CallFrame::new(path, closure, 0));
+        self.modules.entry(module.path).or_insert(Module::new());
+        self.load_imports(module, &module.imports, modules)?;
+        self.stack.push(Value::Closure(module.code));
+        self.frames
+            .push(CallFrame::new(module.path, module.code, 0));
 
         Ok(())
     }
 
-    fn load_import<P: AsRef<Path>>(&mut self, import: &Import, script_path: P) -> Result<()> {
-        let total_path = script_path
-            .as_ref()
-            .parent()
-            .expect("Can't execute empty file...")
-            .join(
-                import
-                    .file
-                    .text
-                    .as_ref()
-                    .map_or("", |text| text.inner.as_str()),
-            )
-            .canonicalize()?;
+    fn load_imports(
+        &mut self,
+        current: &CompiledModule,
+        imports: &[CompiledImport],
+        modules: &HashMap<GcRef<Str>, CompiledModule>,
+    ) -> Result<()> {
+        for import in imports {
+            if self.modules.contains_key(&import.path) {
+                // The import has already been loaded. There are two possibilities:
+                // 1. The import has already been run, and this is okay.
+                // 2. The import has not already been run, because there is a circular
+                //    dependency, in which case an error will be returned
+                self.add_imports(current, import)?;
+                continue;
+            }
 
-        let module_ref = self.gc.intern(total_path.to_string_lossy());
-        // Don't attempt to run an import if there exists an import
-        // with the same path
-        if self.modules.contains_key(&module_ref) {
-            return Ok(());
+            let module = &modules[&import.path];
+            self.load_module(module, modules)?;
+            self.run()?;
+            self.add_exports(module)?;
+            self.add_imports(current, import)?;
         }
 
-        let module = std::fs::read_to_string(&total_path)?;
-        let mut parser = Parser::new(module.as_bytes(), &total_path);
-        let script = parser.parse_module()?;
-        self.load_script(&script, &total_path)?;
-        self.run()?;
+        Ok(())
+    }
 
-        let export = &script.exports;
-        let script = self.gc.intern(script_path.as_ref().to_string_lossy());
-        if let Some(Ident { raw, .. }) = import.name.as_ref() {
-            let alias = self.gc.intern(raw);
+    fn add_exports(&mut self, import: &CompiledModule) -> Result<()> {
+        if let Some(exports) = import.export.as_ref() {
             self.modules
-                .get_mut(&script)
-                .expect("Script must have been added at this point")
-                .define_global(alias, Value::ModulePath(module_ref));
-        }
-
-        if let Some(exports) = export.first() {
-            self.modules
-                .get_mut(&module_ref)
+                .get_mut(&import.path)
                 .expect("Module must have been added at this point")
                 .build_exports(exports.items.iter().map(|i| ModuleExport {
                     name: self.gc.intern(&i.item.raw),
@@ -241,21 +221,45 @@ impl Vm {
                 }));
         }
 
-        for i in import.items.iter().map(|i| i.item.raw.as_str()) {
+        Ok(())
+    }
+
+    fn add_imports(&mut self, current: &CompiledModule, import: &CompiledImport) -> Result<()> {
+        // Load a qualified import:
+        if let Some(Ident { raw, .. }) = import.raw.name.as_ref() {
+            let alias = self.gc.intern(raw);
+            self.modules
+                .get_mut(&current.path)
+                .expect("Script must have been added at this point")
+                .define_global(alias, Value::ModulePath(import.path));
+        }
+
+        // Load all named imports:
+        for i in import.raw.items.iter().map(|i| i.item.raw.as_str()) {
             let gci = self.gc.intern(i);
             let item = self
                 .modules
-                .get_mut(&module_ref)
+                .get_mut(&import.path)
                 .expect("Module must have been added at this point")
                 .get_export(gci);
 
             let item = match item {
                 Some(t) => t,
-                None => return self.error(Error::NoExportViaName(i.to_string(), module.clone())),
+                None => {
+                    let path = import
+                        .raw
+                        .file
+                        .text
+                        .as_ref()
+                        .map(|i| i.inner.to_string())
+                        .unwrap_or_default();
+
+                    return self.error(Error::NoExportViaName(i.to_string(), path));
+                }
             };
 
             self.modules
-                .get_mut(&script)
+                .get_mut(&current.path)
                 .expect("Script must have been added at this point")
                 .define_global(gci, item);
         }
@@ -810,7 +814,7 @@ impl Vm {
             .insert(name, Value::Native(NativeFunction::new(f)));
     }
 
-    fn native_print(vm: &Self, args: &[Value]) -> Result<Value> {
+    fn native_print(vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         for arg in args {
             print!("{}", arg.format(&vm.gc));
         }
@@ -818,7 +822,7 @@ impl Vm {
         Ok(Value::Nil)
     }
 
-    fn native_println(vm: &Self, args: &[Value]) -> Result<Value> {
+    fn native_println(vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         for arg in args {
             print!("{}", arg.format(&vm.gc));
         }
@@ -827,14 +831,14 @@ impl Vm {
         Ok(Value::Nil)
     }
 
-    fn native_rand(_vm: &Self, args: &[Value]) -> Result<Value> {
+    fn native_rand(_vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         match args.is_empty() {
             true => Ok(Value::Int(rand::random())),
             false => Err(Error::ArgAmountMismatch(0, args.len())),
         }
     }
 
-    fn native_user_int(_vm: &Self, args: &[Value]) -> Result<Value> {
+    fn native_user_int(_vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         if !args.is_empty() {
             return Err(Error::ArgAmountMismatch(0, args.len()));
         }
@@ -850,7 +854,7 @@ impl Vm {
         ))
     }
 
-    fn native_user_char(_vm: &Self, args: &[Value]) -> Result<Value> {
+    fn native_user_char(_vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         if !args.is_empty() {
             return Err(Error::ArgAmountMismatch(0, args.len()));
         }
