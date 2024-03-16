@@ -195,9 +195,7 @@ impl From<Vec<Value>> for Array {
 
 impl FromIterator<Value> for Array {
     fn from_iter<T: IntoIterator<Item = Value>>(iter: T) -> Self {
-        Self {
-            items: iter.into_iter().collect(),
-        }
+        Self { items: iter.into_iter().collect() }
     }
 }
 
@@ -266,10 +264,7 @@ pub struct Closure {
 
 impl Closure {
     pub fn new(func: GcRef<Function>) -> Self {
-        Self {
-            func,
-            upvalues: Vec::new(),
-        }
+        Self { func, upvalues: Vec::new() }
     }
 }
 
@@ -281,10 +276,7 @@ pub struct ResolvedUpvalue {
 
 impl ResolvedUpvalue {
     pub fn new(index: usize) -> Self {
-        Self {
-            index,
-            closed: None,
-        }
+        Self { index, closed: None }
     }
 }
 
@@ -298,7 +290,11 @@ impl NativeFunction {
         Self { raw: f }
     }
 
-    pub fn call(&self, vm: &Vm<'_>, args: &[Value]) -> Result<Value, crate::vm::Error> {
+    pub fn call(
+        &self,
+        vm: &Vm<'_>,
+        args: &[Value],
+    ) -> Result<Value, crate::vm::Error> {
         (self.raw)(vm, args)
     }
 }

@@ -1,13 +1,17 @@
 mod module;
 
-use lambc_parse::Ident;
 use std::{cmp::Ordering, collections::HashMap, convert::identity, ops};
+
+use lambc_parse::Ident;
 
 use crate::{
     chunk::{Chunk, Op},
     compiler::{CompiledImport, CompiledModule, Exe},
     gc::{Allocable, GcRef, LambGc},
-    value::{Array, Closure, NativeFunction, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
+    value::{
+        Array, Closure, NativeFunction, ResolvedUpvalue, Str,
+        UnresolvedUpvalue, Value,
+    },
     vm::module::{Module, ModuleExport},
 };
 
@@ -37,13 +41,17 @@ pub enum Error {
     #[error("Type Error: Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
 
-    #[error("Type Error: Values of types {1} and {0} can't be compared with {2}")]
+    #[error(
+        "Type Error: Values of types {1} and {0} can't be compared with {2}"
+    )]
     NotComparable(&'static str, &'static str, &'static str),
 
     #[error("Type Error: The binary op {2} can't be used with values of types {1} and {0}")]
     BinaryTypeMismatch(&'static str, &'static str, &'static str),
 
-    #[error("Type Error: The unary op {1} can't be used with a value of type {0}")]
+    #[error(
+        "Type Error: The unary op {1} can't be used with a value of type {0}"
+    )]
     UnaryTypeMismatch(&'static str, &'static str),
 
     #[error("Index {0} is out of bounds (max {1})")]
@@ -178,8 +186,7 @@ impl<'gc> Vm<'gc> {
         self.modules.entry(module.path).or_insert(Module::new());
         self.load_imports(module, &module.imports, modules)?;
         self.stack.push(Value::Closure(module.code));
-        self.frames
-            .push(CallFrame::new(module.path, module.code, 0));
+        self.frames.push(CallFrame::new(module.path, module.code, 0));
 
         Ok(())
     }
@@ -224,7 +231,11 @@ impl<'gc> Vm<'gc> {
         Ok(())
     }
 
-    fn add_imports(&mut self, current: &CompiledModule, import: &CompiledImport) -> Result<()> {
+    fn add_imports(
+        &mut self,
+        current: &CompiledModule,
+        import: &CompiledImport,
+    ) -> Result<()> {
         // Load a qualified import:
         if let Some(Ident { raw, .. }) = import.raw.name.as_ref() {
             let alias = self.gc.intern(raw);
@@ -254,7 +265,8 @@ impl<'gc> Vm<'gc> {
                         .map(|i| i.inner.to_string())
                         .unwrap_or_default();
 
-                    return self.error(Error::NoExportViaName(i.to_string(), path));
+                    return self
+                        .error(Error::NoExportViaName(i.to_string(), path));
                 }
             };
 
@@ -283,7 +295,9 @@ impl<'gc> Vm<'gc> {
                     self.push(value);
                 }
                 Op::DefineGlobal(i) => {
-                    let Value::String(name) = self.chunk().constants[usize::from(i)] else {
+                    let Value::String(name) =
+                        self.chunk().constants[usize::from(i)]
+                    else {
                         panic!("Compilation Error: DefineGlobal references non-string constant");
                     };
 
@@ -297,19 +311,26 @@ impl<'gc> Vm<'gc> {
                     module.define_global(name, value);
                 }
                 Op::GetGlobal(i) => {
-                    let Value::String(name) = self.chunk().constants[usize::from(i)] else {
+                    let Value::String(name) =
+                        self.chunk().constants[usize::from(i)]
+                    else {
                         panic!("Compilation Error: GetGlobal references non-string constant");
                     };
 
                     let module = self.frame().module;
-                    let module = self.modules.get(&module).expect("Module must be defined");
+                    let module = self
+                        .modules
+                        .get(&module)
+                        .expect("Module must be defined");
                     let global = match module.get_global(name) {
                         Some(item) => Some(item),
                         None => self.builtins.get(&name).copied(),
                     };
 
                     let Some(global) = global else {
-                        return self.error(Error::NoSuchGlobal(self.gc.deref(name).0.clone()));
+                        return self.error(Error::NoSuchGlobal(
+                            self.gc.deref(name).0.clone(),
+                        ));
                     };
 
                     self.push(global);
@@ -335,24 +356,34 @@ impl<'gc> Vm<'gc> {
                             let closure = self.gc.deref(cl);
                             let func = self.gc.deref(closure.func);
                             if args != func.arity {
-                                return self.error(Error::ArgAmountMismatch(args, func.arity));
+                                return self.error(Error::ArgAmountMismatch(
+                                    args, func.arity,
+                                ));
                             } else {
-                                let frame =
-                                    CallFrame::new(func.module, cl, self.stack.len() - 1 - args);
+                                let frame = CallFrame::new(
+                                    func.module,
+                                    cl,
+                                    self.stack.len() - 1 - args,
+                                );
                                 self.frames.push(frame);
                             }
                         }
                         Value::Native(native) => {
                             let args = self.stack.len() - args;
-                            let result = native.call(self, &self.stack[args..]).map_err(|e| {
-                                self.recover();
-                                e
-                            })?;
+                            let result = native
+                                .call(self, &self.stack[args..])
+                                .map_err(|e| {
+                                    self.recover();
+                                    e
+                                })?;
 
                             self.stack.truncate(args - 1);
                             self.push(result);
                         }
-                        val => return self.error(Error::BadCalleeType(val.type_name())),
+                        val => {
+                            return self
+                                .error(Error::BadCalleeType(val.type_name()))
+                        }
                     }
                 }
                 Op::Return => {
@@ -374,7 +405,9 @@ impl<'gc> Vm<'gc> {
                     self.pop();
                 }
                 Op::Closure(i) => {
-                    let Value::Function(func_ref) = self.chunk().constants[usize::from(i)] else {
+                    let Value::Function(func_ref) =
+                        self.chunk().constants[usize::from(i)]
+                    else {
                         panic!("Compilation Error: Op::Closure expects Value::Function");
                     };
 
@@ -387,7 +420,8 @@ impl<'gc> Vm<'gc> {
                         let UnresolvedUpvalue { index, is_local } =
                             self.gc.deref(func_ref).upvalues[i];
                         if is_local {
-                            let up = self.capture_upvalue(self.frame().slot + index);
+                            let up = self
+                                .capture_upvalue(self.frame().slot + index);
                             closure.upvalues.push(up);
                         } else {
                             let curr_closure = self.frame().closure;
@@ -406,7 +440,8 @@ impl<'gc> Vm<'gc> {
                     self.push(item);
                 }
                 Op::Pop(n) => {
-                    self.stack.truncate(self.stack.len() - usize::from(n.get()));
+                    self.stack
+                        .truncate(self.stack.len() - usize::from(n.get()));
                 }
                 Op::Jump(off) => {
                     self.frame_mut().ip += usize::from(off);
@@ -414,7 +449,11 @@ impl<'gc> Vm<'gc> {
                 Op::JumpIfFalse(off) => {
                     let is_true = match self.peek(0) {
                         Value::Bool(is_true) => is_true,
-                        val => return self.error(Error::CtrlFlowNotBool(val.type_name())),
+                        val => {
+                            return self.error(Error::CtrlFlowNotBool(
+                                val.type_name(),
+                            ))
+                        }
                     };
 
                     if !is_true {
@@ -424,7 +463,11 @@ impl<'gc> Vm<'gc> {
                 Op::JumpIfTrue(off) => {
                     let is_true = match self.peek(0) {
                         Value::Bool(is_true) => is_true,
-                        val => return self.error(Error::CtrlFlowNotBool(val.type_name())),
+                        val => {
+                            return self.error(Error::CtrlFlowNotBool(
+                                val.type_name(),
+                            ))
+                        }
                     };
 
                     if is_true {
@@ -448,7 +491,11 @@ impl<'gc> Vm<'gc> {
                     let len = match self.peek(0) {
                         Value::Array(arr) => self.gc.deref(arr).len(),
                         Value::String(str) => self.gc.deref(str).len(),
-                        val => return self.error(Error::BadArrayScrutinee(val.type_name())),
+                        val => {
+                            return self.error(Error::BadArrayScrutinee(
+                                val.type_name(),
+                            ))
+                        }
                     };
 
                     self.push(Value::Int(i64::try_from(len).unwrap()))
@@ -456,7 +503,10 @@ impl<'gc> Vm<'gc> {
                 Op::Index => {
                     let idx = match self.pop() {
                         Value::Int(idx) => idx,
-                        val => return self.error(Error::BadIndexType(val.type_name())),
+                        val => {
+                            return self
+                                .error(Error::BadIndexType(val.type_name()))
+                        }
                     };
 
                     let idx = usize::try_from(idx).unwrap();
@@ -482,13 +532,19 @@ impl<'gc> Vm<'gc> {
 
                             self.push(val);
                         }
-                        val => return self.error(Error::BadIndexeeType(val.type_name())),
+                        val => {
+                            return self
+                                .error(Error::BadIndexeeType(val.type_name()))
+                        }
                     }
                 }
                 Op::IndexRev => {
                     let idx = match self.pop() {
                         Value::Int(idx) => idx,
-                        val => return self.error(Error::BadIndexType(val.type_name())),
+                        val => {
+                            return self
+                                .error(Error::BadIndexType(val.type_name()))
+                        }
                     };
 
                     let idx = usize::try_from(idx).unwrap();
@@ -516,16 +572,22 @@ impl<'gc> Vm<'gc> {
 
                             self.push(val);
                         }
-                        val => return self.error(Error::BadIndexeeType(val.type_name())),
+                        val => {
+                            return self
+                                .error(Error::BadIndexeeType(val.type_name()))
+                        }
                     }
                 }
                 Op::Slice(idx) => {
-                    let Value::Int(i) = self.chunk().constants[usize::from(idx)] else {
+                    let Value::Int(i) =
+                        self.chunk().constants[usize::from(idx)]
+                    else {
                         panic!("Compilation Error: Slice references non-int constant");
                     };
 
                     let start = ((i as u64 >> u32::BITS) as u32) as usize;
-                    let dist_from_end = ((i as u64 as u32) & u32::MAX) as usize;
+                    let dist_from_end =
+                        ((i as u64 as u32) & u32::MAX) as usize;
 
                     let val = self.peek(0);
                     match val {
@@ -543,11 +605,17 @@ impl<'gc> Vm<'gc> {
                             let new = self.alloc(new);
                             self.push(Value::String(new));
                         }
-                        val => return self.error(Error::BadArrayScrutinee(val.type_name())),
+                        val => {
+                            return self.error(Error::BadArrayScrutinee(
+                                val.type_name(),
+                            ))
+                        }
                     }
                 }
                 Op::MakeArray(n) => {
-                    let vec = self.stack.split_off(self.stack.len() - usize::from(n));
+                    let vec = self
+                        .stack
+                        .split_off(self.stack.len() - usize::from(n));
                     let arr = Array::from(vec);
                     let arr = self.alloc(arr);
                     self.push(Value::Array(arr));
@@ -560,14 +628,20 @@ impl<'gc> Vm<'gc> {
                 Op::Access => {
                     let rhs = self.pop();
                     let lhs = self.pop();
-                    let (Value::ModulePath(path), Value::ModulePath(item)) = (lhs, rhs) else {
+                    let (Value::ModulePath(path), Value::ModulePath(item)) =
+                        (lhs, rhs)
+                    else {
                         return self.error(Error::NotAModule(lhs.type_name()));
                     };
 
                     let item = self
                         .modules
                         .get(&path)
-                        .ok_or_else(|| Error::NoSuchModule(self.gc.deref(path).0.to_string()))
+                        .ok_or_else(|| {
+                            Error::NoSuchModule(
+                                self.gc.deref(path).0.to_string(),
+                            )
+                        })
                         .and_then(|module| {
                             module.get_export(item).ok_or_else(|| {
                                 Error::NoExportViaName(
@@ -595,10 +669,17 @@ impl<'gc> Vm<'gc> {
 
                 Op::Eq => self.value_eq_op(identity),
                 Op::Ne => self.value_eq_op(ops::Not::not),
-                Op::Ge => self.value_cmp_op(|o| !matches!(o, Ordering::Less), ">=")?,
-                Op::Le => self.value_cmp_op(|o| !matches!(o, Ordering::Greater), "<=")?,
-                Op::Gt => self.value_cmp_op(|o| matches!(o, Ordering::Greater), ">")?,
-                Op::Lt => self.value_cmp_op(|o| matches!(o, Ordering::Less), "<")?,
+                Op::Ge => {
+                    self.value_cmp_op(|o| !matches!(o, Ordering::Less), ">=")?
+                }
+                Op::Le => self
+                    .value_cmp_op(|o| !matches!(o, Ordering::Greater), "<=")?,
+                Op::Gt => {
+                    self.value_cmp_op(|o| matches!(o, Ordering::Greater), ">")?
+                }
+                Op::Lt => {
+                    self.value_cmp_op(|o| matches!(o, Ordering::Less), "<")?
+                }
             }
         }
     }
@@ -724,12 +805,7 @@ impl<'gc> Vm<'gc> {
     }
 
     fn close_upvalues(&mut self, slot: usize) {
-        let Self {
-            gc,
-            open_upvalues,
-            stack,
-            ..
-        } = self;
+        let Self { gc, open_upvalues, stack, .. } = self;
 
         open_upvalues.retain(|up| {
             let up = gc.deref_mut(*up);
@@ -810,8 +886,7 @@ impl<'gc> Vm<'gc> {
 
     fn define_native(&mut self, name: &str, f: RawNative) {
         let name = self.gc.intern(name);
-        self.builtins
-            .insert(name, Value::Native(NativeFunction::new(f)));
+        self.builtins.insert(name, Value::Native(NativeFunction::new(f)));
     }
 
     fn native_print(vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
@@ -862,9 +937,12 @@ impl<'gc> Vm<'gc> {
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
 
-        Ok(Value::Char(input.trim().parse().map_err(|_| {
-            Error::InputConv(Value::Char('o').type_name())
-        })?))
+        Ok(Value::Char(
+            input
+                .trim()
+                .parse()
+                .map_err(|_| Error::InputConv(Value::Char('o').type_name()))?,
+        ))
     }
 }
 
@@ -877,11 +955,6 @@ struct CallFrame {
 
 impl CallFrame {
     fn new(module: GcRef<Str>, closure: GcRef<Closure>, slot: usize) -> Self {
-        CallFrame {
-            module,
-            closure,
-            ip: 0,
-            slot,
-        }
+        CallFrame { module, closure, ip: 0, slot }
     }
 }

@@ -1,8 +1,9 @@
 #![warn(clippy::pedantic)]
 
+use std::error::Error;
+
 use lambc_vm::{Compiler, LambGc};
 use repl::Command;
-use std::error::Error;
 
 mod cli;
 mod repl;

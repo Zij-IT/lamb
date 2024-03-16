@@ -42,7 +42,9 @@ impl super::Lowerer {
 
     fn lower_pattern_top(&mut self, c: &InnerPattern, gc: &mut LambGc) {
         match c {
-            InnerPattern::Rest(..) => unimplemented!("This must be handled by the parent pattern"),
+            InnerPattern::Rest(..) => {
+                unimplemented!("This must be handled by the parent pattern")
+            }
             InnerPattern::Literal(lit) => {
                 self.write_op(Op::Dup);
                 self.lower_literal_pattern(gc, lit);
@@ -112,12 +114,15 @@ impl super::Lowerer {
 
                         self.func.chunk.constants.push(Value::Int(repr));
                         self.write_op(Op::Slice(
-                            u16::try_from(self.func.chunk.constants.len() - 1).unwrap(),
+                            u16::try_from(self.func.chunk.constants.len() - 1)
+                                .unwrap(),
                         ));
 
                         for Ident { raw, .. } in bindings {
                             let slot = self.local_slot(&raw).unwrap();
-                            self.write_op(Op::SetSlot(u16::try_from(slot).unwrap()))
+                            self.write_op(Op::SetSlot(
+                                u16::try_from(slot).unwrap(),
+                            ))
                         }
 
                         self.write_op(Op::Pop(NZ_ONE_U16));
@@ -130,7 +135,9 @@ impl super::Lowerer {
 
                     self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::Dup);
-                    self.write_const_op(Value::Int((tail.len() - 1 - idx).try_into().unwrap()));
+                    self.write_const_op(Value::Int(
+                        (tail.len() - 1 - idx).try_into().unwrap(),
+                    ));
                     self.write_op(Op::IndexRev);
 
                     self.lower_pattern(pat, gc);
@@ -151,7 +158,11 @@ impl super::Lowerer {
         }
     }
 
-    fn lower_literal_pattern(&mut self, gc: &mut LambGc, lit: &LiteralPattern) {
+    fn lower_literal_pattern(
+        &mut self,
+        gc: &mut LambGc,
+        lit: &LiteralPattern,
+    ) {
         match lit {
             LiteralPattern::String(s) => self.lower_str_literal(gc, s),
             LiteralPattern::Bool(b) => self.lower_bool_literal(b),

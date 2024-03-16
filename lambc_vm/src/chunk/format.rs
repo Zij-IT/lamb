@@ -26,7 +26,12 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
         writeln!(f, "===  END  ===")
     }
 
-    fn format_op(&self, op: Op, offset: usize, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn format_op(
+        &self,
+        op: Op,
+        offset: usize,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         print!("{offset:04} ");
         match op {
             Op::Access => writeln!(f, "Access"),
@@ -96,12 +101,22 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
         writeln!(f, "{name:<16} {arg_name:<8} {count:4}")
     }
 
-    fn const_op(&self, name: &str, idx: u16, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn const_op(
+        &self,
+        name: &str,
+        idx: u16,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         let value = self.chunk.constants[idx as usize].format(self.gc);
         writeln!(f, "{name:<16} {idx:4} ({value})")
     }
 
-    fn slot_op(&self, name: &str, slot: u16, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn slot_op(
+        &self,
+        name: &str,
+        slot: u16,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
         writeln!(f, "{name:<16} {slot:4}")
     }
 

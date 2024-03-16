@@ -13,10 +13,7 @@ impl<'gc> std::fmt::Debug for State<'gc> {
 
 impl<'gc> State<'gc> {
     pub fn new(gc: &'gc mut LambGc) -> Self {
-        Self {
-            gc,
-            has_errors: false,
-        }
+        Self { gc, has_errors: false }
     }
 
     pub fn add_error<T>(&mut self, err: T) {

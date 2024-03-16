@@ -7,10 +7,11 @@ mod vm;
 
 use std::path::Path;
 
-pub use compiler::Compiler;
-pub use gc::LambGc;
-pub use vm::Error;
-pub use vm::Vm;
+pub use crate::{
+    compiler::Compiler,
+    gc::LambGc,
+    vm::{Error, Vm},
+};
 
 pub fn run_script<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     let mut gc = LambGc::new();

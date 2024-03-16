@@ -18,10 +18,7 @@ pub struct Module {
 
 impl Module {
     pub fn new() -> Self {
-        Self {
-            globals: Default::default(),
-            exports: Default::default(),
-        }
+        Self { globals: Default::default(), exports: Default::default() }
     }
 
     pub fn build_exports<I>(&mut self, exports: I)

@@ -1,14 +1,16 @@
 use std::path::PathBuf;
 
-use crate::{
-    ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm, CharLit, CharText, Define,
-    Else, Export, ExportItem, Expr, ExprStatement, F64Lit, FnDef, Group, I64Base, I64Lit, Ident,
-    IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Lexer, List, LiteralPattern,
-    Module, NilLit, Path, Pattern, RestPattern, Return, Span, Statement, StrLit, StrText, TokKind,
-    Token, Unary, UnaryOp,
-};
 use miette::Diagnostic;
 use thiserror::Error as ThError;
+
+use crate::{
+    ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm,
+    CharLit, CharText, Define, Else, Export, ExportItem, Expr, ExprStatement,
+    F64Lit, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
+    Import, ImportItem, Index, InnerPattern, Lexer, List, LiteralPattern,
+    Module, NilLit, Path, Pattern, RestPattern, Return, Span, Statement,
+    StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+};
 
 #[derive(Diagnostic, Debug, ThError, PartialEq, Eq)]
 #[error("error[Parse Error]: {message}")]
@@ -51,7 +53,8 @@ impl<'a> Parser<'a> {
         let mut exports = Vec::new();
         loop {
             let peek = self.peek1();
-            let peek_is_export = peek.kind == TokKind::Ident && peek.slice == "export";
+            let peek_is_export =
+                peek.kind == TokKind::Ident && peek.slice == "export";
             let peek2_is_brace = self.peek2().kind == TokKind::OpenBrace;
 
             if peek_is_export && peek2_is_brace {
@@ -64,7 +67,8 @@ impl<'a> Parser<'a> {
         let mut imports = Vec::new();
         loop {
             let peek = self.peek1();
-            let peek_is_import = peek.kind == TokKind::Ident && peek.slice == "from";
+            let peek_is_import =
+                peek.kind == TokKind::Ident && peek.slice == "from";
             let peek2_is_brace = self.peek2().kind == TokKind::StringStart;
 
             if peek_is_import && peek2_is_brace {
@@ -109,10 +113,8 @@ impl<'a> Parser<'a> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
-        let name = self
-            .eat_ident("as")
-            .map(|_| self.parse_ident())
-            .transpose()?;
+        let name =
+            self.eat_ident("as").map(|_| self.parse_ident()).transpose()?;
 
         let mut items = Vec::new();
         let mut is_glob = false;
@@ -166,10 +168,7 @@ impl<'a> Parser<'a> {
         )?;
 
         let end = self.expect(TokKind::Semi)?;
-        Ok(Export {
-            items,
-            span: Span::connect(export.span, end.span),
-        })
+        Ok(Export { items, span: Span::connect(export.span, end.span) })
     }
 
     fn parse_export_item(&mut self) -> Result<ExportItem> {
@@ -314,8 +313,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_call_expr(&mut self, callee: Expr) -> Result<Expr> {
-        let (_, args, end_tok) =
-            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, Self::parse_expr)?;
+        let (_, args, end_tok) = self.parse_node_list(
+            TokKind::OpenParen,
+            TokKind::CloseParen,
+            Self::parse_expr,
+        )?;
 
         let span = Span::connect(callee.span(), end_tok.span);
         Ok(Expr::Call(Box::new(Call { callee, args, span })))
@@ -327,11 +329,7 @@ impl<'a> Parser<'a> {
         let close = self.expect(TokKind::CloseBrack)?;
         let span = Span::connect(res.span(), close.span);
 
-        Ok(Expr::Index(Box::new(Index {
-            lhs: res,
-            rhs: index,
-            span,
-        })))
+        Ok(Expr::Index(Box::new(Index { lhs: res, rhs: index, span })))
     }
 
     /// Parses the items that can make up an expression without any operators
@@ -357,7 +355,9 @@ impl<'a> Parser<'a> {
             TokKind::If => self.parse_if()?,
             TokKind::Case => self.parse_case()?,
             TokKind::Return => self.parse_return()?,
-            TokKind::Ident if self.peek2().kind == TokKind::PathSep => self.parse_path()?,
+            TokKind::Ident if self.peek2().kind == TokKind::PathSep => {
+                self.parse_path()?
+            }
             _ => self.parse_literal()?,
         })
     }
@@ -393,7 +393,10 @@ impl<'a> Parser<'a> {
                 } else if let Some(close) = self.eat(TokKind::CloseBrace) {
                     break (Some(expr), close);
                 } else {
-                    return Err(Self::error_expected_str_found("a ';' or '}'", self.peek1()));
+                    return Err(Self::error_expected_str_found(
+                        "a ';' or '}'",
+                        self.peek1(),
+                    ));
                 }
             }
         };
@@ -414,8 +417,11 @@ impl<'a> Parser<'a> {
     ///                | '[' ']'
     /// ```
     fn parse_list(&mut self) -> Result<Expr> {
-        let (tok, values, end_tok) =
-            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, Self::parse_expr)?;
+        let (tok, values, end_tok) = self.parse_node_list(
+            TokKind::OpenBrack,
+            TokKind::CloseBrack,
+            Self::parse_expr,
+        )?;
 
         Ok(Expr::List(List {
             values,
@@ -450,8 +456,11 @@ impl<'a> Parser<'a> {
     /// ```
     fn parse_fn_def(&mut self) -> Result<Expr> {
         let tok = self.eat(TokKind::Rec).unwrap_or(self.expect(TokKind::Fn)?);
-        let (_, args, _) =
-            self.parse_node_list(TokKind::OpenParen, TokKind::CloseParen, Self::parse_ident)?;
+        let (_, args, _) = self.parse_node_list(
+            TokKind::OpenParen,
+            TokKind::CloseParen,
+            Self::parse_ident,
+        )?;
 
         self.expect(TokKind::Arrow)?;
 
@@ -495,12 +504,7 @@ impl<'a> Parser<'a> {
         };
 
         let span = Span::connect(if_.span, end_span);
-        Ok(Expr::If(Box::new(If {
-            cond: if_,
-            elif: elifs,
-            els_,
-            span,
-        })))
+        Ok(Expr::If(Box::new(If { cond: if_, elif: elifs, els_, span })))
     }
 
     fn parse_case(&mut self) -> Result<Expr> {
@@ -597,8 +601,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_array_pattern(&mut self) -> Result<InnerPattern> {
-        let (start, patterns, end) =
-            self.parse_node_list(TokKind::OpenBrack, TokKind::CloseBrack, Self::parse_pattern)?;
+        let (start, patterns, end) = self.parse_node_list(
+            TokKind::OpenBrack,
+            TokKind::CloseBrack,
+            Self::parse_pattern,
+        )?;
 
         Ok(InnerPattern::Array(Box::new(ArrayPattern {
             patterns,
@@ -622,28 +629,30 @@ impl<'a> Parser<'a> {
         };
 
         let span = Span::connect(ident.span, span);
-        Ok(InnerPattern::Ident(Box::new(IdentPattern {
-            ident,
-            bound,
-            span,
-        })))
+        Ok(InnerPattern::Ident(Box::new(IdentPattern { ident, bound, span })))
     }
 
     fn parse_literal_pattern(&mut self) -> Result<InnerPattern> {
         let tok = self.peek1();
         let lit = match tok.kind {
             TokKind::Nil => LiteralPattern::Nil(self.parse_nil()?),
-            TokKind::StringStart => LiteralPattern::String(self.parse_string()?),
-            TokKind::CharStart => LiteralPattern::Char(self.parse_char()?),
-            TokKind::True | TokKind::False => LiteralPattern::Bool(self.parse_bool()?),
-            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
-                LiteralPattern::I64(self.parse_i64()?)
+            TokKind::StringStart => {
+                LiteralPattern::String(self.parse_string()?)
             }
+            TokKind::CharStart => LiteralPattern::Char(self.parse_char()?),
+            TokKind::True | TokKind::False => {
+                LiteralPattern::Bool(self.parse_bool()?)
+            }
+            TokKind::BinI64
+            | TokKind::OctI64
+            | TokKind::HexI64
+            | TokKind::DecI64 => LiteralPattern::I64(self.parse_i64()?),
             // Parse a negative number literal
             TokKind::Sub => {
                 let neg = self.next();
                 let mut num = self.parse_i64()?;
-                let spaces = " ".repeat((num.span.start - neg.span.end).saturating_sub(1));
+                let spaces = " "
+                    .repeat((num.span.start - neg.span.end).saturating_sub(1));
                 num.value = format!("-{}{}", spaces, num.value);
                 num.span = Span::connect(neg.span, num.span);
                 LiteralPattern::I64(num)
@@ -674,10 +683,16 @@ impl<'a> Parser<'a> {
             TokKind::F64 => Expr::F64(self.parse_f64()?),
             TokKind::True | TokKind::False => Expr::Bool(self.parse_bool()?),
             TokKind::StringStart => Expr::String(self.parse_string()?),
-            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => {
-                Expr::I64(self.parse_i64()?)
+            TokKind::BinI64
+            | TokKind::OctI64
+            | TokKind::HexI64
+            | TokKind::DecI64 => Expr::I64(self.parse_i64()?),
+            _ => {
+                return Err(Self::error_expected_str_found(
+                    "an expression",
+                    tok,
+                ))
             }
-            _ => return Err(Self::error_expected_str_found("an expression", tok)),
         })
     }
 
@@ -691,19 +706,12 @@ impl<'a> Parser<'a> {
             _ => return Err(Self::error_expected_str_found("an i64", &tok)),
         };
 
-        Ok(I64Lit {
-            base,
-            value: tok.slice.into_owned(),
-            span: tok.span,
-        })
+        Ok(I64Lit { base, value: tok.slice.into_owned(), span: tok.span })
     }
 
     fn parse_f64(&mut self) -> Result<F64Lit> {
         let tok = self.expect(TokKind::F64)?;
-        Ok(F64Lit {
-            value: tok.slice.into_owned(),
-            span: tok.span,
-        })
+        Ok(F64Lit { value: tok.slice.into_owned(), span: tok.span })
     }
 
     fn parse_bool(&mut self) -> Result<BoolLit> {
@@ -713,10 +721,7 @@ impl<'a> Parser<'a> {
             _ => return Err(Self::error_expected_str_found("boolean", &tok)),
         };
 
-        Ok(BoolLit {
-            value: tok.slice.starts_with('t'),
-            span: tok.span,
-        })
+        Ok(BoolLit { value: tok.slice.starts_with('t'), span: tok.span })
     }
 
     fn parse_nil(&mut self) -> Result<NilLit> {
@@ -733,18 +738,12 @@ impl<'a> Parser<'a> {
 
         let end = self.expect(TokKind::StringEnd).map_err(|err| Error {
             message: "unclosed string literal".into(),
-            span: Span {
-                start: tok.span.start,
-                end: err.span.start,
-            },
+            span: Span { start: tok.span.start, end: err.span.start },
         })?;
 
         Ok(StrLit {
             text,
-            span: Span {
-                start: tok.span.start,
-                end: end.span.end,
-            },
+            span: Span { start: tok.span.start, end: end.span.end },
         })
     }
 
@@ -757,28 +756,19 @@ impl<'a> Parser<'a> {
 
         let end = self.expect(TokKind::CharEnd).map_err(|err| Error {
             message: "unclosed char literal".into(),
-            span: Span {
-                start: tok.span.start,
-                end: err.span.start,
-            },
+            span: Span { start: tok.span.start, end: err.span.start },
         })?;
 
         Ok(CharLit {
             text,
-            span: Span {
-                start: tok.span.start,
-                end: end.span.end,
-            },
+            span: Span { start: tok.span.start, end: end.span.end },
         })
     }
 
     fn parse_ident(&mut self) -> Result<Ident> {
         let tok = self.expect(TokKind::Ident)?;
 
-        Ok(Ident {
-            raw: tok.slice.into(),
-            span: tok.span,
-        })
+        Ok(Ident { raw: tok.slice.into(), span: tok.span })
     }
 
     fn parse_path(&mut self) -> Result<Expr> {
@@ -908,7 +898,10 @@ impl<'a> Parser<'a> {
         Err(Self::error_expected_str_found(ident, &next))
     }
 
-    fn error_expected_tok_found(expected: TokKind, found: &Token<'a>) -> Error {
+    fn error_expected_tok_found(
+        expected: TokKind,
+        found: &Token<'a>,
+    ) -> Error {
         Self::error_expected_str_found(expected.desc(), found)
     }
 
@@ -928,18 +921,15 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, I64Base, I64Lit, Ident, NilLit, Parser, Span,
-        StrLit, StrText,
-    };
     use pretty_assertions::assert_eq;
 
+    use crate::{
+        BoolLit, CharLit, CharText, Expr, F64Lit, I64Base, I64Lit, Ident,
+        NilLit, Parser, Span, StrLit, StrText,
+    };
+
     fn int(value: &str, base: I64Base, start: usize, end: usize) -> I64Lit {
-        I64Lit {
-            base,
-            value: value.into(),
-            span: span(start, end),
-        }
+        I64Lit { base, value: value.into(), span: span(start, end) }
     }
 
     fn span(start: usize, end: usize) -> Span {
@@ -974,10 +964,7 @@ mod tests {
                 parser.parse_f64(),
                 Ok(F64Lit {
                     value: inp.into(),
-                    span: Span {
-                        start: 0,
-                        end: inp.len(),
-                    }
+                    span: Span { start: 0, end: inp.len() }
                 })
             );
         };
@@ -1001,10 +988,7 @@ mod tests {
                 parser.parse_bool(),
                 Ok(BoolLit {
                     value: inp.parse().unwrap(),
-                    span: Span {
-                        start: 0,
-                        end: inp.len(),
-                    }
+                    span: Span { start: 0, end: inp.len() }
                 })
             );
         };
@@ -1018,9 +1002,7 @@ mod tests {
         let mut parser = Parser::new("nil".as_bytes(), "");
         assert_eq!(
             parser.parse_nil(),
-            Ok(NilLit {
-                span: Span { start: 0, end: 3 }
-            })
+            Ok(NilLit { span: Span { start: 0, end: 3 } })
         );
     }
 
@@ -1032,10 +1014,7 @@ mod tests {
             parser.parse_string(),
             Ok(StrLit {
                 text: None,
-                span: Span {
-                    start: 0,
-                    end: input.len(),
-                }
+                span: Span { start: 0, end: input.len() }
             })
         );
 
@@ -1061,10 +1040,7 @@ mod tests {
             parser.parse_char(),
             Ok(CharLit {
                 text: None,
-                span: Span {
-                    start: 0,
-                    end: input.len(),
-                }
+                span: Span { start: 0, end: input.len() }
             })
         );
 
@@ -1103,10 +1079,7 @@ mod tests {
                 parser.parse_ident(),
                 Ok(Ident {
                     raw: ident.into(),
-                    span: Span {
-                        start: 0,
-                        end: ident.len(),
-                    }
+                    span: Span { start: 0, end: ident.len() }
                 })
             )
         };
@@ -1127,18 +1100,12 @@ mod tests {
 
         literal(
             "true",
-            Ok(Expr::Bool(BoolLit {
-                value: true,
-                span: Span::new(0, 4),
-            })),
+            Ok(Expr::Bool(BoolLit { value: true, span: Span::new(0, 4) })),
         );
 
         literal(
             "false",
-            Ok(Expr::Bool(BoolLit {
-                value: false,
-                span: Span::new(0, 5),
-            })),
+            Ok(Expr::Bool(BoolLit { value: false, span: Span::new(0, 5) })),
         );
 
         literal(
@@ -1149,12 +1116,7 @@ mod tests {
             })),
         );
 
-        literal(
-            "nil",
-            Ok(Expr::Nil(NilLit {
-                span: Span::new(0, 3),
-            })),
-        );
+        literal("nil", Ok(Expr::Nil(NilLit { span: Span::new(0, 3) })));
 
         literal(
             "42",
@@ -1167,10 +1129,7 @@ mod tests {
 
         literal(
             "\"\"",
-            Ok(Expr::String(StrLit {
-                text: None,
-                span: Span::new(0, 2),
-            })),
+            Ok(Expr::String(StrLit { text: None, span: Span::new(0, 2) })),
         );
 
         literal(
@@ -1186,10 +1145,7 @@ mod tests {
 
         literal(
             "''",
-            Ok(Expr::Char(CharLit {
-                text: None,
-                span: Span::new(0, 2),
-            })),
+            Ok(Expr::Char(CharLit { text: None, span: Span::new(0, 2) })),
         );
 
         literal(
@@ -1318,7 +1274,9 @@ mod tests {
             };
         }
 
-        atom!("if true { if true { } } elif false { } elif false { } else { }");
+        atom!(
+            "if true { if true { } } elif false { } elif false { } else { }"
+        );
     }
 
     #[test]

@@ -23,11 +23,7 @@ struct Block {
 
 impl Block {
     fn new_for_func() -> Self {
-        Self {
-            base: 0,
-            offset: 1,
-            depth: 0,
-        }
+        Self { base: 0, offset: 1, depth: 0 }
     }
 }
 
@@ -40,11 +36,7 @@ pub struct Local {
 
 impl Local {
     pub fn new(name: String, depth: usize) -> Self {
-        Self {
-            name,
-            depth,
-            is_captured: false,
-        }
+        Self { name, depth, is_captured: false }
     }
 
     pub fn mark_captured(&mut self) {
@@ -75,17 +67,19 @@ impl Lowerer {
         }
     }
 
-    pub fn lower(mut self, gc: &mut LambGc, script: &Module) -> GcRef<Closure> {
+    pub fn lower(
+        mut self,
+        gc: &mut LambGc,
+        script: &Module,
+    ) -> GcRef<Closure> {
         self.lower_script(script, gc);
         self.finish(gc)
     }
 
     pub fn finish(mut self, gc: &mut LambGc) -> GcRef<Closure> {
         self.write_op(Op::Return);
-        let closure = Closure {
-            func: gc.alloc(self.func),
-            upvalues: Vec::new(),
-        };
+        let closure =
+            Closure { func: gc.alloc(self.func), upvalues: Vec::new() };
 
         gc.alloc(closure)
     }
@@ -195,19 +189,14 @@ impl Lowerer {
         match pos {
             Some(p) => p,
             None => {
-                self.func
-                    .upvalues
-                    .push(UnresolvedUpvalue { index, is_local });
+                self.func.upvalues.push(UnresolvedUpvalue { index, is_local });
                 self.func.upvalues.len() - 1
             }
         }
     }
 
     fn write_closure(&mut self, gc: &mut LambGc, func: Function) {
-        self.func
-            .chunk
-            .constants
-            .push(Value::Function(gc.alloc(func)));
+        self.func.chunk.constants.push(Value::Function(gc.alloc(func)));
 
         let idx = self.func.chunk.constants.len() - 1;
         self.write_op(Op::Closure(idx.try_into().unwrap()))
@@ -248,13 +237,21 @@ impl Lowerer {
             | Op::Slice(_)
             | Op::UnsaveValue => self.block_mut().offset += 1,
             Op::MakeArray(0) => self.block_mut().offset += 1,
-            Op::MakeArray(elems) => self.block_mut().offset -= usize::from(elems) - 1,
+            Op::MakeArray(elems) => {
+                self.block_mut().offset -= usize::from(elems) - 1
+            }
             Op::Call(off) => self.block_mut().offset -= usize::from(off),
-            Op::Return | Op::BinNeg | Op::LogNeg | Op::NumNeg | Op::SetSlot(_) => {
+            Op::Return
+            | Op::BinNeg
+            | Op::LogNeg
+            | Op::NumNeg
+            | Op::SetSlot(_) => {
                 self.block_mut().offset += 0;
             }
             Op::Jump(_) | Op::JumpIfFalse(_) | Op::JumpIfTrue(_) => {
-                panic!("Jump operators must be written with Lowerer::write_jump")
+                panic!(
+                    "Jump operators must be written with Lowerer::write_jump"
+                )
             }
         }
 

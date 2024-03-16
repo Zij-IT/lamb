@@ -161,7 +161,10 @@ enum State {
 impl TokKind {
     pub fn desc(self) -> &'static str {
         match self {
-            TokKind::BinI64 | TokKind::OctI64 | TokKind::HexI64 | TokKind::DecI64 => "i64",
+            TokKind::BinI64
+            | TokKind::OctI64
+            | TokKind::HexI64
+            | TokKind::DecI64 => "i64",
             TokKind::OpenBrace => "a '{'",
             TokKind::CloseBrace => "a '}'",
             TokKind::OpenBrack => "a '['",
@@ -246,11 +249,7 @@ pub struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     /// Constructs a new `Lexer` with the input.
     pub fn new(input: &'a [u8]) -> Self {
-        Self {
-            state: State::Default,
-            input,
-            at: 0,
-        }
+        Self { state: State::Default, input, at: 0 }
     }
 
     /// Returns the next [`Token`] in the input that isn't whitespace or a comment. If the lexer
@@ -277,7 +276,9 @@ impl<'a> Lexer<'a> {
     fn default_token(&mut self) -> Token<'a> {
         self.eat_whitespace();
         match self.current() {
-            byte if byte.is_ascii_alphabetic() || byte == b'_' => self.identlike(),
+            byte if byte.is_ascii_alphabetic() || byte == b'_' => {
+                self.identlike()
+            }
             byte if byte.is_ascii_digit() => self.number(),
             b'{' => self.simple(TokKind::OpenBrace),
             b'}' => self.simple(TokKind::CloseBrace),
@@ -391,7 +392,9 @@ impl<'a> Lexer<'a> {
         let slice = loop {
             if use_buffer {
                 match self.current() {
-                    _ if self.at_end() => break String::from_utf8(buffer).unwrap().into(),
+                    _ if self.at_end() => {
+                        break String::from_utf8(buffer).unwrap().into()
+                    }
                     b'"' => break String::from_utf8(buffer).unwrap().into(),
                     b':' => match self.next() {
                         b'n' => buffer.push(b'\n'),
@@ -445,7 +448,9 @@ impl<'a> Lexer<'a> {
                             _ => (),
                         }
                     }
-                    _ if self.at_end() => break self.slice(start, self.at).into(),
+                    _ if self.at_end() => {
+                        break self.slice(start, self.at).into()
+                    }
                     _ => (),
                 }
             }
@@ -531,7 +536,9 @@ impl<'a> Lexer<'a> {
                             _ => (),
                         }
                     }
-                    _ if self.at_end() => break self.slice(start, self.at).into(),
+                    _ if self.at_end() => {
+                        break self.slice(start, self.at).into()
+                    }
                     _ => (),
                 }
             }
@@ -553,14 +560,24 @@ impl<'a> Lexer<'a> {
 
     fn number(&mut self) -> Token<'a> {
         match (self.current(), self.next()) {
-            (b'0', b'x' | b'X') => self.prefix_num(TokKind::HexI64, |b| b.is_ascii_hexdigit()),
-            (b'0', b'b' | b'B') => self.prefix_num(TokKind::BinI64, |b| matches!(b, b'0' | b'1')),
-            (b'0', b'o' | b'O') => self.prefix_num(TokKind::OctI64, |b| matches!(b, b'0'..=b'7')),
+            (b'0', b'x' | b'X') => {
+                self.prefix_num(TokKind::HexI64, |b| b.is_ascii_hexdigit())
+            }
+            (b'0', b'b' | b'B') => {
+                self.prefix_num(TokKind::BinI64, |b| matches!(b, b'0' | b'1'))
+            }
+            (b'0', b'o' | b'O') => {
+                self.prefix_num(TokKind::OctI64, |b| matches!(b, b'0'..=b'7'))
+            }
             _ => self.dec_number(),
         }
     }
 
-    fn prefix_num<F: Fn(u8) -> bool>(&mut self, kind: TokKind, is_digit: F) -> Token<'a> {
+    fn prefix_num<F: Fn(u8) -> bool>(
+        &mut self,
+        kind: TokKind,
+        is_digit: F,
+    ) -> Token<'a> {
         self.at += 2;
         let start = self.at;
         while is_digit(self.current()) || self.current() == b'_' {
@@ -695,7 +712,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn token_from(&mut self, start: usize, end: usize, kind: TokKind) -> Token<'a> {
+    fn token_from(
+        &mut self,
+        start: usize,
+        end: usize,
+        kind: TokKind,
+    ) -> Token<'a> {
         self.at = end;
         Token {
             kind,
@@ -732,16 +754,13 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Lexer, TokKind, Token};
-    use crate::Span;
     use pretty_assertions::assert_eq;
 
+    use super::{Lexer, TokKind, Token};
+    use crate::Span;
+
     fn tok(kind: TokKind, start: usize, end: usize, slice: &str) -> Token {
-        Token {
-            kind,
-            span: Span::new(start, end),
-            slice: slice.into(),
-        }
+        Token { kind, span: Span::new(start, end), slice: slice.into() }
     }
 
     fn lex(input: &str) -> Lexer {
@@ -937,7 +956,8 @@ mod tests {
     #[test]
     fn lexes_identlike() {
         let kws = [
-            "fn", "if", "nil", "rec", "case", "elif", "else", "true", "false", "union", "struct",
+            "fn", "if", "nil", "rec", "case", "elif", "else", "true", "false",
+            "union", "struct",
         ];
 
         let kinds = [

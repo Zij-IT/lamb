@@ -1,5 +1,6 @@
-use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
+
+use clap::{Parser, ValueEnum};
 
 #[repr(C)]
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq)]

@@ -1,8 +1,9 @@
 #![allow(clippy::unused_io_amount)]
 
+use std::{io::Write, path::PathBuf};
+
 use directories::ProjectDirs;
 use rustyline::{error::ReadlineError, Config};
-use std::{io::Write, path::PathBuf};
 
 #[derive(Debug)]
 pub enum Error {
@@ -16,8 +17,12 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Io(err) => write!(f, "[Lamb]: IO Error ({err})"),
-            Error::Rustyline(err) => write!(f, "[Lamb]: Rustyline Error ({err})"),
-            Error::NoValidHomeDir => write!(f, "[Lamb]: Found no valid home directory"),
+            Error::Rustyline(err) => {
+                write!(f, "[Lamb]: Rustyline Error ({err})")
+            }
+            Error::NoValidHomeDir => {
+                write!(f, "[Lamb]: Found no valid home directory")
+            }
             Error::Runtime(run) => write!(f, "[Lamb]: Runtime Error: {run}"),
         }
     }
@@ -64,23 +69,22 @@ impl Repl {
     pub fn new() -> Result<Self, Error> {
         let config = Config::builder().check_cursor_position(true).build();
         let editor = rustyline::Editor::with_config(config)?;
-        let history_path =
-            ProjectDirs::from("", "zij-it", "lamb").map(|pd| pd.data_dir().join("history.txt"));
+        let history_path = ProjectDirs::from("", "zij-it", "lamb")
+            .map(|pd| pd.data_dir().join("history.txt"));
 
-        Ok(Self {
-            inner: editor,
-            history: history_path,
-        })
+        Ok(Self { inner: editor, history: history_path })
     }
 
     pub fn with_history(&mut self) -> Result<&mut Self, Error> {
-        let history_path =
-            ProjectDirs::from("", "zij-it", "lamb").map(|pd| pd.data_dir().join("history.txt"));
+        let history_path = ProjectDirs::from("", "zij-it", "lamb")
+            .map(|pd| pd.data_dir().join("history.txt"));
 
         match history_path.as_deref() {
             Some(path) => match self.inner.load_history(path) {
                 Ok(()) => {}
-                Err(ReadlineError::Io(err)) if err.kind() == std::io::ErrorKind::NotFound => {
+                Err(ReadlineError::Io(err))
+                    if err.kind() == std::io::ErrorKind::NotFound =>
+                {
                     std::fs::create_dir_all(
                         path.parent()
                             .expect("ProjectDirs would have returned None if no home dir existed"),

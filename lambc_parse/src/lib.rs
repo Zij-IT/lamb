@@ -24,10 +24,7 @@ impl Span {
     /// Helper function to join two spans from the same file. The resulting span will have the
     /// the start from `start` and end from `end`.
     pub(crate) fn connect(start: Self, end: Self) -> Self {
-        Self {
-            start: start.start,
-            end: end.end,
-        }
+        Self { start: start.start, end: end.end }
     }
 }
 

@@ -4,9 +4,8 @@ use std::num::NonZeroU16;
 
 use lambc_parse::{BinaryOp, UnaryOp};
 
-use crate::{gc::LambGc, value::Value};
-
 use self::format::ChunkFormatter;
+use crate::{gc::LambGc, value::Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Op {
@@ -114,13 +113,14 @@ impl Default for Chunk {
 
 impl Chunk {
     pub fn new() -> Self {
-        Self {
-            code: Vec::new(),
-            constants: Vec::new(),
-        }
+        Self { code: Vec::new(), constants: Vec::new() }
     }
 
-    pub fn display<'b, 'c>(&self, gc: &'b LambGc, name: &'c str) -> ChunkFormatter<'_, 'b, 'c> {
+    pub fn display<'b, 'c>(
+        &self,
+        gc: &'b LambGc,
+        name: &'c str,
+    ) -> ChunkFormatter<'_, 'b, 'c> {
         ChunkFormatter::new(self, gc, name)
     }
 

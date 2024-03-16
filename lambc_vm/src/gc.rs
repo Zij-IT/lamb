@@ -2,7 +2,10 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
     chunk::Op,
-    value::{Array, Closure, Function, ResolvedUpvalue, Str, UnresolvedUpvalue, Value},
+    value::{
+        Array, Closure, Function, ResolvedUpvalue, Str, UnresolvedUpvalue,
+        Value,
+    },
 };
 
 const KB: usize = 1024;
@@ -38,11 +41,7 @@ impl LambGc {
     pub fn alloc<T: Allocable>(&mut self, obj: T) -> GcRef<T> {
         let obj = obj.into_raw();
         let size = obj.size() + std::mem::size_of::<GcItem>();
-        let item = GcItem {
-            is_marked: false,
-            size,
-            obj,
-        };
+        let item = GcItem { is_marked: false, size, obj };
 
         self.bytes_alloced += size;
         let idx = match self.free_slots.pop() {
@@ -56,10 +55,7 @@ impl LambGc {
             }
         };
 
-        GcRef {
-            idx,
-            _type: PhantomData,
-        }
+        GcRef { idx, _type: PhantomData }
     }
 
     pub fn intern(&mut self, s: impl Into<String>) -> GcRef<Str> {
@@ -158,9 +154,7 @@ impl LambGc {
     }
 
     fn remove_weak_refs(&mut self) {
-        let Self {
-            strings, objects, ..
-        } = self;
+        let Self { strings, objects, .. } = self;
 
         strings.retain(|_, str| objects[str.idx].as_ref().unwrap().is_marked)
     }
@@ -244,13 +238,16 @@ impl GcItemRaw {
             GcItemRaw::String(s) => s.capacity() + std::mem::size_of::<Str>(),
             GcItemRaw::Closure(c) => {
                 std::mem::size_of::<Closure>()
-                    + c.upvalues.capacity() * std::mem::size_of::<ResolvedUpvalue>()
+                    + c.upvalues.capacity()
+                        * std::mem::size_of::<ResolvedUpvalue>()
             }
             GcItemRaw::Func(f) => {
                 std::mem::size_of::<Function>()
-                    + f.upvalues.capacity() * std::mem::size_of::<UnresolvedUpvalue>()
+                    + f.upvalues.capacity()
+                        * std::mem::size_of::<UnresolvedUpvalue>()
                     + f.chunk.code.capacity() * std::mem::size_of::<Op>()
-                    + f.chunk.constants.capacity() * std::mem::size_of::<Value>()
+                    + f.chunk.constants.capacity()
+                        * std::mem::size_of::<Value>()
             }
         }
     }

@@ -134,10 +134,7 @@ pub struct Pattern {
 impl Pattern {
     // TODO: Get rid of this when introducing hir
     pub fn binding_names(&self) -> Vec<&Ident> {
-        self.inner
-            .iter()
-            .flat_map(InnerPattern::binding_names)
-            .collect()
+        self.inner.iter().flat_map(InnerPattern::binding_names).collect()
     }
 }
 
@@ -155,11 +152,9 @@ impl InnerPattern {
         match self {
             InnerPattern::Literal(_) => vec![],
             InnerPattern::Rest(_) => vec![],
-            InnerPattern::Array(arr) => arr
-                .patterns
-                .iter()
-                .flat_map(Pattern::binding_names)
-                .collect(),
+            InnerPattern::Array(arr) => {
+                arr.patterns.iter().flat_map(Pattern::binding_names).collect()
+            }
             InnerPattern::Ident(id) => {
                 vec![&id.ident]
             }
@@ -216,13 +211,14 @@ pub struct ArrayPattern {
 }
 impl ArrayPattern {
     pub fn as_parts(&self) -> (&[Pattern], &[Pattern], Option<&InnerPattern>) {
-        let mut splits = self.patterns.split(|pat| match pat.inner.as_slice() {
-            [InnerPattern::Rest(..)] => true,
-            [InnerPattern::Ident(ip)] => {
-                matches!(ip.bound.as_deref(), Some(InnerPattern::Rest(..)))
-            }
-            _ => false,
-        });
+        let mut splits =
+            self.patterns.split(|pat| match pat.inner.as_slice() {
+                [InnerPattern::Rest(..)] => true,
+                [InnerPattern::Ident(ip)] => {
+                    matches!(ip.bound.as_deref(), Some(InnerPattern::Rest(..)))
+                }
+                _ => false,
+            });
 
         let head = splits.next().unwrap_or_default();
         let (tail, rest) = if let Some(tail) = splits.next() {
@@ -424,7 +420,9 @@ impl Expr {
             | Expr::Call(_)
             | Expr::Path(_)
             | Expr::Group(_) => false,
-            Expr::Return(r) => r.value.as_ref().map_or(false, |e| e.ends_with_block()),
+            Expr::Return(r) => {
+                r.value.as_ref().map_or(false, |e| e.ends_with_block())
+            }
             Expr::Unary(u) => u.rhs.ends_with_block(),
             Expr::Binary(b) => b.rhs.ends_with_block(),
             Expr::FnDef(f) => f.body.ends_with_block(),

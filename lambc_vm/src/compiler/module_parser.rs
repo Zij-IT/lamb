@@ -9,20 +9,10 @@ use super::State;
 
 #[derive(Debug)]
 enum Error {
-    FailedToRead {
-        path: PathBuf,
-        inner: std::io::Error,
-    },
-    ImportNotAFile {
-        path: PathBuf,
-        span: lambc_parse::Span,
-    },
-    EmptyImport {
-        span: lambc_parse::Span,
-    },
-    SyntaxError {
-        inner: lambc_parse::Error,
-    },
+    FailedToRead { path: PathBuf, inner: std::io::Error },
+    ImportNotAFile { path: PathBuf, span: lambc_parse::Span },
+    EmptyImport { span: lambc_parse::Span },
+    SyntaxError { inner: lambc_parse::Error },
 }
 
 #[derive(Debug)]
@@ -85,10 +75,9 @@ impl<'b, 'state> ModuleParser<'b, 'state> {
         };
         let mut parser = Parser::new(&input, path);
         match parser.parse_module() {
-            Ok(module) => Some(ParsedModule {
-                ast: module,
-                path: path.into(),
-            }),
+            Ok(module) => {
+                Some(ParsedModule { ast: module, path: path.into() })
+            }
             Err(err) => {
                 self.state.add_error(Error::SyntaxError { inner: err });
                 None
@@ -96,7 +85,9 @@ impl<'b, 'state> ModuleParser<'b, 'state> {
         }
     }
 
-    fn extract_imports(module: &ParsedModule) -> impl Iterator<Item = Result<PathBuf, Error>> + '_ {
+    fn extract_imports(
+        module: &ParsedModule,
+    ) -> impl Iterator<Item = Result<PathBuf, Error>> + '_ {
         let parent = module.path.parent().unwrap_or(Path::new(""));
         module.ast.imports.iter().map(|i| {
             let file: Option<PathBuf> = i.file.text.as_ref().map(|i| {
@@ -107,10 +98,9 @@ impl<'b, 'state> ModuleParser<'b, 'state> {
             match file {
                 Some(f) if f.is_file() => Ok(f),
                 // Error because the path is not a file
-                Some(f) => Err(Error::ImportNotAFile {
-                    path: f,
-                    span: i.span,
-                }),
+                Some(f) => {
+                    Err(Error::ImportNotAFile { path: f, span: i.span })
+                }
                 // Error because the path was empty
                 None => Err(Error::EmptyImport { span: i.span }),
             }

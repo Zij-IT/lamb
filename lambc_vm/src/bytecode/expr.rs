@@ -1,8 +1,9 @@
 use std::num::NonZeroU16;
 
 use lambc_parse::{
-    BinaryOp, Block as LambBlock, BoolLit, Case, CaseArm, CharLit, Else, Expr, F64Lit, FnDef,
-    I64Base, I64Lit, Ident, If, IfCond, List, NilLit, Return, StrLit,
+    BinaryOp, Block as LambBlock, BoolLit, Case, CaseArm, CharLit, Else, Expr,
+    F64Lit, FnDef, I64Base, I64Lit, Ident, If, IfCond, List, NilLit, Return,
+    StrLit,
 };
 
 use crate::{
@@ -28,12 +29,24 @@ impl super::Lowerer {
                     self.lower_expr(&bin.rhs, gc);
                     self.write_op(op);
                 }
-                Err(BinaryOp::Land) => self.lower_sc_op(&bin.lhs, &bin.rhs, Jump::IfFalse, gc),
-                Err(BinaryOp::Lor) => self.lower_sc_op(&bin.lhs, &bin.rhs, Jump::IfTrue, gc),
-                Err(BinaryOp::Appl) => self.lower_apply(&bin.lhs, &bin.rhs, gc),
-                Err(BinaryOp::Appr) => self.lower_apply(&bin.rhs, &bin.lhs, gc),
-                Err(BinaryOp::Cpsl) => self.lower_compose(&bin.lhs, &bin.rhs, gc),
-                Err(BinaryOp::Cpsr) => self.lower_compose(&bin.rhs, &bin.lhs, gc),
+                Err(BinaryOp::Land) => {
+                    self.lower_sc_op(&bin.lhs, &bin.rhs, Jump::IfFalse, gc)
+                }
+                Err(BinaryOp::Lor) => {
+                    self.lower_sc_op(&bin.lhs, &bin.rhs, Jump::IfTrue, gc)
+                }
+                Err(BinaryOp::Appl) => {
+                    self.lower_apply(&bin.lhs, &bin.rhs, gc)
+                }
+                Err(BinaryOp::Appr) => {
+                    self.lower_apply(&bin.rhs, &bin.lhs, gc)
+                }
+                Err(BinaryOp::Cpsl) => {
+                    self.lower_compose(&bin.lhs, &bin.rhs, gc)
+                }
+                Err(BinaryOp::Cpsr) => {
+                    self.lower_compose(&bin.rhs, &bin.lhs, gc)
+                }
                 Err(_) => unreachable!("All cases are actually covered!"),
             },
             Expr::Index(i) => {
@@ -102,11 +115,7 @@ impl super::Lowerer {
     }
 
     fn lower_block(&mut self, block: &LambBlock, gc: &mut LambGc) {
-        let LambBlock {
-            value,
-            statements: stats,
-            ..
-        } = block;
+        let LambBlock { value, statements: stats, .. } = block;
         self.start_block();
 
         for stat in stats {
@@ -146,13 +155,23 @@ impl super::Lowerer {
         }
     }
 
-    fn lower_apply<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
+    fn lower_apply<'ast>(
+        &mut self,
+        lhs: &'ast Expr,
+        rhs: &'ast Expr,
+        gc: &mut LambGc,
+    ) {
         self.lower_expr(lhs, gc);
         self.lower_expr(rhs, gc);
         self.write_op(Op::Call(1));
     }
 
-    fn lower_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, gc: &mut LambGc) {
+    fn lower_compose<'ast>(
+        &mut self,
+        lhs: &'ast Expr,
+        rhs: &'ast Expr,
+        gc: &mut LambGc,
+    ) {
         let ident = gc.intern("Anon Func");
         let mut composition = Self::new(ident, self.module);
         composition.locals[0].depth = 1;
@@ -187,7 +206,13 @@ impl super::Lowerer {
         self.write_closure(gc, composition.func);
     }
 
-    fn lower_sc_op<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr, jump: Jump, gc: &mut LambGc) {
+    fn lower_sc_op<'ast>(
+        &mut self,
+        lhs: &'ast Expr,
+        rhs: &'ast Expr,
+        jump: Jump,
+        gc: &mut LambGc,
+    ) {
         self.lower_expr(lhs, gc);
         let idx = self.write_jump(jump);
         self.write_op(Op::Pop(NZ_ONE_U16));
@@ -195,7 +220,11 @@ impl super::Lowerer {
         self.patch_jump(idx);
     }
 
-    fn lower_path<'ast>(&mut self, path: &'ast lambc_parse::Path, gc: &mut LambGc) {
+    fn lower_path<'ast>(
+        &mut self,
+        path: &'ast lambc_parse::Path,
+        gc: &mut LambGc,
+    ) {
         // Module::item1::item2
         // ^^^^^^  ^^^^^  ^^^^^
         //     |   |      |
@@ -209,7 +238,10 @@ impl super::Lowerer {
         self.lower_ident(first, gc);
 
         let mut iter = rest.chunks_exact(2);
-        while let Some(&[Ident { raw: ref left, .. }, Ident { raw: ref right, .. }]) = iter.next() {
+        while let Some(
+            &[Ident { raw: ref left, .. }, Ident { raw: ref right, .. }],
+        ) = iter.next()
+        {
             let left = Value::ModulePath(gc.intern(left));
             let right = Value::ModulePath(gc.intern(right));
             self.write_const_op(left);
@@ -227,12 +259,7 @@ impl super::Lowerer {
     }
 
     fn lower_if_expr(&mut self, if_: &If, gc: &mut LambGc) {
-        let If {
-            cond: IfCond { cond, body, .. },
-            elif,
-            els_,
-            ..
-        } = if_;
+        let If { cond: IfCond { cond, body, .. }, elif, els_, .. } = if_;
 
         // <cond>
         // jmpfalse .cond_false1
@@ -292,9 +319,7 @@ impl super::Lowerer {
     }
 
     fn lower_case(&mut self, c: &Case, gc: &mut LambGc) {
-        let Case {
-            arms, scrutinee, ..
-        } = c;
+        let Case { arms, scrutinee, .. } = c;
 
         self.lower_expr(scrutinee, gc);
 
@@ -357,7 +382,8 @@ impl super::Lowerer {
         // Remove `binding_count` amount of bindings
         // Remove scrutinee
         self.write_op(Op::Pop(
-            NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2).unwrap(),
+            NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2)
+                .unwrap(),
         ));
 
         self.write_op(Op::UnsaveValue);
@@ -376,7 +402,8 @@ impl super::Lowerer {
         // Remove scrutinee dup
         // Remove `binding_count` amount of bindings
         self.write_op(Op::Pop(
-            NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2).unwrap(),
+            NonZeroU16::new(u16::try_from(binding_count).unwrap() + 2)
+                .unwrap(),
         ));
 
         self.block_mut().offset = offset_before_arm;
@@ -396,12 +423,7 @@ impl super::Lowerer {
     }
 
     fn lower_func(&mut self, f: &FnDef, gc: &mut LambGc, name: String) {
-        let FnDef {
-            args,
-            body,
-            recursive,
-            ..
-        } = f;
+        let FnDef { args, body, recursive, .. } = f;
 
         let func_name = gc.intern(name.clone());
         let mut func_comp = Self::new(func_name, self.module);
