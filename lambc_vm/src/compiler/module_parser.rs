@@ -54,7 +54,8 @@ impl<'b, 'state> ModuleParser<'b, 'state> {
                     let path = match import {
                         Ok(path) => path,
                         Err(err) => {
-                            self.state.add_error(err);
+                            let source = std::fs::read_to_string(&path).ok();
+                            self.state.add_error(err, source);
                             continue;
                         }
                     };
@@ -78,10 +79,10 @@ impl<'b, 'state> ModuleParser<'b, 'state> {
         let input = match std::fs::read(path) {
             Ok(b) => b,
             Err(err) => {
-                self.state.add_error(Error::FailedToRead {
-                    path: path.into(),
-                    inner: err,
-                });
+                self.state.add_error(
+                    Error::FailedToRead { path: path.into(), inner: err },
+                    None,
+                );
                 return None;
             }
         };
@@ -91,7 +92,23 @@ impl<'b, 'state> ModuleParser<'b, 'state> {
                 Some(ParsedModule { ast: module, path: path.into() })
             }
             Err(err) => {
-                self.state.add_error(Error::SyntaxError { inner: err });
+                let input = match String::from_utf8(input) {
+                    Ok(input) => Some(input),
+                    Err(..) => {
+                        // Hit em with the good old 1-2 punch
+                        self.state.add_error(
+                            miette::diagnostic!(
+                                help = "Ensure your input is utf-8",
+                                "The file '{}' is invalid utf-8",
+                                path.display()
+                            ),
+                            None,
+                        );
+                        None
+                    }
+                };
+
+                self.state.add_error(err, input);
                 None
             }
         }

@@ -118,7 +118,8 @@ impl<'gc> Compiler<'gc> {
                 self.attempt_repl_expr(source, err)?
             }
             Err(err) => {
-                self.state.add_error(err);
+                let input = String::from_utf8(source.to_vec()).ok();
+                self.state.add_error(err, input);
                 return Err(Error::Invalid);
             }
         };
@@ -150,7 +151,13 @@ impl<'gc> Compiler<'gc> {
     ) -> Result<ParsedModule> {
         let mut expr = Parser::new(source, REPL);
         let Ok(expr) = expr.parse_expr_end() else {
-            self.state.add_error(original_err);
+            self.state.add_error(
+                original_err,
+                // Normally I would expect the input to be utf-8, however for
+                // the repl we just add replacement characters.
+                Some(String::from_utf8_lossy(source).into_owned()),
+            );
+
             return Err(Error::Invalid);
         };
 
