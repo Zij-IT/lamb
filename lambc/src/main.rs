@@ -45,9 +45,9 @@ fn run_repl() -> Result<(), repl::Error> {
                 let mut compiler = Compiler::new(vm.gc_mut());
                 compiler.enable_repl_exprs();
                 let Ok(exe) = compiler.build_from_source(s) else {
-                    eprintln!("Error: wait for diagnostics...");
-                    // And now I lie :D
-                    return Ok(());
+                    // TODO: This function shouldn't return repl errors...
+                    _ = compiler.print_diagnostics();
+                    continue;
                 };
 
                 if let Err(err) = vm.load_exe(exe) {

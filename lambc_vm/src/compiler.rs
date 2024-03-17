@@ -2,7 +2,10 @@ mod exe;
 mod module_parser;
 mod state;
 
-use std::path::{Path, PathBuf};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use lambc_parse::{Expr, Import, Module, Parser, Statement};
 use module_parser::{ModuleParser, ParsedModule};
@@ -190,5 +193,18 @@ impl<'gc> Compiler<'gc> {
             },
             path: REPL.into(),
         }
+    }
+
+    pub fn print_diagnostics(&self) -> std::fmt::Result {
+        let mut buffer = String::new();
+
+        let handler = miette::GraphicalReportHandler::new();
+        for diagnostic in &self.state.diagnostics {
+            handler.render_report(&mut buffer, diagnostic.as_ref())?;
+        }
+
+        // There's not really a lot to do here if for whatever reason
+        _ = std::io::stderr().write_all(buffer.as_bytes());
+        Ok(())
     }
 }
