@@ -4,6 +4,7 @@ mod state;
 
 use std::{
     io::Write,
+    marker::PhantomData,
     path::{Path, PathBuf},
 };
 
@@ -16,6 +17,17 @@ pub use self::{
 };
 use crate::{bytecode::Lowerer, gc::LambGc};
 
+mod sealed {
+    pub struct Repl;
+    pub struct File;
+    pub trait CompilerKind {}
+
+    impl CompilerKind for Repl {}
+    impl CompilerKind for File {}
+}
+
+use sealed::*;
+
 const REPL: &'static str = "\0REPL\0";
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -26,28 +38,23 @@ pub enum Error {
     Invalid,
 }
 
-pub struct Compiler<'gc> {
-    is_for_repl: bool,
+pub struct Compiler<'gc, K: CompilerKind = File> {
     state: State<'gc>,
+    _phantom: PhantomData<K>,
 }
 
-impl<'gc> Compiler<'gc> {
-    pub fn new(gc: &'gc mut LambGc) -> Self {
-        Self { is_for_repl: false, state: State::new(gc) }
-    }
+impl<'gc, K: CompilerKind> Compiler<'gc, K> {
+    pub fn print_diagnostics(&self) -> std::fmt::Result {
+        let mut buffer = String::new();
 
-    pub fn build_from_source(&mut self, source: String) -> Result<Exe> {
-        let parsed = self.parse_modules_from_source(source.as_bytes())?;
-        let compiled = self.compile_modules(parsed)?;
-        Ok(self.build_exe(REPL.into(), compiled))
-    }
+        let handler = miette::GraphicalReportHandler::new();
+        for diagnostic in &self.state.diagnostics {
+            handler.render_report(&mut buffer, diagnostic.as_ref())?;
+        }
 
-    pub fn build_from_path(&mut self, path: PathBuf) -> Result<Exe> {
-        let main = path.canonicalize().unwrap_or(path);
-        let parsed =
-            ModuleParser::new(&mut self.state).parse(vec![main.clone()]);
-        let compiled = self.compile_modules(parsed)?;
-        Ok(self.build_exe(main, compiled))
+        // There's not really a lot to do here if for whatever reason
+        _ = std::io::stderr().write_all(buffer.as_bytes());
+        Ok(())
     }
 
     fn compile_modules(
@@ -109,7 +116,32 @@ impl<'gc> Compiler<'gc> {
             modules: compiled.into_iter().map(|cm| (cm.path, cm)).collect(),
         }
     }
+}
 
+impl<'gc> Compiler<'gc, File> {
+    pub fn new(gc: &'gc mut LambGc) -> Self {
+        Self { state: State::new(gc), _phantom: PhantomData }
+    }
+
+    pub fn build_from_path(&mut self, path: PathBuf) -> Result<Exe> {
+        let main = path.canonicalize().unwrap_or(path);
+        let parsed =
+            ModuleParser::new(&mut self.state).parse(vec![main.clone()]);
+        let compiled = self.compile_modules(parsed)?;
+        Ok(self.build_exe(main, compiled))
+    }
+}
+
+impl<'gc> Compiler<'gc, Repl> {
+    pub fn new_for_repl(gc: &'gc mut LambGc) -> Self {
+        Self { state: State::new(gc), _phantom: PhantomData }
+    }
+
+    pub fn build_from_source(&mut self, source: String) -> Result<Exe> {
+        let parsed = self.parse_modules_from_source(source.as_bytes())?;
+        let compiled = self.compile_modules(parsed)?;
+        Ok(self.build_exe(REPL.into(), compiled))
+    }
     fn parse_modules_from_source(
         &mut self,
         source: &[u8],
@@ -117,14 +149,7 @@ impl<'gc> Compiler<'gc> {
         let mut parser = Parser::new(source, REPL);
         let module = match parser.parse_module() {
             Ok(module) => ParsedModule { ast: module, path: REPL.into() },
-            Err(err) if self.is_for_repl => {
-                self.attempt_repl_expr(source, err)?
-            }
-            Err(err) => {
-                let input = String::from_utf8(source.to_vec()).ok();
-                self.state.add_error(err, input);
-                return Err(Error::Invalid);
-            }
+            Err(err) => self.attempt_repl_expr(source, err)?,
         };
 
         let curr_path = std::fs::canonicalize(".").expect("No.");
@@ -148,10 +173,6 @@ impl<'gc> Compiler<'gc> {
             ModuleParser::new(&mut self.state).parse(import_paths);
         parsed.insert(0, module);
         Ok(parsed)
-    }
-
-    pub fn enable_repl_exprs(&mut self) {
-        self.is_for_repl = true;
     }
 
     fn attempt_repl_expr(
@@ -200,18 +221,5 @@ impl<'gc> Compiler<'gc> {
             },
             path: REPL.into(),
         }
-    }
-
-    pub fn print_diagnostics(&self) -> std::fmt::Result {
-        let mut buffer = String::new();
-
-        let handler = miette::GraphicalReportHandler::new();
-        for diagnostic in &self.state.diagnostics {
-            handler.render_report(&mut buffer, diagnostic.as_ref())?;
-        }
-
-        // There's not really a lot to do here if for whatever reason
-        _ = std::io::stderr().write_all(buffer.as_bytes());
-        Ok(())
     }
 }

@@ -42,8 +42,7 @@ fn run_repl() -> Result<(), repl::Error> {
             Command::Quit => return Ok(()),
             Command::Run => break,
             Command::String(s) => {
-                let mut compiler = Compiler::new(vm.gc_mut());
-                compiler.enable_repl_exprs();
+                let mut compiler = Compiler::new_for_repl(vm.gc_mut());
                 let Ok(exe) = compiler.build_from_source(s) else {
                     // TODO: This function shouldn't return repl errors...
                     _ = compiler.print_diagnostics();
