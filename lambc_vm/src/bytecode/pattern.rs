@@ -3,18 +3,17 @@ use lambc_parse::{Ident, InnerPattern, LiteralPattern, Pattern};
 use crate::{
     bytecode::NZ_ONE_U16,
     chunk::{Jump, Op},
-    gc::LambGc,
     value::Value,
 };
 
-impl super::Lowerer {
+impl<'a, 'b> super::Lowerer<'a, 'b> {
     // Note:
     //
     //     The scrutinee is assumed to be sitting on the top off the stack
     //     and is *only* to be removed after the case arm is complete.
     //
     //     This means that any sub-patterns must duplicate it.
-    pub fn lower_pattern(&mut self, c: &Pattern, gc: &mut LambGc) {
+    pub fn lower_pattern(&mut self, c: &Pattern) {
         let Pattern { inner, .. } = c;
 
         let offset = self.block().offset;
@@ -22,7 +21,7 @@ impl super::Lowerer {
 
         let mut jumps = Vec::with_capacity(rest.len() + 1);
 
-        self.lower_pattern_top(first, gc);
+        self.lower_pattern_top(first);
         for pat in rest {
             let eop = self.write_jump(Jump::IfTrue);
             jumps.push(eop);
@@ -32,7 +31,7 @@ impl super::Lowerer {
             // same stack offset and will leave one expression on the stack
             // which will result in either `true` or `false`
             self.block_mut().offset = offset;
-            self.lower_pattern_top(pat, gc);
+            self.lower_pattern_top(pat);
         }
 
         for j in jumps {
@@ -40,26 +39,26 @@ impl super::Lowerer {
         }
     }
 
-    fn lower_pattern_top(&mut self, c: &InnerPattern, gc: &mut LambGc) {
+    fn lower_pattern_top(&mut self, c: &InnerPattern) {
         match c {
             InnerPattern::Rest(..) => {
                 unimplemented!("This must be handled by the parent pattern")
             }
             InnerPattern::Literal(lit) => {
                 self.write_op(Op::Dup);
-                self.lower_literal_pattern(gc, lit);
+                self.lower_literal_pattern(lit);
                 self.write_op(Op::Eq);
             }
             InnerPattern::Ident(ref pat) => {
                 let i = &pat.ident.raw;
                 let pat = &pat.bound;
                 // The ident must have been declared by `lower_case`.
-                let slot = self.local_slot(i.as_str()).unwrap();
-                let _ = gc.intern(i);
+                let slot = self.info.local_slot(i.as_str()).unwrap();
+                let _ = self.state.gc.intern(i);
                 self.write_op(Op::SetSlot(slot.try_into().unwrap()));
 
                 if let Some(pat) = pat.as_deref() {
-                    self.lower_pattern_top(pat, gc);
+                    self.lower_pattern_top(pat);
                 } else {
                     self.write_const_op(Value::Bool(true));
                 }
@@ -82,7 +81,7 @@ impl super::Lowerer {
                     self.write_const_op(Value::Int(idx.try_into().unwrap()));
                     self.write_op(Op::Index);
 
-                    self.lower_pattern(pat, gc);
+                    self.lower_pattern(pat);
 
                     // Stack is:
                     //   <is_match>
@@ -112,14 +111,16 @@ impl super::Lowerer {
                         ends.push(self.write_jump(Jump::IfFalse));
                         self.write_op(Op::Pop(NZ_ONE_U16));
 
-                        self.func.chunk.constants.push(Value::Int(repr));
+                        self.info.func.chunk.constants.push(Value::Int(repr));
                         self.write_op(Op::Slice(
-                            u16::try_from(self.func.chunk.constants.len() - 1)
-                                .unwrap(),
+                            u16::try_from(
+                                self.info.func.chunk.constants.len() - 1,
+                            )
+                            .unwrap(),
                         ));
 
                         for Ident { raw, .. } in bindings {
-                            let slot = self.local_slot(&raw).unwrap();
+                            let slot = self.info.local_slot(&raw).unwrap();
                             self.write_op(Op::SetSlot(
                                 u16::try_from(slot).unwrap(),
                             ))
@@ -140,7 +141,7 @@ impl super::Lowerer {
                     ));
                     self.write_op(Op::IndexRev);
 
-                    self.lower_pattern(pat, gc);
+                    self.lower_pattern(pat);
 
                     // Stack is:
                     //   <is_match>
@@ -158,13 +159,9 @@ impl super::Lowerer {
         }
     }
 
-    fn lower_literal_pattern(
-        &mut self,
-        gc: &mut LambGc,
-        lit: &LiteralPattern,
-    ) {
+    fn lower_literal_pattern(&mut self, lit: &LiteralPattern) {
         match lit {
-            LiteralPattern::String(s) => self.lower_str_literal(gc, s),
+            LiteralPattern::String(s) => self.lower_str_literal(s),
             LiteralPattern::Bool(b) => self.lower_bool_literal(b),
             LiteralPattern::Char(c) => self.lower_char_literal(c),
             LiteralPattern::I64(i) => self.lower_i64_literal(i),

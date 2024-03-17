@@ -77,7 +77,8 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
                 let main_path = &m.path;
                 let path = self.state.gc.intern(m.path.to_string_lossy());
                 let code =
-                    Lowerer::new(name, path).lower(self.state.gc, &m.ast);
+                    Lowerer::new(&mut self.state, name, path).lower(&m.ast);
+
                 let imports = self.compile_imports(main_path, m.ast.imports);
                 CompiledModule {
                     // TODO: This should be caught in analysis

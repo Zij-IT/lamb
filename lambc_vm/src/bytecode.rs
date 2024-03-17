@@ -7,7 +7,8 @@ use lambc_parse::{Define, Expr, Ident, Module, Statement};
 
 use crate::{
     chunk::{Jump, JumpIdx, Op},
-    gc::{GcRef, LambGc},
+    compiler::State,
+    gc::GcRef,
     value::{Closure, Function, Str, UnresolvedUpvalue, Value},
 };
 
@@ -45,18 +46,16 @@ impl Local {
 }
 
 #[derive(Debug)]
-pub struct Lowerer {
-    module: GcRef<Str>,
+pub struct FunctionInfo {
     blocks: Vec<Block>,
     locals: Vec<Local>,
     func: Function,
     enclosing: Option<Box<Self>>,
 }
 
-impl Lowerer {
-    pub fn new(name: GcRef<Str>, module: GcRef<Str>) -> Self {
+impl FunctionInfo {
+    fn new(name: GcRef<Str>, module: GcRef<Str>) -> Self {
         Self {
-            module,
             enclosing: None,
             func: Function::new(name, module),
             blocks: vec![Block::new_for_func()],
@@ -67,70 +66,12 @@ impl Lowerer {
         }
     }
 
-    pub fn lower(
-        mut self,
-        gc: &mut LambGc,
-        script: &Module,
-    ) -> GcRef<Closure> {
-        self.lower_script(script, gc);
-        self.finish(gc)
-    }
-
-    pub fn finish(mut self, gc: &mut LambGc) -> GcRef<Closure> {
-        self.write_op(Op::Return);
-        let closure =
-            Closure { func: gc.alloc(self.func), upvalues: Vec::new() };
-
-        gc.alloc(closure)
-    }
-
     fn block(&self) -> &Block {
         self.blocks.last().unwrap()
     }
 
     fn block_mut(&mut self) -> &mut Block {
         self.blocks.last_mut().unwrap()
-    }
-
-    fn start_block(&mut self) {
-        let block = self.block();
-        let block = Block {
-            base: block.base + block.offset,
-            offset: 0,
-            depth: block.depth + 1,
-        };
-
-        self.blocks.push(block);
-    }
-
-    fn end_block(&mut self) {
-        self.blocks.pop();
-        let depth = self.block().depth;
-
-        self.func.chunk.write_op(Op::SaveValue);
-        for (idx, loc) in self.locals.iter().enumerate().rev() {
-            if loc.depth <= depth {
-                self.locals.truncate(idx + 1);
-                break;
-            }
-
-            let op = if loc.is_captured {
-                Op::CloseValue
-            } else {
-                Op::Pop(NZ_ONE_U16)
-            };
-
-            self.func.chunk.write_op(op);
-        }
-        self.func.chunk.write_op(Op::UnsaveValue);
-    }
-
-    fn add_arg(&mut self, gc: &mut LambGc, Ident { raw, .. }: &Ident) {
-        let rf = gc.intern(raw);
-        self.func.chunk.constants.push(Value::String(rf));
-        self.add_local(raw.clone());
-        self.func.arity += 1;
-        self.block_mut().offset += 1;
     }
 
     fn add_local(&mut self, name: String) {
@@ -194,11 +135,96 @@ impl Lowerer {
             }
         }
     }
+}
 
-    fn write_closure(&mut self, gc: &mut LambGc, func: Function) {
-        self.func.chunk.constants.push(Value::Function(gc.alloc(func)));
+#[derive(Debug)]
+pub struct Lowerer<'a, 'b> {
+    state: &'a mut State<'b>,
+    module: GcRef<Str>,
+    info: FunctionInfo,
+}
 
-        let idx = self.func.chunk.constants.len() - 1;
+impl<'a, 'b> Lowerer<'a, 'b> {
+    pub fn new(
+        state: &'a mut State<'b>,
+        name: GcRef<Str>,
+        module: GcRef<Str>,
+    ) -> Self {
+        Self { state, module, info: FunctionInfo::new(name, module) }
+    }
+
+    pub fn lower(mut self, script: &Module) -> GcRef<Closure> {
+        self.lower_script(script);
+        self.finish()
+    }
+
+    pub fn finish(mut self) -> GcRef<Closure> {
+        self.write_op(Op::Return);
+        let closure = Closure {
+            func: self.state.gc.alloc(self.info.func),
+            upvalues: Vec::new(),
+        };
+
+        self.state.gc.alloc(closure)
+    }
+
+    fn block(&self) -> &Block {
+        self.info.block()
+    }
+
+    fn block_mut(&mut self) -> &mut Block {
+        self.info.block_mut()
+    }
+
+    fn start_block(&mut self) {
+        let block = self.block();
+        let block = Block {
+            base: block.base + block.offset,
+            offset: 0,
+            depth: block.depth + 1,
+        };
+
+        self.info.blocks.push(block);
+    }
+
+    fn end_block(&mut self) {
+        self.info.blocks.pop();
+        let depth = self.block().depth;
+
+        self.info.func.chunk.write_op(Op::SaveValue);
+        for (idx, loc) in self.info.locals.iter().enumerate().rev() {
+            if loc.depth <= depth {
+                self.info.locals.truncate(idx + 1);
+                break;
+            }
+
+            let op = if loc.is_captured {
+                Op::CloseValue
+            } else {
+                Op::Pop(NZ_ONE_U16)
+            };
+
+            self.info.func.chunk.write_op(op);
+        }
+        self.info.func.chunk.write_op(Op::UnsaveValue);
+    }
+
+    fn add_arg(&mut self, Ident { raw, .. }: &Ident) {
+        let rf = self.state.gc.intern(raw);
+        self.info.func.chunk.constants.push(Value::String(rf));
+        self.info.add_local(raw.clone());
+        self.info.func.arity += 1;
+        self.block_mut().offset += 1;
+    }
+
+    fn write_closure(&mut self, func: Function) {
+        self.info
+            .func
+            .chunk
+            .constants
+            .push(Value::Function(self.state.gc.alloc(func)));
+
+        let idx = self.info.func.chunk.constants.len() - 1;
         self.write_op(Op::Closure(idx.try_into().unwrap()))
     }
 
@@ -255,30 +281,30 @@ impl Lowerer {
             }
         }
 
-        self.func.chunk.write_op(op);
+        self.info.func.chunk.write_op(op);
     }
 
     fn write_const_op(&mut self, val: Value) {
-        self.func.chunk.constants.push(val);
-        let idx = self.func.chunk.constants.len() - 1;
+        self.info.func.chunk.constants.push(val);
+        let idx = self.info.func.chunk.constants.len() - 1;
         self.write_op(Op::Constant(idx.try_into().unwrap()));
     }
 
     fn write_jump(&mut self, jmp: Jump) -> JumpIdx {
-        self.func.chunk.write_jmp(jmp)
+        self.info.func.chunk.write_jmp(jmp)
     }
 
     fn patch_jump(&mut self, jmp: JumpIdx) {
-        self.func.chunk.patch_jmp(jmp);
+        self.info.func.chunk.patch_jmp(jmp);
     }
 
-    fn lower_script(&mut self, script: &Module, gc: &mut LambGc) {
+    fn lower_script(&mut self, script: &Module) {
         for stat in &script.statements {
-            self.lower_stmt(stat, gc);
+            self.lower_stmt(stat);
         }
     }
 
-    fn lower_stmt(&mut self, stat: &Statement, gc: &mut LambGc) {
+    fn lower_stmt(&mut self, stat: &Statement) {
         match stat {
             Statement::Define(assign) => {
                 let Define {
@@ -289,24 +315,24 @@ impl Lowerer {
 
                 if let Expr::FnDef(f) = value {
                     if f.recursive {
-                        self.lower_rec_func_def(ident, f, gc);
+                        self.lower_rec_func_def(ident, f);
                         return;
                     }
                 }
 
-                self.lower_expr(value, gc);
+                self.lower_expr(value);
 
-                let ident_obj = gc.intern(raw);
-                self.func.chunk.write_val(Value::String(ident_obj));
+                let ident_obj = self.state.gc.intern(raw);
+                self.info.func.chunk.write_val(Value::String(ident_obj));
                 if self.block().depth == 0 {
-                    let idx = self.func.chunk.constants.len() - 1;
+                    let idx = self.info.func.chunk.constants.len() - 1;
                     self.write_op(Op::DefineGlobal(idx.try_into().unwrap()));
                 } else {
-                    self.add_local(raw.clone());
+                    self.info.add_local(raw.clone());
                 }
             }
             Statement::Expr(e) => {
-                self.lower_expr(&e.expr, gc);
+                self.lower_expr(&e.expr);
                 self.write_op(Op::Pop(NZ_ONE_U16));
             }
         }
