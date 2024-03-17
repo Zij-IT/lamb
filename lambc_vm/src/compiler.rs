@@ -133,7 +133,14 @@ impl<'gc> Compiler<'gc> {
             .imports
             .iter()
             .map(|i| {
-                curr_path.join(i.file.text.as_ref().map_or("", |t| &t.inner))
+                let import_path =
+                    Path::new(i.file.text.as_ref().map_or("", |t| &t.inner));
+
+                if import_path.is_relative() {
+                    curr_path.join(import_path)
+                } else {
+                    import_path.to_path_buf()
+                }
             })
             .collect();
 
