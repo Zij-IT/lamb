@@ -57,6 +57,15 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
         Ok(())
     }
 
+    fn pipeline(
+        &mut self,
+        main: PathBuf,
+        parsed: Vec<ParsedModule>,
+    ) -> Result<Exe> {
+        let compiled = self.compile_modules(parsed)?;
+        Ok(self.build_exe(main, compiled))
+    }
+
     fn compile_modules(
         &mut self,
         parsed: Vec<ParsedModule>,
@@ -127,8 +136,8 @@ impl<'gc> Compiler<'gc, File> {
         let main = path.canonicalize().unwrap_or(path);
         let parsed =
             ModuleParser::new(&mut self.state).parse(vec![main.clone()]);
-        let compiled = self.compile_modules(parsed)?;
-        Ok(self.build_exe(main, compiled))
+
+        self.pipeline(main, parsed)
     }
 }
 
@@ -139,9 +148,9 @@ impl<'gc> Compiler<'gc, Repl> {
 
     pub fn build_from_source(&mut self, source: String) -> Result<Exe> {
         let parsed = self.parse_modules_from_source(source.as_bytes())?;
-        let compiled = self.compile_modules(parsed)?;
-        Ok(self.build_exe(REPL.into(), compiled))
+        self.pipeline(REPL.into(), parsed)
     }
+
     fn parse_modules_from_source(
         &mut self,
         source: &[u8],
