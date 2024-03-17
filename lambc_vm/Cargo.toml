@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 lambc_parse = { path = "../lambc_parse" }
+miette = "7.2.0"
 rand = { version = "0.8.5", features = ["std"] }
 thiserror = "1.0.56"

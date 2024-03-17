@@ -4,15 +4,27 @@ use std::{
 };
 
 use lambc_parse::Parser;
+use miette::Diagnostic;
+use thiserror::Error as ThError;
 
 use super::State;
 
-#[derive(Debug)]
+#[derive(Debug, Diagnostic, ThError)]
+#[diagnostic()]
 enum Error {
+    #[error("Unable to read the file at '{}': '{}", .path.display(), .inner)]
     FailedToRead { path: PathBuf, inner: std::io::Error },
-    ImportNotAFile { path: PathBuf, span: lambc_parse::Span },
-    EmptyImport { span: lambc_parse::Span },
-    SyntaxError { inner: lambc_parse::Error },
+    #[error("This path is not a file: {}", .path.display())]
+    ImportNotAFile {
+        path: PathBuf,
+        #[label]
+        span: lambc_parse::Span,
+    },
+    #[error("This import path is empty")]
+    EmptyImport {
+        #[label]
+        span: lambc_parse::Span,
+    },
 }
 
 #[derive(Debug)]
