@@ -16,7 +16,7 @@ pub use crate::{
 pub fn run_script<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     let mut gc = LambGc::new();
     let mut compiler = Compiler::new(&mut gc);
-    let Ok(exe) = compiler.build_from_path(path.as_ref().to_path_buf()) else {
+    let Ok(exe) = compiler.build(path.as_ref().to_path_buf()) else {
         _ = compiler.print_diagnostics();
         return Ok(());
     };

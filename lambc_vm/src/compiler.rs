@@ -132,7 +132,7 @@ impl<'gc> Compiler<'gc, File> {
         Self { state: State::new(gc), _phantom: PhantomData }
     }
 
-    pub fn build_from_path(&mut self, path: PathBuf) -> Result<Exe> {
+    pub fn build(&mut self, path: PathBuf) -> Result<Exe> {
         let main = path.canonicalize().unwrap_or(path);
         let parsed =
             ModuleParser::new(&mut self.state).parse(vec![main.clone()]);
@@ -146,7 +146,7 @@ impl<'gc> Compiler<'gc, Repl> {
         Self { state: State::new(gc), _phantom: PhantomData }
     }
 
-    pub fn build_from_source(&mut self, source: String) -> Result<Exe> {
+    pub fn build(&mut self, source: String) -> Result<Exe> {
         let parsed = self.parse_modules_from_source(source.as_bytes())?;
         self.pipeline(REPL.into(), parsed)
     }
