@@ -1,141 +1,21 @@
 mod expr;
+mod info;
 mod pattern;
 
 use std::num::NonZeroU16;
 
 use lambc_parse::{Define, Expr, Ident, Module, Statement};
 
+use self::info::{Block, FunctionInfo};
 use crate::{
     chunk::{Jump, JumpIdx, Op},
     compiler::State,
     gc::GcRef,
-    value::{Closure, Function, Str, UnresolvedUpvalue, Value},
+    value::{Closure, Function, Str, Value},
 };
 
 // Safety: 1, despite its appearence, is not equal to zero
 const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
-
-#[derive(Debug, Default)]
-struct Block {
-    pub base: usize,
-    pub offset: usize,
-    pub depth: usize,
-}
-
-impl Block {
-    fn new_for_func() -> Self {
-        Self { base: 0, offset: 1, depth: 0 }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Local {
-    name: String,
-    depth: usize,
-    is_captured: bool,
-}
-
-impl Local {
-    pub fn new(name: String, depth: usize) -> Self {
-        Self { name, depth, is_captured: false }
-    }
-
-    pub fn mark_captured(&mut self) {
-        self.is_captured = true;
-    }
-}
-
-#[derive(Debug)]
-pub struct FunctionInfo {
-    blocks: Vec<Block>,
-    locals: Vec<Local>,
-    func: Function,
-    enclosing: Option<Box<Self>>,
-}
-
-impl FunctionInfo {
-    fn new(name: GcRef<Str>, module: GcRef<Str>) -> Self {
-        Self {
-            enclosing: None,
-            func: Function::new(name, module),
-            blocks: vec![Block::new_for_func()],
-            // This local refers to the function that is currently being lowered.
-            // By setting its depth to zero, we make sure it is unaccessible to
-            // the user
-            locals: vec![Local::new("".into(), 0)],
-        }
-    }
-
-    fn block(&self) -> &Block {
-        self.blocks.last().unwrap()
-    }
-
-    fn block_mut(&mut self) -> &mut Block {
-        self.blocks.last_mut().unwrap()
-    }
-
-    fn add_local(&mut self, name: String) {
-        self.locals.push(Local::new(name, self.block().depth));
-    }
-
-    fn local_slot(&self, name: &str) -> Option<usize> {
-        let idx = self.local_idx(name)?;
-        let depth = self.locals[idx].depth;
-
-        // This looks backwards to find the block that the local with a depth
-        // of `depth` is found. This local must be within one of the blocks,
-        // and as such we must be able to find the associated block.
-        let base = self
-            .blocks
-            .iter()
-            .rev()
-            .find(|b| b.depth == depth)
-            .map(|b| b.base)
-            .expect("The local must exist within a block of the same depth");
-
-        // This finds the amount of locals that wee declared in the block
-        // before the local `name`
-        let predecessors = &self
-            .locals
-            .iter()
-            .take(idx)
-            .rev()
-            .take_while(|l| l.depth == depth)
-            .count();
-
-        Some(base + predecessors)
-    }
-
-    fn local_idx(&self, name: &str) -> Option<usize> {
-        self.locals.iter().rposition(|l| l.name == name)
-    }
-
-    fn upvalue_idx(&mut self, name: &str) -> Option<usize> {
-        let parent = self.enclosing.as_deref_mut()?;
-        if let Some(idx) = parent.local_idx(name) {
-            parent.locals[idx].mark_captured();
-            return Some(self.add_upvalue(idx, true));
-        }
-
-        parent.upvalue_idx(name).map(|l| self.add_upvalue(l, false))
-    }
-
-    fn add_upvalue(&mut self, index: usize, is_local: bool) -> usize {
-        let pos = self
-            .func
-            .upvalues
-            .iter()
-            .position(|u| u.index == index && u.is_local == is_local);
-
-        match pos {
-            Some(p) => p,
-            None => {
-                self.func.upvalues.push(UnresolvedUpvalue { index, is_local });
-                self.func.upvalues.len() - 1
-            }
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct Lowerer<'a, 'b> {
