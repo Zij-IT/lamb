@@ -17,7 +17,9 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         let Pattern { inner, .. } = c;
 
         let offset = self.block().offset;
-        let (first, rest) = inner.split_first().unwrap();
+        let (first, rest) = inner
+            .split_first()
+            .expect("A tokenized pattern contains at least one InnerPattern");
 
         let mut jumps = Vec::with_capacity(rest.len() + 1);
 
