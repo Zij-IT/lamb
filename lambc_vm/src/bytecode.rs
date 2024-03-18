@@ -15,15 +15,7 @@ use crate::{
 };
 
 #[derive(thiserror::Error, miette::Diagnostic, Debug)]
-#[diagnostic()]
-#[error("")]
-struct ErrorBunch {
-    #[related]
-    errs: Vec<Error>,
-}
-
-#[derive(thiserror::Error, miette::Diagnostic, Debug)]
-#[diagnostic()]
+#[diagnostic(severity(error))]
 pub enum Error {
     #[error("There are too many {items_name}. Limit of {limit}")]
     LimitError {
@@ -87,7 +79,9 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         let errs = std::mem::take(&mut self.errs);
         if !errs.is_empty() {
             let source = std::fs::read_to_string(&script.path).ok();
-            self.state.add_error(ErrorBunch { errs }, source);
+            for err in errs {
+                self.state.add_error(err, source.clone().into());
+            }
         }
 
         self.finish()
