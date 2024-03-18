@@ -10,6 +10,17 @@ pub enum I64Base {
     Hex,
 }
 
+impl I64Base {
+    pub fn to_base(&self) -> u32 {
+        match self {
+            I64Base::Bin => 2,
+            I64Base::Oct => 8,
+            I64Base::Dec => 10,
+            I64Base::Hex => 16,
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct I64Lit {
     pub base: I64Base,
@@ -228,6 +239,20 @@ impl ArrayPattern {
         };
 
         (head, tail, rest)
+    }
+
+    pub fn head_span(&self) -> Option<Span> {
+        let head = self.as_parts().0;
+        head.first()
+            .zip(head.last())
+            .map(|(first, last)| Span::connect(first.span, last.span))
+    }
+
+    pub fn tail_span(&self) -> Option<Span> {
+        let tail = self.as_parts().1;
+        tail.first()
+            .zip(tail.last())
+            .map(|(first, last)| Span::connect(first.span, last.span))
     }
 }
 

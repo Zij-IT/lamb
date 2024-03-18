@@ -1,5 +1,6 @@
 use lambc_parse::{Ident, InnerPattern, LiteralPattern, Pattern};
 
+use super::Error;
 use crate::{
     bytecode::NZ_ONE_U16,
     chunk::{Jump, Op},
@@ -44,7 +45,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     fn lower_pattern_top(&mut self, c: &InnerPattern) {
         match c {
             InnerPattern::Rest(..) => {
-                unimplemented!("This must be handled by the parent pattern")
+                self.add_err(Error::InvalidRestPattern { span: c.span() });
             }
             InnerPattern::Literal(lit) => {
                 self.write_op(Op::Dup);
@@ -70,17 +71,42 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
 
                 // Compare the lengths. Array patterns can only be properly be
                 // tested if the lengths proper.
-                let min_len = head.len() + tail.len();
+                let Ok(head_len) = u16::try_from(head.len()) else {
+                    // head_span is only `None` if head contains 0 elements
+                    let head_span = pat.head_span().unwrap();
+                    self.add_err(Error::ListPatternLimit {
+                        limit: u32::MAX as usize,
+                        span: head_span,
+                    });
+
+                    return;
+                };
+
+                let Ok(tail_len) = u16::try_from(tail.len()) else {
+                    // tail_span is only `None` if tail contains 0 elements
+                    let tail_span = pat.tail_span().unwrap();
+                    self.add_err(Error::ListPatternLimit {
+                        limit: u32::MAX as usize,
+                        span: tail_span,
+                    });
+
+                    return;
+                };
+
+                // Prevent overflow as u16 + u16 < u32::MAX
+                let min_len = i64::from(head_len as u32 + tail_len as u32);
+
                 self.write_op(Op::Len);
-                self.write_const_op(Value::Int(min_len.try_into().unwrap()));
+                self.write_const_op(Value::Int(min_len));
                 self.write_op(if dots.is_some() { Op::Ge } else { Op::Eq });
 
-                let mut ends = Vec::with_capacity(min_len);
-                for (idx, pat) in head.iter().enumerate() {
+                let pat_count = usize::try_from(min_len).unwrap_or(0);
+                let mut ends = Vec::with_capacity(pat_count);
+                for (pat, idx) in head.iter().zip(0_u16..) {
                     ends.push(self.write_jump(Jump::IfFalse));
                     self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::Dup);
-                    self.write_const_op(Value::Int(idx.try_into().unwrap()));
+                    self.write_const_op(Value::Int(i64::from(idx)));
                     self.write_op(Op::Index);
 
                     self.lower_pattern(pat);
@@ -98,16 +124,8 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
                 if let Some(rest) = dots {
                     let bindings = rest.binding_names();
                     if !bindings.is_empty() {
-                        let start = head.len();
-                        let dist_from_end = tail.len();
-
-                        let max = usize::try_from(u32::MAX).unwrap();
-                        if start > max || dist_from_end > max {
-                            panic!("crap");
-                        }
-
-                        let start = (start as u64) << u32::BITS;
-                        let dist_from_end = dist_from_end as u64;
+                        let start = (head_len as u64) << u32::BITS;
+                        let dist_from_end = tail_len as u64;
                         let repr = (start | dist_from_end) as i64;
 
                         ends.push(self.write_jump(Jump::IfFalse));
@@ -133,14 +151,14 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
                     }
                 }
 
-                for (idx, pat) in tail.iter().enumerate() {
+                for (pat, idx) in tail.iter().zip(0_u16..) {
                     ends.push(self.write_jump(Jump::IfFalse));
 
                     self.write_op(Op::Pop(NZ_ONE_U16));
                     self.write_op(Op::Dup);
-                    self.write_const_op(Value::Int(
-                        (tail.len() - 1 - idx).try_into().unwrap(),
-                    ));
+                    self.write_const_op(Value::Int(i64::from(
+                        tail_len - 1 - idx,
+                    )));
                     self.write_op(Op::IndexRev);
 
                     self.lower_pattern(pat);

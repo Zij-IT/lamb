@@ -4,7 +4,7 @@ mod pattern;
 
 use std::num::NonZeroU16;
 
-use lambc_parse::{Define, Expr, Ident, Module, Statement};
+use lambc_parse::{Define, Expr, Ident, Module, Span, Statement};
 
 use self::info::{Block, FunctionInfo};
 use crate::{
@@ -14,6 +14,49 @@ use crate::{
     value::{Closure, Function, Str, Value},
 };
 
+#[derive(thiserror::Error, miette::Diagnostic, Debug)]
+#[diagnostic()]
+#[error("")]
+struct ErrorBunch {
+    #[related]
+    errs: Vec<Error>,
+}
+
+#[derive(thiserror::Error, miette::Diagnostic, Debug)]
+#[diagnostic()]
+pub enum Error {
+    #[error("There are too many {items_name}. Limit of {limit}")]
+    LimitError {
+        items_name: &'static str,
+        limit: usize,
+        #[label]
+        span: Span,
+    },
+    #[error("Invalid {type_} literal. {reason}")]
+    InvalidLiteral {
+        type_: &'static str,
+        reason: &'static str,
+        #[help]
+        help: Option<String>,
+        #[label]
+        span: Span,
+    },
+    #[error(
+        "A list can contain a maximum of {limit} elements. Contains {total}"
+    )]
+    ArrayLimitError { limit: usize, total: usize, span: Span },
+    #[error("The '..' pattern is not valid here")]
+    InvalidRestPattern {
+        #[label]
+        span: Span,
+    },
+    #[error("An list pattern can contain at most {limit} sub-patterns")]
+    ListPatternLimit {
+        limit: usize,
+        span: Span, // or tail_span
+    },
+}
+
 // Safety: 1, despite its appearence, is not equal to zero
 const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
 
@@ -22,6 +65,7 @@ pub struct Lowerer<'a, 'b> {
     state: &'a mut State<'b>,
     module: GcRef<Str>,
     info: FunctionInfo,
+    errs: Vec<Error>,
 }
 
 impl<'a, 'b> Lowerer<'a, 'b> {
@@ -30,11 +74,22 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         name: GcRef<Str>,
         module: GcRef<Str>,
     ) -> Self {
-        Self { state, module, info: FunctionInfo::new(name, module) }
+        Self {
+            state,
+            module,
+            info: FunctionInfo::new(name, module),
+            errs: vec![],
+        }
     }
 
     pub fn lower(mut self, script: &Module) -> GcRef<Closure> {
         self.lower_script(script);
+        let errs = std::mem::take(&mut self.errs);
+        if !errs.is_empty() {
+            let source = std::fs::read_to_string(&script.path).ok();
+            self.state.add_error(ErrorBunch { errs }, source);
+        }
+
         self.finish()
     }
 
@@ -216,5 +271,9 @@ impl<'a, 'b> Lowerer<'a, 'b> {
                 self.write_op(Op::Pop(NZ_ONE_U16));
             }
         }
+    }
+
+    fn add_err(&mut self, err: Error) {
+        self.errs.push(err);
     }
 }

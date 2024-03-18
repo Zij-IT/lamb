@@ -2,11 +2,10 @@ use std::num::NonZeroU16;
 
 use lambc_parse::{
     BinaryOp, Block as LambBlock, BoolLit, Case, CaseArm, CharLit, Else, Expr,
-    F64Lit, FnDef, I64Base, I64Lit, Ident, If, IfCond, List, NilLit, Return,
-    StrLit,
+    F64Lit, FnDef, I64Lit, Ident, If, IfCond, List, NilLit, Return, StrLit,
 };
 
-use super::FunctionInfo;
+use super::{Error, FunctionInfo};
 use crate::{
     bytecode::NZ_ONE_U16,
     chunk::{Jump, JumpIdx, Op},
@@ -51,7 +50,23 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
                 for arg in &call.args {
                     self.lower_expr(arg);
                 }
-                self.write_op(Op::Call(call.args.len().try_into().unwrap()))
+
+                let arg_count = match u16::try_from(call.args.len()) {
+                    Ok(len) => len,
+                    Err(..) => {
+                        // Fix offset to help prevent further issues
+                        self.block_mut().offset -= call.args.len();
+                        self.add_err(Error::LimitError {
+                            items_name: "arguments",
+                            limit: u16::MAX as usize,
+                            span: call.span,
+                        });
+
+                        0
+                    }
+                };
+
+                self.write_op(Op::Call(arg_count))
             }
             Expr::If(if_) => self.lower_if_expr(if_),
             Expr::Case(c) => self.lower_case(c),
@@ -82,24 +97,94 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     }
 
     pub fn lower_char_literal(&mut self, lit: &CharLit) {
-        let val = lit.text.as_ref().unwrap().inner.parse().unwrap();
+        let val = match lit.text.as_ref().map(|c| c.inner.as_str()) {
+            Some(txt) => {
+                let mut chs = txt.chars();
+                let ch = chs
+                    .next()
+                    .expect("CharText is only parsed if there is text");
+
+                if chs.next().is_some() {
+                    self.add_err(Error::InvalidLiteral {
+                        type_: "char",
+                        reason: "Char literals may only contain one unicode scalar value",
+                        help: Some("If this was meant to be a string, use '\"'".into()),
+                        span: lit.span,
+                    });
+                }
+
+                ch
+            }
+            None => {
+                self.add_err(Error::InvalidLiteral {
+                    type_: "char",
+                    reason:
+                        "Char literals must contain one unicode scalar value",
+                    help: None,
+                    span: lit.span,
+                });
+
+                'f'
+            }
+        };
+
         self.write_const_op(Value::Char(val));
     }
 
     pub fn lower_i64_literal(&mut self, lit: &I64Lit) {
-        let val = match lit.base {
-            I64Base::Bin => i64::from_str_radix(&lit.value, 2),
-            I64Base::Oct => i64::from_str_radix(&lit.value, 8),
-            I64Base::Dec => i64::from_str_radix(&lit.value, 10),
-            I64Base::Hex => i64::from_str_radix(&lit.value, 16),
+        if lit.value.is_empty() {
+            self.add_err(Error::InvalidLiteral {
+                type_: "i64",
+                reason: "prefixed literal cannot be empty",
+                help: None,
+                span: lit.span,
+            });
+
+            self.write_const_op(Value::Int(0));
+            return;
         }
-        .unwrap();
+
+        let slice = {
+            let mut clone = lit.value.clone();
+            clone.retain(|c| c != '_');
+            clone
+        };
+
+        let val = match i128::from_str_radix(&slice, lit.base.to_base()) {
+            Ok(parsed) => match i64::try_from(parsed) {
+                Ok(val) => val,
+                Err(_) => {
+                    self.add_err(Error::InvalidLiteral {
+                        type_: "i64",
+                        reason: "literal is out of range for an i64",
+                        help: Some(format!(
+                            "An i64 literal must be between {} and {}",
+                            i64::MIN,
+                            i64::MAX
+                        )),
+                        span: lit.span,
+                    });
+
+                    0
+                }
+            },
+            Err(e) => unreachable!(
+                "Tokenizer produced an invalid token '{slice}': {e}"
+            ),
+        };
 
         self.write_const_op(Value::Int(val));
     }
 
     pub fn lower_f64_literal(&mut self, lit: &F64Lit) {
-        let val = lit.value.parse().unwrap();
+        let val = match lit.value.parse() {
+            Ok(val) => val,
+            Err(er) => unreachable!(
+                "Tokenizer produced an invalid f64 token '{}': {er}",
+                lit.value
+            ),
+        };
+
         self.write_const_op(Value::Double(val))
     }
 
@@ -390,12 +475,26 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     }
 
     fn lower_list(&mut self, list: &List) {
-        let len = list.values.len();
         for e in list.values.iter() {
             self.lower_expr(e);
         }
 
-        self.write_op(Op::MakeArray(len.try_into().unwrap()));
+        let len = match u16::try_from(list.values.len()) {
+            Ok(len) => len,
+            Err(..) => {
+                // Fix the stack offset and add an error
+                self.block_mut().offset -= list.values.len();
+                self.add_err(Error::ArrayLimitError {
+                    limit: u16::MAX as usize,
+                    total: list.values.len(),
+                    span: list.span,
+                });
+
+                0
+            }
+        };
+
+        self.write_op(Op::MakeArray(len));
     }
 
     fn lower_func(&mut self, f: &FnDef, name: String) {
