@@ -138,7 +138,12 @@ impl<B: Backend> Compiler<B, Repl> {
                     Path::new(i.file.text.as_ref().map_or("", |t| &t.inner));
 
                 if import_path.is_relative() {
-                    curr_path.join(import_path)
+                    curr_path.join(
+                        import_path
+                            .canonicalize()
+                            .as_deref()
+                            .unwrap_or(import_path),
+                    )
                 } else {
                     import_path.to_path_buf()
                 }
