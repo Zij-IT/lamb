@@ -2,7 +2,7 @@
 
 use std::error::Error;
 
-use lambc_vm::{Compiler, LambGc};
+use lambc_vm::{vm_backend, Compiler, LambGc};
 use repl::Command;
 
 mod cli;
@@ -42,13 +42,16 @@ fn run_repl() -> Result<(), repl::Error> {
             Command::Quit => return Ok(()),
             Command::Run => break,
             Command::String(s) => {
-                let mut compiler = Compiler::new_for_repl(vm.gc_mut());
+                let mut compiler =
+                    Compiler::new_for_repl(vm_backend(vm.gc_mut()));
+
                 let Ok(exe) = compiler.build(s) else {
                     // TODO: This function shouldn't return repl errors...
                     _ = compiler.print_diagnostics();
                     continue;
                 };
 
+                drop(compiler);
                 if let Err(err) = vm.load_exe(exe) {
                     println!("{err}");
                     continue;

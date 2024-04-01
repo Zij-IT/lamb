@@ -8,14 +8,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use lambc_parse::{Expr, Import, Module, Parser, Statement};
-use module_parser::{ModuleParser, ParsedModule};
+use lambc_parse::{Expr, Module, Parser, Statement};
+use module_parser::ModuleParser;
 
 pub use self::{
     exe::{CompiledImport, CompiledModule, Exe},
+    module_parser::ParsedModule,
     state::State,
 };
-use crate::{bytecode::Lowerer, gc::LambGc};
 
 mod sealed {
     pub struct Repl;
@@ -38,13 +38,45 @@ pub enum Error {
     Invalid,
 }
 
-pub struct Compiler<'gc, K: CompilerKind = File> {
-    gc: &'gc mut LambGc,
+pub trait Backend {
+    type Output;
+
+    fn build(
+        &mut self,
+        state: &mut State,
+        main: PathBuf,
+        parsed: Vec<ParsedModule>,
+    ) -> Result<Self::Output>;
+}
+
+impl<T, R> Backend for T
+where
+    T: FnMut(&mut State, PathBuf, Vec<ParsedModule>) -> R,
+{
+    type Output = R;
+
+    fn build(
+        &mut self,
+        state: &mut State,
+        main: PathBuf,
+        parsed: Vec<ParsedModule>,
+    ) -> Result<Self::Output> {
+        let val = self(state, main, parsed);
+        if state.has_errors() {
+            Err(Error::Invalid)
+        } else {
+            Ok(val)
+        }
+    }
+}
+
+pub struct Compiler<B: Backend, K: CompilerKind = File> {
+    backend: B,
     state: State,
     _phantom: PhantomData<K>,
 }
 
-impl<'gc, K: CompilerKind> Compiler<'gc, K> {
+impl<B: Backend, K: CompilerKind> Compiler<B, K> {
     pub fn print_diagnostics(&self) -> std::fmt::Result {
         let mut buffer = String::new();
 
@@ -62,80 +94,17 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
         &mut self,
         main: PathBuf,
         parsed: Vec<ParsedModule>,
-    ) -> Result<Exe> {
-        let compiled = self.compile_modules(parsed)?;
-        Ok(self.build_exe(main, compiled))
-    }
-
-    fn compile_modules(
-        &mut self,
-        parsed: Vec<ParsedModule>,
-    ) -> Result<Vec<CompiledModule>> {
-        let name = self.gc.intern(" __MODULE__ ");
-        let compiled = parsed
-            .into_iter()
-            .map(|m| {
-                let main_path = &m.path;
-                let path = self.gc.intern(m.path.to_string_lossy());
-                let code =
-                    Lowerer::new(&mut self.gc, &mut self.state, name, path)
-                        .lower(&m.ast);
-
-                let imports = self.compile_imports(main_path, m.ast.imports);
-                CompiledModule {
-                    // TODO: This should be caught in analysis
-                    export: m.ast.exports.into_iter().next(),
-                    imports,
-                    code,
-                    path,
-                }
-            })
-            .collect();
-
-        if self.state.has_errors() {
-            Err(Error::Invalid)
-        } else {
-            Ok(compiled)
-        }
-    }
-
-    fn compile_imports(
-        &mut self,
-        main: &Path,
-        imports: Vec<Import>,
-    ) -> Vec<CompiledImport> {
-        let parent = main.parent().expect("Can't run a directory :D");
-        imports
-            .into_iter()
-            .map(|i| {
-                let path = i.file.text.as_ref().map_or("", |t| &t.inner);
-                let path = parent.join(path);
-                let path = path.canonicalize().unwrap_or(path);
-                let path = self.gc.intern(path.to_string_lossy());
-                CompiledImport { raw: i, path }
-            })
-            .collect()
-    }
-
-    fn build_exe(
-        &mut self,
-        main: PathBuf,
-        compiled: Vec<CompiledModule>,
-    ) -> Exe {
-        let main = self.gc.intern(main.to_string_lossy());
-        Exe {
-            main,
-            modules: compiled.into_iter().map(|cm| (cm.path, cm)).collect(),
-        }
+    ) -> Result<B::Output> {
+        self.backend.build(&mut self.state, main, parsed)
     }
 }
 
-impl<'gc> Compiler<'gc, File> {
-    pub fn new(gc: &'gc mut LambGc) -> Self {
-        Self { gc, state: State::new(), _phantom: PhantomData }
+impl<B: Backend> Compiler<B, File> {
+    pub fn new(backend: B) -> Self {
+        Self { backend, state: State::new(), _phantom: PhantomData }
     }
 
-    pub fn build(&mut self, path: PathBuf) -> Result<Exe> {
+    pub fn build(&mut self, path: PathBuf) -> Result<B::Output> {
         let main = path.canonicalize().unwrap_or(path);
         let parsed =
             ModuleParser::new(&mut self.state).parse(vec![main.clone()]);
@@ -144,12 +113,12 @@ impl<'gc> Compiler<'gc, File> {
     }
 }
 
-impl<'gc> Compiler<'gc, Repl> {
-    pub fn new_for_repl(gc: &'gc mut LambGc) -> Self {
-        Self { gc, state: State::new(), _phantom: PhantomData }
+impl<B: Backend> Compiler<B, Repl> {
+    pub fn new_for_repl(backend: B) -> Self {
+        Self { backend, state: State::new(), _phantom: PhantomData }
     }
 
-    pub fn build(&mut self, source: String) -> Result<Exe> {
+    pub fn build(&mut self, source: String) -> Result<B::Output> {
         let parsed = self.parse_modules_from_source(source.as_bytes())?;
         self.pipeline(REPL.into(), parsed)
     }
