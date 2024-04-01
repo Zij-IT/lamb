@@ -39,7 +39,8 @@ pub enum Error {
 }
 
 pub struct Compiler<'gc, K: CompilerKind = File> {
-    state: State<'gc>,
+    gc: &'gc mut LambGc,
+    state: State,
     _phantom: PhantomData<K>,
 }
 
@@ -70,14 +71,15 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
         &mut self,
         parsed: Vec<ParsedModule>,
     ) -> Result<Vec<CompiledModule>> {
-        let name = self.state.gc.intern(" __MODULE__ ");
+        let name = self.gc.intern(" __MODULE__ ");
         let compiled = parsed
             .into_iter()
             .map(|m| {
                 let main_path = &m.path;
-                let path = self.state.gc.intern(m.path.to_string_lossy());
+                let path = self.gc.intern(m.path.to_string_lossy());
                 let code =
-                    Lowerer::new(&mut self.state, name, path).lower(&m.ast);
+                    Lowerer::new(&mut self.gc, &mut self.state, name, path)
+                        .lower(&m.ast);
 
                 let imports = self.compile_imports(main_path, m.ast.imports);
                 CompiledModule {
@@ -109,7 +111,7 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
                 let path = i.file.text.as_ref().map_or("", |t| &t.inner);
                 let path = parent.join(path);
                 let path = path.canonicalize().unwrap_or(path);
-                let path = self.state.gc.intern(path.to_string_lossy());
+                let path = self.gc.intern(path.to_string_lossy());
                 CompiledImport { raw: i, path }
             })
             .collect()
@@ -120,7 +122,7 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
         main: PathBuf,
         compiled: Vec<CompiledModule>,
     ) -> Exe {
-        let main = self.state.gc.intern(main.to_string_lossy());
+        let main = self.gc.intern(main.to_string_lossy());
         Exe {
             main,
             modules: compiled.into_iter().map(|cm| (cm.path, cm)).collect(),
@@ -130,7 +132,7 @@ impl<'gc, K: CompilerKind> Compiler<'gc, K> {
 
 impl<'gc> Compiler<'gc, File> {
     pub fn new(gc: &'gc mut LambGc) -> Self {
-        Self { state: State::new(gc), _phantom: PhantomData }
+        Self { gc, state: State::new(), _phantom: PhantomData }
     }
 
     pub fn build(&mut self, path: PathBuf) -> Result<Exe> {
@@ -144,7 +146,7 @@ impl<'gc> Compiler<'gc, File> {
 
 impl<'gc> Compiler<'gc, Repl> {
     pub fn new_for_repl(gc: &'gc mut LambGc) -> Self {
-        Self { state: State::new(gc), _phantom: PhantomData }
+        Self { gc, state: State::new(), _phantom: PhantomData }
     }
 
     pub fn build(&mut self, source: String) -> Result<Exe> {

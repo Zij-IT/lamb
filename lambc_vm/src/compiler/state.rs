@@ -1,22 +1,19 @@
 use miette::{Diagnostic, Report, Severity};
 
-use crate::gc::LambGc;
-
-pub struct State<'gc> {
-    pub gc: &'gc mut LambGc,
+pub struct State {
     pub diagnostics: Vec<miette::Report>,
     has_errors: bool,
 }
 
-impl<'gc> std::fmt::Debug for State<'gc> {
+impl std::fmt::Debug for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("State").finish_non_exhaustive()
     }
 }
 
-impl<'gc> State<'gc> {
-    pub fn new(gc: &'gc mut LambGc) -> Self {
-        Self { gc, diagnostics: vec![], has_errors: false }
+impl State {
+    pub fn new() -> Self {
+        Self { diagnostics: vec![], has_errors: false }
     }
 
     pub fn add_error<T>(&mut self, err: T, source: Option<String>)

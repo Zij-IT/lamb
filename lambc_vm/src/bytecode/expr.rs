@@ -88,7 +88,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
 
     pub fn lower_str_literal(&mut self, lit: &StrLit) {
         let inner = lit.text.as_ref().map_or("", |l| l.inner.as_str());
-        let inner = self.state.gc.intern(inner);
+        let inner = self.gc.intern(inner);
         self.write_const_op(Value::String(inner))
     }
 
@@ -219,7 +219,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         Ident { raw, .. }: &'ast Ident,
         def: &'ast FnDef,
     ) {
-        let ident = self.state.gc.intern(raw);
+        let ident = self.gc.intern(raw);
         self.info.func.chunk.write_val(Value::String(ident));
         let idx = self.info.func.chunk.constants.len() - 1;
 
@@ -239,7 +239,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     }
 
     fn lower_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
-        let ident = self.state.gc.intern("Anon Func");
+        let ident = self.gc.intern("Anon Func");
         let mut composition = FunctionInfo::new(ident, self.module);
         composition.locals[0].depth = 1;
 
@@ -301,17 +301,15 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
             &[Ident { raw: ref left, .. }, Ident { raw: ref right, .. }],
         ) = iter.next()
         {
-            let left = Value::ModulePath(self.state.gc.intern(left));
-            let right = Value::ModulePath(self.state.gc.intern(right));
+            let left = Value::ModulePath(self.gc.intern(left));
+            let right = Value::ModulePath(self.gc.intern(right));
             self.write_const_op(left);
             self.write_op(Op::Access);
             self.write_const_op(right);
         }
 
         let path = match iter.remainder() {
-            &[Ident { ref raw, .. }] => {
-                Value::ModulePath(self.state.gc.intern(raw))
-            }
+            &[Ident { ref raw, .. }] => Value::ModulePath(self.gc.intern(raw)),
             _ => return,
         };
 
@@ -383,7 +381,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
 
         self.lower_expr(scrutinee);
 
-        self.state.gc.intern(SCRUTINEE);
+        self.gc.intern(SCRUTINEE);
         self.info.add_local(SCRUTINEE.to_string());
 
         let after_case = arms
@@ -412,14 +410,14 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         let binding_count = bindings.len();
 
         for Ident { raw, .. } in bindings {
-            self.state.gc.intern(raw);
+            self.gc.intern(raw);
 
             self.write_const_op(Value::Nil);
             self.info
                 .func
                 .chunk
                 .constants
-                .push(Value::String(self.state.gc.alloc(Str::new(raw))));
+                .push(Value::String(self.gc.alloc(Str::new(raw))));
 
             self.info.add_local(raw.clone());
         }
@@ -500,7 +498,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     fn lower_func(&mut self, f: &FnDef, name: String) {
         let FnDef { args, body, recursive, .. } = f;
 
-        let func_name = self.state.gc.intern(name.clone());
+        let func_name = self.gc.intern(name.clone());
         let mut func_comp = FunctionInfo::new(func_name, self.module);
         if *recursive {
             func_comp.locals[0].name = name;
@@ -528,7 +526,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         } else if let Some(slot) = self.info.upvalue_idx(raw) {
             self.write_op(Op::GetUpvalue(slot.try_into().unwrap()))
         } else {
-            let str = self.state.gc.intern(raw);
+            let str = self.gc.intern(raw);
             self.info.func.chunk.constants.push(Value::String(str));
             let idx = self.info.func.chunk.constants.len() - 1;
             self.write_op(Op::GetGlobal(idx.try_into().unwrap()))

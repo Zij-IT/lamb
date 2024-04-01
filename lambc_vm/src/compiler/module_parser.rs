@@ -34,12 +34,12 @@ pub struct ParsedModule {
 }
 
 #[derive(Debug)]
-pub struct ModuleParser<'b, 'state> {
-    state: &'b mut State<'state>,
+pub struct ModuleParser<'b> {
+    state: &'b mut State,
 }
 
-impl<'b, 'state> ModuleParser<'b, 'state> {
-    pub fn new(state: &'b mut State<'state>) -> Self {
+impl<'b> ModuleParser<'b> {
+    pub fn new(state: &'b mut State) -> Self {
         Self { state }
     }
 

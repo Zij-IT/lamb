@@ -12,6 +12,7 @@ use crate::{
     compiler::State,
     gc::GcRef,
     value::{Closure, Function, Str, Value},
+    LambGc,
 };
 
 #[derive(thiserror::Error, miette::Diagnostic, Debug)]
@@ -52,21 +53,29 @@ pub enum Error {
 // Safety: 1, despite its appearence, is not equal to zero
 const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
 
-#[derive(Debug)]
 pub struct Lowerer<'a, 'b> {
-    state: &'a mut State<'b>,
+    gc: &'b mut LambGc,
+    state: &'a mut State,
     module: GcRef<Str>,
     info: FunctionInfo,
     errs: Vec<Error>,
 }
 
+impl<'a, 'b> std::fmt::Debug for Lowerer<'a, 'b> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Lowerer").finish_non_exhaustive()
+    }
+}
+
 impl<'a, 'b> Lowerer<'a, 'b> {
     pub fn new(
-        state: &'a mut State<'b>,
+        gc: &'b mut LambGc,
+        state: &'a mut State,
         name: GcRef<Str>,
         module: GcRef<Str>,
     ) -> Self {
         Self {
+            gc,
             state,
             module,
             info: FunctionInfo::new(name, module),
@@ -90,11 +99,11 @@ impl<'a, 'b> Lowerer<'a, 'b> {
     pub fn finish(mut self) -> GcRef<Closure> {
         self.write_op(Op::Return);
         let closure = Closure {
-            func: self.state.gc.alloc(self.info.func),
+            func: self.gc.alloc(self.info.func),
             upvalues: Vec::new(),
         };
 
-        self.state.gc.alloc(closure)
+        self.gc.alloc(closure)
     }
 
     fn block(&self) -> &Block {
@@ -139,7 +148,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
     }
 
     fn add_arg(&mut self, Ident { raw, .. }: &Ident) {
-        let rf = self.state.gc.intern(raw);
+        let rf = self.gc.intern(raw);
         self.info.func.chunk.constants.push(Value::String(rf));
         self.info.add_local(raw.clone());
         self.info.func.arity += 1;
@@ -151,7 +160,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
             .func
             .chunk
             .constants
-            .push(Value::Function(self.state.gc.alloc(func)));
+            .push(Value::Function(self.gc.alloc(func)));
 
         let idx = self.info.func.chunk.constants.len() - 1;
         self.write_op(Op::Closure(idx.try_into().unwrap()))
@@ -251,7 +260,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
 
                 self.lower_expr(value);
 
-                let ident_obj = self.state.gc.intern(raw);
+                let ident_obj = self.gc.intern(raw);
                 self.info.func.chunk.write_val(Value::String(ident_obj));
                 if self.block().depth == 0 {
                     let idx = self.info.func.chunk.constants.len() - 1;

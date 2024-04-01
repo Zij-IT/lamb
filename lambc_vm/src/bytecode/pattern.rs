@@ -57,7 +57,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
                 let pat = &pat.bound;
                 // The ident must have been declared by `lower_case`.
                 let slot = self.info.local_slot(i.as_str()).unwrap();
-                let _ = self.state.gc.intern(i);
+                let _ = self.gc.intern(i);
                 self.write_op(Op::SetSlot(slot.try_into().unwrap()));
 
                 if let Some(pat) = pat.as_deref() {
