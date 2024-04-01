@@ -4,12 +4,13 @@ mod pattern;
 
 use std::num::NonZeroU16;
 
-use lambc_compiler::State;
+use lambc_compiler::{ParsedModule, State};
 use lambc_parse::{Define, Expr, Ident, Module, Span, Statement};
 
 use self::info::{Block, FunctionInfo};
 use crate::{
     chunk::{Jump, JumpIdx, Op},
+    exe::{CompiledImport, CompiledModule, Exe},
     gc::GcRef,
     value::{Closure, Function, Str, Value},
     LambGc,
@@ -53,18 +54,77 @@ pub enum Error {
 // Safety: 1, despite its appearence, is not equal to zero
 const NZ_ONE_U16: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1) };
 
-pub struct Lowerer<'a, 'b> {
+pub struct Backend<'a> {
+    gc: &'a mut LambGc,
+}
+
+impl<'a> Backend<'a> {
+    pub fn new(gc: &'a mut LambGc) -> Self {
+        Self { gc }
+    }
+}
+
+impl<'a> lambc_compiler::Backend for Backend<'a> {
+    type Output = super::exe::Exe;
+
+    fn build(
+        &mut self,
+        state: &mut State,
+        main: std::path::PathBuf,
+        parsed: Vec<lambc_compiler::ParsedModule>,
+    ) -> lambc_compiler::Result<Self::Output> {
+        let name = self.gc.intern(" __MODULE__ ");
+        let compiled = parsed
+            .into_iter()
+            .map(|m: ParsedModule| {
+                let main_path = &m.path;
+                let path = self.gc.intern(m.path.to_string_lossy());
+                let code = Lowerer::new(&mut self.gc, state, name, path)
+                    .lower(&m.ast);
+
+                let parent =
+                    main_path.parent().expect("Can't run a directory :D");
+
+                let imports = m
+                    .ast
+                    .imports
+                    .into_iter()
+                    .map(|i| {
+                        let path =
+                            i.file.text.as_ref().map_or("", |t| &t.inner);
+                        let path = parent.join(path);
+                        let path = path.canonicalize().unwrap_or(path);
+                        let path = self.gc.intern(path.to_string_lossy());
+                        CompiledImport { raw: i, path }
+                    })
+                    .collect();
+
+                CompiledModule {
+                    // TODO: This should be caught in analysis
+                    export: m.ast.exports.into_iter().next(),
+                    imports,
+                    code,
+                    path,
+                }
+            })
+            .map(|cm| (cm.path, cm))
+            .collect();
+
+        let main = self.gc.intern(main.to_string_lossy());
+        if state.has_errors() {
+            Err(lambc_compiler::Error::Invalid)
+        } else {
+            Ok(Exe { main, modules: compiled })
+        }
+    }
+}
+
+struct Lowerer<'a, 'b> {
     gc: &'b mut LambGc,
     state: &'a mut State,
     module: GcRef<Str>,
     info: FunctionInfo,
     errs: Vec<Error>,
-}
-
-impl<'a, 'b> std::fmt::Debug for Lowerer<'a, 'b> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Lowerer").finish_non_exhaustive()
-    }
 }
 
 impl<'a, 'b> Lowerer<'a, 'b> {
