@@ -5,6 +5,7 @@ members = [
     "lambc",
     "lambc_vm",
     "lambc_parse",
+    "lambc_compiler",
 ]
 
 # Config for 'cargo dist'

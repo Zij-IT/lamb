@@ -2,7 +2,8 @@
 
 use std::error::Error;
 
-use lambc_vm::{vm_backend, Compiler, LambGc};
+use lambc_compiler::Compiler;
+use lambc_vm::{vm_backend, LambGc};
 use repl::Command;
 
 mod cli;

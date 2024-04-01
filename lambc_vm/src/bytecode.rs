@@ -4,12 +4,12 @@ mod pattern;
 
 use std::num::NonZeroU16;
 
+use lambc_compiler::State;
 use lambc_parse::{Define, Expr, Ident, Module, Span, Statement};
 
 use self::info::{Block, FunctionInfo};
 use crate::{
     chunk::{Jump, JumpIdx, Op},
-    compiler::State,
     gc::GcRef,
     value::{Closure, Function, Str, Value},
     LambGc,

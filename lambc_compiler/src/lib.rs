@@ -1,4 +1,3 @@
-mod exe;
 mod module_parser;
 mod state;
 
@@ -11,11 +10,7 @@ use std::{
 use lambc_parse::{Expr, Module, Parser, Statement};
 use module_parser::ModuleParser;
 
-pub use self::{
-    exe::{CompiledImport, CompiledModule, Exe},
-    module_parser::ParsedModule,
-    state::State,
-};
+pub use self::{module_parser::ParsedModule, state::State};
 
 mod sealed {
     pub struct Repl;

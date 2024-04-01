@@ -1,19 +1,20 @@
 mod bytecode;
 mod chunk;
-mod compiler;
+mod exe;
 mod gc;
 mod value;
 mod vm;
 
 use std::path::{Path, PathBuf};
 
-use bytecode::Lowerer;
-use compiler::{
-    Backend, CompiledImport, CompiledModule, Exe, ParsedModule, State,
-};
+use lambc_compiler::{Backend, Compiler, ParsedModule, State};
 
+use self::{
+    bytecode::Lowerer,
+    exe::{CompiledImport, CompiledModule},
+};
 pub use crate::{
-    compiler::Compiler,
+    exe::Exe,
     gc::LambGc,
     vm::{Error, Vm},
 };

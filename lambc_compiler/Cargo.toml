@@ -1,5 +1,5 @@
 [package]
-name = "lambc_vm"
+name = "lambc_compiler"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,5 @@ edition = "2021"
 
 [dependencies]
 lambc_parse = { path = "../lambc_parse" }
-lambc_compiler = { path = "../lambc_compiler" }
 miette = "7.2.0"
-rand = { version = "0.8.5", features = ["std"] }
 thiserror = "1.0.56"

@@ -6,7 +6,7 @@ use lambc_parse::Ident;
 
 use crate::{
     chunk::{Chunk, Op},
-    compiler::{CompiledImport, CompiledModule, Exe},
+    exe::{CompiledImport, CompiledModule, Exe},
     gc::{Allocable, GcRef, LambGc},
     value::{
         Array, Closure, NativeFunction, ResolvedUpvalue, Str,
