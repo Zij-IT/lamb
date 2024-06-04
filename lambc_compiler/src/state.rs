@@ -1,7 +1,14 @@
+mod pathmap;
+
+use std::path::PathBuf;
+
 use miette::{Diagnostic, Report, Severity};
+
+pub use self::pathmap::{PathMap, PathRef};
 
 pub struct State {
     pub diagnostics: Vec<miette::Report>,
+    pathmap: PathMap,
     has_errors: bool,
 }
 
@@ -13,7 +20,15 @@ impl std::fmt::Debug for State {
 
 impl State {
     pub fn new() -> Self {
-        Self { diagnostics: vec![], has_errors: false }
+        Self {
+            diagnostics: vec![],
+            has_errors: false,
+            pathmap: PathMap::new(),
+        }
+    }
+
+    pub fn add_path<P: Into<PathBuf>>(&mut self, path: P) -> PathRef {
+        self.pathmap.insert(path)
     }
 
     pub fn add_error<T>(&mut self, err: T, source: Option<String>)

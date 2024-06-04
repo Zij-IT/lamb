@@ -3,11 +3,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use lambc_parse::Parser;
+use lambc_parse::{
+    Export, Ident, ImportItem, Module, Parser, Span, Statement,
+};
 use miette::Diagnostic;
 use thiserror::Error as ThError;
 
 use super::State;
+use crate::state::PathRef;
 
 #[derive(Debug, Diagnostic, ThError)]
 #[diagnostic()]
@@ -28,9 +31,21 @@ enum Error {
 }
 
 #[derive(Debug)]
+pub struct ParsedImport {
+    pub path: PathRef,
+    pub items: Vec<ImportItem>,
+    pub name: Option<Ident>,
+    pub star: bool,
+    pub span: Span,
+}
+
+#[derive(Debug)]
 pub struct ParsedModule {
-    pub ast: lambc_parse::Module,
-    pub path: PathBuf,
+    pub exports: Vec<Export>,
+    pub imports: Vec<ParsedImport>,
+    pub statements: Vec<Statement>,
+    pub path: PathRef,
+    pub span: Span,
 }
 
 #[derive(Debug)]
@@ -50,32 +65,53 @@ impl<'b> ModuleParser<'b> {
 
         while let Some(path) = pending.pop() {
             if let Some(module) = self.parse_module(path.as_path()) {
-                for import in Self::extract_imports(&module) {
-                    let path = match import {
-                        Ok(path) => path,
-                        Err(err) => {
-                            let source = std::fs::read_to_string(&path).ok();
-                            self.state.add_error(err, source);
-                            continue;
-                        }
-                    };
+                let mut imports = Vec::new();
+                for import in module.imports {
+                    let import_path =
+                        match self.import_path_from(&import, &path) {
+                            Ok(p) => p,
+                            Err(e) => {
+                                self.state.add_error(
+                                    e,
+                                    std::fs::read_to_string(path.clone()).ok(),
+                                );
+                                continue;
+                            }
+                        };
 
-                    if scheduled.contains(&path) {
+                    if scheduled.contains(&import_path) {
                         continue;
                     }
 
-                    scheduled.insert(path.clone());
-                    pending.push(path);
+                    let import = ParsedImport {
+                        path: self.state.add_path(&import_path),
+                        items: import.items,
+                        name: import.name,
+                        star: import.star,
+                        span: import.span,
+                    };
+
+                    scheduled.insert(import_path.clone());
+                    pending.push(import_path);
+                    imports.push(import);
                 }
 
-                modules.push(module);
+                let parsed = ParsedModule {
+                    imports,
+                    exports: module.exports,
+                    statements: module.statements,
+                    path: self.state.add_path(module.path),
+                    span: module.span,
+                };
+
+                modules.push(parsed);
             }
         }
 
         modules
     }
 
-    fn parse_module(&mut self, path: &Path) -> Option<ParsedModule> {
+    fn parse_module(&mut self, path: &Path) -> Option<Module> {
         let input = match std::fs::read(path) {
             Ok(b) => b,
             Err(err) => {
@@ -88,9 +124,7 @@ impl<'b> ModuleParser<'b> {
         };
         let mut parser = Parser::new(&input, path);
         match parser.parse_module() {
-            Ok(module) => {
-                Some(ParsedModule { ast: module, path: path.into() })
-            }
+            Ok(module) => Some(module),
             Err(err) => {
                 let input = match String::from_utf8(input) {
                     Ok(input) => Some(input),
@@ -114,25 +148,30 @@ impl<'b> ModuleParser<'b> {
         }
     }
 
-    fn extract_imports(
-        module: &ParsedModule,
-    ) -> impl Iterator<Item = Result<PathBuf, Error>> + '_ {
-        let parent = module.path.parent().unwrap_or(Path::new(""));
-        module.ast.imports.iter().map(|i| {
-            let file: Option<PathBuf> = i.file.text.as_ref().map(|i| {
-                let path = parent.join(i.inner.as_str());
-                path.canonicalize().unwrap_or(path)
-            });
+    fn import_path_from(
+        &self,
+        import: &lambc_parse::Import,
+        path: &Path,
+    ) -> Result<PathBuf, Error> {
+        let import_path =
+            import.file.text.as_ref().map(|t| Path::new(&*t.inner));
 
-            match file {
-                Some(f) if f.is_file() => Ok(f),
-                // Error because the path is not a file
-                Some(f) => {
-                    Err(Error::ImportNotAFile { path: f, span: i.span })
-                }
-                // Error because the path was empty
-                None => Err(Error::EmptyImport { span: i.span }),
-            }
-        })
+        let import_path = match import_path {
+            Some(import_path) => import_path,
+            _ => return Err(Error::EmptyImport { span: import.span }),
+        };
+
+        let origin = path.parent().unwrap_or(path);
+        let import_path = origin.join(import_path);
+        let import_path = import_path.canonicalize().unwrap_or(import_path);
+
+        if !import_path.is_file() {
+            return Err(Error::ImportNotAFile {
+                path: import_path,
+                span: import.span,
+            });
+        }
+
+        Ok(import_path)
     }
 }
