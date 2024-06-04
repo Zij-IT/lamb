@@ -15,7 +15,7 @@ use crate::{
     vm::module::{Module, ModuleExport},
 };
 
-pub type RawNative = fn(&Vm<'_>, &[Value]) -> Result<Value>;
+pub(crate) type RawNative = fn(&Vm<'_>, &[Value]) -> Result<Value>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(thiserror::Error, Debug)]
@@ -40,11 +40,6 @@ pub enum Error {
 
     #[error("Type Error: Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
-
-    #[error(
-        "Type Error: Values of types {1} and {0} can't be compared with {2}"
-    )]
-    NotComparable(&'static str, &'static str, &'static str),
 
     #[error("Type Error: The binary op {2} can't be used with values of types {1} and {0}")]
     BinaryTypeMismatch(&'static str, &'static str, &'static str),
@@ -71,12 +66,6 @@ pub enum Error {
 
     #[error("Module {0} doesn't export an item named {1}")]
     NoExportViaName(String, String),
-
-    #[error("Syntax Errors in import. File: '{0}'")]
-    SyntaxErrorInImport(String),
-
-    #[error("Syntax Error: {0}")]
-    Syntax(#[from] lambc_parse::Error),
 }
 
 macro_rules! num_bin_op {
@@ -172,10 +161,6 @@ impl<'gc> Vm<'gc> {
 
         let module = &modules[&main];
         self.load_module(module, &modules)
-    }
-
-    pub fn gc_mut(&mut self) -> &mut LambGc {
-        self.gc
     }
 
     fn load_module(

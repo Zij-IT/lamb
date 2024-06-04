@@ -40,7 +40,7 @@ pub struct LambOptions {
     #[arg(short, long, value_enum, default_value_t = OptLevel::None)]
     pub optimization_level: OptLevel,
 
-    pub path: Option<PathBuf>,
+    pub path: PathBuf,
 }
 
 impl LambOptions {
