@@ -18,7 +18,7 @@ use crate::{
 pub(crate) type RawNative = fn(&Vm<'_>, &[Value]) -> Result<Value>;
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(miette::Diagnostic, thiserror::Error, Debug)]
 pub enum Error {
     #[error("No global with the name '{0}'")]
     NoSuchGlobal(String),
@@ -64,7 +64,7 @@ pub enum Error {
     #[error("Attempt to treat a value of type '{0}' as a module.")]
     NotAModule(&'static str),
 
-    #[error("Module {0} doesn't export an item named {1}")]
+    #[error("Module '{1}' doesn't export an item named '{0}'")]
     NoExportViaName(String, String),
 }
 

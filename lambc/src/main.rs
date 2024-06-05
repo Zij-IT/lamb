@@ -1,12 +1,11 @@
 #![warn(clippy::pedantic)]
 
-use std::error::Error;
+use miette::Result;
 
 mod cli;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     human_panic::setup_panic!();
-
     let cli::LambOptions {
         debug_level: _,
         gc_debug_level: _,
