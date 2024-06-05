@@ -24,7 +24,7 @@ impl PathMap {
         self.inner.insert(path.into())
     }
 
-    pub fn resolve(&mut self, pref: PathRef) -> Option<&Path> {
+    pub fn resolve(&self, pref: PathRef) -> Option<&Path> {
         self.inner.get(pref).map(Deref::deref)
     }
 }

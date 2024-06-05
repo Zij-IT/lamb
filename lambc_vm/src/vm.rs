@@ -242,16 +242,12 @@ impl<'gc> Vm<'gc> {
             let item = match item {
                 Some(t) => t,
                 None => {
-                    let path = import
-                        .raw
-                        .file
-                        .text
-                        .as_ref()
-                        .map(|i| i.inner.to_string())
-                        .unwrap_or_default();
+                    let path = self.gc.deref(import.path);
 
-                    return self
-                        .error(Error::NoExportViaName(i.to_string(), path));
+                    return self.error(Error::NoExportViaName(
+                        i.to_string(),
+                        path.0.clone(),
+                    ));
                 }
             };
 

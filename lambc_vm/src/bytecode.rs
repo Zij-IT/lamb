@@ -4,8 +4,8 @@ mod pattern;
 
 use std::num::NonZeroU16;
 
-use lambc_compiler::{ParsedModule, State};
-use lambc_parse::{Define, Expr, Ident, Module, Span, Statement};
+use lambc_compiler::{ParsedModule, PathRef, State};
+use lambc_parse::{Define, Expr, Ident, Span, Statement};
 
 use self::info::{Block, FunctionInfo};
 use crate::{
@@ -70,30 +70,23 @@ impl<'a> lambc_compiler::Backend for Backend<'a> {
     fn build(
         &mut self,
         state: &mut State,
-        main: std::path::PathBuf,
+        main: PathRef,
         parsed: Vec<lambc_compiler::ParsedModule>,
     ) -> lambc_compiler::Result<Self::Output> {
         let name = self.gc.intern(" __MODULE__ ");
         let compiled = parsed
             .into_iter()
             .map(|m: ParsedModule| {
-                let main_path = &m.path;
-                let path = self.gc.intern(m.path.to_string_lossy());
-                let code = Lowerer::new(&mut self.gc, state, name, path)
-                    .lower(&m.ast);
-
-                let parent =
-                    main_path.parent().expect("Can't run a directory :D");
+                let mod_path = state.resolve_path(m.path);
+                let mod_path = self.gc.intern(mod_path.to_string_lossy());
+                let code = Lowerer::new(&mut self.gc, state, name, mod_path)
+                    .lower(&m);
 
                 let imports = m
-                    .ast
                     .imports
                     .into_iter()
                     .map(|i| {
-                        let path =
-                            i.file.text.as_ref().map_or("", |t| &t.inner);
-                        let path = parent.join(path);
-                        let path = path.canonicalize().unwrap_or(path);
+                        let path = state.resolve_path(i.path);
                         let path = self.gc.intern(path.to_string_lossy());
                         CompiledImport { raw: i, path }
                     })
@@ -101,15 +94,16 @@ impl<'a> lambc_compiler::Backend for Backend<'a> {
 
                 CompiledModule {
                     // TODO: This should be caught in analysis
-                    export: m.ast.exports.into_iter().next(),
+                    export: m.exports.into_iter().next(),
                     imports,
                     code,
-                    path,
+                    path: mod_path,
                 }
             })
             .map(|cm| (cm.path, cm))
             .collect();
 
+        let main = state.resolve_path(main);
         let main = self.gc.intern(main.to_string_lossy());
         if state.has_errors() {
             Err(lambc_compiler::Error::Invalid)
@@ -143,11 +137,12 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         }
     }
 
-    pub fn lower(mut self, script: &Module) -> GcRef<Closure> {
+    pub fn lower(mut self, script: &ParsedModule) -> GcRef<Closure> {
         self.lower_script(script);
         let errs = std::mem::take(&mut self.errs);
         if !errs.is_empty() {
-            let source = std::fs::read_to_string(&script.path).ok();
+            let path = self.state.resolve_path(script.path);
+            let source = std::fs::read_to_string(path).ok();
             for err in errs {
                 self.state.add_error(err, source.clone().into());
             }
@@ -296,7 +291,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         self.info.func.chunk.patch_jmp(jmp);
     }
 
-    fn lower_script(&mut self, script: &Module) {
+    fn lower_script(&mut self, script: &ParsedModule) {
         for stat in &script.statements {
             self.lower_stmt(stat);
         }

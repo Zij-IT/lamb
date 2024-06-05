@@ -31,6 +31,10 @@ impl State {
         self.pathmap.insert(path)
     }
 
+    pub fn resolve_path(&self, pr: PathRef) -> &std::path::Path {
+        self.pathmap.resolve(pr).expect("There should be only one pathmap being used throughout compilation")
+    }
+
     pub fn add_error<T>(&mut self, err: T, source: Option<String>)
     where
         T: Diagnostic + Send + Sync + 'static,

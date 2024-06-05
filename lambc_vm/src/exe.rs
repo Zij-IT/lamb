@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use lambc_parse::{Export, Import};
+use lambc_compiler::ParsedImport;
+use lambc_parse::Export;
 
 use crate::{
     gc::GcRef,
@@ -20,6 +21,6 @@ pub struct CompiledModule {
 }
 
 pub struct CompiledImport {
-    pub(crate) raw: Import,
+    pub(crate) raw: ParsedImport,
     pub(crate) path: GcRef<Str>,
 }
