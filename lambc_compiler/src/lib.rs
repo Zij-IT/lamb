@@ -60,8 +60,7 @@ impl<B: Backend> Compiler<B> {
         Self { backend, state: State::new() }
     }
 
-    pub fn build(&mut self, path: PathBuf) -> Result<B::Output> {
-        let main = path.canonicalize().unwrap_or(path);
+    pub fn build(&mut self, main: PathBuf) -> Result<B::Output> {
         let parsed =
             ModuleParser::new(&mut self.state).parse(vec![main.clone()]);
 
