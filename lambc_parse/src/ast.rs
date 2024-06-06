@@ -10,7 +10,7 @@ impl Spanned for Ident {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum I64Base {
     Bin,
     Oct,
@@ -29,73 +29,73 @@ impl I64Base {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct I64Lit {
     pub base: I64Base,
     pub value: String,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct F64Lit {
     pub value: String,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BoolLit {
     pub value: bool,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NilLit {
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StrLit {
     pub text: Option<StrText>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StrText {
     pub inner: String,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CharLit {
     pub text: Option<CharText>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CharText {
     pub inner: String,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Ident {
     pub raw: String,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct List<IdKind> {
     pub values: Vec<Expr<IdKind>>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Group<IdKind> {
     pub value: Expr<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FnDef<IdKind> {
     pub args: Vec<IdKind>,
     pub body: Expr<IdKind>,
@@ -103,27 +103,27 @@ pub struct FnDef<IdKind> {
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Block<IdKind> {
     pub statements: Vec<Statement<IdKind>>,
     pub value: Option<Expr<IdKind>>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IfCond<IdKind> {
     pub cond: Expr<IdKind>,
     pub body: Block<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Else<IdKind> {
     pub body: Block<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct If<IdKind> {
     pub cond: IfCond<IdKind>,
     pub elif: Vec<IfCond<IdKind>>,
@@ -131,21 +131,21 @@ pub struct If<IdKind> {
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Case<IdKind> {
     pub scrutinee: Expr<IdKind>,
     pub arms: Vec<CaseArm<IdKind>>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CaseArm<IdKind> {
     pub pattern: Pattern<IdKind>,
     pub body: Expr<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pattern<IdKind> {
     pub inner: Vec<InnerPattern<IdKind>>,
     pub span: Span,
@@ -157,7 +157,7 @@ impl<IdKind> Pattern<IdKind> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InnerPattern<IdKind> {
     Literal(Box<LiteralPattern>),
     Array(Box<ArrayPattern<IdKind>>),
@@ -190,12 +190,12 @@ impl<IdKind> InnerPattern<IdKind> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RestPattern {
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LiteralPattern {
     String(StrLit),
     Bool(BoolLit),
@@ -216,14 +216,14 @@ impl LiteralPattern {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IdentPattern<IdKind> {
     pub ident: IdKind,
     pub bound: Option<Box<InnerPattern<IdKind>>>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ArrayPattern<IdKind> {
     pub patterns: Vec<Pattern<IdKind>>,
     pub span: Span,
@@ -267,21 +267,21 @@ impl<IdKind> ArrayPattern<IdKind> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Index<IdKind> {
     pub lhs: Expr<IdKind>,
     pub rhs: Expr<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Call<IdKind> {
     pub callee: Expr<IdKind>,
     pub args: Vec<Expr<IdKind>>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Binary<IdKind> {
     pub lhs: Expr<IdKind>,
     pub op: BinaryOp,
@@ -346,7 +346,7 @@ impl BinaryOp {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Unary<IdKind> {
     pub rhs: Expr<IdKind>,
     pub op: UnaryOp,
@@ -381,20 +381,20 @@ impl From<TokKind> for UnaryOp {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Return<IdKind> {
     pub value: Option<Expr<IdKind>>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Path {
     pub head: Ident,
     pub tail: Vec<Ident>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr<IdKind> {
     Ident(IdKind),
     Char(CharLit),
@@ -467,32 +467,32 @@ impl<IdKind: Spanned> Expr<IdKind> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Define<IdKind> {
     pub ident: IdKind,
     pub value: Expr<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExprStatement<IdKind> {
     pub expr: Expr<IdKind>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Statement<IdKind> {
     Define(Define<IdKind>),
     Expr(ExprStatement<IdKind>),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImportItem {
     pub item: Ident,
     pub alias: Option<Ident>,
     pub span: Span,
 }
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Import<PathKind> {
     pub file: PathKind,
     pub name: Option<Ident>,
@@ -501,20 +501,20 @@ pub struct Import<PathKind> {
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExportItem {
     pub item: Ident,
     pub alias: Option<Ident>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Export {
     pub items: Vec<ExportItem>,
     pub span: Span,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Module<IdKind, PathKind> {
     pub exports: Vec<Export>,
     pub imports: Vec<Import<PathKind>>,
