@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{Span, TokKind};
 
 pub trait Spanned {
@@ -495,8 +493,8 @@ pub struct ImportItem {
     pub span: Span,
 }
 #[derive(Debug, Eq, PartialEq)]
-pub struct Import {
-    pub file: StrLit,
+pub struct Import<PathKind> {
+    pub file: PathKind,
     pub name: Option<Ident>,
     pub items: Vec<ImportItem>,
     pub star: bool,
@@ -517,10 +515,10 @@ pub struct Export {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Module<IdKind> {
+pub struct Module<IdKind, PathKind> {
     pub exports: Vec<Export>,
-    pub imports: Vec<Import>,
+    pub imports: Vec<Import<PathKind>>,
     pub statements: Vec<Statement<IdKind>>,
-    pub path: PathBuf,
+    pub path: PathKind,
     pub span: Span,
 }

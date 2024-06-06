@@ -111,7 +111,7 @@ impl<'b> ModuleParser<'b> {
         modules
     }
 
-    fn parse_module(&mut self, path: &Path) -> Option<Module<Ident>> {
+    fn parse_module(&mut self, path: &Path) -> Option<Module<Ident, PathBuf>> {
         let input = match std::fs::read_to_string(path) {
             Ok(b) => b,
             Err(err) => {
@@ -134,16 +134,13 @@ impl<'b> ModuleParser<'b> {
 
     fn import_path_from(
         &self,
-        import: &lambc_parse::Import,
+        import: &lambc_parse::Import<PathBuf>,
         path: &Path,
     ) -> Result<PathBuf, Error> {
-        let import_path =
-            import.file.text.as_ref().map(|t| Path::new(&*t.inner));
-
-        let import_path = match import_path {
-            Some(import_path) => import_path,
-            _ => return Err(Error::EmptyImport { span: import.span }),
-        };
+        let import_path = import.file.as_path();
+        if import_path == Path::new("") {
+            return Err(Error::EmptyImport { span: import.span });
+        }
 
         let origin = path.parent().unwrap_or(path);
         let import_path = origin.join(import_path);

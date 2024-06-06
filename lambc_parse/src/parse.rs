@@ -47,7 +47,7 @@ impl<'a> Parser<'a> {
     ///    module := export? import* stat*
     /// ```
     ///
-    pub fn parse_module(&mut self) -> Result<Module<Ident>> {
+    pub fn parse_module(&mut self) -> Result<Module<Ident, PathBuf>> {
         // Only a singular export is expected, however this is a simple way to catch
         // when the user writes multiple
         let mut exports = Vec::new();
@@ -109,10 +109,13 @@ impl<'a> Parser<'a> {
     ///
     ///     import := 'from' string ('as' ident)? 'import' ('*'? | '(' ident_list ')') ';'
     /// ```
-    fn parse_import(&mut self) -> Result<Import> {
+    fn parse_import(&mut self) -> Result<Import<PathBuf>> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
+        let path =
+            path.text.map_or(PathBuf::from(""), |t| PathBuf::from(t.inner));
+
         let name =
             self.eat_ident("as").map(|_| self.parse_ident()).transpose()?;
 
