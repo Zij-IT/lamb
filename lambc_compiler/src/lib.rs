@@ -86,6 +86,10 @@ impl<B: Backend> Compiler<B> {
         main: PathRef,
         parsed: Vec<ParsedModule>,
     ) -> Result<B::Output> {
+        if self.state.has_errors() {
+            return Err(Error::Invalid);
+        }
+
         self.backend.build(&mut self.state, main, parsed)
     }
 }
