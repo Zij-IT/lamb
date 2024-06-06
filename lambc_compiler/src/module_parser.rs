@@ -43,7 +43,7 @@ pub struct ParsedImport {
 pub struct ParsedModule {
     pub exports: Vec<Export>,
     pub imports: Vec<ParsedImport>,
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Statement<Ident>>,
     pub path: PathRef,
     pub span: Span,
 }
@@ -111,7 +111,7 @@ impl<'b> ModuleParser<'b> {
         modules
     }
 
-    fn parse_module(&mut self, path: &Path) -> Option<Module> {
+    fn parse_module(&mut self, path: &Path) -> Option<Module<Ident>> {
         let input = match std::fs::read_to_string(path) {
             Ok(b) => b,
             Err(err) => {

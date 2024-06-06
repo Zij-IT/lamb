@@ -14,7 +14,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     //     and is *only* to be removed after the case arm is complete.
     //
     //     This means that any sub-patterns must duplicate it.
-    pub fn lower_pattern(&mut self, c: &Pattern) {
+    pub fn lower_pattern(&mut self, c: &Pattern<Ident>) {
         let Pattern { inner, .. } = c;
 
         let offset = self.block().offset;
@@ -42,7 +42,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         }
     }
 
-    fn lower_pattern_top(&mut self, c: &InnerPattern) {
+    fn lower_pattern_top(&mut self, c: &InnerPattern<Ident>) {
         match c {
             InnerPattern::Rest(..) => {
                 self.add_err(Error::InvalidRestPattern { span: c.span() });

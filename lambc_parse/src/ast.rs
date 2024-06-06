@@ -2,6 +2,16 @@ use std::path::PathBuf;
 
 use crate::{Span, TokKind};
 
+pub trait Spanned {
+    fn span(&self) -> Span;
+}
+
+impl Spanned for Ident {
+    fn span(&self) -> Span {
+        self.span
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum I64Base {
     Bin,
@@ -76,90 +86,90 @@ pub struct Ident {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct List {
-    pub values: Vec<Expr>,
+pub struct List<IdKind> {
+    pub values: Vec<Expr<IdKind>>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Group {
-    pub value: Expr,
+pub struct Group<IdKind> {
+    pub value: Expr<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct FnDef {
-    pub args: Vec<Ident>,
-    pub body: Expr,
+pub struct FnDef<IdKind> {
+    pub args: Vec<IdKind>,
+    pub body: Expr<IdKind>,
     pub recursive: bool,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Block {
-    pub statements: Vec<Statement>,
-    pub value: Option<Expr>,
+pub struct Block<IdKind> {
+    pub statements: Vec<Statement<IdKind>>,
+    pub value: Option<Expr<IdKind>>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct IfCond {
-    pub cond: Expr,
-    pub body: Block,
+pub struct IfCond<IdKind> {
+    pub cond: Expr<IdKind>,
+    pub body: Block<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Else {
-    pub body: Block,
+pub struct Else<IdKind> {
+    pub body: Block<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct If {
-    pub cond: IfCond,
-    pub elif: Vec<IfCond>,
-    pub els_: Option<Else>,
+pub struct If<IdKind> {
+    pub cond: IfCond<IdKind>,
+    pub elif: Vec<IfCond<IdKind>>,
+    pub els_: Option<Else<IdKind>>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Case {
-    pub scrutinee: Expr,
-    pub arms: Vec<CaseArm>,
+pub struct Case<IdKind> {
+    pub scrutinee: Expr<IdKind>,
+    pub arms: Vec<CaseArm<IdKind>>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct CaseArm {
-    pub pattern: Pattern,
-    pub body: Expr,
+pub struct CaseArm<IdKind> {
+    pub pattern: Pattern<IdKind>,
+    pub body: Expr<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Pattern {
-    pub inner: Vec<InnerPattern>,
+pub struct Pattern<IdKind> {
+    pub inner: Vec<InnerPattern<IdKind>>,
     pub span: Span,
 }
-impl Pattern {
+impl<IdKind> Pattern<IdKind> {
     // TODO: Get rid of this when introducing hir
-    pub fn binding_names(&self) -> Vec<&Ident> {
+    pub fn binding_names(&self) -> Vec<&IdKind> {
         self.inner.iter().flat_map(InnerPattern::binding_names).collect()
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum InnerPattern {
+pub enum InnerPattern<IdKind> {
     Literal(Box<LiteralPattern>),
-    Array(Box<ArrayPattern>),
-    Ident(Box<IdentPattern>),
+    Array(Box<ArrayPattern<IdKind>>),
+    Ident(Box<IdentPattern<IdKind>>),
     Rest(Box<RestPattern>),
 }
 
-impl InnerPattern {
+impl<IdKind> InnerPattern<IdKind> {
     // TODO: Get rid of this when introducing hir
-    pub fn binding_names(&self) -> Vec<&Ident> {
+    pub fn binding_names(&self) -> Vec<&IdKind> {
         match self {
             InnerPattern::Literal(_) => vec![],
             InnerPattern::Rest(_) => vec![],
@@ -209,19 +219,22 @@ impl LiteralPattern {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct IdentPattern {
-    pub ident: Ident,
-    pub bound: Option<Box<InnerPattern>>,
+pub struct IdentPattern<IdKind> {
+    pub ident: IdKind,
+    pub bound: Option<Box<InnerPattern<IdKind>>>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ArrayPattern {
-    pub patterns: Vec<Pattern>,
+pub struct ArrayPattern<IdKind> {
+    pub patterns: Vec<Pattern<IdKind>>,
     pub span: Span,
 }
-impl ArrayPattern {
-    pub fn as_parts(&self) -> (&[Pattern], &[Pattern], Option<&InnerPattern>) {
+impl<IdKind> ArrayPattern<IdKind> {
+    pub fn as_parts(
+        &self,
+    ) -> (&[Pattern<IdKind>], &[Pattern<IdKind>], Option<&InnerPattern<IdKind>>)
+    {
         let mut splits =
             self.patterns.split(|pat| match pat.inner.as_slice() {
                 [InnerPattern::Rest(..)] => true,
@@ -257,24 +270,24 @@ impl ArrayPattern {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Index {
-    pub lhs: Expr,
-    pub rhs: Expr,
+pub struct Index<IdKind> {
+    pub lhs: Expr<IdKind>,
+    pub rhs: Expr<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Call {
-    pub callee: Expr,
-    pub args: Vec<Expr>,
+pub struct Call<IdKind> {
+    pub callee: Expr<IdKind>,
+    pub args: Vec<Expr<IdKind>>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Binary {
-    pub lhs: Expr,
+pub struct Binary<IdKind> {
+    pub lhs: Expr<IdKind>,
     pub op: BinaryOp,
-    pub rhs: Expr,
+    pub rhs: Expr<IdKind>,
     pub span: Span,
     // Must be a subspan of `span`
     pub op_span: Span,
@@ -336,8 +349,8 @@ impl BinaryOp {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Unary {
-    pub rhs: Expr,
+pub struct Unary<IdKind> {
+    pub rhs: Expr<IdKind>,
     pub op: UnaryOp,
     pub span: Span,
     // Must be a subspan of `span`
@@ -371,8 +384,8 @@ impl From<TokKind> for UnaryOp {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Return {
-    pub value: Option<Expr>,
+pub struct Return<IdKind> {
+    pub value: Option<Expr<IdKind>>,
     pub span: Span,
 }
 
@@ -384,32 +397,32 @@ pub struct Path {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Expr {
-    Ident(Ident),
+pub enum Expr<IdKind> {
+    Ident(IdKind),
     Char(CharLit),
     String(StrLit),
     Bool(BoolLit),
     Nil(NilLit),
     I64(I64Lit),
     F64(F64Lit),
-    List(List),
-    Group(Box<Group>),
-    FnDef(Box<FnDef>),
-    Block(Box<Block>),
-    If(Box<If>),
-    Case(Box<Case>),
-    Index(Box<Index>),
-    Call(Box<Call>),
-    Unary(Box<Unary>),
-    Binary(Box<Binary>),
-    Return(Box<Return>),
+    List(List<IdKind>),
+    Group(Box<Group<IdKind>>),
+    FnDef(Box<FnDef<IdKind>>),
+    Block(Box<Block<IdKind>>),
+    If(Box<If<IdKind>>),
+    Case(Box<Case<IdKind>>),
+    Index(Box<Index<IdKind>>),
+    Call(Box<Call<IdKind>>),
+    Unary(Box<Unary<IdKind>>),
+    Binary(Box<Binary<IdKind>>),
+    Return(Box<Return<IdKind>>),
     Path(Box<Path>),
 }
 
-impl Expr {
+impl<IdKind: Spanned> Expr<IdKind> {
     pub fn span(&self) -> Span {
         match self {
-            Expr::Ident(e) => e.span,
+            Expr::Ident(e) => e.span(),
             Expr::Char(e) => e.span,
             Expr::String(e) => e.span,
             Expr::Bool(e) => e.span,
@@ -457,22 +470,22 @@ impl Expr {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Define {
-    pub ident: Ident,
-    pub value: Expr,
+pub struct Define<IdKind> {
+    pub ident: IdKind,
+    pub value: Expr<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ExprStatement {
-    pub expr: Expr,
+pub struct ExprStatement<IdKind> {
+    pub expr: Expr<IdKind>,
     pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Statement {
-    Define(Define),
-    Expr(ExprStatement),
+pub enum Statement<IdKind> {
+    Define(Define<IdKind>),
+    Expr(ExprStatement<IdKind>),
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -504,10 +517,10 @@ pub struct Export {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Module {
+pub struct Module<IdKind> {
     pub exports: Vec<Export>,
     pub imports: Vec<Import>,
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Statement<IdKind>>,
     pub path: PathBuf,
     pub span: Span,
 }

@@ -16,7 +16,7 @@ const SCRUTINEE: &str = " SCRUTINEE";
 const COMPOSE_ARG: &str = "COMP ARG";
 
 impl<'a, 'b> super::Lowerer<'a, 'b> {
-    pub fn lower_expr(&mut self, value: &Expr) {
+    pub fn lower_expr(&mut self, value: &Expr<Ident>) {
         match value {
             Expr::Unary(un) => {
                 self.lower_expr(&un.rhs);
@@ -192,7 +192,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         self.write_const_op(Value::Nil);
     }
 
-    fn lower_block(&mut self, block: &LambBlock) {
+    fn lower_block(&mut self, block: &LambBlock<Ident>) {
         let LambBlock { value, statements: stats, .. } = block;
         self.start_block();
 
@@ -217,7 +217,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
     pub fn lower_rec_func_def<'ast>(
         &mut self,
         Ident { raw, .. }: &'ast Ident,
-        def: &'ast FnDef,
+        def: &'ast FnDef<Ident>,
     ) {
         let ident = self.gc.intern(raw);
         self.info.func.chunk.write_val(Value::String(ident));
@@ -232,13 +232,21 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         }
     }
 
-    fn lower_apply<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
+    fn lower_apply<'ast>(
+        &mut self,
+        lhs: &'ast Expr<Ident>,
+        rhs: &'ast Expr<Ident>,
+    ) {
         self.lower_expr(lhs);
         self.lower_expr(rhs);
         self.write_op(Op::Call(1));
     }
 
-    fn lower_compose<'ast>(&mut self, lhs: &'ast Expr, rhs: &'ast Expr) {
+    fn lower_compose<'ast>(
+        &mut self,
+        lhs: &'ast Expr<Ident>,
+        rhs: &'ast Expr<Ident>,
+    ) {
         let ident = self.gc.intern("Anon Func");
         let mut composition = FunctionInfo::new(ident, self.module);
         composition.locals[0].depth = 1;
@@ -272,8 +280,8 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
 
     fn lower_sc_op<'ast>(
         &mut self,
-        lhs: &'ast Expr,
-        rhs: &'ast Expr,
+        lhs: &'ast Expr<Ident>,
+        rhs: &'ast Expr<Ident>,
         jump: Jump,
     ) {
         self.lower_expr(lhs);
@@ -317,7 +325,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         self.write_op(Op::Access);
     }
 
-    fn lower_if_expr(&mut self, if_: &If) {
+    fn lower_if_expr(&mut self, if_: &If<Ident>) {
         let If { cond: IfCond { cond, body, .. }, elif, els_, .. } = if_;
 
         // <cond>
@@ -364,8 +372,8 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
 
     fn lower_conditional<'ast>(
         &mut self,
-        cond: &'ast Expr,
-        block: &'ast LambBlock,
+        cond: &'ast Expr<Ident>,
+        block: &'ast LambBlock<Ident>,
     ) -> JumpIdx {
         self.lower_expr(cond);
         let cond_false = self.write_jump(Jump::IfFalse);
@@ -376,7 +384,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         past_else
     }
 
-    fn lower_case(&mut self, c: &Case) {
+    fn lower_case(&mut self, c: &Case<Ident>) {
         let Case { arms, scrutinee, .. } = c;
 
         self.lower_expr(scrutinee);
@@ -400,7 +408,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         assert_eq!(self.info.locals.pop().unwrap().name, SCRUTINEE);
     }
 
-    fn lower_case_arm(&mut self, c: &CaseArm) -> JumpIdx {
+    fn lower_case_arm(&mut self, c: &CaseArm<Ident>) -> JumpIdx {
         let CaseArm { pattern, body, .. } = c;
 
         let offset_before_arm = self.block().offset;
@@ -472,7 +480,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         past_arms
     }
 
-    fn lower_list(&mut self, list: &List) {
+    fn lower_list(&mut self, list: &List<Ident>) {
         for e in list.values.iter() {
             self.lower_expr(e);
         }
@@ -495,7 +503,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         self.write_op(Op::MakeArray(len));
     }
 
-    fn lower_func(&mut self, f: &FnDef, name: String) {
+    fn lower_func(&mut self, f: &FnDef<Ident>, name: String) {
         let FnDef { args, body, recursive, .. } = f;
 
         let func_name = self.gc.intern(name.clone());
@@ -533,7 +541,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         }
     }
 
-    fn lower_return(&mut self, ret: &Return) {
+    fn lower_return(&mut self, ret: &Return<Ident>) {
         if let Some(value) = &ret.value {
             self.lower_expr(value);
             self.write_op(Op::Return);

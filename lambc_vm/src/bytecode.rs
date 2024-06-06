@@ -297,7 +297,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         }
     }
 
-    fn lower_stmt(&mut self, stat: &Statement) {
+    fn lower_stmt(&mut self, stat: &Statement<Ident>) {
         match stat {
             Statement::Define(assign) => {
                 let Define {

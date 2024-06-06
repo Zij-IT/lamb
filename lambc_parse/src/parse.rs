@@ -47,7 +47,7 @@ impl<'a> Parser<'a> {
     ///    module := export? import* stat*
     /// ```
     ///
-    pub fn parse_module(&mut self) -> Result<Module> {
+    pub fn parse_module(&mut self) -> Result<Module<Ident>> {
         // Only a singular export is expected, however this is a simple way to catch
         // when the user writes multiple
         let mut exports = Vec::new();
@@ -97,7 +97,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses an expression with no trailing input.
-    pub fn parse_expr_end(&mut self) -> Result<Expr> {
+    pub fn parse_expr_end(&mut self) -> Result<Expr<Ident>> {
         let expr = self.parse_expr()?;
         self.expect(TokKind::End)?;
         Ok(expr)
@@ -191,7 +191,7 @@ impl<'a> Parser<'a> {
     ///     stmt := ident ':=' expr ';'
     ///           | expr  ';'
     /// ```
-    fn parse_stmt(&mut self) -> Result<Statement> {
+    fn parse_stmt(&mut self) -> Result<Statement<Ident>> {
         if self.peek2().kind == TokKind::Assign {
             self.parse_assign_stmt()
         } else {
@@ -199,7 +199,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expr_stmt(&mut self) -> Result<Statement> {
+    fn parse_expr_stmt(&mut self) -> Result<Statement<Ident>> {
         let expr = self.parse_expr()?;
         let span = expr.span();
         let semi = self.expect(TokKind::Semi)?;
@@ -210,7 +210,7 @@ impl<'a> Parser<'a> {
         }))
     }
 
-    fn parse_assign_stmt(&mut self) -> Result<Statement> {
+    fn parse_assign_stmt(&mut self) -> Result<Statement<Ident>> {
         let ident = self.parse_ident()?;
         self.expect(TokKind::Assign)?;
         let value = self.parse_expr()?;
@@ -230,11 +230,11 @@ impl<'a> Parser<'a> {
     ///          | expr '[' expr ']'
     ///          | expr '(' expr ')'
     /// ```
-    fn parse_expr(&mut self) -> Result<Expr> {
+    fn parse_expr(&mut self) -> Result<Expr<Ident>> {
         self.parse_expr_pratt(0)
     }
 
-    fn parse_expr_pratt(&mut self, min_bp: u8) -> Result<Expr> {
+    fn parse_expr_pratt(&mut self, min_bp: u8) -> Result<Expr<Ident>> {
         let peek = self.peek1();
         let mut lhs = match peek.kind {
             TokKind::Sub | TokKind::Bneg | TokKind::Lnot => {
@@ -298,7 +298,7 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    fn parse_chained_expr(&mut self) -> Result<Expr> {
+    fn parse_chained_expr(&mut self) -> Result<Expr<Ident>> {
         let mut res = self.parse_atom()?;
         while !res.ends_with_block() {
             let peek = self.peek1();
@@ -312,7 +312,7 @@ impl<'a> Parser<'a> {
         Ok(res)
     }
 
-    fn parse_call_expr(&mut self, callee: Expr) -> Result<Expr> {
+    fn parse_call_expr(&mut self, callee: Expr<Ident>) -> Result<Expr<Ident>> {
         let (_, args, end_tok) = self.parse_node_list(
             TokKind::OpenParen,
             TokKind::CloseParen,
@@ -323,7 +323,7 @@ impl<'a> Parser<'a> {
         Ok(Expr::Call(Box::new(Call { callee, args, span })))
     }
 
-    fn parse_index_expr(&mut self, res: Expr) -> Result<Expr> {
+    fn parse_index_expr(&mut self, res: Expr<Ident>) -> Result<Expr<Ident>> {
         self.expect(TokKind::OpenBrack)?;
         let index = self.parse_expr()?;
         let close = self.expect(TokKind::CloseBrack)?;
@@ -344,7 +344,7 @@ impl<'a> Parser<'a> {
     ///           | if
     ///           | literal
     /// ```
-    fn parse_atom(&mut self) -> Result<Expr> {
+    fn parse_atom(&mut self) -> Result<Expr<Ident>> {
         let kind = self.peek1().kind;
         Ok(match kind {
             TokKind::OpenBrace => self.parse_block()?,
@@ -368,11 +368,11 @@ impl<'a> Parser<'a> {
     ///
     ///     block_expr := '{' stat* expr? '}'
     /// ```
-    fn parse_block(&mut self) -> Result<Expr> {
+    fn parse_block(&mut self) -> Result<Expr<Ident>> {
         Ok(Expr::Block(Box::new(self.parse_raw_block()?)))
     }
 
-    fn parse_raw_block(&mut self) -> Result<Block> {
+    fn parse_raw_block(&mut self) -> Result<Block<Ident>> {
         let open = self.expect(TokKind::OpenBrace)?;
         let mut stmts = Vec::new();
         let (value, close) = loop {
@@ -416,7 +416,7 @@ impl<'a> Parser<'a> {
     ///     list_expr := '[' expr (',' expr )* ','? ']'
     ///                | '[' ']'
     /// ```
-    fn parse_list(&mut self) -> Result<Expr> {
+    fn parse_list(&mut self) -> Result<Expr<Ident>> {
         let (tok, values, end_tok) = self.parse_node_list(
             TokKind::OpenBrack,
             TokKind::CloseBrack,
@@ -435,7 +435,7 @@ impl<'a> Parser<'a> {
     ///
     ///     grouped_expr := '(' expr ')'
     /// ```
-    fn parse_group(&mut self) -> Result<Expr> {
+    fn parse_group(&mut self) -> Result<Expr<Ident>> {
         let tok = self.expect(TokKind::OpenParen)?;
         let value = self.parse_expr()?;
         let next = self.expect(TokKind::CloseParen)?;
@@ -454,7 +454,7 @@ impl<'a> Parser<'a> {
     ///
     ///     arg_list := ident (',' ident )* ','?
     /// ```
-    fn parse_fn_def(&mut self) -> Result<Expr> {
+    fn parse_fn_def(&mut self) -> Result<Expr<Ident>> {
         let tok = self.eat(TokKind::Rec).unwrap_or(self.expect(TokKind::Fn)?);
         let (_, args, _) = self.parse_node_list(
             TokKind::OpenParen,
@@ -475,7 +475,7 @@ impl<'a> Parser<'a> {
         })))
     }
 
-    fn parse_if(&mut self) -> Result<Expr> {
+    fn parse_if(&mut self) -> Result<Expr<Ident>> {
         let start = self.expect(TokKind::If)?;
         let cond = self.parse_expr()?;
         let body = self.parse_raw_block()?;
@@ -507,7 +507,7 @@ impl<'a> Parser<'a> {
         Ok(Expr::If(Box::new(If { cond: if_, elif: elifs, els_, span })))
     }
 
-    fn parse_case(&mut self) -> Result<Expr> {
+    fn parse_case(&mut self) -> Result<Expr<Ident>> {
         let case = self.expect(TokKind::Case)?;
         let scrutinee = self.parse_expr()?;
         self.expect(TokKind::OpenBrace)?;
@@ -525,7 +525,7 @@ impl<'a> Parser<'a> {
         })))
     }
 
-    fn parse_return(&mut self) -> Result<Expr> {
+    fn parse_return(&mut self) -> Result<Expr<Ident>> {
         let ret = self.expect(TokKind::Return)?;
         let peek = self.peek1();
         let (span, value) = match peek.kind {
@@ -553,7 +553,7 @@ impl<'a> Parser<'a> {
     /// case_arm := pattern '->' block_expr
     ///           | pattern '->' expr ','
     /// ```
-    fn parse_case_arm(&mut self) -> Result<CaseArm> {
+    fn parse_case_arm(&mut self) -> Result<CaseArm<Ident>> {
         let pattern = self.parse_pattern()?;
         self.expect(TokKind::Arrow)?;
         let value = self.parse_expr()?;
@@ -572,7 +572,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_pattern(&mut self) -> Result<Pattern> {
+    fn parse_pattern(&mut self) -> Result<Pattern<Ident>> {
         let first = self.parse_inner_pattern()?;
         let first_span = first.span();
         let mut last_span = first_span;
@@ -590,7 +590,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_inner_pattern(&mut self) -> Result<InnerPattern> {
+    fn parse_inner_pattern(&mut self) -> Result<InnerPattern<Ident>> {
         let peek1 = self.peek1();
         match peek1.kind {
             TokKind::OpenBrack => self.parse_array_pattern(),
@@ -600,7 +600,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_array_pattern(&mut self) -> Result<InnerPattern> {
+    fn parse_array_pattern(&mut self) -> Result<InnerPattern<Ident>> {
         let (start, patterns, end) = self.parse_node_list(
             TokKind::OpenBrack,
             TokKind::CloseBrack,
@@ -613,12 +613,12 @@ impl<'a> Parser<'a> {
         })))
     }
 
-    fn parse_rest_pattern(&mut self) -> Result<InnerPattern> {
+    fn parse_rest_pattern(&mut self) -> Result<InnerPattern<Ident>> {
         let span = self.expect(TokKind::DotDot)?.span;
         Ok(InnerPattern::Rest(Box::new(RestPattern { span })))
     }
 
-    fn parse_ident_pattern(&mut self) -> Result<InnerPattern> {
+    fn parse_ident_pattern(&mut self) -> Result<InnerPattern<Ident>> {
         let ident = self.parse_ident()?;
         let (bound, span) = if self.eat(TokKind::Bind).is_some() {
             let bound = self.parse_inner_pattern()?;
@@ -632,7 +632,7 @@ impl<'a> Parser<'a> {
         Ok(InnerPattern::Ident(Box::new(IdentPattern { ident, bound, span })))
     }
 
-    fn parse_literal_pattern(&mut self) -> Result<InnerPattern> {
+    fn parse_literal_pattern(&mut self) -> Result<InnerPattern<Ident>> {
         let tok = self.peek1();
         let lit = match tok.kind {
             TokKind::Nil => LiteralPattern::Nil(self.parse_nil()?),
@@ -674,7 +674,7 @@ impl<'a> Parser<'a> {
     ///          | char
     ///          | ident
     /// ```
-    fn parse_literal(&mut self) -> Result<Expr> {
+    fn parse_literal(&mut self) -> Result<Expr<Ident>> {
         let tok = self.peek1();
         Ok(match tok.kind {
             TokKind::Ident => Expr::Ident(self.parse_ident()?),
@@ -771,7 +771,7 @@ impl<'a> Parser<'a> {
         Ok(Ident { raw: tok.slice.into(), span: tok.span })
     }
 
-    fn parse_path(&mut self) -> Result<Expr> {
+    fn parse_path(&mut self) -> Result<Expr<Ident>> {
         let head = self.parse_ident()?;
         let mut tail = Vec::new();
         self.expect(TokKind::PathSep)?;
