@@ -3,9 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use lambc_parse::{
-    Export, Ident, ImportItem, Module, Parser, Span, Statement,
-};
+use lambc_parse::{Ident, Import, Module, Parser};
 use miette::Diagnostic;
 use thiserror::Error as ThError;
 
@@ -31,24 +29,6 @@ enum Error {
 }
 
 #[derive(Debug)]
-pub struct ParsedImport {
-    pub path: PathRef,
-    pub items: Vec<ImportItem>,
-    pub name: Option<Ident>,
-    pub star: bool,
-    pub span: Span,
-}
-
-#[derive(Debug)]
-pub struct ParsedModule {
-    pub exports: Vec<Export>,
-    pub imports: Vec<ParsedImport>,
-    pub statements: Vec<Statement<Ident>>,
-    pub path: PathRef,
-    pub span: Span,
-}
-
-#[derive(Debug)]
 pub struct ModuleParser<'b> {
     state: &'b mut State,
 }
@@ -58,7 +38,10 @@ impl<'b> ModuleParser<'b> {
         Self { state }
     }
 
-    pub fn parse(&mut self, initial: Vec<PathBuf>) -> Vec<ParsedModule> {
+    pub fn parse(
+        &mut self,
+        initial: Vec<PathBuf>,
+    ) -> Vec<Module<Ident, PathRef>> {
         let mut scheduled = HashSet::<PathBuf>::from_iter(initial.clone());
         let mut pending = initial;
         let mut modules = vec![];
@@ -83,8 +66,8 @@ impl<'b> ModuleParser<'b> {
                         continue;
                     }
 
-                    let import = ParsedImport {
-                        path: self.state.add_path(&import_path),
+                    let import = Import {
+                        file: self.state.add_path(&import_path),
                         items: import.items,
                         name: import.name,
                         star: import.star,
@@ -96,7 +79,7 @@ impl<'b> ModuleParser<'b> {
                     imports.push(import);
                 }
 
-                let parsed = ParsedModule {
+                let parsed = Module {
                     imports,
                     exports: module.exports,
                     statements: module.statements,

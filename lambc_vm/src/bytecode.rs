@@ -4,8 +4,8 @@ mod pattern;
 
 use std::num::NonZeroU16;
 
-use lambc_compiler::{ParsedModule, PathRef, State};
-use lambc_parse::{Define, Expr, Ident, Span, Statement};
+use lambc_compiler::{PathRef, State};
+use lambc_parse::{Define, Expr, Ident, Module, Span, Statement};
 
 use self::info::{Block, FunctionInfo};
 use crate::{
@@ -71,12 +71,12 @@ impl<'a> lambc_compiler::Backend for Backend<'a> {
         &mut self,
         state: &mut State,
         main: PathRef,
-        parsed: Vec<lambc_compiler::ParsedModule>,
+        parsed: Vec<Module<Ident, PathRef>>,
     ) -> lambc_compiler::Result<Self::Output> {
         let name = self.gc.intern(" __MODULE__ ");
         let compiled = parsed
             .into_iter()
-            .map(|m: ParsedModule| {
+            .map(|m: Module<_, _>| {
                 let mod_path = state.resolve_path(m.path);
                 let mod_path = self.gc.intern(mod_path.to_string_lossy());
                 let code = Lowerer::new(&mut self.gc, state, name, mod_path)
@@ -86,7 +86,7 @@ impl<'a> lambc_compiler::Backend for Backend<'a> {
                     .imports
                     .into_iter()
                     .map(|i| {
-                        let path = state.resolve_path(i.path);
+                        let path = state.resolve_path(i.file);
                         let path = self.gc.intern(path.to_string_lossy());
                         CompiledImport { raw: i, path }
                     })
@@ -137,7 +137,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         }
     }
 
-    pub fn lower(mut self, script: &ParsedModule) -> GcRef<Closure> {
+    pub fn lower(mut self, script: &Module<Ident, PathRef>) -> GcRef<Closure> {
         self.lower_script(script);
         let errs = std::mem::take(&mut self.errs);
         if !errs.is_empty() {
@@ -291,7 +291,7 @@ impl<'a, 'b> Lowerer<'a, 'b> {
         self.info.func.chunk.patch_jmp(jmp);
     }
 
-    fn lower_script(&mut self, script: &ParsedModule) {
+    fn lower_script(&mut self, script: &Module<Ident, PathRef>) {
         for stat in &script.statements {
             self.lower_stmt(stat);
         }

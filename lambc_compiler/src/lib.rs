@@ -3,12 +3,10 @@ mod state;
 
 use std::path::PathBuf;
 
+use lambc_parse::{Ident, Module};
 use module_parser::ModuleParser;
 
-pub use self::{
-    module_parser::{ParsedImport, ParsedModule},
-    state::{PathRef, State},
-};
+pub use self::state::{PathRef, State};
 
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -25,7 +23,7 @@ pub trait Backend {
         &mut self,
         state: &mut State,
         main: PathRef,
-        parsed: Vec<ParsedModule>,
+        parsed: Vec<Module<Ident, PathRef>>,
     ) -> Result<Self::Output>;
 }
 
@@ -54,7 +52,7 @@ impl<B: Backend> Compiler<B> {
     fn pipeline(
         &mut self,
         main: PathRef,
-        parsed: Vec<ParsedModule>,
+        parsed: Vec<Module<Ident, PathRef>>,
     ) -> Result<B::Output> {
         if self.state.has_errors() {
             return Err(Error::Invalid);
