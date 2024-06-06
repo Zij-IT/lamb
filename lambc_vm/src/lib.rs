@@ -5,7 +5,7 @@ mod gc;
 mod value;
 mod vm;
 
-use std::path::Path;
+use std::{io::Write, path::Path};
 
 use lambc_compiler::Compiler;
 
@@ -20,8 +20,13 @@ pub fn run_script<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     let mut compiler = Compiler::new(Backend::new(&mut gc));
 
     let Ok(exe) = compiler.build(path.as_ref().to_path_buf()) else {
-        _ = compiler.print_diagnostics();
-        return Ok(());
+        let mut buffer = String::new();
+        let handler = miette::GraphicalReportHandler::new();
+        for diagnostic in compiler.diagnostics() {
+            _ = handler.render_report(&mut buffer, diagnostic.as_ref());
+        }
+
+        return Ok(std::io::stderr().write_all(buffer.as_bytes())?);
     };
 
     drop(compiler);

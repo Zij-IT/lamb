@@ -1,7 +1,7 @@
 mod module_parser;
 mod state;
 
-use std::{io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 use module_parser::ModuleParser;
 
@@ -68,17 +68,8 @@ impl<B: Backend> Compiler<B> {
         self.pipeline(main, parsed)
     }
 
-    pub fn print_diagnostics(&self) -> std::fmt::Result {
-        let mut buffer = String::new();
-
-        let handler = miette::GraphicalReportHandler::new();
-        for diagnostic in &self.state.diagnostics {
-            handler.render_report(&mut buffer, diagnostic.as_ref())?;
-        }
-
-        // There's not really a lot to do here if for whatever reason
-        _ = std::io::stderr().write_all(buffer.as_bytes());
-        Ok(())
+    pub fn diagnostics(&self) -> &[miette::Report] {
+        &self.state.diagnostics
     }
 
     fn pipeline(
