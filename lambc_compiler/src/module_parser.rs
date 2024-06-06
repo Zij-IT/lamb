@@ -112,7 +112,7 @@ impl<'b> ModuleParser<'b> {
     }
 
     fn parse_module(&mut self, path: &Path) -> Option<Module> {
-        let input = match std::fs::read(path) {
+        let input = match std::fs::read_to_string(path) {
             Ok(b) => b,
             Err(err) => {
                 self.state.add_error(
@@ -122,27 +122,11 @@ impl<'b> ModuleParser<'b> {
                 return None;
             }
         };
-        let mut parser = Parser::new(&input, path);
+        let mut parser = Parser::new(input.as_bytes(), path);
         match parser.parse_module() {
             Ok(module) => Some(module),
             Err(err) => {
-                let input = match String::from_utf8(input) {
-                    Ok(input) => Some(input),
-                    Err(..) => {
-                        // Hit em with the good old 1-2 punch
-                        self.state.add_error(
-                            miette::diagnostic!(
-                                help = "Ensure your input is utf-8",
-                                "The file '{}' is invalid utf-8",
-                                path.display()
-                            ),
-                            None,
-                        );
-                        None
-                    }
-                };
-
-                self.state.add_error(err, input);
+                self.state.add_error(err, input.into());
                 None
             }
         }

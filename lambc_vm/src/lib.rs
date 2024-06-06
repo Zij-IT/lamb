@@ -29,7 +29,6 @@ pub fn run_script<P: AsRef<Path>>(path: P) -> Result<(), Error> {
         return Ok(std::io::stderr().write_all(buffer.as_bytes())?);
     };
 
-    drop(compiler);
     let mut vm = Vm::new(&mut gc);
     vm.load_exe(exe)?;
     vm.run()

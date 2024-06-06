@@ -29,27 +29,6 @@ pub trait Backend {
     ) -> Result<Self::Output>;
 }
 
-impl<T, R> Backend for T
-where
-    T: FnMut(&mut State, PathRef, Vec<ParsedModule>) -> R,
-{
-    type Output = R;
-
-    fn build(
-        &mut self,
-        state: &mut State,
-        main: PathRef,
-        parsed: Vec<ParsedModule>,
-    ) -> Result<Self::Output> {
-        let val = self(state, main, parsed);
-        if state.has_errors() {
-            Err(Error::Invalid)
-        } else {
-            Ok(val)
-        }
-    }
-}
-
 pub struct Compiler<B: Backend> {
     backend: B,
     state: State,
