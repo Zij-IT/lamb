@@ -206,6 +206,7 @@ impl<'a> Parser<'a> {
     ///     stmt := ident ':=' expr ';'
     ///           | expr  ';'
     /// ```
+    #[cfg(test)]
     fn parse_stmt(&mut self) -> Result<Statement<Ident>> {
         if self.peek1().kind == TokKind::Let {
             self.parse_assign_stmt()
@@ -214,6 +215,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    #[cfg(test)]
     fn parse_expr_stmt(&mut self) -> Result<Statement<Ident>> {
         let expr = self.parse_expr()?;
         let span = expr.span();
