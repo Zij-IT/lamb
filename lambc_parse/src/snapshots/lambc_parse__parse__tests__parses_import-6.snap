@@ -4,21 +4,7 @@ expression: parser.parse_import()
 ---
 Ok(
     Import {
-        file: StrLit {
-            text: Some(
-                StrText {
-                    inner: "my-path",
-                    span: Span {
-                        start: 6,
-                        end: 13,
-                    },
-                },
-            ),
-            span: Span {
-                start: 5,
-                end: 14,
-            },
-        },
+        file: "my-path",
         name: Some(
             Ident {
                 raw: "alias",
