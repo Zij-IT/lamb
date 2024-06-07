@@ -1,23 +1,23 @@
-x0 := "hello 0" + "world 0";
-x1 := "hello 1" + "world 1 ";
-x2 := "hello 2" + "world 2 ";
-x3 := "hello 3" + "world 3 ";
-x4 := "hello 4" + "world 4 ";
-x5 := "hello 5" + "world 5 ";
-x6 := "hello 6" + "world 6 ";
-x7 := "hello 7" + "world 7 ";
-x8 := "hello 8" + "world 8 ";
-x9 := "hello 9" + "world 9 ";
-x10 := "hello 10" + "world 10 ";
-x11 := "hello 11" + "world 11 ";
-x12 := "hello 12" + "world 12 ";
-x13 := "hello 13" + "world 13 ";
-x14 := "hello 14" + "world 14 ";
-x15 := "hello 15" + "world 15 ";
-x16 := "hello 16" + "world 16 ";
-x17 := "hello 17" + "world 17 ";
+def x0 := "hello 0" + "world 0";
+def x1 := "hello 1" + "world 1 ";
+def x2 := "hello 2" + "world 2 ";
+def x3 := "hello 3" + "world 3 ";
+def x4 := "hello 4" + "world 4 ";
+def x5 := "hello 5" + "world 5 ";
+def x6 := "hello 6" + "world 6 ";
+def x7 := "hello 7" + "world 7 ";
+def x8 := "hello 8" + "world 8 ";
+def x9 := "hello 9" + "world 9 ";
+def x10 := "hello 10" + "world 10 ";
+def x11 := "hello 11" + "world 11 ";
+def x12 := "hello 12" + "world 12 ";
+def x13 := "hello 13" + "world 13 ";
+def x14 := "hello 14" + "world 14 ";
+def x15 := "hello 15" + "world 15 ";
+def x16 := "hello 16" + "world 16 ";
+def x17 := "hello 17" + "world 17 ";
 
-println(
+def main := fn() -> println(
 	x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11 + x12 + x13 + x14 + x15 + x16 + x17 +
 	x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11 + x12 + x13 + x14 + x15 + x16 + x17 +
 	x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11 + x12 + x13 + x14 + x15 + x16 + x17 +
@@ -26,4 +26,4 @@ println(
 	x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11 + x12 + x13 + x14 + x15 + x16 + x17 +
 	x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11 + x12 + x13 + x14 + x15 + x16 + x17 +
 	x0 + x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11 + x12 + x13 + x14 + x15 + x16 + x17
-	);
+);

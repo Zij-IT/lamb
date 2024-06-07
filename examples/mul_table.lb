@@ -1,16 +1,18 @@
 -- Mul Table
-table := rec fn(x, y, n) -> {
+def main := fn() -> {
+	table := rec fn(x, y, n) -> {
 
-	print(x * y);
-	print(" ");
+		print(x * y);
+		print(" ");
 
-	if x != n {
-		table(x + 1, y, n);
-	} elif y != n{
-		print(':n');
-		table(1, y + 1, n);
+		if x != n {
+			table(x + 1, y, n);
+		} elif y != n{
+			print(':n');
+			table(1, y + 1, n);
+		};
 	};
-};
 
-print("Please enter a number:: :n");
-table(1, 1, user_int());
+	print("Please enter a number:: :n");
+	table(1, 1, user_int());	
+};

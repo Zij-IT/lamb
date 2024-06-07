@@ -1,4 +1,4 @@
-new_vector := fn(x, y) 
+def new_vector := fn(x, y) 
 	-> fn(method_name) -> case method_name {
  		"x" -> x,
  		"y" -> y,
@@ -19,14 +19,16 @@ new_vector := fn(x, y)
 		},
 	};
 
-v1 := new_vector(0, 1);
-v2 := new_vector(5, 3);
+def main := fn() -> {
+	v1 := new_vector(0, 1);
+	v2 := new_vector(5, 3);
 
-print("Manhattan Distance:: ");
-println(v2("dist")(v1));
+	print("Manhattan Distance:: ");
+	println(v2("dist")(v1));
 
-print("Norm of v2:: ");
-println(v2("norm"));
+	print("Norm of v2:: ");
+	println(v2("norm"));
 
-print("Norm of v1:: ");
-println(v1("norm"));
+	print("Norm of v1:: ");
+	println(v1("norm"));
+};

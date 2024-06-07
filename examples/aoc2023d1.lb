@@ -71,7 +71,7 @@ def all_nums := rec fn(xs) -> case xs {
   }
 };
 
-def main := {
+def main := fn() -> {
   print("Part 1:: ");
   solve(only_digits, input);
 

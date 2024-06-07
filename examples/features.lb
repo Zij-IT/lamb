@@ -1,27 +1,29 @@
 -- Neat Language Features
 
--- Lambdas!
-inc := fn(x) -> x + 1;
-dec := fn(x) -> x - 1;
+def main := fn() -> {
+	-- Lambdas!
+	inc := fn(x) -> x + 1;
+	dec := fn(x) -> x - 1;
 
--- Cool new operators!
-five := 2 $> (inc .> dec .> inc .> inc .> inc);
-println(five);
+	-- Cool new operators!
+	five := 2 $> (inc .> dec .> inc .> inc .> inc);
+	println(five);
 
-five_backwards := (inc <. inc <. inc <. inc <. dec) <$ 2;
-println(five_backwards);
+	five_backwards := (inc <. inc <. inc <. inc <. dec) <$ 2;
+	println(five_backwards);
 
--- Shadowing!
-{
-	x := 2;
-	println(x);
-	x := "shadowing";
-	println(x);
+	-- Shadowing!
+	{
+		x := 2;
+		println(x);
+		x := "shadowing";
+		println(x);
+	};
+
+
+	-- cooler fib when using case and assuming the parser is ever built to match the language goal
+	-- fib := rec fun(x) -> case x {
+	-- 	0 | 1 -> x,
+	-- 	_ -> fib(x - 1) + fib(x - 2),
+	-- };	
 };
-
-
--- cooler fib when using case and assuming the parser is ever built to match the language goal
--- fib := rec fun(x) -> case x {
--- 	0 | 1 -> x,
--- 	_ -> fib(x - 1) + fib(x - 2),
--- };

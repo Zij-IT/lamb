@@ -1,5 +1,5 @@
 export { add, sub };
 
-add := fn(a, b) -> a + b;
+def add := fn(a, b) -> a + b;
 
-sub := fn(a, b) -> a - b;
+def sub := fn(a, b) -> a - b;

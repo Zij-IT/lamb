@@ -1,59 +1,61 @@
--- Eq
-assert(true = (1 = 1));
-assert(false = (1 = 0));
+def main := fn() -> {
+  -- Eq
+  assert(true = (1 = 1));
+  assert(false = (1 = 0));
 
-assert("hello" = "hello");
-assert(("hello" = "world") = false);
+  assert("hello" = "hello");
+  assert(("hello" = "world") = false);
 
-assert([1,2,3] = [1,2,3]);
-assert(([1,2,3] = [1,2]) = false);
+  assert([1,2,3] = [1,2,3]);
+  assert(([1,2,3] = [1,2]) = false);
 
--- Ne
-assert(1 != 0);
-assert((1 != 1) = false);
+  -- Ne
+  assert(1 != 0);
+  assert((1 != 1) = false);
 
-assert("hello" != "world");
-assert(("hello" != "hello") = false);
+  assert("hello" != "world");
+  assert(("hello" != "hello") = false);
 
-assert([1,2,3] != [1,2]);
-assert(([1,2,3] != [1,2,3]) = false);
+  assert([1,2,3] != [1,2]);
+  assert(([1,2,3] != [1,2,3]) = false);
 
--- < <= > >= are special cased in the VM for arrays to
--- check all array indices
+  -- < <= > >= are special cased in the VM for arrays to
+  -- check all array indices
 
--- Lt
-assert(0 < 1);
-assert((1 < 0) = false);
+  -- Lt
+  assert(0 < 1);
+  assert((1 < 0) = false);
 
-assert([1,2,3] < [1,2,3,4]);
-assert([0,2,3] < [1,2,3]);
-assert(([1,2,3] < [1,2]) = false);
+  assert([1,2,3] < [1,2,3,4]);
+  assert([0,2,3] < [1,2,3]);
+  assert(([1,2,3] < [1,2]) = false);
 
--- Gt
-assert(1 > 0);
-assert((0 > 1) = false);
+  -- Gt
+  assert(1 > 0);
+  assert((0 > 1) = false);
 
-assert([1,2,3,4] > [1,2,3]);
-assert([1,2,4] > [1,2,3]);
-assert(([1,2] > [1,2,3]) = false);
+  assert([1,2,3,4] > [1,2,3]);
+  assert([1,2,4] > [1,2,3]);
+  assert(([1,2] > [1,2,3]) = false);
 
--- Ge
-assert(1 >= 0);
-assert((0 >= 1) = false);
+  -- Ge
+  assert(1 >= 0);
+  assert((0 >= 1) = false);
 
-assert([1,2,3] != [1,2]);
-assert(([1,2,3] != [1,2,3]) = false);
+  assert([1,2,3] != [1,2]);
+  assert(([1,2,3] != [1,2,3]) = false);
 
-assert([1,2,3,4] >= [1,2,3]);
-assert([1,2,3] >= [1,2]);
-assert([1,2,3] >= [1,2,3]);
-assert(([0,2,3] >= [1,2,3]) = false);
+  assert([1,2,3,4] >= [1,2,3]);
+  assert([1,2,3] >= [1,2]);
+  assert([1,2,3] >= [1,2,3]);
+  assert(([0,2,3] >= [1,2,3]) = false);
 
--- Le
-assert(0 <= 1);
-assert((1 <= 0) = false);
+  -- Le
+  assert(0 <= 1);
+  assert((1 <= 0) = false);
 
-assert([1,2,3] <= [1,2,3]);
-assert([0,2,3] <= [1,2,3]);
-assert([1,2] <= [1,2,3]);
-assert(([1,2,3,4] <= [1,2,3]) = false);
+  assert([1,2,3] <= [1,2,3]);
+  assert([0,2,3] <= [1,2,3]);
+  assert([1,2] <= [1,2,3]);
+  assert(([1,2,3,4] <= [1,2,3]) = false);
+};

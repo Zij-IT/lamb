@@ -1,9 +1,9 @@
-len := rec fn(xs) -> case xs {
+def len := rec fn(xs) -> case xs {
   [x, rest @ ..] -> 1 + len(rest),
   [] -> 0,
 };
 
-sum := fn(xs) -> { 
+def sum := fn(xs) -> { 
   x := "THIS SHOULD NOT BE PRINTED";
   length := len(xs);                
   helper := rec fn(xs, n) -> {
@@ -17,26 +17,28 @@ sum := fn(xs) -> {
   helper(xs, len(xs) - 1)
 };
 
-print("Should print 0:: ");
-sum([4,3,2,1,-1,-2,-3,-4]) $> println;
-print("Should print 10:: ");
-sum([1,2,3,4]) $> println;
+def main := fn() -> {
+  print("Should print 0:: ");
+  sum([4,3,2,1,-1,-2,-3,-4]) $> println;
+  print("Should print 10:: ");
+  sum([1,2,3,4]) $> println;
 
-sum2 := fn(xs) -> { 
-  4
+  sum2 := fn(xs) -> { 
+    4
+  };
+
+  print("Should print 4:: ");
+  [1,2] $> sum2 .> println;
+
+  helper := rec fn(xs, n) -> {
+  if n = 0 {
+    xs[n]
+  } else {
+    xs[n] + helper(xs, n - 1)
+  }
+  };
+
+
+  print("Should print 10:: ");
+  helper([1,2,3,4], 3) $> print;
 };
-
-print("Should print 4:: ");
-[1,2] $> sum2 .> println;
-
-helper := rec fn(xs, n) -> {
-if n = 0 {
-  xs[n]
-} else {
-  xs[n] + helper(xs, n - 1)
-}
-};
-
-
-print("Should print 10:: ");
-helper([1,2,3,4], 3) $> print;
