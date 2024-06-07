@@ -1,11 +1,11 @@
 def main := fn() -> {
-  inc := fn(x) -> x + 1;
+  let inc := fn(x) -> x + 1;
 
-  dec := fn(x) -> x - 1;
+  let dec := fn(x) -> x - 1;
 
-  dub := fn(x) -> x * 2;
+  let dub := fn(x) -> x * 2;
 
-  fib := rec fn(x) -> if x <= 1 { x } else { fib(x - 1) + fib(x - 2) };
+  let fib := rec fn(x) -> if x <= 1 { x } else { fib(x - 1) + fib(x - 2) };
 
   print("Should print 17:: ");
   println <. dec <. dub <. inc <$ 8;

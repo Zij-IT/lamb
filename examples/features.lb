@@ -2,27 +2,27 @@
 
 def main := fn() -> {
 	-- Lambdas!
-	inc := fn(x) -> x + 1;
-	dec := fn(x) -> x - 1;
+	let inc := fn(x) -> x + 1;
+	let dec := fn(x) -> x - 1;
 
 	-- Cool new operators!
-	five := 2 $> (inc .> dec .> inc .> inc .> inc);
+	let five := 2 $> (inc .> dec .> inc .> inc .> inc);
 	println(five);
 
-	five_backwards := (inc <. inc <. inc <. inc <. dec) <$ 2;
+	let five_backwards := (inc <. inc <. inc <. inc <. dec) <$ 2;
 	println(five_backwards);
 
 	-- Shadowing!
 	{
-		x := 2;
+		let x := 2;
 		println(x);
-		x := "shadowing";
+		let x := "shadowing";
 		println(x);
 	};
 
 
 	-- cooler fib when using case and assuming the parser is ever built to match the language goal
-	-- fib := rec fun(x) -> case x {
+	-- let fib := rec fun(x) -> case x {
 	-- 	0 | 1 -> x,
 	-- 	_ -> fib(x - 1) + fib(x - 2),
 	-- };	

@@ -4,8 +4,8 @@ def new_vector := fn(x, y)
  		"y" -> y,
 		"norm" -> x + y, 
 		"dist" -> fn(v2) -> {
-			x := x - v2("x");
-			y := y - v2("y");
+			let x := x - v2("x");
+			let y := y - v2("y");
 
 			if x < 0 && y < 0 {
 				-x + -y
@@ -20,8 +20,8 @@ def new_vector := fn(x, y)
 	};
 
 def main := fn() -> {
-	v1 := new_vector(0, 1);
-	v2 := new_vector(5, 3);
+	let v1 := new_vector(0, 1);
+	let v2 := new_vector(5, 3);
 
 	print("Manhattan Distance:: ");
 	println(v2("dist")(v1));

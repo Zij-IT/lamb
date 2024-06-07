@@ -7,7 +7,7 @@ def part_one := rec fn(xs) -> case xs {
 };
 
 def part_two := fn(xs) -> {
-  inner := rec fn(xs, n, sum) -> case sum {
+  let inner := rec fn(xs, n, sum) -> case sum {
     -1 -> n,
     _  -> case xs {
       ['(', rest @ ..] -> inner(rest, n + 1, sum + 1),

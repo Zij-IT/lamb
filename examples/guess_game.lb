@@ -1,13 +1,13 @@
 -- Guessing Game
 def new_num := fn() -> {
-	r := rand();
+	let r := rand();
 	if r < 0 { -r } else { r } % 200
 };
 
 def main := fn() -> {
 	println("Enter a number! (0 .. 200)");
-	guess := rec fn(n, guess_count) -> {
-		x := user_int();
+	let guess := rec fn(n, guess_count) -> {
+		let x := user_int();
 		if x = n {
 			println("You guessed it");
 			print("You needed ");

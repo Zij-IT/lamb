@@ -1,6 +1,6 @@
 -- Mul Table
 def main := fn() -> {
-	table := rec fn(x, y, n) -> {
+	let table := rec fn(x, y, n) -> {
 
 		print(x * y);
 		print(" ");

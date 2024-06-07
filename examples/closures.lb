@@ -1,10 +1,10 @@
 def x := "global";
 
 def main := fn() -> {
-	outer := fn() -> {
-		x := "outer";
-		y := "hi";
-		z := fn() -> print(x + y);
+	let outer := fn() -> {
+		let x := "outer";
+		let y := "hi";
+		let z := fn() -> print(x + y);
 		z(); 
 	};
 
@@ -14,12 +14,12 @@ def main := fn() -> {
 
 	println("=====");
 
-	make_closure := fn() -> {
-		local := "local";
+	let make_closure := fn() -> {
+		let local := "local";
 		return fn() -> print(local);
 	};
 
-	closure := make_closure();
+	let closure := make_closure();
 
 	print("This should output 'local':: ");
 	closure();
@@ -27,12 +27,12 @@ def main := fn() -> {
 
 	println("=====");
 
-	make_name := fn(name) -> {
+	let make_name := fn(name) -> {
 		return fn() -> print(name);
 	};
 
-	doughnut := make_name("doughnut");
-	bagel := make_name("bagel");
+	let doughnut := make_name("doughnut");
+	let bagel := make_name("bagel");
 
 	print("This should output 'doughnut':: ");
 	doughnut();

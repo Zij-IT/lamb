@@ -41,7 +41,7 @@ def solve := fn(f, input) -> map(f .> score, input) $> sum .> println;
 def only_digits := rec fn(xs) -> case xs {
     [] -> [],
     [x, xs @ ..] -> {
-      num := char_to_num(x);
+      let num := char_to_num(x);
       if num = nil {
         only_digits(xs)
       } else {
@@ -62,7 +62,7 @@ def all_nums := rec fn(xs) -> case xs {
   ['e', 'i', 'g', 'h', 't', rest @ ..] -> [8] + all_nums("t" + rest),
   ['n', 'i', 'n', 'e', rest @ ..] -> [9] + all_nums("e" + rest),
   [x, xs @ ..] -> {
-    num := char_to_num(x);
+    let num := char_to_num(x);
     if num = nil {
       all_nums(xs)
     } else {

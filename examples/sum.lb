@@ -4,9 +4,9 @@ def len := rec fn(xs) -> case xs {
 };
 
 def sum := fn(xs) -> { 
-  x := "THIS SHOULD NOT BE PRINTED";
-  length := len(xs);                
-  helper := rec fn(xs, n) -> {
+  let x := "THIS SHOULD NOT BE PRINTED";
+  let length := len(xs);                
+  let helper := rec fn(xs, n) -> {
     if n = 0 {
       xs[n]
     } else {
@@ -23,14 +23,14 @@ def main := fn() -> {
   print("Should print 10:: ");
   sum([1,2,3,4]) $> println;
 
-  sum2 := fn(xs) -> { 
+  let sum2 := fn(xs) -> { 
     4
   };
 
   print("Should print 4:: ");
   [1,2] $> sum2 .> println;
 
-  helper := rec fn(xs, n) -> {
+  let helper := rec fn(xs, n) -> {
   if n = 0 {
     xs[n]
   } else {
