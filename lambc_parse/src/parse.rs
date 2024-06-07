@@ -7,9 +7,9 @@ use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm,
     CharLit, CharText, Define, Else, Export, ExportItem, Expr, ExprStatement,
     F64Lit, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
-    Import, ImportItem, Index, InnerPattern, Lexer, List, LiteralPattern,
-    Module, NilLit, Path, Pattern, RestPattern, Return, Span, Statement,
-    StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+    Import, ImportItem, Index, InnerPattern, Item, Lexer, List,
+    LiteralPattern, Module, NilLit, Path, Pattern, RestPattern, Return, Span,
+    Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
 };
 
 #[derive(Diagnostic, Debug, ThError, PartialEq, Eq)]
@@ -44,7 +44,7 @@ impl<'a> Parser<'a> {
     /// ```text
     /// Grammar:
     ///
-    ///    module := export? import* stat*
+    ///    module := export? import* item*
     /// ```
     ///
     pub fn parse_module(&mut self) -> Result<Module<Ident, PathBuf>> {
@@ -78,22 +78,37 @@ impl<'a> Parser<'a> {
             }
         }
 
-        let mut statements = Vec::new();
+        let mut items = Vec::new();
         let span = loop {
             if let Some(end) = self.eat(TokKind::End) {
                 break Span::new(0, end.span.end);
             }
 
-            statements.push(self.parse_stmt()?);
+            items.push(self.parse_item()?);
         };
 
-        Ok(Module {
-            exports,
-            imports,
-            statements,
-            path: self.file.clone(),
-            span,
-        })
+        Ok(Module { exports, imports, items, path: self.file.clone(), span })
+    }
+
+    /// Parses an item, which can either be a `def`, `struct` or `union`
+    /// declaration
+    pub fn parse_item(&mut self) -> Result<Item<Ident>> {
+        match self.peek1().kind {
+            TokKind::Def => Ok(Item::Def(self.parse_definition()?)),
+            _ => Err(Self::error_expected_str_found("item", self.peek1())),
+        }
+    }
+
+    /// Parses an expression with no trailing input.
+    pub fn parse_definition(&mut self) -> Result<Define<Ident>> {
+        let start = self.expect(TokKind::Def)?;
+        let Statement::Define(mut def) = self.parse_assign_stmt()? else {
+            unreachable!()
+        };
+
+        def.span = Span::connect(start.span, def.span);
+
+        Ok(def)
     }
 
     /// Parses an expression with no trailing input.

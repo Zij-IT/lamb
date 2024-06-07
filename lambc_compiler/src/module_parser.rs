@@ -82,7 +82,7 @@ impl<'b> ModuleParser<'b> {
                 let parsed = Module {
                     imports,
                     exports: module.exports,
-                    statements: module.statements,
+                    items: module.items,
                     path: self.state.add_path(module.path),
                     span: module.span,
                 };

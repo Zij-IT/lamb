@@ -487,6 +487,11 @@ pub enum Statement<IdKind> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Item<IdKind> {
+    Def(Define<IdKind>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImportItem {
     pub item: Ident,
     pub alias: Option<Ident>,
@@ -518,7 +523,7 @@ pub struct Export {
 pub struct Module<IdKind, PathKind> {
     pub exports: Vec<Export>,
     pub imports: Vec<Import<PathKind>>,
-    pub statements: Vec<Statement<IdKind>>,
+    pub items: Vec<Item<IdKind>>,
     pub path: PathKind,
     pub span: Span,
 }

@@ -5,7 +5,7 @@ mod pattern;
 use std::num::NonZeroU16;
 
 use lambc_compiler::{PathRef, State};
-use lambc_parse::{Define, Expr, Ident, Module, Span, Statement};
+use lambc_parse::{Define, Expr, Ident, Item, Module, Span, Statement};
 
 use self::info::{Block, FunctionInfo};
 use crate::{
@@ -292,38 +292,39 @@ impl<'a, 'b> Lowerer<'a, 'b> {
     }
 
     fn lower_script(&mut self, script: &Module<Ident, PathRef>) {
-        for stat in &script.statements {
-            self.lower_stmt(stat);
+        for item in &script.items {
+            self.lower_item(item);
+        }
+    }
+
+    fn lower_item(&mut self, item: &Item<Ident>) {
+        match item {
+            Item::Def(def) => self.lower_definition(def),
+        }
+    }
+
+    fn lower_definition(&mut self, def: &Define<Ident>) {
+        let Define { ident: ident @ Ident { raw, .. }, value, span: _ } = def;
+        if let Expr::FnDef(f) = value {
+            if f.recursive {
+                self.lower_rec_func_def(ident, f);
+                return;
+            }
+        }
+        self.lower_expr(value);
+        let ident_obj = self.gc.intern(raw);
+        self.info.func.chunk.write_val(Value::String(ident_obj));
+        if self.block().depth == 0 {
+            let idx = self.info.func.chunk.constants.len() - 1;
+            self.write_op(Op::DefineGlobal(idx.try_into().unwrap()));
+        } else {
+            self.info.add_local(raw.clone());
         }
     }
 
     fn lower_stmt(&mut self, stat: &Statement<Ident>) {
         match stat {
-            Statement::Define(assign) => {
-                let Define {
-                    ident: ident @ Ident { raw, .. },
-                    value,
-                    span: _,
-                } = assign;
-
-                if let Expr::FnDef(f) = value {
-                    if f.recursive {
-                        self.lower_rec_func_def(ident, f);
-                        return;
-                    }
-                }
-
-                self.lower_expr(value);
-
-                let ident_obj = self.gc.intern(raw);
-                self.info.func.chunk.write_val(Value::String(ident_obj));
-                if self.block().depth == 0 {
-                    let idx = self.info.func.chunk.constants.len() - 1;
-                    self.write_op(Op::DefineGlobal(idx.try_into().unwrap()));
-                } else {
-                    self.info.add_local(raw.clone());
-                }
-            }
+            Statement::Define(assign) => self.lower_definition(assign),
             Statement::Expr(e) => {
                 self.lower_expr(&e.expr);
                 self.write_op(Op::Pop(NZ_ONE_U16));
