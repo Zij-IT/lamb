@@ -7,21 +7,7 @@ Ok(
         exports: [],
         imports: [
             Import {
-                file: StrLit {
-                    text: Some(
-                        StrText {
-                            inner: "my-path",
-                            span: Span {
-                                start: 19,
-                                end: 26,
-                            },
-                        },
-                    ),
-                    span: Span {
-                        start: 18,
-                        end: 27,
-                    },
-                },
+                file: "my-path",
                 name: None,
                 items: [],
                 star: true,
@@ -31,10 +17,17 @@ Ok(
                 },
             },
         ],
-        statements: [
-            Expr(
-                ExprStatement {
-                    expr: Binary(
+        items: [
+            Def(
+                Define {
+                    ident: Ident {
+                        raw: "_",
+                        span: Span {
+                            start: 54,
+                            end: 55,
+                        },
+                    },
+                    value: Binary(
                         Binary {
                             lhs: Call(
                                 Call {
@@ -42,8 +35,8 @@ Ok(
                                         Ident {
                                             raw: "call",
                                             span: Span {
-                                                start: 50,
-                                                end: 54,
+                                                start: 59,
+                                                end: 63,
                                             },
                                         },
                                     ),
@@ -54,8 +47,8 @@ Ok(
                                                     Ident {
                                                         raw: "x",
                                                         span: Span {
-                                                            start: 58,
-                                                            end: 59,
+                                                            start: 67,
+                                                            end: 68,
                                                         },
                                                     },
                                                 ],
@@ -63,15 +56,15 @@ Ok(
                                                     Ident {
                                                         raw: "x",
                                                         span: Span {
-                                                            start: 64,
-                                                            end: 65,
+                                                            start: 73,
+                                                            end: 74,
                                                         },
                                                     },
                                                 ),
                                                 recursive: false,
                                                 span: Span {
-                                                    start: 55,
-                                                    end: 65,
+                                                    start: 64,
+                                                    end: 74,
                                                 },
                                             },
                                         ),
@@ -80,15 +73,15 @@ Ok(
                                                 base: Dec,
                                                 value: "1",
                                                 span: Span {
-                                                    start: 67,
-                                                    end: 68,
+                                                    start: 76,
+                                                    end: 77,
                                                 },
                                             },
                                         ),
                                     ],
                                     span: Span {
-                                        start: 50,
-                                        end: 69,
+                                        start: 59,
+                                        end: 78,
                                     },
                                 },
                             ),
@@ -97,24 +90,24 @@ Ok(
                                 Ident {
                                     raw: "println",
                                     span: Span {
-                                        start: 73,
-                                        end: 80,
+                                        start: 82,
+                                        end: 89,
                                     },
                                 },
                             ),
                             span: Span {
-                                start: 50,
-                                end: 80,
+                                start: 59,
+                                end: 89,
                             },
                             op_span: Span {
-                                start: 70,
-                                end: 72,
+                                start: 79,
+                                end: 81,
                             },
                         },
                     ),
                     span: Span {
                         start: 50,
-                        end: 81,
+                        end: 90,
                     },
                 },
             ),
@@ -122,7 +115,7 @@ Ok(
         path: "",
         span: Span {
             start: 0,
-            end: 94,
+            end: 103,
         },
     },
 )

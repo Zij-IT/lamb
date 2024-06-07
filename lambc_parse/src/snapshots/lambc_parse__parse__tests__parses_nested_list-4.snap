@@ -11,8 +11,8 @@ Ok(
                         ident: Ident {
                             raw: "x",
                             span: Span {
-                                start: 2,
-                                end: 3,
+                                start: 6,
+                                end: 7,
                             },
                         },
                         value: I64(
@@ -20,14 +20,14 @@ Ok(
                                 base: Dec,
                                 value: "2",
                                 span: Span {
-                                    start: 7,
-                                    end: 8,
+                                    start: 11,
+                                    end: 12,
                                 },
                             },
                         ),
                         span: Span {
                             start: 2,
-                            end: 9,
+                            end: 13,
                         },
                     },
                 ),
@@ -37,15 +37,15 @@ Ok(
                     Ident {
                         raw: "x",
                         span: Span {
-                            start: 10,
-                            end: 11,
+                            start: 14,
+                            end: 15,
                         },
                     },
                 ),
             ),
             span: Span {
                 start: 0,
-                end: 13,
+                end: 17,
             },
         },
     ),

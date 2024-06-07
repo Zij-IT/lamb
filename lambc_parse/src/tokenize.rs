@@ -110,6 +110,8 @@ pub enum TokKind {
     If,
     /// 'def'
     Def,
+    /// 'let'
+    Let,
     /// 'elif'
     Elif,
     /// 'else'
@@ -211,6 +213,7 @@ impl TokKind {
             TokKind::Fn => "the 'fn' keyword",
             TokKind::If => "the 'if' keyword",
             TokKind::Def => "the 'def' keyword",
+            TokKind::Let => "the 'let' keyword",
             TokKind::Elif => "the 'elif' keyword",
             TokKind::Else => "the 'else' keyword",
             TokKind::Rec => "the 'rec' keyword",
@@ -359,6 +362,7 @@ impl<'a> Lexer<'a> {
             "nil" => TokKind::Nil,
             "rec" => TokKind::Rec,
             "def" => TokKind::Def,
+            "let" => TokKind::Let,
             "case" => TokKind::Case,
             "elif" => TokKind::Elif,
             "else" => TokKind::Else,

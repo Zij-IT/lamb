@@ -102,10 +102,7 @@ impl<'a> Parser<'a> {
     /// Parses an expression with no trailing input.
     pub fn parse_definition(&mut self) -> Result<Define<Ident>> {
         let start = self.expect(TokKind::Def)?;
-        let Statement::Define(mut def) = self.parse_assign_stmt()? else {
-            unreachable!()
-        };
-
+        let mut def = self.parse_define()?;
         def.span = Span::connect(start.span, def.span);
 
         Ok(def)
@@ -210,7 +207,7 @@ impl<'a> Parser<'a> {
     ///           | expr  ';'
     /// ```
     fn parse_stmt(&mut self) -> Result<Statement<Ident>> {
-        if self.peek2().kind == TokKind::Assign {
+        if self.peek1().kind == TokKind::Let {
             self.parse_assign_stmt()
         } else {
             self.parse_expr_stmt()
@@ -229,16 +226,20 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_assign_stmt(&mut self) -> Result<Statement<Ident>> {
+        let start = self.expect(TokKind::Let)?;
+        let mut define = self.parse_define()?;
+        define.span = Span::connect(start.span, define.span);
+
+        Ok(Statement::Define(define))
+    }
+
+    fn parse_define(&mut self) -> Result<Define<Ident>> {
         let ident = self.parse_ident()?;
         self.expect(TokKind::Assign)?;
         let value = self.parse_expr()?;
         let semi = self.expect(TokKind::Semi)?;
 
-        Ok(Statement::Define(Define {
-            span: Span::connect(ident.span, semi.span),
-            ident,
-            value,
-        }))
+        Ok(Define { span: Span::connect(ident.span, semi.span), ident, value })
     }
 
     /// ```text
@@ -394,7 +395,7 @@ impl<'a> Parser<'a> {
         let open = self.expect(TokKind::OpenBrace)?;
         let mut stmts = Vec::new();
         let (value, close) = loop {
-            if self.peek2().kind == TokKind::Assign {
+            if self.peek1().kind == TokKind::Let {
                 stmts.push(self.parse_assign_stmt()?);
             } else if let Some(close) = self.eat(TokKind::CloseBrace) {
                 break (None, close);
@@ -1225,7 +1226,7 @@ mod tests {
         atom!("[nil, [], [nil, 2,],]");
         atom!("fn() -> nil");
         atom!("rec fn(a,) -> nil");
-        atom!("{ x := 2; x }");
+        atom!("{ let x := 2; x }");
         atom!("if true { }");
         atom!("if true { } elif false { }");
         atom!("if true { } elif false { } else { }");
@@ -1265,7 +1266,7 @@ mod tests {
             };
         }
 
-        stmt!("x := 2;");
+        stmt!("let x := 2;");
         stmt!("2;");
         stmt!("fn(a, b) -> fn(c) -> fn(d, e,) -> nil;");
     }
@@ -1280,7 +1281,7 @@ mod tests {
         }
 
         atom!("{ { { } } }");
-        atom!("{ x := 2; { x := 2; { x := { 2 }; } } }");
+        atom!("{ let x := 2; { let x := 2; { let x := { 2 }; } } }");
     }
 
     #[test]
@@ -1416,15 +1417,15 @@ mod tests {
 
         module! {
             r#"
-              def main := fn() ->
-                part_one := rec fn(xs) -> case xs {
+              def main := fn() -> {
+                let part_one := rec fn(xs) -> case xs {
                   ['(', rest @ ..] -> 1 + part_one(rest),
                   [')', rest @ ..] -> -1 + part_one(rest),
                   [] -> 0,
                 };
 
-                part_two := fn(xs) -> {
-                  inner := rec fn(xs, n, sum) -> case sum {
+                let part_two := fn(xs) -> {
+                  let inner := rec fn(xs, n, sum) -> case sum {
                     -1 -> n,
                     _  -> case xs {
                       ['(', rest @ ..] -> inner(rest, n + 1, sum + 1),
@@ -1440,7 +1441,7 @@ mod tests {
 
                 print("Part Two:: ");
                 input $> part_two .> println;
-              }
+              };
             "#
         }
 
