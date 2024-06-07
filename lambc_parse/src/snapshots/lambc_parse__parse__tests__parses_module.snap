@@ -6,14 +6,14 @@ Ok(
     Module {
         exports: [],
         imports: [],
-        statements: [
-            Define(
+        items: [
+            Def(
                 Define {
                     ident: Ident {
                         raw: "id",
                         span: Span {
-                            start: 17,
-                            end: 19,
+                            start: 21,
+                            end: 23,
                         },
                     },
                     value: FnDef(
@@ -22,8 +22,8 @@ Ok(
                                 Ident {
                                     raw: "x",
                                     span: Span {
-                                        start: 26,
-                                        end: 27,
+                                        start: 30,
+                                        end: 31,
                                     },
                                 },
                             ],
@@ -31,27 +31,34 @@ Ok(
                                 Ident {
                                     raw: "x",
                                     span: Span {
-                                        start: 32,
-                                        end: 33,
+                                        start: 36,
+                                        end: 37,
                                     },
                                 },
                             ),
                             recursive: false,
                             span: Span {
-                                start: 23,
-                                end: 33,
+                                start: 27,
+                                end: 37,
                             },
                         },
                     ),
                     span: Span {
                         start: 17,
-                        end: 34,
+                        end: 38,
                     },
                 },
             ),
-            Expr(
-                ExprStatement {
-                    expr: Group(
+            Def(
+                Define {
+                    ident: Ident {
+                        raw: "_",
+                        span: Span {
+                            start: 59,
+                            end: 60,
+                        },
+                    },
+                    value: Group(
                         Group {
                             value: Binary(
                                 Binary {
@@ -61,8 +68,8 @@ Ok(
                                                 Ident {
                                                     raw: "id",
                                                     span: Span {
-                                                        start: 52,
-                                                        end: 54,
+                                                        start: 65,
+                                                        end: 67,
                                                     },
                                                 },
                                             ),
@@ -71,18 +78,18 @@ Ok(
                                                 Ident {
                                                     raw: "id",
                                                     span: Span {
-                                                        start: 58,
-                                                        end: 60,
+                                                        start: 71,
+                                                        end: 73,
                                                     },
                                                 },
                                             ),
                                             span: Span {
-                                                start: 52,
-                                                end: 60,
+                                                start: 65,
+                                                end: 73,
                                             },
                                             op_span: Span {
-                                                start: 55,
-                                                end: 57,
+                                                start: 68,
+                                                end: 70,
                                             },
                                         },
                                     ),
@@ -91,30 +98,30 @@ Ok(
                                         Ident {
                                             raw: "id",
                                             span: Span {
-                                                start: 64,
-                                                end: 66,
+                                                start: 77,
+                                                end: 79,
                                             },
                                         },
                                     ),
                                     span: Span {
-                                        start: 52,
-                                        end: 66,
+                                        start: 65,
+                                        end: 79,
                                     },
                                     op_span: Span {
-                                        start: 61,
-                                        end: 63,
+                                        start: 74,
+                                        end: 76,
                                     },
                                 },
                             ),
                             span: Span {
-                                start: 51,
-                                end: 67,
+                                start: 64,
+                                end: 80,
                             },
                         },
                     ),
                     span: Span {
-                        start: 51,
-                        end: 68,
+                        start: 55,
+                        end: 81,
                     },
                 },
             ),
@@ -122,7 +129,7 @@ Ok(
         path: "",
         span: Span {
             start: 0,
-            end: 81,
+            end: 94,
         },
     },
 )

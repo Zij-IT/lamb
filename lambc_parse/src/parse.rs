@@ -1409,13 +1409,14 @@ mod tests {
 
         module! {
             r#"
-                id := fn(x) -> x;
-                (id .> id .> id);
+                def id := fn(x) -> x;
+                def _ := (id .> id .> id);
             "#
         }
 
         module! {
             r#"
+              def main := fn() ->
                 part_one := rec fn(xs) -> case xs {
                   ['(', rest @ ..] -> 1 + part_one(rest),
                   [')', rest @ ..] -> -1 + part_one(rest),
@@ -1439,13 +1440,14 @@ mod tests {
 
                 print("Part Two:: ");
                 input $> part_two .> println;
+              }
             "#
         }
 
         module! {
             r#"
             from "my-path" import *;
-            call(fn(x) -> x, 1) $> println;
+            def _ := call(fn(x) -> x, 1) $> println;
             "#
         }
     }
