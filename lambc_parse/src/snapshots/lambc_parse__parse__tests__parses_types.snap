@@ -1,0 +1,22 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_type()
+---
+Ok(
+    Named(
+        NamedType {
+            name: Ident {
+                raw: "int",
+                span: Span {
+                    start: 0,
+                    end: 3,
+                },
+            },
+            gens: None,
+            span: Span {
+                start: 0,
+                end: 3,
+            },
+        },
+    ),
+)

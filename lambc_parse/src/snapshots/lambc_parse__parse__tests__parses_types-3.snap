@@ -1,0 +1,57 @@
+---
+source: lambc_parse/src/parse.rs
+expression: parser.parse_type()
+---
+Ok(
+    Named(
+        NamedType {
+            name: Ident {
+                raw: "map",
+                span: Span {
+                    start: 0,
+                    end: 3,
+                },
+            },
+            gens: Some(
+                Generics {
+                    params: [
+                        Generic {
+                            id: Ident {
+                                raw: "k",
+                                span: Span {
+                                    start: 4,
+                                    end: 5,
+                                },
+                            },
+                            span: Span {
+                                start: 4,
+                                end: 5,
+                            },
+                        },
+                        Generic {
+                            id: Ident {
+                                raw: "v",
+                                span: Span {
+                                    start: 7,
+                                    end: 8,
+                                },
+                            },
+                            span: Span {
+                                start: 7,
+                                end: 8,
+                            },
+                        },
+                    ],
+                    span: Span {
+                        start: 3,
+                        end: 9,
+                    },
+                },
+            ),
+            span: Span {
+                start: 0,
+                end: 9,
+            },
+        },
+    ),
+)

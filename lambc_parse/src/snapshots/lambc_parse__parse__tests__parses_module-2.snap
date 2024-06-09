@@ -16,6 +16,7 @@ Ok(
                             end: 23,
                         },
                     },
+                    typ: None,
                     value: FnDef(
                         FnDef {
                             args: [],
@@ -31,6 +32,7 @@ Ok(
                                                         end: 65,
                                                     },
                                                 },
+                                                typ: None,
                                                 value: FnDef(
                                                     FnDef {
                                                         args: [
@@ -399,6 +401,7 @@ Ok(
                                                         end: 285,
                                                     },
                                                 },
+                                                typ: None,
                                                 value: FnDef(
                                                     FnDef {
                                                         args: [
@@ -422,6 +425,7 @@ Ok(
                                                                                     end: 328,
                                                                                 },
                                                                             },
+                                                                            typ: None,
                                                                             value: FnDef(
                                                                                 FnDef {
                                                                                     args: [

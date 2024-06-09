@@ -100,8 +100,6 @@ pub enum TokKind {
     Appl,
     /// '$>'
     Appr,
-    /// ':='
-    Assign,
 
     // Keyword
     /// 'fn'
@@ -130,6 +128,8 @@ pub enum TokKind {
     Ident,
 
     // Syntax
+    /// ':'
+    Colon,
     /// ','
     Comma,
     /// ';'
@@ -209,7 +209,7 @@ impl TokKind {
             TokKind::Cpsr => "a '.>'",
             TokKind::Appl => "a '<$'",
             TokKind::Appr => "a '$>'",
-            TokKind::Assign => "a ':='",
+            TokKind::Colon => "a ':'",
             TokKind::Fn => "the 'fn' keyword",
             TokKind::If => "the 'if' keyword",
             TokKind::Def => "the 'def' keyword",
@@ -661,9 +661,8 @@ impl<'a> Lexer<'a> {
     fn colon(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
-            b'=' => self.token_from(start, start + 2, TokKind::Assign),
             b':' => self.token_from(start, start + 2, TokKind::PathSep),
-            _ => self.token_from(start, start + 1, TokKind::Invalid),
+            _ => self.token_from(start, start + 1, TokKind::Colon),
         }
     }
 
@@ -901,11 +900,11 @@ mod tests {
 
     #[test]
     fn lexes_colon_start() {
-        lex_one(":=", TokKind::Assign);
-        lex_one(":", TokKind::Invalid);
+        lex_one(":", TokKind::Colon);
+        lex_one("::", TokKind::PathSep);
 
         let input = ":=:";
-        let kinds = [TokKind::Assign, TokKind::Invalid];
+        let kinds = [TokKind::Colon, TokKind::Eq, TokKind::Colon];
         lex_mult(input, &kinds);
     }
 

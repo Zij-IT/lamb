@@ -470,7 +470,53 @@ impl<IdKind: Spanned> Expr<IdKind> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Define<IdKind> {
     pub ident: IdKind,
+    pub typ: Option<Type<IdKind>>,
     pub value: Expr<IdKind>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Type<IdKind> {
+    /// Represents all function types
+    Fn(Box<FnType<IdKind>>),
+    /// Represents all other types. This is here
+    /// because functions have named types,
+    Named(Box<NamedType<IdKind>>),
+}
+
+impl<IdKind> Type<IdKind> {
+    pub fn span(&self) -> Span {
+        match self {
+            Type::Fn(fun) => fun.span,
+            Type::Named(nt) => nt.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FnType<IdKind> {
+    pub args: Vec<Type<IdKind>>,
+    pub gens: Option<Generics<IdKind>>,
+    pub ret_type: Option<Type<IdKind>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NamedType<IdKind> {
+    pub name: IdKind,
+    pub gens: Option<Generics<IdKind>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Generics<IdKind> {
+    pub params: Vec<Generic<IdKind>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Generic<IdKind> {
+    pub id: IdKind,
     pub span: Span,
 }
 

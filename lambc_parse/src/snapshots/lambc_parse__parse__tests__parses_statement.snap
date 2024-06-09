@@ -12,6 +12,7 @@ Ok(
                     end: 5,
                 },
             },
+            typ: None,
             value: I64(
                 I64Lit {
                     base: Dec,

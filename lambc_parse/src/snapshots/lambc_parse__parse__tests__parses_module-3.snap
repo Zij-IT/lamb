@@ -27,6 +27,7 @@ Ok(
                             end: 55,
                         },
                     },
+                    typ: None,
                     value: Binary(
                         Binary {
                             lhs: Call(

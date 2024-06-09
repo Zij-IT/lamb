@@ -6,10 +6,11 @@ use thiserror::Error as ThError;
 use crate::{
     ArrayPattern, Binary, BinaryOp, Block, BoolLit, Call, Case, CaseArm,
     CharLit, CharText, Define, Else, Export, ExportItem, Expr, ExprStatement,
-    F64Lit, FnDef, Group, I64Base, I64Lit, Ident, IdentPattern, If, IfCond,
-    Import, ImportItem, Index, InnerPattern, Item, Lexer, List,
-    LiteralPattern, Module, NilLit, Path, Pattern, RestPattern, Return, Span,
-    Statement, StrLit, StrText, TokKind, Token, Unary, UnaryOp,
+    F64Lit, FnDef, FnType, Generic, Generics, Group, I64Base, I64Lit, Ident,
+    IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Item,
+    Lexer, List, LiteralPattern, Module, NamedType, NilLit, Path, Pattern,
+    RestPattern, Return, Span, Statement, StrLit, StrText, TokKind, Token,
+    Type, Unary, UnaryOp,
 };
 
 #[derive(Diagnostic, Debug, ThError, PartialEq, Eq)]
@@ -237,11 +238,96 @@ impl<'a> Parser<'a> {
 
     fn parse_define(&mut self) -> Result<Define<Ident>> {
         let ident = self.parse_ident()?;
-        self.expect(TokKind::Assign)?;
+        self.expect(TokKind::Colon)?;
+        let typ = (self.peek1().kind != TokKind::Eq)
+            .then(|| self.parse_type())
+            .transpose()?;
+
+        self.expect(TokKind::Eq)?;
         let value = self.parse_expr()?;
         let semi = self.expect(TokKind::Semi)?;
 
-        Ok(Define { span: Span::connect(ident.span, semi.span), ident, value })
+        Ok(Define {
+            span: Span::connect(ident.span, semi.span),
+            ident,
+            value,
+            typ,
+        })
+    }
+
+    fn parse_type(&mut self) -> Result<Type<Ident>> {
+        // Types:
+        // + basic: `int`
+        // + generic: `list[int]`
+        // + function: `fn(int) -> int`
+        // + generic function: `fn[t](t) -> t`
+        if self.peek1().kind == TokKind::Fn {
+            return self.parse_fn_type();
+        }
+
+        let name = self.parse_ident()?;
+        let gens = (self.peek1().kind == TokKind::OpenBrack)
+            .then(|| {
+                self.parse_node_list(
+                    TokKind::OpenBrack,
+                    TokKind::CloseBrack,
+                    Self::parse_ident,
+                )
+                .map(|(beg, ids, end)| Generics {
+                    params: ids
+                        .into_iter()
+                        .map(|i| Generic { span: i.span, id: i })
+                        .collect(),
+                    span: Span::connect(beg.span, end.span),
+                })
+            })
+            .transpose()?;
+
+        let span = Span::connect(
+            name.span,
+            gens.as_ref().map(|gens| gens.span).unwrap_or(name.span),
+        );
+
+        Ok(Type::Named(Box::new(NamedType { name, gens, span })))
+    }
+
+    fn parse_fn_type(&mut self) -> Result<Type<Ident>> {
+        let fn_kw = self.expect(TokKind::Fn)?;
+        let tparams = (self.peek1().kind == TokKind::OpenBrack)
+            .then(|| {
+                self.parse_node_list(
+                    TokKind::OpenBrack,
+                    TokKind::CloseBrack,
+                    Self::parse_ident,
+                )
+                .map(|(beg, ids, end)| Generics {
+                    params: ids
+                        .into_iter()
+                        .map(|i| Generic { span: i.span, id: i })
+                        .collect(),
+                    span: Span::connect(beg.span, end.span),
+                })
+            })
+            .transpose()?;
+
+        let (_, types, end) = self.parse_node_list(
+            TokKind::OpenParen,
+            TokKind::CloseParen,
+            Self::parse_type,
+        )?;
+
+        let ret_type =
+            self.eat(TokKind::Arrow).map(|_| self.parse_type()).transpose()?;
+
+        let final_span =
+            ret_type.as_ref().map(|rt| rt.span()).unwrap_or(end.span);
+
+        Ok(Type::Fn(Box::new(FnType {
+            args: types,
+            gens: tparams,
+            ret_type,
+            span: Span::connect(fn_kw.span, final_span),
+        })))
     }
 
     /// ```text
@@ -1562,5 +1648,20 @@ mod tests {
         return_in_expr! {
             r#"{ return }"#
         }
+    }
+
+    #[test]
+    fn parses_types() {
+        macro_rules! typ {
+            ($ret:expr) => {
+                let mut parser = Parser::new($ret.as_bytes(), "");
+                insta::assert_debug_snapshot!(parser.parse_type())
+            };
+        }
+
+        typ!(r#"int"#);
+        typ!(r#"list[a]"#);
+        typ!(r#"map[k, v]"#);
+        typ!(r#"fn[k, v]() -> map[k, v]"#);
     }
 }

@@ -304,7 +304,12 @@ impl<'a, 'b> Lowerer<'a, 'b> {
     }
 
     fn lower_definition(&mut self, def: &Define<Ident>) {
-        let Define { ident: ident @ Ident { raw, .. }, value, span: _ } = def;
+        let Define {
+            ident: ident @ Ident { raw, .. },
+            value,
+            span: _,
+            typ: _,
+        } = def;
         if let Expr::FnDef(f) = value {
             if f.recursive {
                 self.lower_rec_func_def(ident, f);

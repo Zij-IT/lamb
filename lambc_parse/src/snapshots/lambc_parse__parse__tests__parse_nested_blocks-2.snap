@@ -15,6 +15,7 @@ Ok(
                                 end: 7,
                             },
                         },
+                        typ: None,
                         value: I64(
                             I64Lit {
                                 base: Dec,
@@ -45,6 +46,7 @@ Ok(
                                             end: 21,
                                         },
                                     },
+                                    typ: None,
                                     value: I64(
                                         I64Lit {
                                             base: Dec,
@@ -75,6 +77,7 @@ Ok(
                                                         end: 35,
                                                     },
                                                 },
+                                                typ: None,
                                                 value: Block(
                                                     Block {
                                                         statements: [],
