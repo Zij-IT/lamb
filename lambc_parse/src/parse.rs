@@ -122,7 +122,7 @@ impl<'a> Parser<'a> {
     ///
     ///     import := 'from' string ('as' ident)? 'import' ('*'? | '(' ident_list ')') ';'
     /// ```
-    fn parse_import(&mut self) -> Result<Import<PathBuf>> {
+    fn parse_import(&mut self) -> Result<Import<Ident, PathBuf>> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
@@ -162,7 +162,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_import_item(&mut self) -> Result<ImportItem> {
+    fn parse_import_item(&mut self) -> Result<ImportItem<Ident>> {
         let item = self.parse_ident()?;
         let (alias, span) = if self.eat_ident("as").is_some() {
             let alias = self.parse_ident()?;
@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
         Ok(ImportItem { item, alias, span })
     }
 
-    fn parse_export(&mut self) -> Result<Export> {
+    fn parse_export(&mut self) -> Result<Export<Ident>> {
         let export = self.expect_ident("export")?;
         let (_, items, _) = self.parse_node_list(
             TokKind::OpenBrace,
@@ -187,7 +187,7 @@ impl<'a> Parser<'a> {
         Ok(Export { items, span: Span::connect(export.span, end.span) })
     }
 
-    fn parse_export_item(&mut self) -> Result<ExportItem> {
+    fn parse_export_item(&mut self) -> Result<ExportItem<Ident>> {
         let item = self.parse_ident()?;
         let (alias, span) = if self.eat_ident("as").is_some() {
             let alias = self.parse_ident()?;

@@ -538,37 +538,37 @@ pub enum Item<IdKind> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ImportItem {
-    pub item: Ident,
-    pub alias: Option<Ident>,
+pub struct ImportItem<IdKind> {
+    pub item: IdKind,
+    pub alias: Option<IdKind>,
     pub span: Span,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Import<PathKind> {
+pub struct Import<IdKind, PathKind> {
     pub file: PathKind,
-    pub name: Option<Ident>,
-    pub items: Vec<ImportItem>,
+    pub name: Option<IdKind>,
+    pub items: Vec<ImportItem<IdKind>>,
     pub star: bool,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ExportItem {
-    pub item: Ident,
-    pub alias: Option<Ident>,
+pub struct ExportItem<IdKind> {
+    pub item: IdKind,
+    pub alias: Option<IdKind>,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Export {
-    pub items: Vec<ExportItem>,
+pub struct Export<IdKind> {
+    pub items: Vec<ExportItem<IdKind>>,
     pub span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Module<IdKind, PathKind> {
-    pub exports: Vec<Export>,
-    pub imports: Vec<Import<PathKind>>,
+    pub exports: Vec<Export<IdKind>>,
+    pub imports: Vec<Import<IdKind, PathKind>>,
     pub items: Vec<Item<IdKind>>,
     pub path: PathKind,
     pub span: Span,

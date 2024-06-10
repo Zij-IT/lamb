@@ -117,7 +117,7 @@ impl<'b> ModuleParser<'b> {
 
     fn import_path_from(
         &self,
-        import: &lambc_parse::Import<PathBuf>,
+        import: &lambc_parse::Import<Ident, PathBuf>,
         path: &Path,
     ) -> Result<PathBuf, Error> {
         let import_path = import.file.as_path();

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use lambc_compiler::PathRef;
-use lambc_parse::{Export, Import};
+use lambc_parse::{Export, Ident, Import};
 
 use crate::{
     gc::GcRef,
@@ -16,11 +16,11 @@ pub struct Exe {
 pub struct CompiledModule {
     pub(crate) path: GcRef<Str>,
     pub(crate) imports: Vec<CompiledImport>,
-    pub(crate) export: Option<Export>,
+    pub(crate) export: Option<Export<Ident>>,
     pub(crate) code: GcRef<Closure>,
 }
 
 pub struct CompiledImport {
-    pub(crate) raw: Import<PathRef>,
+    pub(crate) raw: Import<Ident, PathRef>,
     pub(crate) path: GcRef<Str>,
 }
