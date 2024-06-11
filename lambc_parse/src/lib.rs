@@ -17,13 +17,13 @@ pub struct Span {
 impl Span {
     /// Creates a new `Span` for the specified `FileId`. `start` and `end` mark byte offsets in
     /// the source file.
-    pub(crate) fn new(start: usize, end: usize) -> Self {
+    pub const fn new(start: usize, end: usize) -> Self {
         Self { start, end }
     }
 
     /// Helper function to join two spans from the same file. The resulting span will have the
     /// the start from `start` and end from `end`.
-    pub(crate) fn connect(start: Self, end: Self) -> Self {
+    pub const fn connect(start: Self, end: Self) -> Self {
         Self { start: start.start, end: end.end }
     }
 }
