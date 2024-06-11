@@ -20,5 +20,9 @@ Ok(
             start: 0,
             end: 33,
         },
+        path_span: Span {
+            start: 5,
+            end: 14,
+        },
     },
 )

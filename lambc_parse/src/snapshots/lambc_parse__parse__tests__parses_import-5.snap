@@ -71,5 +71,9 @@ Ok(
             start: 0,
             end: 54,
         },
+        path_span: Span {
+            start: 5,
+            end: 14,
+        },
     },
 )

@@ -550,6 +550,7 @@ pub struct Import<IdKind, PathKind> {
     pub items: Vec<ImportItem<IdKind>>,
     pub star: bool,
     pub span: Span,
+    pub path_span: Span,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

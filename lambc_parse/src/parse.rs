@@ -126,6 +126,7 @@ impl<'a> Parser<'a> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
+        let path_span = path.span;
         let path =
             path.text.map_or(PathBuf::from(""), |t| PathBuf::from(t.inner));
 
@@ -159,6 +160,7 @@ impl<'a> Parser<'a> {
             items,
             star: is_glob,
             span: Span::connect(start.span, semi.span),
+            path_span,
         })
     }
 

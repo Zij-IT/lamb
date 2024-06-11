@@ -72,6 +72,7 @@ impl<'b> ModuleParser<'b> {
                         name: import.name,
                         star: import.star,
                         span: import.span,
+                        path_span: import.path_span,
                     };
 
                     scheduled.insert(import_path.clone());

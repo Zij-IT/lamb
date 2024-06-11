@@ -15,6 +15,10 @@ Ok(
                     start: 13,
                     end: 37,
                 },
+                path_span: Span {
+                    start: 18,
+                    end: 27,
+                },
             },
         ],
         items: [
