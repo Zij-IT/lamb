@@ -417,6 +417,12 @@ pub enum Expr<IdKind> {
     Path(Box<Path>),
 }
 
+impl<IdKind> Expr<IdKind> {
+    pub fn is_recursive(&self) -> bool {
+        matches!(self, Self::FnDef(f) if f.recursive)
+    }
+}
+
 impl<IdKind: Spanned> Expr<IdKind> {
     pub fn span(&self) -> Span {
         match self {

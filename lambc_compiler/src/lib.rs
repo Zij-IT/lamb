@@ -1,4 +1,5 @@
 mod module_parser;
+mod name_res;
 mod state;
 
 use std::path::PathBuf;
@@ -54,6 +55,13 @@ impl<B: Backend> Compiler<B> {
         main: PathRef,
         parsed: Vec<Module<Ident, PathRef>>,
     ) -> Result<B::Output> {
+        if self.state.has_errors() {
+            return Err(Error::Invalid);
+        }
+
+        let mut resolver = name_res::Resolver::new(&mut self.state);
+        _ = resolver.resolve(parsed.clone());
+
         if self.state.has_errors() {
             return Err(Error::Invalid);
         }
