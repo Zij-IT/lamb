@@ -6,7 +6,7 @@ use lambc_parse::{
     IfCond, Import, ImportItem, Index, InnerPattern, Item, List, Module,
     Pattern, Return, Span, Statement, Unary,
 };
-use miette::Diagnostic;
+use miette::{Diagnostic, LabeledSpan};
 
 use crate::{PathRef, State};
 
@@ -25,6 +25,12 @@ pub enum Error {
         span: Span,
         #[label("this module doesn't export `{}`", .name)]
         import_span: Span,
+    },
+    #[error("`{}` is defined multiple times", .name)]
+    MultipleDefinitions {
+        name: String,
+        #[label(collection)]
+        locations: Vec<LabeledSpan>,
     },
 }
 
@@ -297,6 +303,28 @@ impl<'s> Resolver<'s> {
     ) -> Box<FnDef<Var>> {
         let FnDef { args, body, recursive, span } = fndef;
         scope.begin();
+
+        let mut map: HashMap<_, Vec<_>> = HashMap::new();
+        for (s, span) in args.iter().map(|a| (a.raw.as_str(), a.span)) {
+            map.entry(s)
+                .or_default()
+                .push(LabeledSpan::new_with_span(Some("here".into()), span));
+        }
+
+        let file = self.state.resolve_path(scope.module);
+        let file = std::fs::read_to_string(file).ok();
+        for (s, spans) in map {
+            if spans.len() > 1 {
+                self.state.add_error(
+                    Error::MultipleDefinitions {
+                        name: s.into(),
+                        locations: spans,
+                    },
+                    file.clone(),
+                )
+            }
+        }
+
         let args =
             args.into_iter().map(|i| self.define_new_var(scope, &i)).collect();
 
