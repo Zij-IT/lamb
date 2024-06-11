@@ -56,7 +56,7 @@ impl<'s> Resolver<'s> {
         let mut scopemap = HashMap::new();
         let exportmap = modules
             .iter()
-            .map(|md| (md.path, self.create_exportmap(&md.exports)))
+            .map(|md| (md.path, self.create_exportmap(md.path, &md.exports)))
             .collect::<HashMap<_, _>>();
 
         for module in &modules {
@@ -94,8 +94,15 @@ impl<'s> Resolver<'s> {
 
     fn create_exportmap(
         &mut self,
+        path: PathRef,
         exports: &[Export<Ident>],
     ) -> HashMap<String, Var> {
+        let names = exports.iter().flat_map(|e| e.items.as_slice()).map(|e| {
+            (e.alias.as_ref().unwrap_or(&e.item).raw.as_str(), e.item.span)
+        });
+
+        self.report_if_duplicates(path, names);
+
         let mut map = HashMap::new();
         for export in exports {
             for item in &export.items {
@@ -304,26 +311,10 @@ impl<'s> Resolver<'s> {
         let FnDef { args, body, recursive, span } = fndef;
         scope.begin();
 
-        let mut map: HashMap<_, Vec<_>> = HashMap::new();
-        for (s, span) in args.iter().map(|a| (a.raw.as_str(), a.span)) {
-            map.entry(s)
-                .or_default()
-                .push(LabeledSpan::new_with_span(Some("here".into()), span));
-        }
-
-        let file = self.state.resolve_path(scope.module);
-        let file = std::fs::read_to_string(file).ok();
-        for (s, spans) in map {
-            if spans.len() > 1 {
-                self.state.add_error(
-                    Error::MultipleDefinitions {
-                        name: s.into(),
-                        locations: spans,
-                    },
-                    file.clone(),
-                )
-            }
-        }
+        self.report_if_duplicates(
+            scope.module,
+            args.iter().map(|a| (a.raw.as_str(), a.span)),
+        );
 
         let args =
             args.into_iter().map(|i| self.define_new_var(scope, &i)).collect();
@@ -576,6 +567,33 @@ impl<'s> Resolver<'s> {
                 );
 
                 self.fresh()
+            }
+        }
+    }
+
+    fn report_if_duplicates<'a>(
+        &mut self,
+        module: PathRef,
+        iter: impl Iterator<Item = (&'a str, Span)>,
+    ) {
+        let mut map: HashMap<_, Vec<_>> = HashMap::new();
+        for (s, span) in iter {
+            map.entry(s)
+                .or_default()
+                .push(LabeledSpan::new_with_span(Some("here".into()), span));
+        }
+
+        let file = self.state.resolve_path(module);
+        let file = std::fs::read_to_string(file).ok();
+        for (s, spans) in map {
+            if spans.len() > 1 {
+                self.state.add_error(
+                    Error::MultipleDefinitions {
+                        name: s.into(),
+                        locations: spans,
+                    },
+                    file.clone(),
+                )
             }
         }
     }
