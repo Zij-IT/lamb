@@ -199,7 +199,7 @@ impl<'a> Parser<'a> {
             (None, item.span)
         };
 
-        Ok(ExportItem { item, alias, span })
+        Ok(ExportItem { span: Span::connect(item.span, span), item, alias })
     }
 
     /// Parses a statement as defined by the following grammar
