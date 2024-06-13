@@ -96,21 +96,19 @@ impl<'s> Resolver<'s> {
         &mut self,
         path: PathRef,
         exports: &[Export<Ident>],
-    ) -> HashMap<String, Var> {
-        let names = exports.iter().flat_map(|e| e.items.as_slice()).map(|e| {
-            (e.alias.as_ref().unwrap_or(&e.item).raw.as_str(), e.item.span)
+    ) -> ExportMap {
+        let names = exports.iter().flat_map(|e| {
+            e.items.iter().map(|item| {
+                let name = item.alias.as_ref().unwrap_or(&item.item);
+                (name.raw.as_str(), item.span)
+            })
         });
 
         self.report_if_duplicates(path, names);
 
-        let mut map = HashMap::new();
-        for export in exports {
-            for item in &export.items {
-                let name =
-                    item.alias.as_ref().unwrap_or(&item.item).raw.clone();
-
-                map.insert(name, self.fresh());
-            }
+        let mut map = ExportMap::new();
+        for export in exports.iter().flat_map(|e| &e.items) {
+            map.insert(export, self.fresh());
         }
 
         map
@@ -119,7 +117,7 @@ impl<'s> Resolver<'s> {
     fn create_scope_and_resolve_imports(
         &mut self,
         md: &Module<Ident, PathRef>,
-        exports: &HashMap<PathRef, HashMap<String, Var>>,
+        exports: &HashMap<PathRef, ExportMap>,
     ) -> (Vec<Import<Var, PathRef>>, Scope) {
         let mut scope = Scope::new(md.path);
         scope.add_builtin_vars(|| self.fresh());
@@ -137,10 +135,10 @@ impl<'s> Resolver<'s> {
             let export = &exports[&import.file];
             for item in import.items.iter() {
                 let name = &item.alias.as_ref().unwrap_or(&item.item).raw;
-                let exported = &item.item.raw;
-                let var = if let Some(var) = export.get(exported) {
-                    scope.add_var(name, *var);
-                    *var
+                let var = if let Some(var) = export.get_from_within(&item.item)
+                {
+                    scope.add_var(name, var);
+                    var
                 } else {
                     let path = self.state.resolve_path(scope.module);
                     self.state.add_error(
@@ -189,7 +187,7 @@ impl<'s> Resolver<'s> {
     fn resolve_exports(
         &self,
         exports: &[Export<Ident>],
-        exportmap: &HashMap<String, Var>,
+        exportmap: &ExportMap,
     ) -> Vec<Export<Var>> {
         exports
             .iter()
@@ -197,10 +195,14 @@ impl<'s> Resolver<'s> {
                 let exports = items
                     .iter()
                     .map(|ExportItem { item, alias, span }| ExportItem {
-                        item: exportmap[&item.raw],
-                        // We want the alias to point to the original name, so we use the
-                        // the actual name for the alias
-                        alias: alias.as_ref().map(|_| exportmap[&item.raw]),
+                        item: exportmap.get_from_within(&item).expect(
+                            "Exports should all be found within the map",
+                        ),
+                        alias: alias.as_ref().map(|i| {
+                            exportmap.get_from_outside(&i).expect(
+                                "Exports should all be found within the map",
+                            )
+                        }),
                         span: span.clone(),
                     })
                     .collect();
@@ -647,6 +649,34 @@ impl Scope {
 
     pub fn end(&mut self) {
         *self = *self.parent.take().expect("Closing the global scope, eh?")
+    }
+}
+
+struct ExportMap {
+    within: HashMap<String, Var>,
+    outside: HashMap<String, Var>,
+}
+
+impl ExportMap {
+    pub fn new() -> Self {
+        Self { within: HashMap::new(), outside: HashMap::new() }
+    }
+
+    pub fn insert(&mut self, export: &ExportItem<Ident>, v: Var) {
+        let within = export.item.raw.clone();
+        let outside =
+            export.alias.as_ref().unwrap_or(&export.item).raw.clone();
+
+        self.within.insert(within, v);
+        self.outside.insert(outside, v);
+    }
+
+    pub fn get_from_within(&self, ident: &Ident) -> Option<Var> {
+        self.within.get(&ident.raw).copied()
+    }
+
+    pub fn get_from_outside(&self, ident: &Ident) -> Option<Var> {
+        self.outside.get(&ident.raw).copied()
     }
 }
 
