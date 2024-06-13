@@ -35,10 +35,14 @@ impl State {
         self.pathmap.resolve(pr).expect("There should be only one pathmap being used throughout compilation")
     }
 
-    pub fn add_error<T>(&mut self, err: T, source: Option<String>)
+    pub fn add_error<T>(&mut self, err: T, source: Option<PathRef>)
     where
         T: Diagnostic + Send + Sync + 'static,
     {
+        let source = source
+            .map(|src| self.resolve_path(src))
+            .and_then(|path| std::fs::read_to_string(path).ok());
+
         let report = match source {
             Some(source) => Report::new(err).with_source_code(source),
             None => Report::new(err),

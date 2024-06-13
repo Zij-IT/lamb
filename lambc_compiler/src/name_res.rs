@@ -140,14 +140,13 @@ impl<'s> Resolver<'s> {
                     scope.add_var(name, var);
                     var
                 } else {
-                    let path = self.state.resolve_path(scope.module);
                     self.state.add_error(
                         Error::NotExported {
                             name: item.item.raw.clone(),
                             span: item.item.span,
                             import_span: import.path_span,
                         },
-                        std::fs::read_to_string(path).ok(),
+                        Some(scope.module),
                     );
 
                     self.define_new_var(
@@ -562,10 +561,9 @@ impl<'s> Resolver<'s> {
         match scope.get_var(&i.raw) {
             Some(v) => v,
             None => {
-                let path = self.state.resolve_path(scope.module);
                 self.state.add_error(
                     Error::NotFound { name: i.raw.clone(), span: i.span },
-                    std::fs::read_to_string(path).ok(),
+                    Some(scope.module),
                 );
 
                 self.fresh()
@@ -585,8 +583,6 @@ impl<'s> Resolver<'s> {
                 .push(LabeledSpan::new_with_span(Some("here".into()), span));
         }
 
-        let file = self.state.resolve_path(module);
-        let file = std::fs::read_to_string(file).ok();
         for (s, spans) in map {
             if spans.len() > 1 {
                 self.state.add_error(
@@ -594,7 +590,7 @@ impl<'s> Resolver<'s> {
                         name: s.into(),
                         locations: spans,
                     },
-                    file.clone(),
+                    Some(module),
                 )
             }
         }

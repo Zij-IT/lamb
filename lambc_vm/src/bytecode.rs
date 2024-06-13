@@ -139,13 +139,9 @@ impl<'a, 'b> Lowerer<'a, 'b> {
 
     pub fn lower(mut self, script: &Module<Ident, PathRef>) -> GcRef<Closure> {
         self.lower_script(script);
-        let errs = std::mem::take(&mut self.errs);
-        if !errs.is_empty() {
-            let path = self.state.resolve_path(script.path);
-            let source = std::fs::read_to_string(path).ok();
-            for err in errs {
-                self.state.add_error(err, source.clone().into());
-            }
+
+        for err in std::mem::take(&mut self.errs) {
+            self.state.add_error(err, Some(script.path));
         }
 
         self.finish()

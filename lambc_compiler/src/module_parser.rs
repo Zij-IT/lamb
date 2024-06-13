@@ -54,10 +54,8 @@ impl<'b> ModuleParser<'b> {
                         match self.import_path_from(&import, &path) {
                             Ok(p) => p,
                             Err(e) => {
-                                self.state.add_error(
-                                    e,
-                                    std::fs::read_to_string(path.clone()).ok(),
-                                );
+                                let path = self.state.add_path(path.clone());
+                                self.state.add_error(e, Some(path));
                                 continue;
                             }
                         };
@@ -110,7 +108,8 @@ impl<'b> ModuleParser<'b> {
         match parser.parse_module() {
             Ok(module) => Some(module),
             Err(err) => {
-                self.state.add_error(err, input.into());
+                let pref = self.state.add_path(path);
+                self.state.add_error(err, Some(pref));
                 None
             }
         }
