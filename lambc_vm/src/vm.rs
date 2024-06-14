@@ -20,50 +20,65 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(miette::Diagnostic, thiserror::Error, Debug)]
 pub enum Error {
+    #[diagnostic(code("runtime::no-such-global"))]
     #[error("No global with the name '{0}'")]
     NoSuchGlobal(String),
 
+    #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to test a value of type {0} against an array pattern")]
     BadArrayScrutinee(&'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to use a value of type {0} as an index")]
     BadIndexType(&'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to index into a value of type {0}")]
     BadIndexeeType(&'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error("Callee accepts {0} arguments, but was provided {1}")]
     ArgAmountMismatch(usize, usize),
 
+    #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to call a value of type {0}")]
     BadCalleeType(&'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error("Type Error: Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error("Type Error: The binary op {2} can't be used with values of types {1} and {0}")]
     BinaryTypeMismatch(&'static str, &'static str, &'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error(
         "Type Error: The unary op {1} can't be used with a value of type {0}"
     )]
     UnaryTypeMismatch(&'static str, &'static str),
 
+    #[diagnostic(code("runtime::out-of-bounds"))]
     #[error("Index {0} is out of bounds (max {1})")]
     IndexOutOfBounds(usize, usize),
 
+    #[diagnostic(code("runtime::unreadble-user-input"))]
     #[error("IoError: {0}")]
     Io(#[from] std::io::Error),
 
+    #[diagnostic(code("runtime::bad-user-input"))]
     #[error("Cant convert input to a value of type {0}")]
     InputConv(&'static str),
 
+    #[diagnostic(code("type-error"))]
     #[error("No module with path '{0}' has been loaded.")]
     NoSuchModule(String),
 
+    #[diagnostic(code("type-error"))]
     #[error("Attempt to treat a value of type '{0}' as a module.")]
     NotAModule(&'static str),
 
+    #[diagnostic(code("runtime::no-such-export"))]
     #[error("Module '{1}' doesn't export an item named '{0}'")]
     NoExportViaName(String, String),
 }

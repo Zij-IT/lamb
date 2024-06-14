@@ -13,14 +13,17 @@ use crate::state::PathRef;
 #[derive(Debug, Diagnostic, ThError)]
 #[diagnostic()]
 enum Error {
+    #[diagnostic(code("file::unreadable"))]
     #[error("Unable to read the file at '{}': '{}", .path.display(), .inner)]
     FailedToRead { path: PathBuf, inner: std::io::Error },
+    #[diagnostic(code("file::not-a-file"))]
     #[error("This path is not a file: {}", .path.display())]
     ImportNotAFile {
         path: PathBuf,
         #[label]
         span: lambc_parse::Span,
     },
+    #[diagnostic(code("file::empty-import"))]
     #[error("This import path is empty")]
     EmptyImport {
         #[label]

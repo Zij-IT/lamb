@@ -19,6 +19,7 @@ use crate::{
 #[derive(thiserror::Error, miette::Diagnostic, Debug)]
 #[diagnostic(severity(error))]
 pub enum Error {
+    #[diagnostic(code("bytecode::limit-error"))]
     #[error("There are too many {items_name}. Limit of {limit}")]
     LimitError {
         items_name: &'static str,
@@ -26,6 +27,7 @@ pub enum Error {
         #[label]
         span: Span,
     },
+    #[diagnostic(code("bytecode::invalid-literal"))]
     #[error("Invalid {type_} literal. {reason}")]
     InvalidLiteral {
         type_: &'static str,
@@ -35,15 +37,18 @@ pub enum Error {
         #[label]
         span: Span,
     },
+    #[diagnostic(code("bytecode::invalid-array"))]
     #[error(
         "A list can contain a maximum of {limit} elements. Contains {total}"
     )]
     ArrayLimitError { limit: usize, total: usize, span: Span },
+    #[diagnostic(code("bytecode::invalid-rest-pattern"))]
     #[error("The '..' pattern is not valid here")]
     InvalidRestPattern {
         #[label]
         span: Span,
     },
+    #[diagnostic(code("bytecode::list-pattern-limit"))]
     #[error("An list pattern can contain at most {limit} sub-patterns")]
     ListPatternLimit {
         limit: usize,
@@ -79,8 +84,8 @@ impl<'a> lambc_compiler::Backend for Backend<'a> {
             .map(|m: Module<_, _>| {
                 let mod_path = state.resolve_path(m.path);
                 let mod_path = self.gc.intern(mod_path.to_string_lossy());
-                let code = Lowerer::new(self.gc, state, name, mod_path)
-                    .lower(&m);
+                let code =
+                    Lowerer::new(self.gc, state, name, mod_path).lower(&m);
 
                 let imports = m
                     .imports
