@@ -68,33 +68,48 @@ impl<'s> Resolver<'s> {
         }
 
         for module in modules {
-            let scope =
-                scopemap.get_mut(&module.path).expect("module removed?");
-
-            let exports = self.resolve_exports(
-                scope,
-                &module.exports,
-                &exportmap[&module.path],
+            let module = self.resolve_module(
+                &mut scopemap,
+                module,
+                &exportmap,
+                &mut importmap,
             );
-
-            let items = self.resolve_items(scope, module.items);
-
-            let imports = std::mem::take(
-                importmap.get_mut(&module.path).expect("module was removed?"),
-            );
-
-            let module = Module {
-                exports,
-                imports,
-                items,
-                path: module.path,
-                span: module.span,
-            };
 
             mapped.push(module)
         }
 
         mapped
+    }
+
+    fn resolve_module(
+        &mut self,
+        scopemap: &mut HashMap<PathRef, Scope>,
+        module: Module<Ident, PathRef>,
+        exportmap: &HashMap<PathRef, ExportMap>,
+        importmap: &mut HashMap<PathRef, Vec<Import<Var, PathRef>>>,
+    ) -> Module<Var, PathRef> {
+        let scope = scopemap.get_mut(&module.path).expect("module removed?");
+
+        let exports = self.resolve_exports(
+            scope,
+            &module.exports,
+            &exportmap[&module.path],
+        );
+
+        let items = self.resolve_items(scope, module.items);
+
+        let imports = std::mem::take(
+            importmap.get_mut(&module.path).expect("module was removed?"),
+        );
+
+        let module = Module {
+            exports,
+            imports,
+            items,
+            path: module.path,
+            span: module.span,
+        };
+        module
     }
 
     fn create_exportmap(
