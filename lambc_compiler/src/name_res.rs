@@ -51,7 +51,6 @@ impl<'s> Resolver<'s> {
         &mut self,
         modules: Vec<Module<Ident, PathRef>>,
     ) -> Vec<Module<Var, PathRef>> {
-        let mut mapped = Vec::new();
         let mut importmap = HashMap::new();
         let mut scopemap = HashMap::new();
         let mut exportmap = modules
@@ -67,22 +66,21 @@ impl<'s> Resolver<'s> {
             scopemap.insert(module.path, scope);
         }
 
-        for module in modules {
-            let scope =
-                scopemap.remove(&module.path).expect("module removed?");
+        modules
+            .into_iter()
+            .map(|module| {
+                let scope =
+                    scopemap.remove(&module.path).expect("module removed?");
 
-            let imports =
-                importmap.remove(&module.path).expect("module removed?");
+                let imports =
+                    importmap.remove(&module.path).expect("module removed?");
 
-            let exports =
-                exportmap.remove(&module.path).expect("module removed?");
+                let exports =
+                    exportmap.remove(&module.path).expect("module removed?");
 
-            let module = self.resolve_module(scope, module, exports, imports);
-
-            mapped.push(module)
-        }
-
-        mapped
+                self.resolve_module(scope, module, exports, imports)
+            })
+            .collect()
     }
 
     fn resolve_module(
