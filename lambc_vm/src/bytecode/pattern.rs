@@ -140,7 +140,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
                         ));
 
                         for Ident { raw, .. } in bindings {
-                            let slot = self.info.local_slot(&raw).unwrap();
+                            let slot = self.info.local_slot(raw).unwrap();
                             self.write_op(Op::SetSlot(
                                 u16::try_from(slot).unwrap(),
                             ))

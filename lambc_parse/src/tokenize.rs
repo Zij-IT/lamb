@@ -784,7 +784,7 @@ mod tests {
 
     fn lex_mult(input: &str, kinds: &[TokKind]) {
         let mut lexer = Lexer::new(input.as_bytes());
-        let mut kinds = kinds.into_iter().copied();
+        let mut kinds = kinds.iter().copied();
 
         while let (Some(kind), tok) = (kinds.next(), lexer.next_token()) {
             assert_eq!(kind, tok.kind);

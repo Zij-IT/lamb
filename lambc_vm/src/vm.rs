@@ -159,8 +159,8 @@ impl<'gc> Vm<'gc> {
         let main = &exe.main;
         let modules = &exe.modules;
 
-        let module = &modules[&main];
-        self.load_module(module, &modules)
+        let module = &modules[main];
+        self.load_module(module, modules)
     }
 
     fn load_module(
@@ -762,7 +762,7 @@ impl<'gc> Vm<'gc> {
         let rhs = self.pop();
         let lhs = self.pop();
 
-        let Some(ord) = lhs.compare(&rhs, &self.gc) else {
+        let Some(ord) = lhs.compare(&rhs, self.gc) else {
             return self.error(Error::BinaryTypeMismatch(
                 lhs.type_name(),
                 rhs.type_name(),
@@ -780,7 +780,7 @@ impl<'gc> Vm<'gc> {
     {
         let rhs = self.pop();
         let lhs = self.pop();
-        let eq = matches!(lhs.compare(&rhs, &self.gc), Some(Ordering::Equal));
+        let eq = matches!(lhs.compare(&rhs, self.gc), Some(Ordering::Equal));
 
         self.push(Value::Bool(f(eq)))
     }
@@ -837,7 +837,7 @@ impl<'gc> Vm<'gc> {
 
         for (k, v) in &self.modules {
             self.gc.mark_object(*k);
-            v.mark_items(&mut self.gc);
+            v.mark_items(self.gc);
         }
 
         for upvalue in &self.open_upvalues {
@@ -872,7 +872,7 @@ impl<'gc> Vm<'gc> {
 
     fn native_print(vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         for arg in args {
-            print!("{}", arg.format(&vm.gc));
+            print!("{}", arg.format(vm.gc));
         }
 
         Ok(Value::Nil)
@@ -880,7 +880,7 @@ impl<'gc> Vm<'gc> {
 
     fn native_println(vm: &Vm<'_>, args: &[Value]) -> Result<Value> {
         for arg in args {
-            print!("{}", arg.format(&vm.gc));
+            print!("{}", arg.format(vm.gc));
         }
 
         println!();

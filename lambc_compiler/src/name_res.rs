@@ -193,15 +193,15 @@ impl<'s> Resolver<'s> {
                         // locatable in the global scope of that module.
                         item: self.find_var(scope, item),
                         alias: alias.as_ref().map(|i| {
-                            exportmap.get_from_outside(&i).expect(
+                            exportmap.get_from_outside(i).expect(
                                 "Exports should all be found within the map",
                             )
                         }),
-                        span: span.clone(),
+                        span: *span,
                     })
                     .collect();
 
-                Export { items: exports, span: span.clone() }
+                Export { items: exports, span: *span }
             })
             .collect()
     }
@@ -228,7 +228,7 @@ impl<'s> Resolver<'s> {
                     value,
                     // TODO: Add type information in `Scope`
                     typ: None,
-                    span: def.span.clone(),
+                    span: def.span,
                 })
             }
         }
@@ -255,7 +255,7 @@ impl<'s> Resolver<'s> {
                     ident: self.define_new_var(scope, &def.ident),
                     value,
                     typ: None,
-                    span: def.span.clone(),
+                    span: def.span,
                 })
             }
             Statement::Expr(ExprStatement { expr, span }) => {

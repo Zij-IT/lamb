@@ -82,7 +82,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
             Expr::List(list) => self.lower_list(list),
             Expr::Group(gr) => self.lower_expr(&gr.value),
             Expr::Return(ret) => self.lower_return(ret),
-            Expr::Path(path) => self.lower_path(&path),
+            Expr::Path(path) => self.lower_path(path),
         }
     }
 
@@ -291,7 +291,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         self.patch_jump(idx);
     }
 
-    fn lower_path<'ast>(&mut self, path: &'ast lambc_parse::Path) {
+    fn lower_path(&mut self, path: &lambc_parse::Path) {
         // Module::item1::item2
         // ^^^^^^  ^^^^^  ^^^^^
         //     |   |      |

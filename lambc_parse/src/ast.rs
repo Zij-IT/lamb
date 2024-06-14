@@ -244,7 +244,7 @@ impl<IdKind> ArrayPattern<IdKind> {
 
         let head = splits.next().unwrap_or_default();
         let (tail, rest) = if let Some(tail) = splits.next() {
-            (tail, self.patterns[head.len()].inner.get(0))
+            (tail, self.patterns[head.len()].inner.first())
         } else {
             ([].as_slice(), None)
         };

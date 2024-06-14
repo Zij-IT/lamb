@@ -79,7 +79,7 @@ impl<'a> lambc_compiler::Backend for Backend<'a> {
             .map(|m: Module<_, _>| {
                 let mod_path = state.resolve_path(m.path);
                 let mod_path = self.gc.intern(mod_path.to_string_lossy());
-                let code = Lowerer::new(&mut self.gc, state, name, mod_path)
+                let code = Lowerer::new(self.gc, state, name, mod_path)
                     .lower(&m);
 
                 let imports = m
