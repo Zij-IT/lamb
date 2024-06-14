@@ -180,6 +180,24 @@ impl<'s> Resolver<'s> {
             };
         }
 
+        let iter = md.items.iter().map(|item| match item {
+            Item::Def(def) => (def.ident.raw.as_str(), def.span),
+        });
+
+        let iter = md
+            .imports
+            .iter()
+            .flat_map(|i| {
+                i.items.iter().map(|ii| {
+                    let name =
+                        ii.alias.as_ref().unwrap_or(&ii.item).raw.as_str();
+                    (name, ii.span)
+                })
+            })
+            .chain(iter);
+
+        self.report_if_duplicates(md.path, iter);
+
         (imports, scope)
     }
 
