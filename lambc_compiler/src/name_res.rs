@@ -114,7 +114,8 @@ impl<'s> Resolver<'s> {
         scope: &mut Scope,
         exports: &HashMap<PathRef, ExportMap>,
     ) -> Import<Var, PathRef> {
-        let import_name = import.name.as_ref().map(|i| (&i.raw, self.fresh()));
+        let import_name =
+            import.name.as_ref().map(|i| (&i.raw, self.fresh_var()));
 
         if let Some((name, var)) = import_name {
             scope.add_var(name, var);
@@ -502,7 +503,7 @@ impl<'s> Resolver<'s> {
                 InnerPattern::Ident(self.resolve_ident_pattern(scope, *i))
             }
             InnerPattern::Array(arr) => {
-                InnerPattern::Array(self.array_pattern(arr, scope))
+                InnerPattern::Array(self.resolve_array_pattern(arr, scope))
             }
         }
     }
@@ -521,7 +522,7 @@ impl<'s> Resolver<'s> {
         })
     }
 
-    fn array_pattern(
+    fn resolve_array_pattern(
         &mut self,
         arr: Box<ArrayPattern<Ident>>,
         scope: &mut Scope,
@@ -537,7 +538,7 @@ impl<'s> Resolver<'s> {
     }
 
     fn define_new_var(&mut self, scope: &mut Scope, i: &Ident) -> Var {
-        let ident = self.fresh();
+        let ident = self.fresh_var();
         scope.add_var(&i.raw, ident);
         ident
     }
@@ -551,12 +552,12 @@ impl<'s> Resolver<'s> {
                     Some(scope.module),
                 );
 
-                self.fresh()
+                self.fresh_var()
             }
         }
     }
 
-    fn fresh(&mut self) -> Var {
+    fn fresh_var(&mut self) -> Var {
         self.start = self.start.checked_add(1).expect("Too many names.");
         Var(self.start - 1)
     }
@@ -564,7 +565,7 @@ impl<'s> Resolver<'s> {
     fn create_exportmap(&mut self, exports: &[Export<Ident>]) -> ExportMap {
         let mut map = ExportMap::new();
         for export in exports.iter().flat_map(|e| &e.items) {
-            map.insert(export, self.fresh());
+            map.insert(export, self.fresh_var());
         }
 
         map
@@ -572,7 +573,7 @@ impl<'s> Resolver<'s> {
 
     fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
         let mut scope = Scope::new(module.path);
-        scope.add_builtin_vars(|| self.fresh());
+        scope.add_builtin_vars(|| self.fresh_var());
         scope
     }
 
