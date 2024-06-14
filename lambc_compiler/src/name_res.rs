@@ -68,13 +68,16 @@ impl<'s> Resolver<'s> {
         }
 
         for module in modules {
-            let exports = self
-                .resolve_exports(&module.exports, &exportmap[&module.path]);
+            let scope =
+                scopemap.get_mut(&module.path).expect("module removed?");
 
-            let items = self.resolve_items(
-                scopemap.get_mut(&module.path).expect("module removed?"),
-                module.items,
+            let exports = self.resolve_exports(
+                scope,
+                &module.exports,
+                &exportmap[&module.path],
             );
+
+            let items = self.resolve_items(scope, module.items);
 
             mapped.push(Module {
                 exports,
@@ -202,7 +205,8 @@ impl<'s> Resolver<'s> {
     }
 
     fn resolve_exports(
-        &self,
+        &mut self,
+        scope: &mut Scope,
         exports: &[Export<Ident>],
         exportmap: &ExportMap,
     ) -> Vec<Export<Var>> {
@@ -212,9 +216,16 @@ impl<'s> Resolver<'s> {
                 let exports = items
                     .iter()
                     .map(|ExportItem { item, alias, span }| ExportItem {
-                        item: exportmap.get_from_within(&item).expect(
-                            "Exports should all be found within the map",
-                        ),
+                        // The export-map is the first thing that is created, which creates
+                        // `Var` entries for each exported item. When attempting to define
+                        // an item in the global scope, it's checked if the item is exported,
+                        // and if so, that var is used.
+                        //
+                        // If we use: `exportmap.get_from_within(..)` it's possible that
+                        // a variable that is exported doesn't exist in the global scope.
+                        // By using `self.find_var(..)` we check that each exported item is
+                        // locatable in the global scope of that module.
+                        item: self.find_var(scope, item),
                         alias: alias.as_ref().map(|i| {
                             exportmap.get_from_outside(&i).expect(
                                 "Exports should all be found within the map",
