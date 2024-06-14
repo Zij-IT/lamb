@@ -60,7 +60,7 @@ impl<B: Backend> Compiler<B> {
         }
 
         let mut resolver = name_res::Resolver::new(&mut self.state);
-        _ = resolver.resolve(parsed.clone());
+        _ = resolver.resolve_modules(parsed.clone());
 
         if self.state.has_errors() {
             return Err(Error::Invalid);

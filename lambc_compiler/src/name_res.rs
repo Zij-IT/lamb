@@ -47,7 +47,7 @@ impl<'s> Resolver<'s> {
         Self { state, start: 0 }
     }
 
-    pub fn resolve(
+    pub fn resolve_modules(
         &mut self,
         modules: Vec<Module<Ident, PathRef>>,
     ) -> Vec<Module<Var, PathRef>> {
