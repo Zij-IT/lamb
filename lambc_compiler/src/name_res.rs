@@ -83,15 +83,13 @@ impl<'s> Resolver<'s> {
 
         let items = self.resolve_items(&mut scope, module.items);
 
-        let module = Module {
+        Module {
             exports,
             imports,
             items,
             path: module.path,
             span: module.span,
-        };
-
-        module
+        }
     }
 
     fn create_exportmap(&mut self, exports: &[Export<Ident>]) -> ExportMap {
