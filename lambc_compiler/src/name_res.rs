@@ -89,6 +89,7 @@ impl<'s> Resolver<'s> {
             path: module.path,
             span: module.span,
         };
+
         module
     }
 
