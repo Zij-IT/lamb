@@ -62,8 +62,12 @@ impl<'s> Resolver<'s> {
         modules
             .into_iter()
             .map(|module| {
-                let (imports, scope) =
-                    self.create_scope_and_resolve_imports(&module, &exportmap);
+                let mut scope = Scope::new(module.path);
+                scope.add_builtin_vars(|| self.fresh());
+
+                let imports = self.create_scope_and_resolve_imports(
+                    &mut scope, &module, &exportmap,
+                );
 
                 let exports =
                     exportmap.get(&module.path).expect("module removed?");
@@ -106,25 +110,23 @@ impl<'s> Resolver<'s> {
 
     fn create_scope_and_resolve_imports(
         &mut self,
+        scope: &mut Scope,
         md: &Module<Ident, PathRef>,
         exports: &HashMap<PathRef, ExportMap>,
-    ) -> (Vec<Import<Var, PathRef>>, Scope) {
-        let mut scope = Scope::new(md.path);
-        scope.add_builtin_vars(|| self.fresh());
-
+    ) -> Vec<Import<Var, PathRef>> {
         let imports = md
             .imports
             .iter()
-            .map(|i| self.resolve_import(i, &mut scope, exports))
+            .map(|i| self.resolve_import(i, scope, exports))
             .collect();
 
         for item in &md.items {
             match item {
-                Item::Def(def) => self.define_new_var(&mut scope, &def.ident),
+                Item::Def(def) => self.define_new_var(scope, &def.ident),
             };
         }
 
-        (imports, scope)
+        imports
     }
 
     fn resolve_import(
