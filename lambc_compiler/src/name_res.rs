@@ -69,13 +69,7 @@ impl<'s> Resolver<'s> {
 
                 self.forward_declare_items(&module, &mut scope);
 
-                let imports =
-                    self.resolve_imports(&mut scope, &module, &exportmap);
-
-                let exports =
-                    exportmap.get(&module.path).expect("module removed?");
-
-                self.resolve_module(scope, exports, imports, module)
+                self.resolve_module(scope, &exportmap, module)
             })
             .collect()
     }
@@ -95,10 +89,13 @@ impl<'s> Resolver<'s> {
     fn resolve_module(
         &mut self,
         mut scope: Scope,
-        exports: &ExportMap,
-        imports: Vec<Import<Var, PathRef>>,
+        exportmap: &HashMap<PathRef, ExportMap>,
         module: Module<Ident, PathRef>,
     ) -> Module<Var, PathRef> {
+        let exports = exportmap.get(&module.path).expect("module removed?");
+
+        let imports = self.resolve_imports(&mut scope, &module, &exportmap);
+
         let exports =
             self.resolve_exports(&mut scope, &module.exports, exports);
 
