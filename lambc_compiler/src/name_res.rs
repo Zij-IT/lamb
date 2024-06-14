@@ -79,7 +79,7 @@ impl<'s> Resolver<'s> {
 
             let items = self.resolve_items(scope, module.items);
 
-            mapped.push(Module {
+            let module = Module {
                 exports,
                 imports: std::mem::take(
                     importmap
@@ -89,7 +89,9 @@ impl<'s> Resolver<'s> {
                 items,
                 path: module.path,
                 span: module.span,
-            })
+            };
+
+            mapped.push(module)
         }
 
         mapped
