@@ -68,12 +68,14 @@ impl<'s> Resolver<'s> {
         }
 
         for module in modules {
-            let module = self.resolve_module(
-                &mut scopemap,
-                module,
-                &exportmap,
-                &mut importmap,
-            );
+            let scope =
+                scopemap.remove(&module.path).expect("module removed?");
+
+            let imports =
+                importmap.remove(&module.path).expect("module removed?");
+
+            let module =
+                self.resolve_module(scope, module, &exportmap, imports);
 
             mapped.push(module)
         }
@@ -83,24 +85,18 @@ impl<'s> Resolver<'s> {
 
     fn resolve_module(
         &mut self,
-        scopemap: &mut HashMap<PathRef, Scope>,
+        mut scope: Scope,
         module: Module<Ident, PathRef>,
         exportmap: &HashMap<PathRef, ExportMap>,
-        importmap: &mut HashMap<PathRef, Vec<Import<Var, PathRef>>>,
+        imports: Vec<Import<Var, PathRef>>,
     ) -> Module<Var, PathRef> {
-        let scope = scopemap.get_mut(&module.path).expect("module removed?");
-
         let exports = self.resolve_exports(
-            scope,
+            &mut scope,
             &module.exports,
             &exportmap[&module.path],
         );
 
-        let items = self.resolve_items(scope, module.items);
-
-        let imports = std::mem::take(
-            importmap.get_mut(&module.path).expect("module was removed?"),
-        );
+        let items = self.resolve_items(&mut scope, module.items);
 
         let module = Module {
             exports,
