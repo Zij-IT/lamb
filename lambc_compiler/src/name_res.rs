@@ -189,11 +189,18 @@ impl<'s> Resolver<'s> {
             .imports
             .iter()
             .flat_map(|i| {
-                i.items.iter().map(|ii| {
-                    let name =
-                        ii.alias.as_ref().unwrap_or(&ii.item).raw.as_str();
-                    (name, ii.span)
-                })
+                i.items
+                    .iter()
+                    .map(|ii| {
+                        let name =
+                            ii.alias.as_ref().unwrap_or(&ii.item).raw.as_str();
+                        (name, ii.span)
+                    })
+                    .chain(
+                        i.name
+                            .as_ref()
+                            .map(|name| (name.raw.as_str(), name.span)),
+                    )
             })
             .chain(iter);
 
