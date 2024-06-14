@@ -5,6 +5,7 @@ mod state;
 use std::path::PathBuf;
 
 use lambc_parse::{Ident, Module};
+use miette::NamedSource;
 use module_parser::ModuleParser;
 
 pub use self::state::{PathRef, State};
@@ -46,8 +47,27 @@ impl<B: Backend> Compiler<B> {
         self.pipeline(main, parsed)
     }
 
-    pub fn diagnostics(&self) -> &[miette::Report] {
-        &self.state.diagnostics
+    pub fn get_diagnostics(&mut self) -> Vec<miette::Report> {
+        let diags = std::mem::take(&mut self.state.diagnostics);
+        diags
+            .inner
+            .into_iter()
+            .map(|(pref, diags)| {
+                let path = pref.and_then(|p| {
+                    let path = self.state.resolve_path(p);
+                    std::fs::read_to_string(path).ok().map(|src| (path, src))
+                });
+
+                let report = miette::Report::new(diags);
+                match path {
+                    Some((p, src)) => {
+                        let p = p.file_name().unwrap().to_string_lossy();
+                        report.with_source_code(NamedSource::new(p, src))
+                    }
+                    _ => report,
+                }
+            })
+            .collect()
     }
 
     fn pipeline(

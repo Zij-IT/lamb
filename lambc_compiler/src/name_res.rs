@@ -12,12 +12,14 @@ use crate::{PathRef, State};
 
 #[derive(Diagnostic, thiserror::Error, Debug)]
 pub enum Error {
+    #[diagnostic(code("name-res::not-found"))]
     #[error("cannot find `{}` in this scope", .name)]
     NotFound {
         name: String,
         #[label]
         span: Span,
     },
+    #[diagnostic(code("name-res::not-exported"))]
     #[error("`{}` not found", .name)]
     NotExported {
         name: String,
@@ -26,6 +28,7 @@ pub enum Error {
         #[label("this module doesn't export `{}`", .name)]
         import_span: Span,
     },
+    #[diagnostic(code("name-res::too-many-defs"))]
     #[error("`{}` is defined multiple times", .name)]
     MultipleDefinitions {
         name: String,

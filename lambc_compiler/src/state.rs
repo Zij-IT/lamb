@@ -1,13 +1,15 @@
+mod diagnostics;
 mod pathmap;
 
 use std::path::PathBuf;
 
-use miette::{Diagnostic, NamedSource, Report, Severity};
+use miette::{Diagnostic, Severity};
 
+use self::diagnostics::Diagnostics;
 pub use self::pathmap::{PathMap, PathRef};
 
 pub struct State {
-    pub diagnostics: Vec<miette::Report>,
+    pub diagnostics: Diagnostics,
     pathmap: PathMap,
     has_errors: bool,
 }
@@ -27,7 +29,7 @@ impl Default for State {
 impl State {
     pub fn new() -> Self {
         Self {
-            diagnostics: vec![],
+            diagnostics: Diagnostics::default(),
             has_errors: false,
             pathmap: PathMap::new(),
         }
@@ -45,29 +47,10 @@ impl State {
     where
         T: Diagnostic + Send + Sync + 'static,
     {
-        let source =
-            source.map(|src| self.resolve_path(src)).and_then(|path| {
-                std::fs::read_to_string(path).ok().map(|src| (path, src))
-            });
-
-        let report = match source {
-            Some((path, source)) => {
-                Report::new(err).with_source_code(NamedSource::new(
-                    path.file_name().unwrap().to_string_lossy(),
-                    source,
-                ))
-            }
-            None => Report::new(err),
-        };
-
-        self.add_report(report)
-    }
-
-    pub fn add_report(&mut self, report: Report) {
         self.has_errors = self.has_errors
-            || matches!(report.severity(), None | Some(Severity::Error));
+            || matches!(err.severity(), None | Some(Severity::Error));
 
-        self.diagnostics.push(report)
+        self.diagnostics.add_error(source, err)
     }
 
     pub fn has_errors(&self) -> bool {

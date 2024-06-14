@@ -20,9 +20,9 @@ pub fn run_script<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     let mut compiler = Compiler::new(Backend::new(&mut gc));
 
     let Ok(exe) = compiler.build(path.as_ref().to_path_buf()) else {
-        let mut buffer = String::new();
+        let mut buffer = String::from("Compilation Errors:\n");
         let handler = miette::GraphicalReportHandler::new();
-        for diagnostic in compiler.diagnostics() {
+        for diagnostic in compiler.get_diagnostics() {
             _ = handler.render_report(&mut buffer, diagnostic.as_ref());
         }
 
