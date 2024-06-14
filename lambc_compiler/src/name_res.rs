@@ -65,9 +65,8 @@ impl<'s> Resolver<'s> {
                 let mut scope = Scope::new(module.path);
                 scope.add_builtin_vars(|| self.fresh());
 
-                let imports = self.create_scope_and_resolve_imports(
-                    &mut scope, &module, &exportmap,
-                );
+                let imports =
+                    self.resolve_imports(&mut scope, &module, &exportmap);
 
                 for item in &module.items {
                     match item {
@@ -116,7 +115,7 @@ impl<'s> Resolver<'s> {
         map
     }
 
-    fn create_scope_and_resolve_imports(
+    fn resolve_imports(
         &mut self,
         scope: &mut Scope,
         md: &Module<Ident, PathRef>,
