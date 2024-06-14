@@ -79,13 +79,13 @@ impl<'s> Resolver<'s> {
 
             let items = self.resolve_items(scope, module.items);
 
+            let imports = std::mem::take(
+                importmap.get_mut(&module.path).expect("module was removed?"),
+            );
+
             let module = Module {
                 exports,
-                imports: std::mem::take(
-                    importmap
-                        .get_mut(&module.path)
-                        .expect("module was removed?"),
-                ),
+                imports,
                 items,
                 path: module.path,
                 span: module.span,
