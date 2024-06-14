@@ -170,40 +170,6 @@ impl<'s> Resolver<'s> {
         (imports, scope)
     }
 
-    fn report_duplicates_in_module(&mut self, md: &Module<Ident, PathRef>) {
-        let global_defs = md
-            .imports
-            .iter()
-            .flat_map(|i| {
-                i.items
-                    .iter()
-                    .map(|ii| {
-                        let name =
-                            ii.alias.as_ref().unwrap_or(&ii.item).raw.as_str();
-                        (name, ii.span)
-                    })
-                    .chain(
-                        i.name
-                            .as_ref()
-                            .map(|name| (name.raw.as_str(), name.span)),
-                    )
-            })
-            .chain(md.items.iter().map(|item| match item {
-                Item::Def(def) => (def.ident.raw.as_str(), def.span),
-            }));
-
-        self.report_if_duplicates(md.path, global_defs);
-
-        let exported_names = md.exports.iter().flat_map(|e| {
-            e.items.iter().map(|item| {
-                let name = item.alias.as_ref().unwrap_or(&item.item);
-                (name.raw.as_str(), item.span)
-            })
-        });
-
-        self.report_if_duplicates(md.path, exported_names);
-    }
-
     fn resolve_exports(
         &mut self,
         scope: &mut Scope,
@@ -628,6 +594,40 @@ impl<'s> Resolver<'s> {
     fn fresh(&mut self) -> Var {
         self.start = self.start.checked_add(1).expect("Too many names.");
         Var(self.start - 1)
+    }
+
+    fn report_duplicates_in_module(&mut self, md: &Module<Ident, PathRef>) {
+        let global_defs = md
+            .imports
+            .iter()
+            .flat_map(|i| {
+                i.items
+                    .iter()
+                    .map(|ii| {
+                        let name =
+                            ii.alias.as_ref().unwrap_or(&ii.item).raw.as_str();
+                        (name, ii.span)
+                    })
+                    .chain(
+                        i.name
+                            .as_ref()
+                            .map(|name| (name.raw.as_str(), name.span)),
+                    )
+            })
+            .chain(md.items.iter().map(|item| match item {
+                Item::Def(def) => (def.ident.raw.as_str(), def.span),
+            }));
+
+        self.report_if_duplicates(md.path, global_defs);
+
+        let exported_names = md.exports.iter().flat_map(|e| {
+            e.items.iter().map(|item| {
+                let name = item.alias.as_ref().unwrap_or(&item.item);
+                (name.raw.as_str(), item.span)
+            })
+        });
+
+        self.report_if_duplicates(md.path, exported_names);
     }
 }
 
