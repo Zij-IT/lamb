@@ -112,12 +112,11 @@ impl<'s> Resolver<'s> {
         let mut scope = Scope::new(md.path);
         scope.add_builtin_vars(|| self.fresh());
 
-        let mut imports = Vec::new();
-        for import in &md.imports {
-            let import = self.resolve_import(import, &mut scope, exports);
-
-            imports.push(import);
-        }
+        let imports = md
+            .imports
+            .iter()
+            .map(|i| self.resolve_import(i, &mut scope, exports))
+            .collect();
 
         for item in &md.items {
             match item {
@@ -170,15 +169,14 @@ impl<'s> Resolver<'s> {
             })
         }
 
-        let import = Import {
+        Import {
             file: import.file,
             name: import_name.map(|i| i.1),
             items,
             star: import.star,
             span: import.span,
             path_span: import.path_span,
-        };
-        import
+        }
     }
 
     fn resolve_exports(
