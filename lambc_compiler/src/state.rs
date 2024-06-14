@@ -2,7 +2,7 @@ mod pathmap;
 
 use std::path::PathBuf;
 
-use miette::{Diagnostic, Report, Severity};
+use miette::{Diagnostic, NamedSource, Report, Severity};
 
 pub use self::pathmap::{PathMap, PathRef};
 
@@ -45,12 +45,18 @@ impl State {
     where
         T: Diagnostic + Send + Sync + 'static,
     {
-        let source = source
-            .map(|src| self.resolve_path(src))
-            .and_then(|path| std::fs::read_to_string(path).ok());
+        let source =
+            source.map(|src| self.resolve_path(src)).and_then(|path| {
+                std::fs::read_to_string(path).ok().map(|src| (path, src))
+            });
 
         let report = match source {
-            Some(source) => Report::new(err).with_source_code(source),
+            Some((path, source)) => {
+                Report::new(err).with_source_code(NamedSource::new(
+                    path.file_name().unwrap().to_string_lossy(),
+                    source,
+                ))
+            }
             None => Report::new(err),
         };
 
