@@ -114,52 +114,7 @@ impl<'s> Resolver<'s> {
 
         let mut imports = Vec::new();
         for import in &md.imports {
-            let import_name =
-                import.name.as_ref().map(|i| (&i.raw, self.fresh()));
-
-            if let Some((name, var)) = import_name {
-                scope.add_var(name, var);
-            }
-
-            let mut items = Vec::new();
-            let export = &exports[&import.file];
-            for item in import.items.iter() {
-                let name = &item.alias.as_ref().unwrap_or(&item.item).raw;
-                let var = if let Some(var) = export.get_from_within(&item.item)
-                {
-                    scope.add_var(name, var);
-                    var
-                } else {
-                    self.state.add_error(
-                        Error::NotExported {
-                            name: item.item.raw.clone(),
-                            span: item.item.span,
-                            import_span: import.path_span,
-                        },
-                        Some(scope.module),
-                    );
-
-                    self.define_new_var(
-                        &mut scope,
-                        item.alias.as_ref().unwrap_or(&item.item),
-                    )
-                };
-
-                items.push(ImportItem {
-                    item: var,
-                    alias: item.alias.as_ref().map(|_| var),
-                    span: item.span,
-                })
-            }
-
-            let import = Import {
-                file: import.file,
-                name: import_name.map(|i| i.1),
-                items,
-                star: import.star,
-                span: import.span,
-                path_span: import.path_span,
-            };
+            let import = self.resolve_import(import, &mut scope, exports);
 
             imports.push(import);
         }
@@ -171,6 +126,59 @@ impl<'s> Resolver<'s> {
         }
 
         (imports, scope)
+    }
+
+    fn resolve_import(
+        &mut self,
+        import: &Import<Ident, PathRef>,
+        scope: &mut Scope,
+        exports: &HashMap<PathRef, ExportMap>,
+    ) -> Import<Var, PathRef> {
+        let import_name = import.name.as_ref().map(|i| (&i.raw, self.fresh()));
+
+        if let Some((name, var)) = import_name {
+            scope.add_var(name, var);
+        }
+
+        let mut items = Vec::new();
+        let export = &exports[&import.file];
+        for item in import.items.iter() {
+            let name = &item.alias.as_ref().unwrap_or(&item.item).raw;
+            let var = if let Some(var) = export.get_from_within(&item.item) {
+                scope.add_var(name, var);
+                var
+            } else {
+                self.state.add_error(
+                    Error::NotExported {
+                        name: item.item.raw.clone(),
+                        span: item.item.span,
+                        import_span: import.path_span,
+                    },
+                    Some(scope.module),
+                );
+
+                self.define_new_var(
+                    scope,
+                    item.alias.as_ref().unwrap_or(&item.item),
+                )
+            };
+
+            items.push(ImportItem {
+                item: var,
+                alias: item.alias.as_ref().map(|_| var),
+                span: item.span,
+            })
+        }
+
+        let import = Import {
+            file: import.file,
+            name: import_name.map(|i| i.1),
+            items,
+            star: import.star,
+            span: import.span,
+            path_span: import.path_span,
+        };
+        import
     }
 
     fn resolve_exports(
