@@ -60,10 +60,6 @@ impl<'b> ModuleParser<'b> {
                             }
                         };
 
-                    if scheduled.contains(&import_path) {
-                        continue;
-                    }
-
                     let import = Import {
                         file: self.state.add_path(&import_path),
                         items: import.items,
@@ -73,9 +69,14 @@ impl<'b> ModuleParser<'b> {
                         path_span: import.path_span,
                     };
 
+                    imports.push(import);
+
+                    if scheduled.contains(&import_path) {
+                        continue;
+                    }
+
                     scheduled.insert(import_path.clone());
                     pending.push(import_path);
-                    imports.push(import);
                 }
 
                 let parsed = Module {
