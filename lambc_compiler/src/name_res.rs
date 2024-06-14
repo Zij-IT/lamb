@@ -64,11 +64,7 @@ impl<'s> Resolver<'s> {
             .map(|module| {
                 self.report_duplicates_in_module(&module);
 
-                let mut scope = self.new_module_scope(&module);
-
-                self.forward_declare_items(&module, &mut scope);
-
-                self.resolve_module(scope, &exportmap, module)
+                self.resolve_module(&exportmap, module)
             })
             .collect()
     }
@@ -93,10 +89,13 @@ impl<'s> Resolver<'s> {
 
     fn resolve_module(
         &mut self,
-        mut scope: Scope,
         exportmap: &HashMap<PathRef, ExportMap>,
         module: Module<Ident, PathRef>,
     ) -> Module<Var, PathRef> {
+        let mut scope = self.new_module_scope(&module);
+
+        self.forward_declare_items(&module, &mut scope);
+
         let exports = exportmap.get(&module.path).expect("module removed?");
 
         let imports = self.resolve_imports(&mut scope, &module, &exportmap);
