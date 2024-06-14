@@ -121,13 +121,10 @@ impl<'s> Resolver<'s> {
         md: &Module<Ident, PathRef>,
         exports: &HashMap<PathRef, ExportMap>,
     ) -> Vec<Import<Var, PathRef>> {
-        let imports = md
-            .imports
+        md.imports
             .iter()
             .map(|i| self.resolve_import(i, scope, exports))
-            .collect();
-
-        imports
+            .collect()
     }
 
     fn resolve_import(
