@@ -64,14 +64,19 @@ impl<'s> Resolver<'s> {
             .map(|module| {
                 self.report_duplicates_in_module(&module);
 
-                let mut scope = Scope::new(module.path);
-                scope.add_builtin_vars(|| self.fresh());
+                let mut scope = self.new_module_scope(&module);
 
                 self.forward_declare_items(&module, &mut scope);
 
                 self.resolve_module(scope, &exportmap, module)
             })
             .collect()
+    }
+
+    fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
+        let mut scope = Scope::new(module.path);
+        scope.add_builtin_vars(|| self.fresh());
+        scope
     }
 
     fn forward_declare_items(
