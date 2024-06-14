@@ -65,6 +65,7 @@ impl<'s> Resolver<'s> {
                 let exports =
                     exportmap.get(&module.path).expect("module removed?");
 
+                self.report_duplicates_in_module(&module);
                 self.resolve_module(scope, exports, imports, module)
             })
             .collect()
@@ -181,6 +182,10 @@ impl<'s> Resolver<'s> {
             };
         }
 
+        (imports, scope)
+    }
+
+    fn report_duplicates_in_module(&mut self, md: &Module<Ident, PathRef>) {
         let iter = md.items.iter().map(|item| match item {
             Item::Def(def) => (def.ident.raw.as_str(), def.span),
         });
@@ -205,8 +210,6 @@ impl<'s> Resolver<'s> {
             .chain(iter);
 
         self.report_if_duplicates(md.path, iter);
-
-        (imports, scope)
     }
 
     fn resolve_exports(
