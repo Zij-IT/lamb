@@ -53,7 +53,7 @@ impl<'s> Resolver<'s> {
     ) -> Vec<Module<Var, PathRef>> {
         let exportmap = modules
             .iter()
-            .map(|md| (md.path, self.create_exportmap(md.path, &md.exports)))
+            .map(|md| (md.path, self.create_exportmap(&md.exports)))
             .collect::<HashMap<_, _>>();
 
         modules
@@ -94,11 +94,7 @@ impl<'s> Resolver<'s> {
         module
     }
 
-    fn create_exportmap(
-        &mut self,
-        path: PathRef,
-        exports: &[Export<Ident>],
-    ) -> ExportMap {
+    fn create_exportmap(&mut self, exports: &[Export<Ident>]) -> ExportMap {
         let mut map = ExportMap::new();
         for export in exports.iter().flat_map(|e| &e.items) {
             map.insert(export, self.fresh());
