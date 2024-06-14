@@ -69,6 +69,14 @@ impl<'s> Resolver<'s> {
                     &mut scope, &module, &exportmap,
                 );
 
+                for item in &module.items {
+                    match item {
+                        Item::Def(def) => {
+                            self.define_new_var(&mut scope, &def.ident)
+                        }
+                    };
+                }
+
                 let exports =
                     exportmap.get(&module.path).expect("module removed?");
 
@@ -119,12 +127,6 @@ impl<'s> Resolver<'s> {
             .iter()
             .map(|i| self.resolve_import(i, scope, exports))
             .collect();
-
-        for item in &md.items {
-            match item {
-                Item::Def(def) => self.define_new_var(scope, &def.ident),
-            };
-        }
 
         imports
     }
