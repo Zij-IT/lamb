@@ -62,18 +62,19 @@ impl<'s> Resolver<'s> {
         modules
             .into_iter()
             .map(|module| {
+                self.report_duplicates_in_module(&module);
+
                 let mut scope = Scope::new(module.path);
                 scope.add_builtin_vars(|| self.fresh());
+
+                self.forward_declare_items(&module, &mut scope);
 
                 let imports =
                     self.resolve_imports(&mut scope, &module, &exportmap);
 
-                self.forward_declare_items(&module, &mut scope);
-
                 let exports =
                     exportmap.get(&module.path).expect("module removed?");
 
-                self.report_duplicates_in_module(&module);
                 self.resolve_module(scope, exports, imports, module)
             })
             .collect()
