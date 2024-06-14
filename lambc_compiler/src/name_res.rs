@@ -69,24 +69,6 @@ impl<'s> Resolver<'s> {
             .collect()
     }
 
-    fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
-        let mut scope = Scope::new(module.path);
-        scope.add_builtin_vars(|| self.fresh());
-        scope
-    }
-
-    fn forward_declare_items(
-        &mut self,
-        module: &Module<Ident, PathRef>,
-        scope: &mut Scope,
-    ) {
-        for item in &module.items {
-            match item {
-                Item::Def(def) => self.define_new_var(scope, &def.ident),
-            };
-        }
-    }
-
     fn resolve_module(
         &mut self,
         exportmap: &HashMap<PathRef, ExportMap>,
@@ -112,15 +94,6 @@ impl<'s> Resolver<'s> {
             path: module.path,
             span: module.span,
         }
-    }
-
-    fn create_exportmap(&mut self, exports: &[Export<Ident>]) -> ExportMap {
-        let mut map = ExportMap::new();
-        for export in exports.iter().flat_map(|e| &e.items) {
-            map.insert(export, self.fresh());
-        }
-
-        map
     }
 
     fn resolve_imports(
@@ -583,34 +556,36 @@ impl<'s> Resolver<'s> {
         }
     }
 
-    fn report_if_duplicates<'a>(
-        &mut self,
-        module: PathRef,
-        iter: impl Iterator<Item = (&'a str, Span)>,
-    ) {
-        let mut map: HashMap<_, Vec<_>> = HashMap::new();
-        for (s, span) in iter {
-            map.entry(s)
-                .or_default()
-                .push(LabeledSpan::new_with_span(Some("here".into()), span));
-        }
-
-        for (s, spans) in map {
-            if spans.len() > 1 {
-                self.state.add_error(
-                    Error::MultipleDefinitions {
-                        name: s.into(),
-                        locations: spans,
-                    },
-                    Some(module),
-                )
-            }
-        }
-    }
-
     fn fresh(&mut self) -> Var {
         self.start = self.start.checked_add(1).expect("Too many names.");
         Var(self.start - 1)
+    }
+
+    fn create_exportmap(&mut self, exports: &[Export<Ident>]) -> ExportMap {
+        let mut map = ExportMap::new();
+        for export in exports.iter().flat_map(|e| &e.items) {
+            map.insert(export, self.fresh());
+        }
+
+        map
+    }
+
+    fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
+        let mut scope = Scope::new(module.path);
+        scope.add_builtin_vars(|| self.fresh());
+        scope
+    }
+
+    fn forward_declare_items(
+        &mut self,
+        module: &Module<Ident, PathRef>,
+        scope: &mut Scope,
+    ) {
+        for item in &module.items {
+            match item {
+                Item::Def(def) => self.define_new_var(scope, &def.ident),
+            };
+        }
     }
 
     fn report_duplicates_in_module(&mut self, md: &Module<Ident, PathRef>) {
@@ -645,6 +620,31 @@ impl<'s> Resolver<'s> {
         });
 
         self.report_if_duplicates(md.path, exported_names);
+    }
+
+    fn report_if_duplicates<'a>(
+        &mut self,
+        module: PathRef,
+        iter: impl Iterator<Item = (&'a str, Span)>,
+    ) {
+        let mut map: HashMap<_, Vec<_>> = HashMap::new();
+        for (s, span) in iter {
+            map.entry(s)
+                .or_default()
+                .push(LabeledSpan::new_with_span(Some("here".into()), span));
+        }
+
+        for (s, spans) in map {
+            if spans.len() > 1 {
+                self.state.add_error(
+                    Error::MultipleDefinitions {
+                        name: s.into(),
+                        locations: spans,
+                    },
+                    Some(module),
+                )
+            }
+        }
     }
 }
 
