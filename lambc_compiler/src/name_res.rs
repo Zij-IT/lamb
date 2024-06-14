@@ -74,11 +74,11 @@ impl<'s> Resolver<'s> {
         &mut self,
         mut scope: Scope,
         module: Module<Ident, PathRef>,
-        exportmap: &ExportMap,
+        exports: &ExportMap,
         imports: Vec<Import<Var, PathRef>>,
     ) -> Module<Var, PathRef> {
         let exports =
-            self.resolve_exports(&mut scope, &module.exports, exportmap);
+            self.resolve_exports(&mut scope, &module.exports, exports);
 
         let items = self.resolve_items(&mut scope, module.items);
 
