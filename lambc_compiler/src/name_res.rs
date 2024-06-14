@@ -51,29 +51,16 @@ impl<'s> Resolver<'s> {
         &mut self,
         modules: Vec<Module<Ident, PathRef>>,
     ) -> Vec<Module<Var, PathRef>> {
-        let mut importmap = HashMap::new();
-        let mut scopemap = HashMap::new();
         let mut exportmap = modules
             .iter()
             .map(|md| (md.path, self.create_exportmap(md.path, &md.exports)))
             .collect::<HashMap<_, _>>();
 
-        for module in &modules {
-            let (imports, scope) =
-                self.create_scope_and_resolve_imports(module, &exportmap);
-
-            importmap.insert(module.path, imports);
-            scopemap.insert(module.path, scope);
-        }
-
         modules
             .into_iter()
             .map(|module| {
-                let scope =
-                    scopemap.remove(&module.path).expect("module removed?");
-
-                let imports =
-                    importmap.remove(&module.path).expect("module removed?");
+                let (imports, scope) =
+                    self.create_scope_and_resolve_imports(&module, &exportmap);
 
                 let exports =
                     exportmap.remove(&module.path).expect("module removed?");
