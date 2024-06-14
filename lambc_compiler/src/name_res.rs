@@ -99,15 +99,6 @@ impl<'s> Resolver<'s> {
         path: PathRef,
         exports: &[Export<Ident>],
     ) -> ExportMap {
-        let names = exports.iter().flat_map(|e| {
-            e.items.iter().map(|item| {
-                let name = item.alias.as_ref().unwrap_or(&item.item);
-                (name.raw.as_str(), item.span)
-            })
-        });
-
-        self.report_if_duplicates(path, names);
-
         let mut map = ExportMap::new();
         for export in exports.iter().flat_map(|e| &e.items) {
             map.insert(export, self.fresh());
@@ -186,11 +177,7 @@ impl<'s> Resolver<'s> {
     }
 
     fn report_duplicates_in_module(&mut self, md: &Module<Ident, PathRef>) {
-        let iter = md.items.iter().map(|item| match item {
-            Item::Def(def) => (def.ident.raw.as_str(), def.span),
-        });
-
-        let iter = md
+        let global_defs = md
             .imports
             .iter()
             .flat_map(|i| {
@@ -207,9 +194,20 @@ impl<'s> Resolver<'s> {
                             .map(|name| (name.raw.as_str(), name.span)),
                     )
             })
-            .chain(iter);
+            .chain(md.items.iter().map(|item| match item {
+                Item::Def(def) => (def.ident.raw.as_str(), def.span),
+            }));
 
-        self.report_if_duplicates(md.path, iter);
+        self.report_if_duplicates(md.path, global_defs);
+
+        let exported_names = md.exports.iter().flat_map(|e| {
+            e.items.iter().map(|item| {
+                let name = item.alias.as_ref().unwrap_or(&item.item);
+                (name.raw.as_str(), item.span)
+            })
+        });
+
+        self.report_if_duplicates(md.path, exported_names);
     }
 
     fn resolve_exports(
