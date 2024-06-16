@@ -1,3 +1,4 @@
+mod pattern;
 use std::collections::HashMap;
 
 use lambc_parse::{
@@ -8,6 +9,7 @@ use lambc_parse::{
 };
 use miette::{Diagnostic, LabeledSpan};
 
+use self::pattern::PatternChecker;
 use crate::{PathRef, State};
 
 #[derive(Diagnostic, thiserror::Error, Debug)]
@@ -34,6 +36,13 @@ pub enum Error {
         name: String,
         #[label(collection)]
         locations: Vec<LabeledSpan>,
+    },
+    #[diagnostic(code("name-res::missing-bindings"))]
+    #[error("`{}` isn't bound in all cases", .binding)]
+    MissingBinding {
+        binding: String,
+        #[label]
+        pat_span: Span,
     },
 }
 
@@ -482,6 +491,8 @@ impl<'s> Resolver<'s> {
         scope: &mut Scope,
         pattern: Pattern<Ident>,
     ) -> Pattern<Var> {
+        self.report_duplicates_in_pattern(scope.module, &pattern);
+
         let Pattern { inner, span } = pattern;
         let inner = inner
             .into_iter()
@@ -621,6 +632,14 @@ impl<'s> Resolver<'s> {
         });
 
         self.report_if_duplicates(md.path, exported_names);
+    }
+
+    fn report_duplicates_in_pattern(
+        &mut self,
+        module: PathRef,
+        pattern: &Pattern<Ident>,
+    ) {
+        PatternChecker::new(module, self).check(pattern)
     }
 
     fn report_if_duplicates<'a>(
