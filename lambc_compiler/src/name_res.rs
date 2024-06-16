@@ -3,9 +3,10 @@ use std::collections::HashMap;
 
 use lambc_parse::{
     ArrayPattern, Binary, Block, Call, Case, CaseArm, Define, Else, Export,
-    ExportItem, Expr, ExprStatement, FnDef, Group, Ident, IdentPattern, If,
-    IfCond, Import, ImportItem, Index, InnerPattern, Item, List, Module,
-    Pattern, Return, Span, Statement, Unary,
+    ExportItem, Expr, ExprStatement, FnDef, FnType, Generic, Generics, Group,
+    Ident, IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern,
+    Item, List, Module, NamedType, Pattern, Return, Span, Statement, Type,
+    Unary,
 };
 use miette::{Diagnostic, LabeledSpan};
 
@@ -227,7 +228,7 @@ impl<'s> Resolver<'s> {
                     ident,
                     value,
                     // TODO: Add type information in `Scope`
-                    typ: None,
+                    typ: def.typ.map(|t| self.resolve_type(scope, t)),
                     span: def.span,
                 })
             }
@@ -548,6 +549,54 @@ impl<'s> Resolver<'s> {
         })
     }
 
+    fn resolve_type(
+        &mut self,
+        scope: &mut Scope,
+        t: Type<Ident>,
+    ) -> Type<Var> {
+        match t {
+            Type::Fn(f) => {
+                let FnType { args, gens, ret_type, span } = *f;
+                let args = args
+                    .into_iter()
+                    .map(|t| self.resolve_type(scope, t))
+                    .collect();
+
+                let gens = gens.map(|Generics { params, span }| {
+                    let params = params
+                        .into_iter()
+                        .map(|i| Generic {
+                            id: self.find_type(scope, &i.id),
+                            span: i.span,
+                        })
+                        .collect();
+
+                    Generics { params, span }
+                });
+
+                let ret_type = ret_type.map(|i| self.resolve_type(scope, i));
+                Type::Fn(Box::new(FnType { args, gens, ret_type, span }))
+            }
+            Type::Named(named) => {
+                let NamedType { name, gens, span } = *named;
+                let name = self.find_type(scope, &name);
+                let gens = gens.map(|Generics { params, span }| {
+                    let params = params
+                        .into_iter()
+                        .map(|i| Generic {
+                            id: self.find_type(scope, &i.id),
+                            span: i.span,
+                        })
+                        .collect();
+
+                    Generics { params, span }
+                });
+
+                Type::Named(Box::new(NamedType { name, gens, span }))
+            }
+        }
+    }
+
     fn define_new_var(&mut self, scope: &mut Scope, i: &Ident) -> Var {
         let ident = self.fresh_var();
         scope.add_var(&i.raw, ident);
@@ -556,6 +605,20 @@ impl<'s> Resolver<'s> {
 
     fn find_var(&mut self, scope: &mut Scope, i: &Ident) -> Var {
         match scope.get_var(&i.raw) {
+            Some(v) => v,
+            None => {
+                self.state.add_error(
+                    Error::NotFound { name: i.raw.clone(), span: i.span },
+                    Some(scope.module),
+                );
+
+                self.fresh_var()
+            }
+        }
+    }
+
+    fn find_type(&mut self, scope: &mut Scope, i: &Ident) -> Var {
+        match scope.get_type(&i.raw) {
             Some(v) => v,
             None => {
                 self.state.add_error(
@@ -584,7 +647,10 @@ impl<'s> Resolver<'s> {
 
     fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
         let mut scope = Scope::new(module.path);
-        scope.add_builtin_vars(|| self.fresh_var());
+        scope
+            .add_builtin_vars(|| self.fresh_var())
+            .add_builtin_types(|| self.fresh_var());
+
         scope
     }
 
@@ -671,6 +737,7 @@ impl<'s> Resolver<'s> {
 #[derive(Default)]
 struct Scope {
     vars: HashMap<String, Var>,
+    types: HashMap<String, Var>,
     parent: Option<Box<Self>>,
     module: PathRef,
 }
@@ -693,6 +760,18 @@ impl Scope {
         self
     }
 
+    pub fn add_builtin_types(
+        &mut self,
+        mut new_id: impl FnMut() -> Var,
+    ) -> &mut Self {
+        self.add_type("int", new_id());
+        self.add_type("usv", new_id());
+        self.add_type("bool", new_id());
+        self.add_type("list", new_id());
+        self.add_type("double", new_id());
+        self
+    }
+
     pub fn add_var<S: Into<String>>(&mut self, item: S, var: Var) {
         self.vars.insert(item.into(), var);
     }
@@ -701,6 +780,17 @@ impl Scope {
         match self.vars.get(item).copied() {
             Some(v) => Some(v),
             None => self.parent.as_ref().and_then(|p| p.get_var(item)),
+        }
+    }
+
+    pub fn add_type<S: Into<String>>(&mut self, item: S, t: Var) {
+        self.types.insert(item.into(), t);
+    }
+
+    pub fn get_type(&self, item: &String) -> Option<Var> {
+        match self.types.get(item).copied() {
+            Some(v) => Some(v),
+            None => self.parent.as_ref().and_then(|p| p.get_type(item)),
         }
     }
 

@@ -1,0 +1,11 @@
+-- There is no 'err' type so this should error
+-- because 'err' is undefined
+def x: err = 2;
+
+-- These should *not* error because types and variable names
+-- occupy different namespaces.
+def int: int = 2;
+def usv: usv = 'c';
+def bool: bool = true;
+
+def int_list: list[int] = [2];
