@@ -1,12 +1,14 @@
 mod module_parser;
 mod name_res;
 mod state;
+mod type_check;
 
 use std::path::PathBuf;
 
 use lambc_parse::{Ident, Module};
 use miette::NamedSource;
 use module_parser::ModuleParser;
+use type_check::TypeChecker;
 
 pub use self::state::{PathRef, State};
 
@@ -80,7 +82,13 @@ impl<B: Backend> Compiler<B> {
         }
 
         let mut resolver = name_res::Resolver::new(&mut self.state);
-        _ = resolver.resolve_modules(parsed.clone());
+        let resolved = resolver.resolve_modules(parsed.clone());
+        if self.state.has_errors() {
+            return Err(Error::Invalid);
+        }
+
+        let checker = &mut TypeChecker::new(&mut self.state);
+        let _checked = checker.check_modules(resolved);
 
         if self.state.has_errors() {
             return Err(Error::Invalid);
