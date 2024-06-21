@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use im::HashMap;
 
 use lambc_parse::{Expr, Module};
 
