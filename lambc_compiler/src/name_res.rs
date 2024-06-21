@@ -48,7 +48,7 @@ pub enum Error {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct Var(u32);
+pub struct Var(pub u32);
 
 pub struct Resolver<'s> {
     pub state: &'s mut State,
