@@ -1,5 +1,5 @@
 use im::HashMap;
-use lambc_parse::{Expr, FnDef, Module};
+use lambc_parse::{Expr, FnDef, Index, Module};
 
 use crate::{name_res::Var, PathRef, State};
 
@@ -97,6 +97,7 @@ impl<'s> TypeChecker<'s> {
                 Type::List(Box::new(Type::Usv)),
             ),
             Expr::FnDef(fndef) => self.infer_fndef(env, *fndef),
+            Expr::Index(idx) => self.infer_idx(env, *idx),
             _ => todo!(),
         }
     }
@@ -157,6 +158,36 @@ impl<'s> TypeChecker<'s> {
         )
     }
 
+    fn infer_idx(
+        &mut self,
+        env: HashMap<Var, Type>,
+        idx: Index<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let list_elem_ty = self.fresh_ty_var();
+        let list_ty = Type::List(Box::new(Type::Var(list_elem_ty)));
+
+        let (mut idxee_out, indexee_ty) =
+            self.infer_expr(env.clone(), idx.lhs);
+
+        let (index_out, index_ty) = self.infer_expr(env, idx.rhs);
+
+        idxee_out.cons.extend(index_out.cons);
+        idxee_out.cons.push(Constraint::TypeEqual(index_ty, Type::Int));
+        idxee_out.cons.push(Constraint::TypeEqual(indexee_ty, list_ty));
+
+        (
+            CheckRes::new(
+                idxee_out.cons,
+                Expr::Index(Box::new(Index {
+                    lhs: idxee_out.ast,
+                    rhs: index_out.ast,
+                    span: idx.span,
+                })),
+            ),
+            Type::Var(list_elem_ty),
+        )
+    }
+
     fn fresh_ty_var(&mut self) -> TypeVar {
         self.types += 1;
         TypeVar(self.types - 1)
@@ -190,8 +221,8 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use lambc_parse::{
-        CharLit, CharText, Expr, F64Lit, FnDef, I64Base, I64Lit, Span, StrLit,
-        StrText,
+        BoolLit, CharLit, CharText, Expr, F64Lit, FnDef, I64Base, I64Lit,
+        Index, NilLit, Span, StrLit, StrText,
     };
 
     use super::{Type, TypeChecker};
@@ -469,6 +500,51 @@ mod tests {
                     body: Expr::Ident(TypedVar(Var(0), Type::Int)),
                     recursive: false,
                     span: Span::new(0, 0)
+                })),
+            ),
+        );
+    }
+
+    #[test]
+    fn infers_idx() {
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+
+        let idx = Index {
+            lhs: Expr::Nil(NilLit { span: Span::new(0, 0) }),
+            rhs: Expr::Bool(BoolLit { value: false, span: Span::new(0, 0) }),
+            span: Span::new(0, 0),
+        };
+
+        let typ = Type::Var(TypeVar(0));
+
+        let out = checker.check_expr(
+            HashMap::new(),
+            Expr::Index(Box::new(idx)),
+            typ,
+        );
+
+        assert_eq!(
+            out,
+            GenWith::new(
+                vec![
+                    Constraint::TypeEqual(Type::Bool, Type::Int),
+                    Constraint::TypeEqual(
+                        Type::Nil,
+                        Type::List(Box::new(Type::Var(TypeVar(0))))
+                    ),
+                    Constraint::TypeEqual(
+                        Type::Var(TypeVar(0)),
+                        Type::Var(TypeVar(0))
+                    )
+                ],
+                Expr::Index(Box::new(Index {
+                    lhs: Expr::Nil(NilLit { span: Span::new(0, 0) }),
+                    rhs: Expr::Bool(BoolLit {
+                        value: false,
+                        span: Span::new(0, 0)
+                    }),
+                    span: Span::new(0, 0),
                 })),
             ),
         );
