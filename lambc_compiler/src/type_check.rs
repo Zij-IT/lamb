@@ -284,11 +284,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = I64Lit {
-            base: I64Base::Dec,
-            value: "2".into(),
-            span: Span::new(0, 0),
-        };
+        let lit = I64Lit { base: I64Base::Dec, value: "2".into(), span: SPAN };
 
         let out = checker.infer_expr(HashMap::new(), Expr::I64(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::I64(lit)), Type::Int))
@@ -299,11 +295,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = I64Lit {
-            base: I64Base::Dec,
-            value: "2".into(),
-            span: Span::new(0, 0),
-        };
+        let lit = I64Lit { base: I64Base::Dec, value: "2".into(), span: SPAN };
 
         let out = checker.check_expr(
             HashMap::new(),
@@ -319,7 +311,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = F64Lit { value: "2.0".into(), span: Span::new(0, 0) };
+        let lit = F64Lit { value: "2.0".into(), span: SPAN };
         let out = checker.infer_expr(HashMap::new(), Expr::F64(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::F64(lit)), Type::Double));
     }
@@ -329,7 +321,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = F64Lit { value: "2.0".into(), span: Span::new(0, 0) };
+        let lit = F64Lit { value: "2.0".into(), span: SPAN };
 
         let out = checker.check_expr(
             HashMap::new(),
@@ -346,8 +338,8 @@ mod tests {
         let mut checker = TypeChecker::new(&mut state);
 
         let lit = CharLit {
-            text: Some(CharText { inner: "f".into(), span: Span::new(0, 0) }),
-            span: Span::new(0, 0),
+            text: Some(CharText { inner: "f".into(), span: SPAN }),
+            span: SPAN,
         };
 
         let out = checker.infer_expr(HashMap::new(), Expr::Char(lit.clone()));
@@ -360,8 +352,8 @@ mod tests {
         let mut checker = TypeChecker::new(&mut state);
 
         let lit = CharLit {
-            text: Some(CharText { inner: "f".into(), span: Span::new(0, 0) }),
-            span: Span::new(0, 0),
+            text: Some(CharText { inner: "f".into(), span: SPAN }),
+            span: SPAN,
         };
 
         let out = checker.check_expr(
@@ -379,8 +371,8 @@ mod tests {
         let mut checker = TypeChecker::new(&mut state);
 
         let lit = StrLit {
-            text: Some(StrText { inner: "a".into(), span: Span::new(0, 0) }),
-            span: Span::new(0, 0),
+            text: Some(StrText { inner: "a".into(), span: SPAN }),
+            span: SPAN,
         };
 
         let out =
@@ -401,8 +393,8 @@ mod tests {
         let mut checker = TypeChecker::new(&mut state);
 
         let lit = StrLit {
-            text: Some(StrText { inner: "a".into(), span: Span::new(0, 0) }),
-            span: Span::new(0, 0),
+            text: Some(StrText { inner: "a".into(), span: SPAN }),
+            span: SPAN,
         };
 
         let out = checker.check_expr(
@@ -439,7 +431,7 @@ mod tests {
             args: vec![Var(0), Var(1)],
             body: Expr::Ident(Var(0)),
             recursive: false,
-            span: Span::new(0, 0),
+            span: SPAN,
         };
 
         let typ = Type::Fun(FnType {
@@ -460,7 +452,7 @@ mod tests {
                     ],
                     body: Expr::Ident(TypedVar(Var(0), Type::Var(TypeVar(0)))),
                     recursive: false,
-                    span: Span::new(0, 0)
+                    span: SPAN
                 }))),
                 typ
             )
@@ -476,7 +468,7 @@ mod tests {
             args: vec![Var(0), Var(1)],
             body: Expr::Ident(Var(0)),
             recursive: false,
-            span: Span::new(0, 0),
+            span: SPAN,
         };
 
         let typ = Type::Fun(FnType {
@@ -504,7 +496,7 @@ mod tests {
                     ],
                     body: Expr::Ident(TypedVar(Var(0), Type::Var(TypeVar(0)))),
                     recursive: false,
-                    span: Span::new(0, 0)
+                    span: SPAN
                 })),
             ),
         );
@@ -519,7 +511,7 @@ mod tests {
             args: vec![Var(0), Var(1)],
             body: Expr::Ident(Var(0)),
             recursive: false,
-            span: Span::new(0, 0),
+            span: SPAN,
         };
 
         let typ = Type::Fun(FnType {
@@ -544,7 +536,7 @@ mod tests {
                     ],
                     body: Expr::Ident(TypedVar(Var(0), Type::Int)),
                     recursive: false,
-                    span: Span::new(0, 0)
+                    span: SPAN
                 })),
             ),
         );
@@ -556,9 +548,9 @@ mod tests {
         let mut checker = TypeChecker::new(&mut state);
 
         let idx = Index {
-            lhs: Expr::Nil(NilLit { span: Span::new(0, 0) }),
-            rhs: Expr::Bool(BoolLit { value: false, span: Span::new(0, 0) }),
-            span: Span::new(0, 0),
+            lhs: Expr::Nil(NilLit { span: SPAN }),
+            rhs: Expr::Bool(BoolLit { value: false, span: SPAN }),
+            span: SPAN,
         };
 
         let typ = Type::Var(TypeVar(0));
@@ -584,12 +576,9 @@ mod tests {
                     )
                 ],
                 Expr::Index(Box::new(Index {
-                    lhs: Expr::Nil(NilLit { span: Span::new(0, 0) }),
-                    rhs: Expr::Bool(BoolLit {
-                        value: false,
-                        span: Span::new(0, 0)
-                    }),
-                    span: Span::new(0, 0),
+                    lhs: Expr::Nil(NilLit { span: SPAN }),
+                    rhs: Expr::Bool(BoolLit { value: false, span: SPAN }),
+                    span: SPAN,
                 })),
             ),
         );
