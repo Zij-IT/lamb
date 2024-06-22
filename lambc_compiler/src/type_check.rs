@@ -279,6 +279,32 @@ mod tests {
         I64Lit { base: I64Base::Dec, value: "1".into(), span: SPAN }
     }
 
+    fn f64_lit() -> F64Lit {
+        F64Lit { value: "2.".into(), span: SPAN }
+    }
+
+    fn str_lit() -> StrLit {
+        StrLit {
+            text: Some(StrText { inner: "a".into(), span: SPAN }),
+            span: SPAN,
+        }
+    }
+
+    fn nil_lit() -> NilLit {
+        NilLit { span: SPAN }
+    }
+
+    fn bool_lit() -> BoolLit {
+        BoolLit { value: false, span: SPAN }
+    }
+
+    fn char_lit() -> CharLit {
+        CharLit {
+            text: Some(CharText { inner: "f".into(), span: SPAN }),
+            span: SPAN,
+        }
+    }
+
     #[test]
     fn infers_int() {
         let mut state = State::default();
@@ -311,7 +337,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = F64Lit { value: "2.0".into(), span: SPAN };
+        let lit = f64_lit();
         let out = checker.infer_expr(HashMap::new(), Expr::F64(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::F64(lit)), Type::Double));
     }
@@ -321,7 +347,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = F64Lit { value: "2.0".into(), span: SPAN };
+        let lit = f64_lit();
 
         let out = checker.check_expr(
             HashMap::new(),
@@ -337,10 +363,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = CharLit {
-            text: Some(CharText { inner: "f".into(), span: SPAN }),
-            span: SPAN,
-        };
+        let lit = char_lit();
 
         let out = checker.infer_expr(HashMap::new(), Expr::Char(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::Char(lit)), Type::Usv));
@@ -351,10 +374,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = CharLit {
-            text: Some(CharText { inner: "f".into(), span: SPAN }),
-            span: SPAN,
-        };
+        let lit = char_lit();
 
         let out = checker.check_expr(
             HashMap::new(),
@@ -370,10 +390,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = StrLit {
-            text: Some(StrText { inner: "a".into(), span: SPAN }),
-            span: SPAN,
-        };
+        let lit = str_lit();
 
         let out =
             checker.infer_expr(HashMap::new(), Expr::String(lit.clone()));
@@ -392,10 +409,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = StrLit {
-            text: Some(StrText { inner: "a".into(), span: SPAN }),
-            span: SPAN,
-        };
+        let lit = str_lit();
 
         let out = checker.check_expr(
             HashMap::new(),
@@ -548,8 +562,8 @@ mod tests {
         let mut checker = TypeChecker::new(&mut state);
 
         let idx = Index {
-            lhs: Expr::Nil(NilLit { span: SPAN }),
-            rhs: Expr::Bool(BoolLit { value: false, span: SPAN }),
+            lhs: Expr::Nil(nil_lit()),
+            rhs: Expr::Bool(bool_lit()),
             span: SPAN,
         };
 
