@@ -100,7 +100,14 @@ impl<'s> TypeChecker<'s> {
             Expr::Call(call) => self.infer_call(env, *call),
             Expr::Index(idx) => self.infer_idx(env, *idx),
             Expr::Group(g) => self.infer_group(env, *g),
-            _ => todo!(),
+            Expr::List(_) => todo!(),
+            Expr::Block(_) => todo!(),
+            Expr::If(_) => todo!(),
+            Expr::Case(_) => todo!(),
+            Expr::Unary(_) => todo!(),
+            Expr::Binary(_) => todo!(),
+            Expr::Return(_) => todo!(),
+            Expr::Path(_) => todo!(),
         }
     }
 
