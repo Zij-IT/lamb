@@ -19,7 +19,13 @@ pub enum Type {
     Double,
     List(Box<Self>),
     Module(Vec<TypedVar>),
-    Fun { args: Vec<Self>, ret_type: Box<Self> },
+    Fun(FnType),
+}
+
+#[derive(Debug, PartialEq, Clone, Eq)]
+struct FnType {
+    args: Vec<Type>,
+    ret_type: Box<Type>,
 }
 
 type Mod<V> = Module<V, PathRef>;
