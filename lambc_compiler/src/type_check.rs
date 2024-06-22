@@ -1,5 +1,5 @@
 use im::HashMap;
-use lambc_parse::{Call, Expr, FnDef, Group, Index, Module};
+use lambc_parse::{Call, Expr, FnDef, Group, Index, List, Module};
 
 use crate::{name_res::Var, PathRef, State};
 
@@ -100,7 +100,7 @@ impl<'s> TypeChecker<'s> {
             Expr::Call(call) => self.infer_call(env, *call),
             Expr::Index(idx) => self.infer_idx(env, *idx),
             Expr::Group(g) => self.infer_group(env, *g),
-            Expr::List(_) => todo!(),
+            Expr::List(list) => self.infer_list(env, list),
             Expr::Block(_) => todo!(),
             Expr::If(_) => todo!(),
             Expr::Case(_) => todo!(),
@@ -253,6 +253,35 @@ impl<'s> TypeChecker<'s> {
         )
     }
 
+    fn infer_list(
+        &mut self,
+        env: HashMap<Var, Type>,
+        list: List<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let mut values = list.values.into_iter();
+        let (mut cons, mut asts, first_ty) = match values.next() {
+            Some(e) => {
+                let (out, res) = self.infer_expr(env.clone(), e);
+                (out.cons, vec![out.ast], res)
+            }
+            None => (vec![], vec![], Type::Var(self.fresh_ty_var())),
+        };
+
+        for val in values {
+            let out = self.check_expr(env.clone(), val, first_ty.clone());
+            cons.extend(out.cons);
+            asts.push(out.ast);
+        }
+
+        (
+            CheckRes::new(
+                cons,
+                Expr::List(List { values: asts, span: list.span }),
+            ),
+            Type::List(Box::new(first_ty)),
+        )
+    }
+
     fn fresh_ty_var(&mut self) -> TypeVar {
         self.types += 1;
         TypeVar(self.types - 1)
@@ -287,7 +316,7 @@ mod tests {
 
     use lambc_parse::{
         BoolLit, Call, CharLit, CharText, Expr, F64Lit, FnDef, Group, I64Base,
-        I64Lit, Index, NilLit, Span, StrLit, StrText,
+        I64Lit, Index, List, NilLit, Span, StrLit, StrText,
     };
 
     use super::{Type, TypeChecker};
@@ -690,6 +719,39 @@ mod tests {
                     })),
                 ),
                 Type::List(Box::new(Type::Usv)),
+            ),
+        );
+    }
+
+    #[test]
+    fn infers_list() {
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+
+        let list = List {
+            values: vec![Expr::String(str_lit()), Expr::Char(char_lit())],
+            span: SPAN,
+        };
+
+        let out = checker.infer_expr(HashMap::new(), Expr::List(list));
+
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![Constraint::TypeEqual(
+                        Type::List(Box::new(Type::Usv)),
+                        Type::Usv,
+                    )],
+                    Expr::List(List {
+                        values: vec![
+                            Expr::String(str_lit()),
+                            Expr::Char(char_lit())
+                        ],
+                        span: SPAN
+                    }),
+                ),
+                Type::List(Box::new(Type::List(Box::new(Type::Usv)))),
             ),
         );
     }
