@@ -284,7 +284,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = I64Lit { base: I64Base::Dec, value: "2".into(), span: SPAN };
+        let lit = i64_lit();
 
         let out = checker.infer_expr(HashMap::new(), Expr::I64(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::I64(lit)), Type::Int))
@@ -295,7 +295,7 @@ mod tests {
         let mut state = State::default();
         let mut checker = TypeChecker::new(&mut state);
 
-        let lit = I64Lit { base: I64Base::Dec, value: "2".into(), span: SPAN };
+        let lit = i64_lit();
 
         let out = checker.check_expr(
             HashMap::new(),
