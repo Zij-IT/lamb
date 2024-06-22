@@ -1,5 +1,5 @@
 use im::HashMap;
-use lambc_parse::{Call, Expr, FnDef, Index, Module};
+use lambc_parse::{Call, Expr, FnDef, Group, Index, Module};
 
 use crate::{name_res::Var, PathRef, State};
 
@@ -99,6 +99,7 @@ impl<'s> TypeChecker<'s> {
             Expr::FnDef(fndef) => self.infer_fndef(env, *fndef),
             Expr::Call(call) => self.infer_call(env, *call),
             Expr::Index(idx) => self.infer_idx(env, *idx),
+            Expr::Group(g) => self.infer_group(env, *g),
             _ => todo!(),
         }
     }
@@ -227,6 +228,24 @@ impl<'s> TypeChecker<'s> {
         )
     }
 
+    fn infer_group(
+        &mut self,
+        env: HashMap<Var, Type>,
+        group: Group<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let (res, ty) = self.infer_expr(env, group.value);
+        (
+            CheckRes::new(
+                res.cons,
+                Expr::Group(Box::new(Group {
+                    value: res.ast,
+                    span: group.span,
+                })),
+            ),
+            ty,
+        )
+    }
+
     fn fresh_ty_var(&mut self) -> TypeVar {
         self.types += 1;
         TypeVar(self.types - 1)
@@ -260,7 +279,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use lambc_parse::{
-        BoolLit, Call, CharLit, CharText, Expr, F64Lit, FnDef, I64Base,
+        BoolLit, Call, CharLit, CharText, Expr, F64Lit, FnDef, Group, I64Base,
         I64Lit, Index, NilLit, Span, StrLit, StrText,
     };
 
@@ -639,6 +658,31 @@ mod tests {
                     })),
                 ),
                 ret_typ
+            ),
+        );
+    }
+
+    #[test]
+    fn infers_group() {
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+
+        let expr = str_lit();
+        let group = Group { value: Expr::String(expr.clone()), span: SPAN };
+        let out =
+            checker.infer_expr(HashMap::new(), Expr::Group(Box::new(group)));
+
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![],
+                    Expr::Group(Box::new(Group {
+                        value: Expr::String(expr),
+                        span: SPAN
+                    })),
+                ),
+                Type::List(Box::new(Type::Usv)),
             ),
         );
     }
