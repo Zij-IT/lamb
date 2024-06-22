@@ -1,5 +1,5 @@
 use im::HashMap;
-use lambc_parse::{Expr, FnDef, Index, Module};
+use lambc_parse::{Call, Expr, FnDef, Index, Module};
 
 use crate::{name_res::Var, PathRef, State};
 
@@ -97,6 +97,7 @@ impl<'s> TypeChecker<'s> {
                 Type::List(Box::new(Type::Usv)),
             ),
             Expr::FnDef(fndef) => self.infer_fndef(env, *fndef),
+            Expr::Call(call) => self.infer_call(env, *call),
             Expr::Index(idx) => self.infer_idx(env, *idx),
             _ => todo!(),
         }
@@ -155,6 +156,44 @@ impl<'s> TypeChecker<'s> {
                 recursive: def.recursive,
                 span: def.span,
             })),
+        )
+    }
+
+    fn infer_call(
+        &mut self,
+        env: HashMap<Var, Type>,
+        call: Call<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let mut cons = Vec::new();
+        let mut asts = Vec::new();
+        let mut typs = Vec::new();
+
+        for arg in call.args {
+            let (out, typ) = self.infer_expr(env.clone(), arg);
+            cons.extend(out.cons);
+            asts.push(out.ast);
+            typs.push(typ);
+        }
+
+        let ret_typ = Type::Var(self.fresh_ty_var());
+        let fn_typ = Type::Fun(FnType {
+            args: typs,
+            ret_type: Box::new(ret_typ.clone()),
+        });
+
+        let fn_out = self.check_expr(env, call.callee, fn_typ);
+        cons.extend(fn_out.cons);
+
+        (
+            CheckRes::new(
+                cons,
+                Expr::Call(Box::new(Call {
+                    callee: fn_out.ast,
+                    args: asts,
+                    span: call.span,
+                })),
+            ),
+            ret_typ,
         )
     }
 
@@ -221,8 +260,8 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use lambc_parse::{
-        BoolLit, CharLit, CharText, Expr, F64Lit, FnDef, I64Base, I64Lit,
-        Index, NilLit, Span, StrLit, StrText,
+        BoolLit, Call, CharLit, CharText, Expr, F64Lit, FnDef, I64Base,
+        I64Lit, Index, NilLit, Span, StrLit, StrText,
     };
 
     use super::{Type, TypeChecker};
@@ -233,6 +272,12 @@ mod tests {
         },
         State,
     };
+
+    const SPAN: Span = Span::new(0, 0);
+
+    fn i64_lit() -> I64Lit {
+        I64Lit { base: I64Base::Dec, value: "1".into(), span: SPAN }
+    }
 
     #[test]
     fn infers_int() {
@@ -546,6 +591,51 @@ mod tests {
                     }),
                     span: Span::new(0, 0),
                 })),
+            ),
+        );
+    }
+
+    #[test]
+    fn infers_call() {
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+
+        let callee_ident = Var(0);
+        let callee_typ = Type::Var(TypeVar(1000));
+        let ret_typ = Type::Var(TypeVar(0));
+
+        let env =
+            HashMap::from([(callee_ident, callee_typ.clone())].as_slice());
+
+        let call = Call {
+            callee: Expr::Ident(callee_ident),
+            args: vec![Expr::I64(i64_lit()), Expr::I64(i64_lit())],
+            span: SPAN,
+        };
+
+        let out = checker.infer_expr(env, Expr::Call(Box::new(call)));
+
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![Constraint::TypeEqual(
+                        Type::Fun(FnType {
+                            args: vec![Type::Int, Type::Int],
+                            ret_type: Box::new(ret_typ.clone())
+                        }),
+                        callee_typ.clone()
+                    )],
+                    Expr::Call(Box::new(Call {
+                        callee: Expr::Ident(TypedVar(
+                            callee_ident,
+                            callee_typ.clone()
+                        )),
+                        args: vec![Expr::I64(i64_lit()), Expr::I64(i64_lit())],
+                        span: SPAN,
+                    })),
+                ),
+                ret_typ
             ),
         );
     }
