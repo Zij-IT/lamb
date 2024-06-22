@@ -1,5 +1,7 @@
 use im::HashMap;
-use lambc_parse::{Call, Expr, FnDef, Group, Index, List, Module};
+use lambc_parse::{
+    Call, Expr, FnDef, Group, Index, List, Module, Unary, UnaryOp,
+};
 
 use crate::{name_res::Var, PathRef, State};
 
@@ -104,7 +106,7 @@ impl<'s> TypeChecker<'s> {
             Expr::Block(_) => todo!(),
             Expr::If(_) => todo!(),
             Expr::Case(_) => todo!(),
-            Expr::Unary(_) => todo!(),
+            Expr::Unary(unary) => self.infer_unary(env, *unary),
             Expr::Binary(_) => todo!(),
             Expr::Return(_) => todo!(),
             Expr::Path(_) => todo!(),
@@ -282,6 +284,37 @@ impl<'s> TypeChecker<'s> {
         )
     }
 
+    fn infer_unary(
+        &mut self,
+        env: HashMap<Var, Type>,
+        unary: Unary<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let Unary { rhs, op, span, op_span } = unary;
+        let (out, ty) = self.infer_expr(env, rhs);
+
+        let mut cons = out.cons;
+        cons.push(match op {
+            UnaryOp::Nneg => Constraint::ImplNegate(ty.clone()),
+            UnaryOp::Lnot => Constraint::TypeEqual(ty.clone(), Type::Bool),
+            UnaryOp::Bneg => Constraint::TypeEqual(ty.clone(), Type::Int),
+        });
+
+        (
+            CheckRes::new(
+                cons,
+                Expr::Unary(Box::new(Unary {
+                    rhs: out.ast,
+                    op,
+                    span,
+                    op_span,
+                })),
+            ),
+            // Each UnaryOp returns the same type as the original type. Each
+            // one is roughly `a -> a`
+            ty,
+        )
+    }
+
     fn fresh_ty_var(&mut self) -> TypeVar {
         self.types += 1;
         TypeVar(self.types - 1)
@@ -306,6 +339,7 @@ impl<T> CheckRes<T> {
 
 #[derive(Debug, Eq, PartialEq)]
 enum Constraint {
+    ImplNegate(Type),
     TypeEqual(Type, Type),
 }
 
@@ -316,7 +350,8 @@ mod tests {
 
     use lambc_parse::{
         BoolLit, Call, CharLit, CharText, Expr, F64Lit, FnDef, Group, I64Base,
-        I64Lit, Index, List, NilLit, Span, StrLit, StrText,
+        I64Lit, Ident, Index, List, NilLit, Span, StrLit, StrText, Unary,
+        UnaryOp,
     };
 
     use super::{Type, TypeChecker};
@@ -753,6 +788,63 @@ mod tests {
                 ),
                 Type::List(Box::new(Type::List(Box::new(Type::Usv)))),
             ),
+        );
+    }
+
+    #[test]
+    fn infers_unary() {
+        fn unary<T>(lit: I64Lit, op: UnaryOp) -> Expr<T> {
+            Expr::Unary(Box::new(Unary {
+                rhs: Expr::I64::<T>(lit),
+                op,
+                span: SPAN,
+                op_span: SPAN,
+            }))
+        }
+
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+
+        let lit = i64_lit();
+        let una = unary(lit.clone(), UnaryOp::Nneg);
+        let out = checker.infer_expr(HashMap::new(), una);
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![Constraint::ImplNegate(Type::Int)],
+                    unary(lit, UnaryOp::Nneg)
+                ),
+                Type::Int
+            )
+        );
+
+        let lit = i64_lit();
+        let una = unary(lit.clone(), UnaryOp::Bneg);
+        let out = checker.infer_expr(HashMap::new(), una);
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![Constraint::TypeEqual(Type::Int, Type::Int)],
+                    unary(lit, UnaryOp::Bneg)
+                ),
+                Type::Int
+            )
+        );
+
+        let lit = i64_lit();
+        let una = unary(lit.clone(), UnaryOp::Lnot);
+        let out = checker.infer_expr(HashMap::new(), una);
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![Constraint::TypeEqual(Type::Int, Type::Bool)],
+                    unary(lit, UnaryOp::Lnot)
+                ),
+                Type::Int
+            )
         );
     }
 }
