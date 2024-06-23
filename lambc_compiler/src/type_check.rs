@@ -1,6 +1,7 @@
 use im::HashMap;
 use lambc_parse::{
-    Call, Expr, FnDef, Group, Index, List, Module, Unary, UnaryOp,
+    Binary, BinaryOp, Call, Expr, FnDef, Group, Index, List, Module, Unary,
+    UnaryOp,
 };
 
 use crate::{name_res::Var, PathRef, State};
@@ -107,7 +108,7 @@ impl<'s> TypeChecker<'s> {
             Expr::If(_) => todo!(),
             Expr::Case(_) => todo!(),
             Expr::Unary(unary) => self.infer_unary(env, *unary),
-            Expr::Binary(_) => todo!(),
+            Expr::Binary(binary) => self.infer_binary(env, *binary),
             Expr::Return(_) => todo!(),
             Expr::Path(_) => todo!(),
         }
@@ -315,6 +316,194 @@ impl<'s> TypeChecker<'s> {
         )
     }
 
+    fn infer_binary(
+        &mut self,
+        env: HashMap<Var, Type>,
+        binary: Binary<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let (lhs, rhs, cons, ty) = match binary.op {
+            // These operators require that both the `[l|r]hs` is a function type
+            // with a singular argument, and `[r|l]hs` is the type of the parameter
+            BinaryOp::Appl => {
+                let arg = Type::Var(self.fresh_ty_var());
+                let ret = Type::Var(self.fresh_ty_var());
+                let fun = Type::Fun(FnType {
+                    args: vec![arg.clone()],
+                    ret_type: Box::new(ret.clone()),
+                });
+
+                let lhs = self.check_expr(env.clone(), binary.lhs, fun);
+                let rhs = self.check_expr(env, binary.rhs, arg);
+                let mut cons = lhs.cons;
+                cons.extend(rhs.cons);
+
+                (lhs.ast, rhs.ast, cons, ret)
+            }
+            BinaryOp::Appr => {
+                let arg = Type::Var(self.fresh_ty_var());
+                let ret = Type::Var(self.fresh_ty_var());
+                let fun = Type::Fun(FnType {
+                    args: vec![arg.clone()],
+                    ret_type: Box::new(ret.clone()),
+                });
+
+                let lhs = self.check_expr(env.clone(), binary.lhs, arg);
+                let rhs = self.check_expr(env, binary.rhs, fun);
+                let mut cons = lhs.cons;
+                cons.extend(rhs.cons);
+
+                (lhs.ast, rhs.ast, cons, ret)
+            }
+            // These operators require that both the `lhs` and `rhs` are both
+            // unary functions where the output of the `[l|r]hs` is the only
+            // parameter of the `[r|l]hs`.
+            BinaryOp::Cpsl => {
+                let rhs_arg = Type::Var(self.fresh_ty_var());
+                let rhs_ret = Type::Var(self.fresh_ty_var());
+                let lhs_ret = Type::Var(self.fresh_ty_var());
+
+                let rhs_fn = Type::Fun(FnType {
+                    args: vec![rhs_arg],
+                    ret_type: Box::new(rhs_ret.clone()),
+                });
+
+                let lhs_fn = Type::Fun(FnType {
+                    args: vec![rhs_ret],
+                    ret_type: Box::new(lhs_ret.clone()),
+                });
+
+                let lhs = self.check_expr(env.clone(), binary.lhs, lhs_fn);
+                let rhs = self.check_expr(env, binary.rhs, rhs_fn);
+                let mut cons = lhs.cons;
+                cons.extend(rhs.cons);
+
+                (lhs.ast, rhs.ast, cons, lhs_ret)
+            }
+            BinaryOp::Cpsr => {
+                let lhs_arg = Type::Var(self.fresh_ty_var());
+                let lhs_ret = Type::Var(self.fresh_ty_var());
+                let rhs_ret = Type::Var(self.fresh_ty_var());
+
+                let lhs_fn = Type::Fun(FnType {
+                    args: vec![lhs_arg],
+                    ret_type: Box::new(lhs_ret.clone()),
+                });
+
+                let rhs_fn = Type::Fun(FnType {
+                    args: vec![lhs_ret],
+                    ret_type: Box::new(rhs_ret.clone()),
+                });
+
+                let lhs = self.check_expr(env.clone(), binary.lhs, lhs_fn);
+                let rhs = self.check_expr(env, binary.rhs, rhs_fn);
+                let mut cons = lhs.cons;
+                cons.extend(rhs.cons);
+
+                (lhs.ast, rhs.ast, cons, rhs_ret)
+            }
+            // These operators always return boolean values, regardless of the
+            // type of the `lhs` and `rhs` value
+            BinaryOp::Land
+            | BinaryOp::Lor
+            | BinaryOp::Eq
+            | BinaryOp::Ne
+            | BinaryOp::Ge
+            | BinaryOp::Gt
+            | BinaryOp::Le
+            | BinaryOp::Lt => {
+                let (lhs, lhs_ty) = self.infer_expr(env.clone(), binary.lhs);
+                let (rhs, rhs_ty) = self.infer_expr(env, binary.rhs);
+                let mut cons = lhs.cons;
+                cons.extend(rhs.cons);
+                cons.push(Constraint::TypeEqual(lhs_ty, rhs_ty));
+
+                (lhs.ast, rhs.ast, cons, Type::Bool)
+            }
+            // These operators require that their values are of the `int` type
+            // and they output a value of type `int`.
+            BinaryOp::Bor
+            | BinaryOp::Bxor
+            | BinaryOp::Band
+            | BinaryOp::Shr
+            | BinaryOp::Shl
+            | BinaryOp::Mod => {
+                let lhs = self.check_expr(env.clone(), binary.lhs, Type::Int);
+                let rhs = self.check_expr(env, binary.rhs, Type::Int);
+                let mut cons = lhs.cons;
+                cons.extend(rhs.cons);
+
+                (lhs.ast, rhs.ast, cons, Type::Int)
+            }
+            // These operators require that their values are of numerical persuasion
+            //
+            // For type inference of the following binary operators, we assume
+            // that the result of the operation is the same type as the expression
+            // on the left hand side of the operator.
+            //
+            // THOUGHT: Perhaps add a `Type::Error` and use a new var with the
+            //          constraint output of `Constriant::OutputOfAdd(Type, Type)`
+            BinaryOp::Add => {
+                let (lhs_out, lhs_ty) =
+                    self.infer_expr(env.clone(), binary.lhs);
+
+                let (rhs_out, rhs_ty) = self.infer_expr(env, binary.rhs);
+
+                let mut cons = lhs_out.cons;
+                cons.extend(rhs_out.cons);
+                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::ImplAdd(lhs_ty.clone()));
+
+                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+            }
+            BinaryOp::Sub => {
+                let (lhs_out, lhs_ty) =
+                    self.infer_expr(env.clone(), binary.lhs);
+
+                let (rhs_out, rhs_ty) = self.infer_expr(env, binary.rhs);
+
+                let mut cons = lhs_out.cons;
+                cons.extend(rhs_out.cons);
+                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::ImplSub(lhs_ty.clone()));
+                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+            }
+            BinaryOp::Div => {
+                let (lhs_out, lhs_ty) =
+                    self.infer_expr(env.clone(), binary.lhs);
+
+                let (rhs_out, rhs_ty) = self.infer_expr(env, binary.rhs);
+
+                let mut cons = lhs_out.cons;
+                cons.extend(rhs_out.cons);
+                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::ImplDiv(lhs_ty.clone()));
+                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+            }
+            BinaryOp::Mul => {
+                let (lhs_out, lhs_ty) =
+                    self.infer_expr(env.clone(), binary.lhs);
+
+                let (rhs_out, rhs_ty) = self.infer_expr(env, binary.rhs);
+
+                let mut cons = lhs_out.cons;
+                cons.extend(rhs_out.cons);
+                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::ImplMul(lhs_ty.clone()));
+                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+            }
+        };
+
+        let bin = Binary {
+            lhs,
+            rhs,
+            op: binary.op,
+            span: binary.span,
+            op_span: binary.op_span,
+        };
+
+        (CheckRes::new(cons, Expr::Binary(Box::new(bin))), ty)
+    }
+
     fn fresh_ty_var(&mut self) -> TypeVar {
         self.types += 1;
         TypeVar(self.types - 1)
@@ -339,6 +528,10 @@ impl<T> CheckRes<T> {
 
 #[derive(Debug, Eq, PartialEq)]
 enum Constraint {
+    ImplAdd(Type),
+    ImplSub(Type),
+    ImplDiv(Type),
+    ImplMul(Type),
     ImplNegate(Type),
     TypeEqual(Type, Type),
 }
