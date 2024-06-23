@@ -1,7 +1,7 @@
 use im::HashMap;
 use lambc_parse::{
-    Binary, BinaryOp, Call, Expr, FnDef, Group, Index, List, Module, Unary,
-    UnaryOp,
+    Binary, BinaryOp, Block, Call, Define, Expr, ExprStatement, FnDef, Group,
+    Index, List, Module, Statement, Unary, UnaryOp,
 };
 
 use crate::{name_res::Var, PathRef, State};
@@ -100,7 +100,7 @@ impl<'s> TypeChecker<'s> {
             Expr::Index(idx) => self.infer_idx(env, *idx),
             Expr::Group(g) => self.infer_group(env, *g),
             Expr::List(list) => self.infer_list(env, list),
-            Expr::Block(_) => todo!(),
+            Expr::Block(block) => self.infer_block(env, *block),
             Expr::If(_) => todo!(),
             Expr::Case(_) => todo!(),
             Expr::Unary(unary) => self.infer_unary(env, *unary),
@@ -500,9 +500,97 @@ impl<'s> TypeChecker<'s> {
         (CheckRes::new(cons, Expr::Binary(Box::new(bin))), ty)
     }
 
+    fn infer_block(
+        &mut self,
+        mut env: HashMap<Var, Type>,
+        block: Block<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let Block { statements, value, span } = block;
+
+        let mut stmts = Vec::with_capacity(statements.len());
+        let mut cons = vec![];
+        for stmt in statements {
+            let out = self.process_stmt(&mut env, stmt);
+            stmts.push(out.ast);
+            cons.extend(out.cons);
+        }
+
+        let (val, ty) =
+            if let Some((out, ty)) = value.map(|v| self.infer_expr(env, v)) {
+                cons.extend(out.cons);
+                (Some(out.ast), ty)
+            } else {
+                (None, Type::Nil)
+            };
+
+        (
+            CheckRes::new(
+                cons,
+                Expr::Block(Box::new(Block {
+                    statements: stmts,
+                    value: val,
+                    span,
+                })),
+            ),
+            ty,
+        )
+    }
+
+    fn process_stmt(
+        &mut self,
+        env: &mut HashMap<Var, Type>,
+        stmt: Statement<Var>,
+    ) -> CheckRes<Statement<TypedVar>> {
+        match stmt {
+            Statement::Define(def) => self.process_def_stmt(env, def),
+            Statement::Expr(expr) => self.process_expr_stmt(env.clone(), expr),
+        }
+    }
+
+    fn process_def_stmt(
+        &mut self,
+        env: &mut HashMap<Var, Type>,
+        def: Define<Var>,
+    ) -> CheckRes<Statement<TypedVar>> {
+        let Define { ident, typ, value, span } = def;
+        let (out, inferred_ty) = self.infer_expr(env.clone(), value);
+        let mut cons = out.cons;
+
+        let (ident, typ) = if let Some(typ) = typ {
+            let ty = self.parse_ty(typ);
+            cons.push(Constraint::TypeEqual(inferred_ty, ty.clone()));
+            // TODO: Figure out what to do with `typ` after type inference
+            (TypedVar(ident, ty.clone()), None)
+        } else {
+            (TypedVar(ident, inferred_ty.clone()), None)
+        };
+
+        CheckRes::new(
+            cons,
+            Statement::Define(Define { ident, typ, value: out.ast, span }),
+        )
+    }
+
+    fn process_expr_stmt(
+        &mut self,
+        env: HashMap<Var, Type>,
+        expr: ExprStatement<Var>,
+    ) -> CheckRes<Statement<TypedVar>> {
+        let ExprStatement { expr, span } = expr;
+        let (out, _ty) = self.infer_expr(env, expr);
+        CheckRes::new(
+            out.cons,
+            Statement::Expr(ExprStatement { expr: out.ast, span }),
+        )
+    }
+
     fn fresh_ty_var(&mut self) -> TypeVar {
         self.types += 1;
         TypeVar(self.types - 1)
+    }
+
+    fn parse_ty(&mut self, ty: lambc_parse::Type<Var>) -> Type {
+        todo!()
     }
 }
 
