@@ -1,7 +1,7 @@
 use im::HashMap;
 use lambc_parse::{
-    Binary, BinaryOp, Block, Call, Define, Expr, ExprStatement, FnDef, Group,
-    Index, List, Module, Statement, Unary, UnaryOp,
+    Binary, BinaryOp, Block, Call, Define, Else, Expr, ExprStatement, FnDef,
+    Group, If, IfCond, Index, List, Module, Statement, Unary, UnaryOp,
 };
 
 use crate::{name_res::Var, PathRef, State};
@@ -101,7 +101,7 @@ impl<'s> TypeChecker<'s> {
             Expr::Group(g) => self.infer_group(env, *g),
             Expr::List(list) => self.infer_list(env, list),
             Expr::Block(block) => self.infer_block(env, *block),
-            Expr::If(_) => todo!(),
+            Expr::If(iff) => self.infer_if(env, *iff),
             Expr::Case(_) => todo!(),
             Expr::Unary(unary) => self.infer_unary(env, *unary),
             Expr::Binary(binary) => self.infer_binary(env, *binary),
@@ -545,6 +545,59 @@ impl<'s> TypeChecker<'s> {
         (
             CheckRes::new(cons, Block { statements: stmts, value: val, span }),
             ty,
+        )
+    }
+
+    fn infer_if(
+        &mut self,
+        mut env: HashMap<Var, Type>,
+        iff: If<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let If { cond, elif, els_, span } = iff;
+        let cond_out = self.check_expr(env.clone(), cond.cond, Type::Bool);
+        let (body_out, body_ty) = self.infer_block_raw(env.clone(), cond.body);
+
+        let first =
+            IfCond { cond: cond_out.ast, body: body_out.ast, span: cond.span };
+
+        let mut cons = vec![];
+        cons.extend(cond_out.cons);
+        cons.extend(body_out.cons);
+
+        let mut elifs = vec![];
+        for IfCond { cond, body, span } in elif {
+            let cond_out = self.check_expr(env.clone(), cond, Type::Bool);
+            let (body_out, elif_ty) = self.infer_block_raw(env.clone(), body);
+
+            cons.extend(cond_out.cons);
+            cons.extend(body_out.cons);
+            cons.push(Constraint::TypeEqual(elif_ty.clone(), body_ty.clone()));
+
+            elifs.push(IfCond {
+                cond: cond_out.ast,
+                body: body_out.ast,
+                span,
+            });
+        }
+
+        let els_ = els_.map(|Else { body, span }| {
+            let (body_out, else_ty) = self.infer_block_raw(env.clone(), body);
+            cons.extend(body_out.cons);
+            cons.push(Constraint::TypeEqual(else_ty.clone(), body_ty.clone()));
+            Else { body: body_out.ast, span }
+        });
+
+        (
+            CheckRes::new(
+                cons,
+                Expr::If(Box::new(If {
+                    cond: first,
+                    elif: elifs,
+                    els_,
+                    span,
+                })),
+            ),
+            body_ty,
         )
     }
 
