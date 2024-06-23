@@ -26,7 +26,7 @@ pub enum Type {
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
-struct FnType {
+pub struct FnType {
     args: Vec<Type>,
     ret_type: Box<Type>,
 }
@@ -503,7 +503,7 @@ impl<'s> TypeChecker<'s> {
 
     fn infer_block(
         &mut self,
-        mut env: HashMap<Var, Type>,
+        env: HashMap<Var, Type>,
         block: Block<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_block_raw(env, block);
@@ -551,7 +551,7 @@ impl<'s> TypeChecker<'s> {
 
     fn infer_if(
         &mut self,
-        mut env: HashMap<Var, Type>,
+        env: HashMap<Var, Type>,
         iff: If<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let If { cond, elif, els_, span } = iff;
@@ -655,7 +655,7 @@ impl<'s> TypeChecker<'s> {
         TypeVar(self.types - 1)
     }
 
-    fn parse_ty(&mut self, ty: lambc_parse::Type<Var>) -> Type {
+    fn parse_ty(&mut self, _ty: lambc_parse::Type<Var>) -> Type {
         todo!()
     }
 }
