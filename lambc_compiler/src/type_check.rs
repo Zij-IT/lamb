@@ -31,10 +31,6 @@ struct FnType {
     ret_type: Box<Type>,
 }
 
-type Mod<V> = Module<V, PathRef>;
-
-type Env = HashMap<Var, Type>;
-
 pub struct TypeChecker<'s> {
     state: &'s mut State,
     types: u32,
@@ -47,14 +43,14 @@ impl<'s> TypeChecker<'s> {
 
     pub fn check_modules(
         &mut self,
-        _modules: Vec<Mod<Var>>,
-    ) -> Vec<Mod<TypedVar>> {
+        _modules: Vec<Module<Var, PathRef>>,
+    ) -> Vec<Module<TypedVar, PathRef>> {
         todo!()
     }
 
     fn check_expr(
         &mut self,
-        env: Env,
+        env: HashMap<Var, Type>,
         expr: Expr<Var>,
         typ: Type,
     ) -> CheckRes<Expr<TypedVar>> {
@@ -81,7 +77,7 @@ impl<'s> TypeChecker<'s> {
 
     fn infer_expr(
         &mut self,
-        env: Env,
+        env: HashMap<Var, Type>,
         expr: Expr<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         match expr {
