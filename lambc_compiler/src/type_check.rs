@@ -505,6 +505,25 @@ impl<'s> TypeChecker<'s> {
         mut env: HashMap<Var, Type>,
         block: Block<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let (res, ty) = self.infer_block_raw(env, block);
+        (
+            CheckRes::new(
+                res.cons,
+                Expr::Block(Box::new(Block {
+                    statements: res.ast.statements,
+                    value: res.ast.value,
+                    span: res.ast.span,
+                })),
+            ),
+            ty,
+        )
+    }
+
+    fn infer_block_raw(
+        &mut self,
+        mut env: HashMap<Var, Type>,
+        block: Block<Var>,
+    ) -> (CheckRes<Block<TypedVar>>, Type) {
         let Block { statements, value, span } = block;
 
         let mut stmts = Vec::with_capacity(statements.len());
@@ -524,14 +543,7 @@ impl<'s> TypeChecker<'s> {
             };
 
         (
-            CheckRes::new(
-                cons,
-                Expr::Block(Box::new(Block {
-                    statements: stmts,
-                    value: val,
-                    span,
-                })),
-            ),
+            CheckRes::new(cons, Block { statements: stmts, value: val, span }),
             ty,
         )
     }
