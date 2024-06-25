@@ -22,7 +22,7 @@ impl<'s> TypeChecker<'s> {
                 CheckRes::empty(Expr::String(s))
             }
             (Expr::FnDef(def), Type::Fun(typ)) => {
-                self.check_fndef(env, def, typ)
+                self.check_fndef(env, *def, typ)
             }
 
             (expr, expected_ty) => {
@@ -40,7 +40,7 @@ impl<'s> TypeChecker<'s> {
     pub(super) fn check_fndef(
         &mut self,
         mut env: HashMap<Var, Type>,
-        def: Box<FnDef<Var>>,
+        def: FnDef<Var>,
         typ: FnType,
     ) -> CheckRes<Expr<TypedVar>> {
         // TODO: Issue type error instead of panic if arg count doesn't match

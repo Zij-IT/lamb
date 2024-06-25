@@ -19,7 +19,7 @@ impl<'r, 's> PatternChecker<'r, 's> {
         Self { module, resolver }
     }
 
-    pub fn check<'a>(&mut self, pattern: &'a Pattern<Ident>) {
+    pub fn check(&mut self, pattern: &Pattern<Ident>) {
         self.pattern_names(pattern);
     }
 

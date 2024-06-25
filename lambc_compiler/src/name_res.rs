@@ -90,7 +90,7 @@ impl<'s> Resolver<'s> {
 
         let exports = exportmap.get(&module.path).expect("module removed?");
 
-        let imports = self.resolve_imports(&mut scope, &module, &exportmap);
+        let imports = self.resolve_imports(&mut scope, &module, exportmap);
 
         let exports =
             self.resolve_exports(&mut scope, &module.exports, exports);
@@ -515,7 +515,7 @@ impl<'s> Resolver<'s> {
                 InnerPattern::Ident(self.resolve_ident_pattern(scope, *i))
             }
             InnerPattern::Array(arr) => {
-                InnerPattern::Array(self.resolve_array_pattern(arr, scope))
+                InnerPattern::Array(self.resolve_array_pattern(*arr, scope))
             }
         }
     }
@@ -536,7 +536,7 @@ impl<'s> Resolver<'s> {
 
     fn resolve_array_pattern(
         &mut self,
-        arr: Box<ArrayPattern<Ident>>,
+        arr: ArrayPattern<Ident>,
         scope: &mut Scope,
     ) -> Box<ArrayPattern<Var>> {
         Box::new(ArrayPattern {
