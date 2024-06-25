@@ -619,6 +619,14 @@ impl<'s> TypeChecker<'s> {
         def: Define<Var>,
     ) -> CheckRes<Statement<TypedVar>> {
         let Define { ident, typ, value, span } = def;
+
+        // Add an entry in for the identifier with a new type
+        let recursive = value.is_recursive();
+        if recursive {
+            let tvar = self.fresh_ty_var();
+            env.insert(ident, Type::Var(tvar));
+        }
+
         let (out, inferred_ty) = self.infer_expr(env.clone(), value);
         let mut cons = out.cons;
 
@@ -631,8 +639,12 @@ impl<'s> TypeChecker<'s> {
             (TypedVar(ident, inferred_ty.clone()), None)
         };
 
-        // This doesn't handle recursive bindings... :/
-        env.insert(ident.0, ident.1.clone());
+        // If recursive, we need to extract out the initial type, and constrain
+        // the initial unknown type to the inferred type.
+        let old = env.insert(ident.0, ident.1.clone());
+        if recursive {
+            cons.push(Constraint::TypeEqual(old.unwrap(), ident.1.clone()));
+        }
 
         CheckRes::new(
             cons,
@@ -1394,6 +1406,105 @@ mod tests {
                     }
                 ),
                 Type::Var(TypeVar(2))
+            )
+        )
+    }
+
+    #[test]
+    fn infers_block_rec_val() {
+        let mk_fn = |arg_ty, ret_ty| {
+            Type::Fun(FnType {
+                args: vec![arg_ty],
+                ret_type: Box::new(ret_ty),
+            })
+        };
+
+        let fn_ty = mk_fn(Type::Var(TypeVar(1)), Type::Var(TypeVar(2)));
+
+        // defines a function: fn x(a) { return x(a); }
+        let def_rec = Statement::Define(Define {
+            ident: Var(0),
+            typ: None,
+            value: Expr::FnDef(Box::new(FnDef {
+                args: vec![Var(1)],
+                body: Expr::Call(Box::new(Call {
+                    callee: Expr::Ident(Var(0)),
+                    args: vec![Expr::Ident(Var(1))],
+                    span: SPAN,
+                })),
+                recursive: true,
+                span: SPAN,
+            })),
+            span: SPAN,
+        });
+
+        let def_rec_ty = Statement::Define(Define {
+            ident: TypedVar(Var(0), fn_ty.clone()),
+            typ: None,
+            value: Expr::FnDef(Box::new(FnDef {
+                args: vec![(TypedVar(Var(1), Type::Var(TypeVar(1))))],
+                body: Expr::Call(Box::new(Call {
+                    callee: Expr::Ident(TypedVar(
+                        Var(0),
+                        Type::Var(TypeVar(0)),
+                    )),
+                    args: vec![Expr::Ident(TypedVar(
+                        Var(1),
+                        Type::Var(TypeVar(1)),
+                    ))],
+                    span: SPAN,
+                })),
+                recursive: true,
+                span: SPAN,
+            })),
+            span: SPAN,
+        });
+
+        let block = Block {
+            statements: vec![def_rec],
+            value: Some(Expr::Call(Box::new(Call {
+                callee: Expr::Ident(Var(0)),
+                args: vec![Expr::Bool(bool_lit())],
+                span: SPAN,
+            }))),
+            span: SPAN,
+        };
+
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+        let out = checker.infer_block_raw(HashMap::new(), block);
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![
+                        Constraint::TypeEqual(
+                            fn_ty.clone(),
+                            Type::Var(TypeVar(0)),
+                        ),
+                        Constraint::TypeEqual(
+                            Type::Var(TypeVar(0)),
+                            fn_ty.clone(),
+                        ),
+                        Constraint::TypeEqual(
+                            mk_fn(Type::Bool, Type::Var(TypeVar(3))),
+                            fn_ty.clone(),
+                        ),
+                    ],
+                    Block {
+                        statements: vec![def_rec_ty],
+                        value: Some(Expr::Call(Box::new(Call {
+                            callee: Expr::Ident(TypedVar(
+                                Var(0),
+                                fn_ty.clone(),
+                            )),
+                            args: vec![Expr::Bool(bool_lit())],
+                            span: SPAN,
+                        }))),
+                        span: SPAN
+                    }
+                ),
+                Type::Var(TypeVar(3))
             )
         )
     }
