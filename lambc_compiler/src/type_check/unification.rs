@@ -30,7 +30,7 @@ pub enum TypeError {
     InfiniteType(TypeVar, Type),
 }
 
-impl<'s> super::TypeChecker<'s> {
+impl super::TypeInference {
     pub(super) fn unification(
         &mut self,
         cons: Vec<Constraint>,

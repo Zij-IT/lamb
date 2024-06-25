@@ -3,9 +3,9 @@ use lambc_parse::{Expr, FnDef};
 
 use crate::name_res::Var;
 
-use super::{CheckRes, Constraint, FnType, Type, TypeChecker, TypedVar};
+use super::{CheckRes, Constraint, FnType, Type, TypeInference, TypedVar};
 
-impl<'s> TypeChecker<'s> {
+impl TypeInference {
     pub(super) fn check_expr(
         &mut self,
         env: HashMap<Var, Type>,
@@ -72,13 +72,12 @@ mod tests {
         StrText,
     };
 
-    use super::{Type, TypeChecker};
+    use super::{Type, TypeInference};
     use crate::{
         name_res::Var,
         type_check::{
             CheckRes as GenWith, Constraint, FnType, TypeVar, TypedVar,
         },
-        State,
     };
 
     const SPAN: Span = Span::new(0, 0);
@@ -107,8 +106,7 @@ mod tests {
 
     #[test]
     fn checks_int() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = i64_lit();
 
@@ -123,8 +121,7 @@ mod tests {
 
     #[test]
     fn checks_double() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = f64_lit();
 
@@ -139,8 +136,7 @@ mod tests {
 
     #[test]
     fn checks_usv() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = char_lit();
 
@@ -155,8 +151,7 @@ mod tests {
 
     #[test]
     fn checks_string() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = str_lit();
 
@@ -171,8 +166,7 @@ mod tests {
 
     #[test]
     fn checks_fndef() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],
@@ -214,8 +208,7 @@ mod tests {
 
     #[test]
     fn checks_fndef_refined() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],

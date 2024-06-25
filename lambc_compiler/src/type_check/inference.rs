@@ -8,10 +8,10 @@ use lambc_parse::{
 use crate::name_res::Var;
 
 use super::{
-    CheckRes, Constraint, FnType, Type, TypeChecker, TypeVar, TypedVar,
+    CheckRes, Constraint, FnType, Type, TypeInference, TypeVar, TypedVar,
 };
 
-impl<'s> TypeChecker<'s> {
+impl TypeInference {
     pub(super) fn infer_expr(
         &mut self,
         env: HashMap<Var, Type>,
@@ -632,10 +632,7 @@ impl<'s> TypeChecker<'s> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        type_check::{Type, TypeChecker},
-        State,
-    };
+    use crate::type_check::{Type, TypeInference};
     use im::HashMap;
     use pretty_assertions::assert_eq;
 
@@ -686,8 +683,7 @@ mod tests {
 
     #[test]
     fn infers_int() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = i64_lit();
 
@@ -697,8 +693,7 @@ mod tests {
 
     #[test]
     fn infers_double() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = f64_lit();
         let out = checker.infer_expr(HashMap::new(), Expr::F64(lit.clone()));
@@ -707,8 +702,7 @@ mod tests {
 
     #[test]
     fn infers_usv() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = char_lit();
 
@@ -718,8 +712,7 @@ mod tests {
 
     #[test]
     fn infers_string() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = str_lit();
 
@@ -737,8 +730,7 @@ mod tests {
 
     #[test]
     fn infers_var() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let typ = Type::Var(TypeVar(0));
         let var = Var(0);
@@ -753,8 +745,7 @@ mod tests {
 
     #[test]
     fn infers_fndef() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],
@@ -790,8 +781,7 @@ mod tests {
 
     #[test]
     fn infers_idx() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let idx = Index {
             lhs: Expr::Nil(nil_lit()),
@@ -835,8 +825,7 @@ mod tests {
 
     #[test]
     fn infers_call() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let callee_ident = Var(0);
         let callee_typ = Type::Var(TypeVar(1000));
@@ -880,8 +869,7 @@ mod tests {
 
     #[test]
     fn infers_group() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let expr = str_lit();
         let group = Group { value: Expr::String(expr.clone()), span: SPAN };
@@ -905,8 +893,7 @@ mod tests {
 
     #[test]
     fn infers_list() {
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let list = List {
             values: vec![Expr::String(str_lit()), Expr::Char(char_lit())],
@@ -947,8 +934,7 @@ mod tests {
             }))
         }
 
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Nneg);
@@ -1066,8 +1052,7 @@ mod tests {
             span: SPAN,
         };
 
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
         let out = checker.infer_block_raw(HashMap::new(), block);
         assert_eq!(
             out,
@@ -1165,8 +1150,7 @@ mod tests {
             span: SPAN,
         };
 
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
         let out = checker.infer_block_raw(HashMap::new(), block);
         assert_eq!(
             out,
@@ -1263,8 +1247,7 @@ mod tests {
             span: SPAN,
         };
 
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
         let out = checker.infer_block_raw(HashMap::new(), block);
         assert_eq!(
             out,
@@ -1328,8 +1311,7 @@ mod tests {
         }
 
         let iff = make_if::<Var>();
-        let mut state = State::default();
-        let mut checker = TypeChecker::new(&mut state);
+        let mut checker = TypeInference::new();
         let out = checker.infer_if(HashMap::new(), iff);
 
         assert_eq!(

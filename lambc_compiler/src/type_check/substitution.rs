@@ -5,11 +5,11 @@ use lambc_parse::{
 
 use crate::type_check::TypedVar;
 
-use super::{FnType, Type, TypeChecker, TypeVar};
+use super::{FnType, Type, TypeInference, TypeVar};
 
 use std::collections::HashSet;
 
-impl<'s> TypeChecker<'s> {
+impl TypeInference {
     pub(super) fn substitute(&mut self, ty: Type) -> (HashSet<TypeVar>, Type) {
         match ty {
             ty @ (Type::Int

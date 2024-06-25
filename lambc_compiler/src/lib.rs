@@ -82,13 +82,13 @@ impl<B: Backend> Compiler<B> {
         }
 
         let mut resolver = name_res::Resolver::new(&mut self.state);
-        let resolved = resolver.resolve_modules(parsed.clone());
+        let _resolved = resolver.resolve_modules(parsed.clone());
         if self.state.has_errors() {
             return Err(Error::Invalid);
         }
 
-        let checker = &mut TypeChecker::new(&mut self.state);
-        let _checked = checker.check_modules(resolved);
+        let checker = TypeChecker::new(&mut self.state);
+        _ = checker.infer(todo());
 
         if self.state.has_errors() {
             return Err(Error::Invalid);
@@ -96,4 +96,8 @@ impl<B: Backend> Compiler<B> {
 
         self.backend.build(&mut self.state, main, parsed)
     }
+}
+
+fn todo<T>() -> T {
+    todo!()
 }
