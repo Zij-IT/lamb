@@ -756,8 +756,8 @@ mod tests {
 
     use lambc_parse::{
         Block, BoolLit, Call, CharLit, CharText, Define, Expr, ExprStatement,
-        F64Lit, FnDef, Group, I64Base, I64Lit, Index, List, NilLit, Span,
-        Statement, StrLit, StrText, Unary, UnaryOp,
+        F64Lit, FnDef, Group, I64Base, I64Lit, If, IfCond, Index, List,
+        NilLit, Span, Statement, StrLit, StrText, Unary, UnaryOp,
     };
 
     use super::{Type, TypeChecker};
@@ -1565,6 +1565,69 @@ mod tests {
                     }
                 ),
                 Type::Var(TypeVar(3))
+            )
+        )
+    }
+
+    #[test]
+    fn infers_if() {
+        fn make_block<T>(t: Expr<T>) -> Block<T> {
+            Block { statements: vec![], value: Some(t), span: SPAN }
+        }
+
+        fn make_ifcond<T>(cond: Expr<T>, body: Expr<T>) -> IfCond<T> {
+            IfCond { cond, body: make_block(body), span: SPAN }
+        }
+
+        fn make_if<T>() -> If<T> {
+            If {
+                cond: make_ifcond(
+                    Expr::Nil(nil_lit()),
+                    Expr::Bool(bool_lit()),
+                ),
+                elif: vec![
+                    make_ifcond(Expr::Bool(bool_lit()), Expr::I64(i64_lit())),
+                    make_ifcond(Expr::I64(i64_lit()), Expr::Bool(bool_lit())),
+                ],
+                els_: None,
+                span: SPAN,
+            }
+        }
+
+        let iff = make_if::<Var>();
+        let mut state = State::default();
+        let mut checker = TypeChecker::new(&mut state);
+        let out = checker.infer_if(HashMap::new(), iff);
+
+        assert_eq!(
+            out,
+            (
+                GenWith::new(
+                    vec![
+                        // If condition is required to be a boolean
+                        Constraint::TypeEqual {
+                            expected: Type::Bool,
+                            got: Type::Nil,
+                        },
+                        // All following conditions are required to be of tpye bool
+                        Constraint::TypeEqual {
+                            expected: Type::Bool,
+                            got: Type::Int,
+                        },
+                        // If condition is required to be a boolean
+                        Constraint::TypeEqual {
+                            expected: Type::Bool,
+                            got: Type::Int,
+                        },
+                        // All following conditions are required to be of type bool
+                        Constraint::TypeEqual {
+                            expected: Type::Bool,
+                            got: Type::Bool,
+                        },
+                    ],
+                    Expr::If(Box::new(make_if::<TypedVar>()))
+                ),
+                Type::Bool
             )
         )
     }
