@@ -1,15 +1,16 @@
-use im::HashMap;
-use lambc_parse::{
-    Binary, BinaryOp, Block, Call, Define, Else, Expr, ExprStatement, FnDef,
-    Group, If, IfCond, Index, List, Module, Statement, Unary, UnaryOp,
-};
+mod check;
+mod inference;
+mod substitution;
+mod unification;
 
-use crate::{name_res::Var, PathRef, State};
+use ena::unify::InPlaceUnificationTable;
+
+use crate::{name_res::Var, State};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct TypedVar(Var, Type);
 
-#[derive(Debug, PartialEq, Clone, Copy, Eq)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub struct TypeVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -32,24 +33,24 @@ pub struct FnType {
 }
 
 pub struct TypeChecker<'s> {
+    uni_table: InPlaceUnificationTable<TypeVar>,
     state: &'s mut State,
-    types: u32,
 }
 
 impl<'s> TypeChecker<'s> {
     pub fn new(state: &'s mut State) -> Self {
-        Self { state, types: 0 }
+        Self { uni_table: Default::default(), state }
     }
 
-    pub fn check_modules(
-        &mut self,
-        _modules: Vec<Module<Var, PathRef>>,
-    ) -> Vec<Module<TypedVar, PathRef>> {
-        todo!()
+    pub fn dostuff(&mut self) {
+        self.check_expr(todo(), todo(), todo());
+        _ = self.unification(todo());
+        _ = self.substitute_expr(todo());
     }
+}
 
-    }
-
+fn todo<T>() -> T {
+    todo!()
 }
 
 #[derive(Debug, Eq, PartialEq)]
