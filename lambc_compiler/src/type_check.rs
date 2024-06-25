@@ -69,7 +69,11 @@ impl<'s> TypeChecker<'s> {
 
             (expr, expected_ty) => {
                 let (mut out, actual_ty) = self.infer_expr(env, expr);
-                out.cons.push(Constraint::TypeEqual(expected_ty, actual_ty));
+                out.cons.push(Constraint::TypeEqual {
+                    expected: expected_ty,
+                    got: actual_ty,
+                });
+
                 out
             }
         }
@@ -219,8 +223,15 @@ impl<'s> TypeChecker<'s> {
         let (index_out, index_ty) = self.infer_expr(env, idx.rhs);
 
         idxee_out.cons.extend(index_out.cons);
-        idxee_out.cons.push(Constraint::TypeEqual(index_ty, Type::Int));
-        idxee_out.cons.push(Constraint::TypeEqual(indexee_ty, list_ty));
+        idxee_out.cons.push(Constraint::TypeEqual {
+            expected: index_ty,
+            got: Type::Int,
+        });
+
+        idxee_out.cons.push(Constraint::TypeEqual {
+            expected: indexee_ty,
+            got: list_ty,
+        });
 
         (
             CheckRes::new(
@@ -293,8 +304,12 @@ impl<'s> TypeChecker<'s> {
         let mut cons = out.cons;
         cons.push(match op {
             UnaryOp::Nneg => Constraint::ImplNegate(ty.clone()),
-            UnaryOp::Lnot => Constraint::TypeEqual(ty.clone(), Type::Bool),
-            UnaryOp::Bneg => Constraint::TypeEqual(ty.clone(), Type::Int),
+            UnaryOp::Lnot => {
+                Constraint::TypeEqual { expected: Type::Bool, got: ty.clone() }
+            }
+            UnaryOp::Bneg => {
+                Constraint::TypeEqual { expected: Type::Int, got: ty.clone() }
+            }
         });
 
         (
@@ -412,7 +427,10 @@ impl<'s> TypeChecker<'s> {
                 let (rhs, rhs_ty) = self.infer_expr(env, binary.rhs);
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
-                cons.push(Constraint::TypeEqual(lhs_ty, rhs_ty));
+                cons.push(Constraint::TypeEqual {
+                    expected: lhs_ty,
+                    got: rhs_ty,
+                });
 
                 (lhs.ast, rhs.ast, cons, Type::Bool)
             }
@@ -447,7 +465,11 @@ impl<'s> TypeChecker<'s> {
 
                 let mut cons = lhs_out.cons;
                 cons.extend(rhs_out.cons);
-                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::TypeEqual {
+                    expected: lhs_ty.clone(),
+                    got: rhs_ty,
+                });
+
                 cons.push(Constraint::ImplAdd(lhs_ty.clone()));
 
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
@@ -460,7 +482,11 @@ impl<'s> TypeChecker<'s> {
 
                 let mut cons = lhs_out.cons;
                 cons.extend(rhs_out.cons);
-                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::TypeEqual {
+                    expected: lhs_ty.clone(),
+                    got: rhs_ty,
+                });
+
                 cons.push(Constraint::ImplSub(lhs_ty.clone()));
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
@@ -472,7 +498,11 @@ impl<'s> TypeChecker<'s> {
 
                 let mut cons = lhs_out.cons;
                 cons.extend(rhs_out.cons);
-                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::TypeEqual {
+                    expected: lhs_ty.clone(),
+                    got: rhs_ty,
+                });
+
                 cons.push(Constraint::ImplDiv(lhs_ty.clone()));
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
@@ -484,7 +514,11 @@ impl<'s> TypeChecker<'s> {
 
                 let mut cons = lhs_out.cons;
                 cons.extend(rhs_out.cons);
-                cons.push(Constraint::TypeEqual(lhs_ty.clone(), rhs_ty));
+                cons.push(Constraint::TypeEqual {
+                    expected: lhs_ty.clone(),
+                    got: rhs_ty,
+                });
+
                 cons.push(Constraint::ImplMul(lhs_ty.clone()));
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
@@ -572,7 +606,10 @@ impl<'s> TypeChecker<'s> {
 
             cons.extend(cond_out.cons);
             cons.extend(body_out.cons);
-            cons.push(Constraint::TypeEqual(elif_ty.clone(), body_ty.clone()));
+            cons.push(Constraint::TypeEqual {
+                expected: body_ty.clone(),
+                got: elif_ty.clone(),
+            });
 
             elifs.push(IfCond {
                 cond: cond_out.ast,
@@ -584,7 +621,11 @@ impl<'s> TypeChecker<'s> {
         let els_ = els_.map(|Else { body, span }| {
             let (body_out, else_ty) = self.infer_block_raw(env.clone(), body);
             cons.extend(body_out.cons);
-            cons.push(Constraint::TypeEqual(else_ty.clone(), body_ty.clone()));
+            cons.push(Constraint::TypeEqual {
+                expected: body_ty.clone(),
+                got: else_ty.clone(),
+            });
+
             Else { body: body_out.ast, span }
         });
 
@@ -632,7 +673,11 @@ impl<'s> TypeChecker<'s> {
 
         let (ident, typ) = if let Some(typ) = typ {
             let ty = self.parse_ty(typ);
-            cons.push(Constraint::TypeEqual(inferred_ty, ty.clone()));
+            cons.push(Constraint::TypeEqual {
+                expected: ty.clone(),
+                got: inferred_ty,
+            });
+
             // TODO: Figure out what to do with `typ` after type inference
             (TypedVar(ident, ty.clone()), None)
         } else {
@@ -643,7 +688,10 @@ impl<'s> TypeChecker<'s> {
         // the initial unknown type to the inferred type.
         let old = env.insert(ident.0, ident.1.clone());
         if recursive {
-            cons.push(Constraint::TypeEqual(old.unwrap(), ident.1.clone()));
+            cons.push(Constraint::TypeEqual {
+                expected: old.unwrap(),
+                got: ident.1.clone(),
+            });
         }
 
         CheckRes::new(
@@ -698,7 +746,7 @@ enum Constraint {
     ImplDiv(Type),
     ImplMul(Type),
     ImplNegate(Type),
-    TypeEqual(Type, Type),
+    TypeEqual { expected: Type, got: Type },
 }
 
 #[cfg(test)]
@@ -947,10 +995,10 @@ mod tests {
         assert_eq!(
             out,
             GenWith::new(
-                vec![Constraint::TypeEqual(
-                    Type::Var(TypeVar(0)),
-                    Type::Var(TypeVar(0))
-                )],
+                vec![Constraint::TypeEqual {
+                    expected: Type::Var(TypeVar(0)),
+                    got: Type::Var(TypeVar(0))
+                }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
                         TypedVar(Var(0), Type::Var(TypeVar(0))),
@@ -990,7 +1038,10 @@ mod tests {
         assert_eq!(
             out,
             GenWith::new(
-                vec![Constraint::TypeEqual(Type::Int, Type::Int)],
+                vec![Constraint::TypeEqual {
+                    expected: Type::Int,
+                    got: Type::Int
+                }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
                         TypedVar(Var(0), Type::Int),
@@ -1027,15 +1078,18 @@ mod tests {
             out,
             GenWith::new(
                 vec![
-                    Constraint::TypeEqual(Type::Bool, Type::Int),
-                    Constraint::TypeEqual(
-                        Type::Nil,
-                        Type::List(Box::new(Type::Var(TypeVar(0))))
-                    ),
-                    Constraint::TypeEqual(
-                        Type::Var(TypeVar(0)),
-                        Type::Var(TypeVar(0))
-                    )
+                    Constraint::TypeEqual {
+                        expected: Type::Bool,
+                        got: Type::Int,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::Nil,
+                        got: Type::List(Box::new(Type::Var(TypeVar(0)))),
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::Var(TypeVar(0)),
+                        got: Type::Var(TypeVar(0))
+                    }
                 ],
                 Expr::Index(Box::new(Index {
                     lhs: Expr::Nil(NilLit { span: SPAN }),
@@ -1070,13 +1124,13 @@ mod tests {
             out,
             (
                 GenWith::new(
-                    vec![Constraint::TypeEqual(
-                        Type::Fun(FnType {
+                    vec![Constraint::TypeEqual {
+                        expected: Type::Fun(FnType {
                             args: vec![Type::Int, Type::Int],
                             ret_type: Box::new(ret_typ.clone())
                         }),
-                        callee_typ.clone()
-                    )],
+                        got: callee_typ.clone(),
+                    }],
                     Expr::Call(Box::new(Call {
                         callee: Expr::Ident(TypedVar(
                             callee_ident,
@@ -1132,10 +1186,10 @@ mod tests {
             out,
             (
                 GenWith::new(
-                    vec![Constraint::TypeEqual(
-                        Type::List(Box::new(Type::Usv)),
-                        Type::Usv,
-                    )],
+                    vec![Constraint::TypeEqual {
+                        expected: Type::List(Box::new(Type::Usv)),
+                        got: Type::Usv,
+                    }],
                     Expr::List(List {
                         values: vec![
                             Expr::String(str_lit()),
@@ -1184,7 +1238,10 @@ mod tests {
             out,
             (
                 GenWith::new(
-                    vec![Constraint::TypeEqual(Type::Int, Type::Int)],
+                    vec![Constraint::TypeEqual {
+                        expected: Type::Int,
+                        got: Type::Int
+                    }],
                     unary(lit, UnaryOp::Bneg)
                 ),
                 Type::Int
@@ -1198,7 +1255,10 @@ mod tests {
             out,
             (
                 GenWith::new(
-                    vec![Constraint::TypeEqual(Type::Int, Type::Bool)],
+                    vec![Constraint::TypeEqual {
+                        expected: Type::Bool,
+                        got: Type::Int,
+                    }],
                     unary(lit, UnaryOp::Lnot)
                 ),
                 Type::Int
@@ -1281,14 +1341,14 @@ mod tests {
             (
                 GenWith::new(
                     vec![
-                        Constraint::TypeEqual(
-                            mk_fn(Type::Nil, Type::Var(TypeVar(1))),
-                            fn_ty.clone()
-                        ),
-                        Constraint::TypeEqual(
-                            mk_fn(Type::Bool, Type::Var(TypeVar(2))),
-                            fn_ty.clone()
-                        ),
+                        Constraint::TypeEqual {
+                            expected: mk_fn(Type::Nil, Type::Var(TypeVar(1))),
+                            got: fn_ty.clone(),
+                        },
+                        Constraint::TypeEqual {
+                            expected: mk_fn(Type::Bool, Type::Var(TypeVar(2))),
+                            got: fn_ty.clone(),
+                        },
                     ],
                     Block {
                         statements: vec![
@@ -1380,14 +1440,14 @@ mod tests {
             (
                 GenWith::new(
                     vec![
-                        Constraint::TypeEqual(
-                            mk_fn(Type::Nil, Type::Var(TypeVar(1))),
-                            fn_ty.clone()
-                        ),
-                        Constraint::TypeEqual(
-                            mk_fn(Type::Bool, Type::Var(TypeVar(2))),
-                            fn_ty.clone()
-                        ),
+                        Constraint::TypeEqual {
+                            expected: mk_fn(Type::Nil, Type::Var(TypeVar(1))),
+                            got: fn_ty.clone(),
+                        },
+                        Constraint::TypeEqual {
+                            expected: mk_fn(Type::Bool, Type::Var(TypeVar(2))),
+                            got: fn_ty.clone(),
+                        },
                     ],
                     Block {
                         statements: vec![
@@ -1478,18 +1538,18 @@ mod tests {
             (
                 GenWith::new(
                     vec![
-                        Constraint::TypeEqual(
-                            fn_ty.clone(),
-                            Type::Var(TypeVar(0)),
-                        ),
-                        Constraint::TypeEqual(
-                            Type::Var(TypeVar(0)),
-                            fn_ty.clone(),
-                        ),
-                        Constraint::TypeEqual(
-                            mk_fn(Type::Bool, Type::Var(TypeVar(3))),
-                            fn_ty.clone(),
-                        ),
+                        Constraint::TypeEqual {
+                            expected: fn_ty.clone(),
+                            got: Type::Var(TypeVar(0)),
+                        },
+                        Constraint::TypeEqual {
+                            expected: Type::Var(TypeVar(0)),
+                            got: fn_ty.clone(),
+                        },
+                        Constraint::TypeEqual {
+                            expected: mk_fn(Type::Bool, Type::Var(TypeVar(3))),
+                            got: fn_ty.clone(),
+                        },
                     ],
                     Block {
                         statements: vec![def_rec_ty],
