@@ -17,18 +17,18 @@ impl TypeInference {
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         match expr {
             // The easy cases!
-            Expr::Nil(n) => (CheckRes::empty(Expr::Nil(n)), Type::Nil),
-            Expr::I64(i) => (CheckRes::empty(Expr::I64(i)), Type::Int),
-            Expr::F64(f) => (CheckRes::empty(Expr::F64(f)), Type::Double),
-            Expr::Char(c) => (CheckRes::empty(Expr::Char(c)), Type::Usv),
-            Expr::Bool(b) => (CheckRes::empty(Expr::Bool(b)), Type::Bool),
+            Expr::Nil(n) => (CheckRes::empty(Expr::Nil(n)), Type::NIL),
+            Expr::I64(i) => (CheckRes::empty(Expr::I64(i)), Type::INT),
+            Expr::F64(f) => (CheckRes::empty(Expr::F64(f)), Type::DOUBLE),
+            Expr::Char(c) => (CheckRes::empty(Expr::Char(c)), Type::USV),
+            Expr::Bool(b) => (CheckRes::empty(Expr::Bool(b)), Type::BOOL),
             Expr::Ident(i) => {
                 let ty = env[&i].clone();
                 (CheckRes::empty(Expr::Ident(TypedVar(i, ty.clone()))), ty)
             }
             Expr::String(s) => (
                 CheckRes::empty(Expr::String(s)),
-                Type::List(Box::new(Type::Usv)),
+                Type::List(Box::new(Type::USV)),
             ),
             // The harder cases!
             Expr::Case(_) => todo!(),
@@ -131,7 +131,7 @@ impl TypeInference {
         idxee_out.cons.extend(index_out.cons);
         idxee_out.cons.push(Constraint::TypeEqual {
             expected: index_ty,
-            got: Type::Int,
+            got: Type::INT,
         });
 
         idxee_out.cons.push(Constraint::TypeEqual {
@@ -211,10 +211,10 @@ impl TypeInference {
         cons.push(match op {
             UnaryOp::Nneg => Constraint::ImplNegate(ty.clone()),
             UnaryOp::Lnot => {
-                Constraint::TypeEqual { expected: Type::Bool, got: ty.clone() }
+                Constraint::TypeEqual { expected: Type::BOOL, got: ty.clone() }
             }
             UnaryOp::Bneg => {
-                Constraint::TypeEqual { expected: Type::Int, got: ty.clone() }
+                Constraint::TypeEqual { expected: Type::INT, got: ty.clone() }
             }
         });
 
@@ -338,7 +338,7 @@ impl TypeInference {
                     got: rhs_ty,
                 });
 
-                (lhs.ast, rhs.ast, cons, Type::Bool)
+                (lhs.ast, rhs.ast, cons, Type::BOOL)
             }
             // These operators require that their values are of the `int` type
             // and they output a value of type `int`.
@@ -348,12 +348,12 @@ impl TypeInference {
             | BinaryOp::Shr
             | BinaryOp::Shl
             | BinaryOp::Mod => {
-                let lhs = self.check_expr(env.clone(), binary.lhs, Type::Int);
-                let rhs = self.check_expr(env, binary.rhs, Type::Int);
+                let lhs = self.check_expr(env.clone(), binary.lhs, Type::INT);
+                let rhs = self.check_expr(env, binary.rhs, Type::INT);
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
 
-                (lhs.ast, rhs.ast, cons, Type::Int)
+                (lhs.ast, rhs.ast, cons, Type::INT)
             }
             // These operators require that their values are of numerical persuasion
             //
@@ -480,7 +480,7 @@ impl TypeInference {
                 cons.extend(out.cons);
                 (Some(out.ast), ty)
             } else {
-                (None, Type::Nil)
+                (None, Type::NIL)
             };
 
         (
@@ -495,7 +495,7 @@ impl TypeInference {
         iff: If<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let If { cond, elif, els_, span } = iff;
-        let cond_out = self.check_expr(env.clone(), cond.cond, Type::Bool);
+        let cond_out = self.check_expr(env.clone(), cond.cond, Type::BOOL);
         let (body_out, body_ty) = self.infer_block_raw(env.clone(), cond.body);
 
         let first =
@@ -507,7 +507,7 @@ impl TypeInference {
 
         let mut elifs = vec![];
         for IfCond { cond, body, span } in elif {
-            let cond_out = self.check_expr(env.clone(), cond, Type::Bool);
+            let cond_out = self.check_expr(env.clone(), cond, Type::BOOL);
             let (body_out, elif_ty) = self.infer_block_raw(env.clone(), body);
 
             cons.extend(cond_out.cons);
@@ -685,7 +685,7 @@ mod tests {
         let lit = i64_lit();
 
         let out = checker.infer_expr(HashMap::new(), Expr::I64(lit.clone()));
-        assert_eq!(out, (GenWith::empty(Expr::I64(lit)), Type::Int))
+        assert_eq!(out, (GenWith::empty(Expr::I64(lit)), Type::INT))
     }
 
     #[test]
@@ -694,7 +694,7 @@ mod tests {
 
         let lit = f64_lit();
         let out = checker.infer_expr(HashMap::new(), Expr::F64(lit.clone()));
-        assert_eq!(out, (GenWith::empty(Expr::F64(lit)), Type::Double));
+        assert_eq!(out, (GenWith::empty(Expr::F64(lit)), Type::DOUBLE));
     }
 
     #[test]
@@ -704,7 +704,7 @@ mod tests {
         let lit = char_lit();
 
         let out = checker.infer_expr(HashMap::new(), Expr::Char(lit.clone()));
-        assert_eq!(out, (GenWith::empty(Expr::Char(lit)), Type::Usv));
+        assert_eq!(out, (GenWith::empty(Expr::Char(lit)), Type::USV));
     }
 
     #[test]
@@ -720,7 +720,7 @@ mod tests {
             out,
             (
                 GenWith::empty(Expr::String(lit)),
-                Type::List(Box::new(Type::Usv))
+                Type::List(Box::new(Type::USV))
             )
         );
     }
@@ -799,11 +799,11 @@ mod tests {
             GenWith::new(
                 vec![
                     Constraint::TypeEqual {
-                        expected: Type::Bool,
-                        got: Type::Int,
+                        expected: Type::BOOL,
+                        got: Type::INT,
                     },
                     Constraint::TypeEqual {
-                        expected: Type::Nil,
+                        expected: Type::NIL,
                         got: Type::List(Box::new(Type::Var(Tyvar(0)))),
                     },
                     Constraint::TypeEqual {
@@ -845,7 +845,7 @@ mod tests {
                 GenWith::new(
                     vec![Constraint::TypeEqual {
                         expected: Type::Fun(FnType {
-                            args: vec![Type::Int, Type::Int],
+                            args: vec![Type::INT, Type::INT],
                             ret_type: Box::new(ret_typ.clone())
                         }),
                         got: callee_typ.clone(),
@@ -883,7 +883,7 @@ mod tests {
                         span: SPAN
                     })),
                 ),
-                Type::List(Box::new(Type::Usv)),
+                Type::List(Box::new(Type::USV)),
             ),
         );
     }
@@ -904,8 +904,8 @@ mod tests {
             (
                 GenWith::new(
                     vec![Constraint::TypeEqual {
-                        expected: Type::List(Box::new(Type::Usv)),
-                        got: Type::Usv,
+                        expected: Type::List(Box::new(Type::USV)),
+                        got: Type::USV,
                     }],
                     Expr::List(List {
                         values: vec![
@@ -915,7 +915,7 @@ mod tests {
                         span: SPAN
                     }),
                 ),
-                Type::List(Box::new(Type::List(Box::new(Type::Usv)))),
+                Type::List(Box::new(Type::List(Box::new(Type::USV)))),
             ),
         );
     }
@@ -940,10 +940,10 @@ mod tests {
             out,
             (
                 GenWith::new(
-                    vec![Constraint::ImplNegate(Type::Int)],
+                    vec![Constraint::ImplNegate(Type::INT)],
                     unary(lit, UnaryOp::Nneg)
                 ),
-                Type::Int
+                Type::INT
             )
         );
 
@@ -955,12 +955,12 @@ mod tests {
             (
                 GenWith::new(
                     vec![Constraint::TypeEqual {
-                        expected: Type::Int,
-                        got: Type::Int
+                        expected: Type::INT,
+                        got: Type::INT
                     }],
                     unary(lit, UnaryOp::Bneg)
                 ),
-                Type::Int
+                Type::INT
             )
         );
 
@@ -972,12 +972,12 @@ mod tests {
             (
                 GenWith::new(
                     vec![Constraint::TypeEqual {
-                        expected: Type::Bool,
-                        got: Type::Int,
+                        expected: Type::BOOL,
+                        got: Type::INT,
                     }],
                     unary(lit, UnaryOp::Lnot)
                 ),
-                Type::Int
+                Type::INT
             )
         );
     }
@@ -1057,11 +1057,11 @@ mod tests {
                 GenWith::new(
                     vec![
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::Nil, Type::Var(Tyvar(1))),
+                            expected: mk_fn(Type::NIL, Type::Var(Tyvar(1))),
                             got: fn_ty.clone(),
                         },
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::Bool, Type::Var(Tyvar(2))),
+                            expected: mk_fn(Type::BOOL, Type::Var(Tyvar(2))),
                             got: fn_ty.clone(),
                         },
                     ],
@@ -1075,7 +1075,7 @@ mod tests {
                         span: SPAN
                     }
                 ),
-                Type::Nil
+                Type::NIL
             )
         )
     }
@@ -1155,11 +1155,11 @@ mod tests {
                 GenWith::new(
                     vec![
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::Nil, Type::Var(Tyvar(1))),
+                            expected: mk_fn(Type::NIL, Type::Var(Tyvar(1))),
                             got: fn_ty.clone(),
                         },
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::Bool, Type::Var(Tyvar(2))),
+                            expected: mk_fn(Type::BOOL, Type::Var(Tyvar(2))),
                             got: fn_ty.clone(),
                         },
                     ],
@@ -1257,7 +1257,7 @@ mod tests {
                             got: fn_ty.clone(),
                         },
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::Bool, Type::Var(Tyvar(3))),
+                            expected: mk_fn(Type::BOOL, Type::Var(Tyvar(3))),
                             got: fn_ty.clone(),
                         },
                     ],
@@ -1315,28 +1315,28 @@ mod tests {
                     vec![
                         // If condition is required to be a boolean
                         Constraint::TypeEqual {
-                            expected: Type::Bool,
-                            got: Type::Nil,
+                            expected: Type::BOOL,
+                            got: Type::NIL,
                         },
                         // All following conditions are required to be of tpye bool
                         Constraint::TypeEqual {
-                            expected: Type::Bool,
-                            got: Type::Int,
+                            expected: Type::BOOL,
+                            got: Type::INT,
                         },
                         // If condition is required to be a boolean
                         Constraint::TypeEqual {
-                            expected: Type::Bool,
-                            got: Type::Int,
+                            expected: Type::BOOL,
+                            got: Type::INT,
                         },
                         // All following conditions are required to be of type bool
                         Constraint::TypeEqual {
-                            expected: Type::Bool,
-                            got: Type::Bool,
+                            expected: Type::BOOL,
+                            got: Type::BOOL,
                         },
                     ],
                     Expr::If(Box::new(make_if::<TypedVar>()))
                 ),
-                Type::Bool
+                Type::BOOL
             )
         )
     }

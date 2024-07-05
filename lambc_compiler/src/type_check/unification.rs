@@ -39,31 +39,31 @@ impl super::TypeInference {
             match con {
                 Constraint::ImplAdd(t) => {
                     let t = self.normalize_ty(t);
-                    if !matches!(t, Type::Int | Type::Double | Type::List(_)) {
+                    if !matches!(t, Type::INT | Type::DOUBLE | Type::List(_)) {
                         return Err(TypeError::AddNotImpld(t));
                     }
                 }
                 Constraint::ImplSub(t) => {
                     let t = self.normalize_ty(t);
-                    if !matches!(t, Type::Int | Type::Double) {
+                    if !matches!(t, Type::INT | Type::DOUBLE) {
                         return Err(TypeError::SubNotImpld(t));
                     }
                 }
                 Constraint::ImplDiv(t) => {
                     let t = self.normalize_ty(t);
-                    if !matches!(t, Type::Int | Type::Double) {
+                    if !matches!(t, Type::INT | Type::DOUBLE) {
                         return Err(TypeError::DivNotImpld(t));
                     }
                 }
                 Constraint::ImplMul(t) => {
                     let t = self.normalize_ty(t);
-                    if !matches!(t, Type::Int | Type::Double) {
+                    if !matches!(t, Type::INT | Type::DOUBLE) {
                         return Err(TypeError::MulNotImpld(t));
                     }
                 }
                 Constraint::ImplNegate(t) => {
                     let t = self.normalize_ty(t);
-                    if !matches!(t, Type::Int | Type::Double) {
+                    if !matches!(t, Type::INT | Type::DOUBLE) {
                         return Err(TypeError::NegNotImpld(t));
                     }
                 }
@@ -80,11 +80,7 @@ impl super::TypeInference {
         let left = self.normalize_ty(l);
         let right = self.normalize_ty(r);
         match (left, right) {
-            (Type::Int, Type::Int)
-            | (Type::Nil, Type::Nil)
-            | (Type::Usv, Type::Usv)
-            | (Type::Bool, Type::Bool)
-            | (Type::Double, Type::Double) => Ok(()),
+            (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
             (Type::Var(l), Type::Var(r)) => self
                 .uni_table
@@ -118,11 +114,7 @@ impl super::TypeInference {
 
     fn normalize_ty(&mut self, ty: Type) -> Type {
         match ty {
-            t @ (Type::Int
-            | Type::Nil
-            | Type::Usv
-            | Type::Bool
-            | Type::Double) => t,
+            t @ Type::Con(..) => t,
             Type::List(t) => Type::List(Box::new(self.normalize_ty(*t))),
             Type::Fun(FnType { args, ret_type }) => Type::Fun(FnType {
                 args: args.into_iter().map(|a| self.normalize_ty(a)).collect(),
@@ -137,9 +129,7 @@ impl super::TypeInference {
 
     fn occurs_check(&self, ty: &Type, tyvar: Tyvar) -> Result<(), TypeError> {
         match ty {
-            Type::Int | Type::Nil | Type::Usv | Type::Bool | Type::Double => {
-                Ok(())
-            }
+            Type::Con(..) => Ok(()),
             Type::Var(v) => {
                 if *v == tyvar {
                     Err(TypeError::InfiniteType(*v, Type::Var(*v)))

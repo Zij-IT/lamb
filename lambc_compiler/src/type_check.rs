@@ -20,13 +20,24 @@ pub struct Tyvar(u32);
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
     Var(Tyvar),
-    Int,
-    Nil,
-    Usv,
-    Bool,
-    Double,
+    Con(Tycon),
     List(Box<Self>),
     Fun(FnType),
+}
+
+impl Type {
+    pub const INT: Self = Self::Con(Tycon { id: Var::INT });
+    pub const NIL: Self = Self::Con(Tycon { id: Var::NIL });
+    pub const USV: Self = Self::Con(Tycon { id: Var::USV });
+    pub const BOOL: Self = Self::Con(Tycon { id: Var::BOOL });
+    pub const DOUBLE: Self = Self::Con(Tycon { id: Var::DOUBLE });
+}
+
+/// A type constructor, like the nulllary (int, nil, usv)
+/// or the more complicated, like `List` and `Fun`
+#[derive(Debug, PartialEq, Clone, Eq)]
+pub struct Tycon {
+    id: Var,
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]

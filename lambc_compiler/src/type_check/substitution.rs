@@ -11,11 +11,7 @@ use crate::type_check::TypedVar;
 impl TypeInference {
     pub(super) fn substitute(&mut self, ty: Type) -> (HashSet<Tyvar>, Type) {
         match ty {
-            ty @ (Type::Int
-            | Type::Bool
-            | Type::Double
-            | Type::Usv
-            | Type::Nil) => (HashSet::new(), ty),
+            ty @ Type::Con(..) => (HashSet::new(), ty),
             Type::List(elem) => {
                 let (unbound, elem) = self.substitute(*elem);
                 (unbound, Type::List(Box::new(elem)))

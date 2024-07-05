@@ -50,6 +50,19 @@ pub enum Error {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Var(pub u32);
 
+impl Var {
+    pub const INT: Self = Self(0);
+    pub const NIL: Self = Self(1);
+    pub const USV: Self = Self(2);
+    pub const BOOL: Self = Self(3);
+    pub const DOUBLE: Self = Self(4);
+    pub const LIST: Self = Self(5);
+    #[allow(nonstandard_style)]
+    // This must be the last item in the list of vars, and must be updated
+    // to not include the next var.
+    pub(self) const __BASE: u32 = 6;
+}
+
 pub struct Resolver<'s> {
     pub state: &'s mut State,
     pub start: u32,
@@ -57,7 +70,7 @@ pub struct Resolver<'s> {
 
 impl<'s> Resolver<'s> {
     pub fn new(state: &'s mut State) -> Self {
-        Self { state, start: 0 }
+        Self { state, start: Var::__BASE }
     }
 
     pub fn resolve_modules(
@@ -647,9 +660,7 @@ impl<'s> Resolver<'s> {
 
     fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
         let mut scope = Scope::new(module.path);
-        scope
-            .add_builtin_vars(|| self.fresh_var())
-            .add_builtin_types(|| self.fresh_var());
+        scope.add_builtin_vars(|| self.fresh_var()).add_builtin_types();
 
         scope
     }
@@ -760,15 +771,12 @@ impl Scope {
         self
     }
 
-    pub fn add_builtin_types(
-        &mut self,
-        mut new_id: impl FnMut() -> Var,
-    ) -> &mut Self {
-        self.add_type("int", new_id());
-        self.add_type("usv", new_id());
-        self.add_type("bool", new_id());
-        self.add_type("list", new_id());
-        self.add_type("double", new_id());
+    pub fn add_builtin_types(&mut self) -> &mut Self {
+        self.add_type("int", Var::INT);
+        self.add_type("usv", Var::USV);
+        self.add_type("bool", Var::BOOL);
+        self.add_type("list", Var::LIST);
+        self.add_type("double", Var::DOUBLE);
         self
     }
 

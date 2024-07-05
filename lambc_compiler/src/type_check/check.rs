@@ -12,12 +12,12 @@ impl TypeInference {
         typ: Type,
     ) -> CheckRes<Expr<TypedVar>> {
         match (expr, typ) {
-            (Expr::Nil(n), Type::Nil) => CheckRes::empty(Expr::Nil(n)),
-            (Expr::I64(i), Type::Int) => CheckRes::empty(Expr::I64(i)),
-            (Expr::Char(c), Type::Usv) => CheckRes::empty(Expr::Char(c)),
-            (Expr::Bool(b), Type::Bool) => CheckRes::empty(Expr::Bool(b)),
-            (Expr::F64(f), Type::Double) => CheckRes::empty(Expr::F64(f)),
-            (Expr::String(s), Type::List(e)) if *e == Type::Usv => {
+            (Expr::Nil(n), Type::NIL) => CheckRes::empty(Expr::Nil(n)),
+            (Expr::I64(i), Type::INT) => CheckRes::empty(Expr::I64(i)),
+            (Expr::Char(c), Type::USV) => CheckRes::empty(Expr::Char(c)),
+            (Expr::Bool(b), Type::BOOL) => CheckRes::empty(Expr::Bool(b)),
+            (Expr::F64(f), Type::DOUBLE) => CheckRes::empty(Expr::F64(f)),
+            (Expr::String(s), Type::List(e)) if *e == Type::USV => {
                 CheckRes::empty(Expr::String(s))
             }
             (Expr::FnDef(def), Type::Fun(typ)) => {
@@ -111,7 +111,7 @@ mod tests {
         let out = checker.check_expr(
             HashMap::new(),
             Expr::I64(lit.clone()),
-            Type::Int,
+            Type::INT,
         );
 
         assert_eq!(out, GenWith::empty(Expr::I64(lit)))
@@ -126,7 +126,7 @@ mod tests {
         let out = checker.check_expr(
             HashMap::new(),
             Expr::F64(lit.clone()),
-            Type::Double,
+            Type::DOUBLE,
         );
 
         assert_eq!(out, GenWith::empty(Expr::F64(lit)))
@@ -141,7 +141,7 @@ mod tests {
         let out = checker.check_expr(
             HashMap::new(),
             Expr::Char(lit.clone()),
-            Type::Usv,
+            Type::USV,
         );
 
         assert_eq!(out, GenWith::empty(Expr::Char(lit)))
@@ -156,7 +156,7 @@ mod tests {
         let out = checker.check_expr(
             HashMap::new(),
             Expr::String(lit.clone()),
-            Type::List(Box::new(Type::Usv)),
+            Type::List(Box::new(Type::USV)),
         );
 
         assert_eq!(out, GenWith::empty(Expr::String(lit)),);
@@ -216,8 +216,8 @@ mod tests {
         };
 
         let typ = Type::Fun(FnType {
-            args: vec![Type::Int, Type::Double],
-            ret_type: Box::new(Type::Int),
+            args: vec![Type::INT, Type::DOUBLE],
+            ret_type: Box::new(Type::INT),
         });
 
         let out = checker.check_expr(
@@ -230,15 +230,15 @@ mod tests {
             out,
             GenWith::new(
                 vec![Constraint::TypeEqual {
-                    expected: Type::Int,
-                    got: Type::Int
+                    expected: Type::INT,
+                    got: Type::INT
                 }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
-                        TypedVar(Var(0), Type::Int),
-                        TypedVar(Var(1), Type::Double)
+                        TypedVar(Var(0), Type::INT),
+                        TypedVar(Var(1), Type::DOUBLE)
                     ],
-                    body: Expr::Ident(TypedVar(Var(0), Type::Int)),
+                    body: Expr::Ident(TypedVar(Var(0), Type::INT)),
                     recursive: false,
                     span: SPAN
                 })),
