@@ -1,6 +1,6 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{Constraint, FnType, Type, TypedVar, Tyvar};
+use super::{Constraint, FnType, TyClass, Type, TypedVar, Tyvar};
 
 impl EqUnifyValue for Type {}
 
@@ -21,11 +21,7 @@ impl UnifyKey for Tyvar {
 }
 
 pub enum TypeError {
-    AddNotImpld(Type),
-    SubNotImpld(Type),
-    DivNotImpld(Type),
-    MulNotImpld(Type),
-    NegNotImpld(Type),
+    NotImpld(TyClass, Type),
     TypeNotEqual(Type, Type),
     InfiniteType(Tyvar, Type),
 }
@@ -37,34 +33,10 @@ impl super::TypeInference {
     ) -> Result<(), TypeError> {
         for con in cons {
             match con {
-                Constraint::ImplAdd(t) => {
+                Constraint::IsIn(class, t) => {
                     let t = self.normalize_ty(t);
-                    if !matches!(t, Type::INT | Type::DOUBLE | Type::List(_)) {
-                        return Err(TypeError::AddNotImpld(t));
-                    }
-                }
-                Constraint::ImplSub(t) => {
-                    let t = self.normalize_ty(t);
-                    if !matches!(t, Type::INT | Type::DOUBLE) {
-                        return Err(TypeError::SubNotImpld(t));
-                    }
-                }
-                Constraint::ImplDiv(t) => {
-                    let t = self.normalize_ty(t);
-                    if !matches!(t, Type::INT | Type::DOUBLE) {
-                        return Err(TypeError::DivNotImpld(t));
-                    }
-                }
-                Constraint::ImplMul(t) => {
-                    let t = self.normalize_ty(t);
-                    if !matches!(t, Type::INT | Type::DOUBLE) {
-                        return Err(TypeError::MulNotImpld(t));
-                    }
-                }
-                Constraint::ImplNegate(t) => {
-                    let t = self.normalize_ty(t);
-                    if !matches!(t, Type::INT | Type::DOUBLE) {
-                        return Err(TypeError::NegNotImpld(t));
+                    if !class.impld_by(&t) {
+                        return Err(TypeError::NotImpld(class, t));
                     }
                 }
                 Constraint::TypeEqual { expected, got } => {

@@ -106,10 +106,46 @@ impl<T> CheckRes<T> {
 
 #[derive(Debug, Eq, PartialEq)]
 enum Constraint {
-    ImplAdd(Type),
-    ImplSub(Type),
-    ImplDiv(Type),
-    ImplMul(Type),
-    ImplNegate(Type),
+    IsIn(TyClass, Type),
     TypeEqual { expected: Type, got: Type },
+}
+
+/// Represents a type-class (think trait) which are builtin
+/// There probably won't be a way to add these for a while
+#[derive(Debug, Eq, PartialEq)]
+enum TyClass {
+    Addable,
+    Num,
+}
+
+impl TyClass {
+    pub fn impld_by(&self, t: &Type) -> bool {
+        match self {
+            TyClass::Addable => {
+                matches!(t, &Type::INT | &Type::DOUBLE | &Type::List(..))
+            }
+            TyClass::Num => {
+                matches!(t, &Type::INT | &Type::DOUBLE)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::type_check::{TyClass, Type};
+
+    #[test]
+    fn int_impls() {
+        let int = Type::INT.clone();
+        assert!(TyClass::Addable.impld_by(&int));
+        assert!(TyClass::Num.impld_by(&int));
+    }
+
+    #[test]
+    fn double_impls() {
+        let dl = Type::DOUBLE.clone();
+        assert!(TyClass::Addable.impld_by(&dl));
+        assert!(TyClass::Num.impld_by(&dl));
+    }
 }

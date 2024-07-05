@@ -5,7 +5,8 @@ use lambc_parse::{
 };
 
 use super::{
-    CheckRes, Constraint, FnType, Type, TypeInference, TypedVar, Tyvar,
+    CheckRes, Constraint, FnType, TyClass, Type, TypeInference, TypedVar,
+    Tyvar,
 };
 use crate::name_res::Var;
 
@@ -209,7 +210,7 @@ impl TypeInference {
 
         let mut cons = out.cons;
         cons.push(match op {
-            UnaryOp::Nneg => Constraint::ImplNegate(ty.clone()),
+            UnaryOp::Nneg => Constraint::IsIn(TyClass::Num, ty.clone()),
             UnaryOp::Lnot => {
                 Constraint::TypeEqual { expected: Type::BOOL, got: ty.clone() }
             }
@@ -376,7 +377,7 @@ impl TypeInference {
                     got: rhs_ty,
                 });
 
-                cons.push(Constraint::ImplAdd(lhs_ty.clone()));
+                cons.push(Constraint::IsIn(TyClass::Addable, lhs_ty.clone()));
 
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
@@ -393,7 +394,7 @@ impl TypeInference {
                     got: rhs_ty,
                 });
 
-                cons.push(Constraint::ImplSub(lhs_ty.clone()));
+                cons.push(Constraint::IsIn(TyClass::Num, lhs_ty.clone()));
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
             BinaryOp::Div => {
@@ -409,7 +410,7 @@ impl TypeInference {
                     got: rhs_ty,
                 });
 
-                cons.push(Constraint::ImplDiv(lhs_ty.clone()));
+                cons.push(Constraint::IsIn(TyClass::Num, lhs_ty.clone()));
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
             BinaryOp::Mul => {
@@ -425,7 +426,7 @@ impl TypeInference {
                     got: rhs_ty,
                 });
 
-                cons.push(Constraint::ImplMul(lhs_ty.clone()));
+                cons.push(Constraint::IsIn(TyClass::Num, lhs_ty.clone()));
                 (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
             }
         };
@@ -641,8 +642,8 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            CheckRes as GenWith, Constraint, FnType, Type, TypeInference,
-            TypedVar, Tyvar,
+            CheckRes as GenWith, Constraint, FnType, TyClass, Type,
+            TypeInference, TypedVar, Tyvar,
         },
     };
 
@@ -940,7 +941,7 @@ mod tests {
             out,
             (
                 GenWith::new(
-                    vec![Constraint::ImplNegate(Type::INT)],
+                    vec![Constraint::IsIn(TyClass::Num, Type::INT)],
                     unary(lit, UnaryOp::Nneg)
                 ),
                 Type::INT
