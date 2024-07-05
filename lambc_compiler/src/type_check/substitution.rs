@@ -1,13 +1,12 @@
+use std::collections::HashSet;
+
 use lambc_parse::{
     Binary, Block, Call, Define, Else, Expr, ExprStatement, FnDef, Group, If,
     IfCond, Index, List, Statement, Unary,
 };
 
-use crate::type_check::TypedVar;
-
 use super::{FnType, Type, TypeInference, TypeVar};
-
-use std::collections::HashSet;
+use crate::type_check::TypedVar;
 
 impl TypeInference {
     pub(super) fn substitute(&mut self, ty: Type) -> (HashSet<TypeVar>, Type) {
@@ -52,7 +51,6 @@ impl TypeInference {
                     Type::Fun(FnType { args, ret_type: Box::new(ret_ty) }),
                 )
             }
-            Type::Module(_) => todo!(),
         }
     }
 

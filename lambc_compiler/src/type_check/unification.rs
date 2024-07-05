@@ -132,11 +132,6 @@ impl super::TypeInference {
                 Some(ty) => self.normalize_ty(ty),
                 None => Type::Var(v),
             },
-            Type::Module(m) => Type::Module(
-                m.into_iter()
-                    .map(|TypedVar(v, ty)| TypedVar(v, self.normalize_ty(ty)))
-                    .collect(),
-            ),
         }
     }
 
@@ -164,13 +159,6 @@ impl super::TypeInference {
                 self.occurs_check(&f.ret_type, tyvar)
             }
             Type::List(l) => self.occurs_check(l.as_ref(), tyvar),
-            Type::Module(m) => {
-                for var in m {
-                    self.occurs_check(&var.1, tyvar)?;
-                }
-
-                Ok(())
-            }
         }
     }
 }

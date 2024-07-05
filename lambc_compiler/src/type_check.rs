@@ -26,7 +26,6 @@ pub enum Type {
     Bool,
     Double,
     List(Box<Self>),
-    Module(Vec<TypedVar>),
     Fun(FnType),
 }
 
