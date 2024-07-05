@@ -15,11 +15,11 @@ use crate::{name_res::Var, State};
 pub struct TypedVar(Var, Type);
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
-pub struct TypeVar(u32);
+pub struct Tyvar(u32);
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
-    Var(TypeVar),
+    Var(Tyvar),
     Int,
     Nil,
     Usv,
@@ -37,7 +37,7 @@ pub struct FnType {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TypeScheme {
-    unbound: HashSet<TypeVar>,
+    unbound: HashSet<Tyvar>,
     ty: Type,
 }
 
@@ -68,7 +68,7 @@ impl<'s> TypeChecker<'s> {
 }
 
 struct TypeInference {
-    uni_table: InPlaceUnificationTable<TypeVar>,
+    uni_table: InPlaceUnificationTable<Tyvar>,
 }
 
 impl TypeInference {

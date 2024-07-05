@@ -1,9 +1,8 @@
 use im::HashMap;
 use lambc_parse::{Expr, FnDef};
 
-use crate::name_res::Var;
-
 use super::{CheckRes, Constraint, FnType, Type, TypeInference, TypedVar};
+use crate::name_res::Var;
 
 impl TypeInference {
     pub(super) fn check_expr(
@@ -65,18 +64,17 @@ impl TypeInference {
 #[cfg(test)]
 mod tests {
     use im::HashMap;
-    use pretty_assertions::assert_eq;
-
     use lambc_parse::{
         CharLit, CharText, Expr, F64Lit, FnDef, I64Base, I64Lit, Span, StrLit,
         StrText,
     };
+    use pretty_assertions::assert_eq;
 
     use super::{Type, TypeInference};
     use crate::{
         name_res::Var,
         type_check::{
-            CheckRes as GenWith, Constraint, FnType, TypeVar, TypedVar,
+            CheckRes as GenWith, Constraint, FnType, TypedVar, Tyvar,
         },
     };
 
@@ -176,8 +174,8 @@ mod tests {
         };
 
         let typ = Type::Fun(FnType {
-            args: vec![Type::Var(TypeVar(0)), Type::Var(TypeVar(1))],
-            ret_type: Box::new(Type::Var(TypeVar(0))),
+            args: vec![Type::Var(Tyvar(0)), Type::Var(Tyvar(1))],
+            ret_type: Box::new(Type::Var(Tyvar(0))),
         });
 
         let out = checker.check_expr(
@@ -190,15 +188,15 @@ mod tests {
             out,
             GenWith::new(
                 vec![Constraint::TypeEqual {
-                    expected: Type::Var(TypeVar(0)),
-                    got: Type::Var(TypeVar(0))
+                    expected: Type::Var(Tyvar(0)),
+                    got: Type::Var(Tyvar(0))
                 }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
-                        TypedVar(Var(0), Type::Var(TypeVar(0))),
-                        TypedVar(Var(1), Type::Var(TypeVar(1)))
+                        TypedVar(Var(0), Type::Var(Tyvar(0))),
+                        TypedVar(Var(1), Type::Var(Tyvar(1)))
                     ],
-                    body: Expr::Ident(TypedVar(Var(0), Type::Var(TypeVar(0)))),
+                    body: Expr::Ident(TypedVar(Var(0), Type::Var(Tyvar(0)))),
                     recursive: false,
                     span: SPAN
                 })),

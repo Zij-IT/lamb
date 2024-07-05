@@ -1,10 +1,10 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{Constraint, FnType, Type, TypeVar, TypedVar};
+use super::{Constraint, FnType, Type, TypedVar, Tyvar};
 
 impl EqUnifyValue for Type {}
 
-impl UnifyKey for TypeVar {
+impl UnifyKey for Tyvar {
     type Value = Option<Type>;
 
     fn index(&self) -> u32 {
@@ -27,7 +27,7 @@ pub enum TypeError {
     MulNotImpld(Type),
     NegNotImpld(Type),
     TypeNotEqual(Type, Type),
-    InfiniteType(TypeVar, Type),
+    InfiniteType(Tyvar, Type),
 }
 
 impl super::TypeInference {
@@ -135,11 +135,7 @@ impl super::TypeInference {
         }
     }
 
-    fn occurs_check(
-        &self,
-        ty: &Type,
-        tyvar: TypeVar,
-    ) -> Result<(), TypeError> {
+    fn occurs_check(&self, ty: &Type, tyvar: Tyvar) -> Result<(), TypeError> {
         match ty {
             Type::Int | Type::Nil | Type::Usv | Type::Bool | Type::Double => {
                 Ok(())
