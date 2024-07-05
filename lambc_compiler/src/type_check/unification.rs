@@ -20,6 +20,7 @@ impl UnifyKey for Tyvar {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TypeError {
     NotImpld(TyClass, Type),
     TypeNotEqual(Type, Type),
