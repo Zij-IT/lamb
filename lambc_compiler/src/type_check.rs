@@ -8,9 +8,8 @@ use std::collections::HashSet;
 use ena::unify::InPlaceUnificationTable;
 use lambc_parse::Expr;
 
-use crate::{name_res::Var, State};
-
 use self::unification::TypeError;
+use crate::{name_res::Var, State};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct TypedVar(Var, Type);
