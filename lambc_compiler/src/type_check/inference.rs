@@ -1,7 +1,8 @@
+use ena::snapshot_vec::VecLike;
 use im::HashMap;
 use lambc_parse::{
     Binary, BinaryOp, Block, Call, Define, Else, Expr, ExprStatement, FnDef,
-    Group, If, IfCond, Index, List, Statement, Unary, UnaryOp,
+    Group, If, IfCond, Index, List, Return, Statement, Unary, UnaryOp,
 };
 
 use super::{
@@ -36,7 +37,7 @@ impl TypeInference {
             Expr::Path(_) => todo!(),
             Expr::If(iff) => self.infer_if(env, *iff),
             Expr::Group(g) => self.infer_group(env, *g),
-            Expr::Return(_) => todo!(),
+            Expr::Return(ret) => self.infer_return(env, *ret),
             Expr::Index(idx) => self.infer_idx(env, *idx),
             Expr::List(list) => self.infer_list(env, list),
             Expr::Call(call) => self.infer_call(env, *call),
@@ -63,7 +64,13 @@ impl TypeInference {
             env.insert(*arg, Type::Var(typ));
         }
 
-        let (body_out, body_typ) = self.infer_expr(env, body);
+        // Return types need to have access to the return type, so that the value
+        // can be checked against this type.
+        let ret_type = Type::Var(self.fresh_ty_var());
+        self.ret_type.push(ret_type.clone());
+
+        let body_out = self.check_expr(env, body, ret_type.clone());
+
         (
             CheckRes {
                 cons: body_out.cons,
@@ -74,7 +81,7 @@ impl TypeInference {
                     span,
                 })),
             },
-            Type::Fun(FnType { args: typs, ret_type: Box::new(body_typ) }),
+            Type::Fun(FnType { args: typs, ret_type: Box::new(ret_type) }),
         )
     }
 
@@ -548,6 +555,25 @@ impl TypeInference {
             ),
             body_ty,
         )
+    }
+
+    fn infer_return(
+        &mut self,
+        env: HashMap<Var, Type>,
+        ret: Return<Var>,
+    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+        let Return { value, span } = ret;
+        let (value, cons) = value.map(|val| {
+            let ret_ty = self.ret_type.last().cloned().expect(
+                "Return outside of a function should have been handled somehow already :/",
+            );
+
+            let res = self.check_expr(env, val, ret_ty);
+            (Some(res.ast), res.cons)
+        }).unwrap_or_default();
+
+        let ret = Expr::Return(Box::new(Return { value, span }));
+        (CheckRes::new(cons, ret), todo!())
     }
 
     fn process_stmt(

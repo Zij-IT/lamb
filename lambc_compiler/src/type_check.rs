@@ -85,11 +85,12 @@ impl<'s> TypeChecker<'s> {
 
 struct TypeInference {
     uni_table: InPlaceUnificationTable<Tyvar>,
+    ret_type: Vec<Type>,
 }
 
 impl TypeInference {
     fn new() -> Self {
-        Self { uni_table: Default::default() }
+        Self { uni_table: Default::default(), ret_type: Default::default() }
     }
 }
 
@@ -140,7 +141,7 @@ impl TyClass {
 mod test {
     use std::collections::HashSet;
 
-    use lambc_parse::{Call, Expr, FnDef, I64Base, I64Lit, NilLit, Span};
+    use lambc_parse::{Call, Expr, FnDef, NilLit, Span};
     use pretty_assertions::assert_eq;
 
     use super::TypeChecker;
