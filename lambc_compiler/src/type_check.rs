@@ -234,7 +234,7 @@ mod test {
         let y = Var(u32::MAX - 1);
 
         let a = Tyvar(0);
-        let b = Tyvar(1);
+        let b = Tyvar(2);
 
         let ast = Expr::FnDef(Box::new(FnDef {
             args: vec![x],
@@ -306,9 +306,9 @@ mod test {
             .infer(s_comb)
             .expect("Inference to succeed");
 
-        let a = Tyvar(2);
-        let b = Tyvar(3);
-        let c = Tyvar(4);
+        let a = Tyvar(4);
+        let b = Tyvar(6);
+        let c = Tyvar(7);
 
         let x_ty = Type::fun(
             vec![Type::Var(a)],
