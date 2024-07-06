@@ -562,14 +562,23 @@ impl TypeInference {
         ret: Return<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let Return { value, span } = ret;
-        let (value, cons) = value.map(|val| {
-            let ret_ty = self.ret_type.last().cloned().expect(
+        let ret_ty = self.ret_type.last().cloned().expect(
                 "Return outside of a function should have been handled somehow already :/",
             );
 
-            let res = self.check_expr(env, val, ret_ty);
-            (Some(res.ast), res.cons)
-        }).unwrap_or_default();
+        let (value, cons) = match value {
+            Some(val) => {
+                let res = self.check_expr(env, val, ret_ty);
+                (Some(res.ast), res.cons)
+            }
+            None => (
+                None,
+                vec![Constraint::TypeEqual {
+                    expected: ret_ty,
+                    got: Type::NIL,
+                }],
+            ),
+        };
 
         let ret = Expr::Return(Box::new(Return { value, span }));
         (CheckRes::new(cons, ret), Type::NEVER)
@@ -660,7 +669,7 @@ mod tests {
     use lambc_parse::{
         Block, BoolLit, Call, CharLit, CharText, Define, Expr, ExprStatement,
         F64Lit, FnDef, Group, I64Base, I64Lit, If, IfCond, Index, List,
-        NilLit, Span, Statement, StrLit, StrText, Unary, UnaryOp,
+        NilLit, Return, Span, Statement, StrLit, StrText, Unary, UnaryOp,
     };
     use pretty_assertions::assert_eq;
 
@@ -1392,5 +1401,217 @@ mod tests {
                 Type::BOOL
             )
         )
+    }
+
+    #[test]
+    fn infers_fn_def_with_return() {
+        fn fndef<T>(args: Vec<T>, body: Expr<T>) -> Expr<T> {
+            Expr::FnDef(Box::new(FnDef {
+                args,
+                body,
+                recursive: false,
+                span: SPAN,
+            }))
+        }
+
+        let x = Var(u32::MAX);
+
+        // fn(x) -> { return true; x };
+        let Expr::FnDef(test) = fndef(
+            vec![x],
+            Expr::Block(Box::new(Block {
+                statements: vec![Statement::Expr(ExprStatement {
+                    expr: Expr::Return(Box::new(Return {
+                        value: Some(Expr::Bool(bool_lit())),
+                        span: SPAN,
+                    })),
+                    span: SPAN,
+                })],
+                value: Some(Expr::Ident(x)),
+                span: SPAN,
+            })),
+        ) else {
+            panic!()
+        };
+
+        let mut checker = TypeInference::new();
+        let (res, ty) = checker.infer_fndef(HashMap::new(), *test);
+        assert_eq!(
+            res,
+            GenWith::new(
+                vec![
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::BOOL,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::Var(Tyvar(0)),
+                    },
+                ],
+                fndef(
+                    vec![TypedVar(x, Type::Var(Tyvar(0)))],
+                    Expr::Block(Box::new(Block {
+                        statements: vec![Statement::Expr(ExprStatement {
+                            expr: Expr::Return(Box::new(Return {
+                                value: Some(Expr::Bool(bool_lit())),
+                                span: SPAN,
+                            })),
+                            span: SPAN,
+                        })],
+                        value: Some(Expr::Ident(TypedVar(
+                            x,
+                            Type::Var(Tyvar(0))
+                        ))),
+                        span: SPAN,
+                    })),
+                )
+            )
+        );
+
+        assert_eq!(
+            ty,
+            Type::fun(vec![Type::Var(Tyvar(0))], Type::Var(Tyvar(1))),
+        );
+    }
+
+    #[test]
+    fn infers_fn_def_returning_never() {
+        fn fndef<T>(args: Vec<T>, body: Expr<T>) -> Expr<T> {
+            Expr::FnDef(Box::new(FnDef {
+                args,
+                body,
+                recursive: false,
+                span: SPAN,
+            }))
+        }
+
+        let x = Var(u32::MAX - 0);
+        let y = Var(u32::MAX - 1);
+
+        // fn(x) -> { return true; x };
+        let Expr::FnDef(test) = fndef(
+            vec![x],
+            Expr::Block(Box::new(Block {
+                statements: vec![Statement::Define(Define {
+                    ident: y,
+                    typ: None,
+                    value: Expr::Return(Box::new(Return {
+                        value: Some(Expr::Bool(bool_lit())),
+                        span: SPAN,
+                    })),
+                    span: SPAN,
+                })],
+                value: Some(Expr::Ident(y)),
+                span: SPAN,
+            })),
+        ) else {
+            panic!()
+        };
+
+        let mut checker = TypeInference::new();
+        let (res, ty) = checker.infer_fndef(HashMap::new(), *test);
+        assert_eq!(
+            res,
+            GenWith::new(
+                vec![
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::BOOL,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::NEVER,
+                    },
+                ],
+                fndef(
+                    vec![TypedVar(x, Type::Var(Tyvar(0)))],
+                    Expr::Block(Box::new(Block {
+                        statements: vec![Statement::Define(Define {
+                            ident: TypedVar(y, Type::NEVER),
+                            typ: None,
+                            value: Expr::Return(Box::new(Return {
+                                value: Some(Expr::Bool(bool_lit())),
+                                span: SPAN,
+                            })),
+                            span: SPAN,
+                        })],
+                        value: Some(Expr::Ident(TypedVar(y, Type::NEVER))),
+                        span: SPAN,
+                    })),
+                )
+            )
+        );
+
+        assert_eq!(
+            ty,
+            Type::fun(vec![Type::Var(Tyvar(0))], Type::Var(Tyvar(1))),
+        );
+    }
+
+    #[test]
+    fn infers_fn_def_chained_return() {
+        fn fndef<T>(args: Vec<T>, body: Expr<T>) -> Expr<T> {
+            Expr::FnDef(Box::new(FnDef {
+                args,
+                body,
+                recursive: false,
+                span: SPAN,
+            }))
+        }
+
+        let x = Var(u32::MAX - 0);
+        let y = Var(u32::MAX - 1);
+
+        // fn(x) -> return return;
+        let Expr::FnDef(test) = fndef(
+            vec![x],
+            Expr::Return(Box::new(Return {
+                value: Some(Expr::Return(Box::new(Return {
+                    value: None,
+                    span: SPAN,
+                }))),
+                span: SPAN,
+            })),
+        ) else {
+            panic!()
+        };
+
+        let mut checker = TypeInference::new();
+        let (res, ty) = checker.infer_fndef(HashMap::new(), *test);
+        assert_eq!(
+            res,
+            GenWith::new(
+                vec![
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::NIL,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::NEVER,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::Var(Tyvar(1)),
+                        got: Type::NEVER,
+                    },
+                ],
+                fndef(
+                    vec![TypedVar(x, Type::Var(Tyvar(0)))],
+                    Expr::Return(Box::new(Return {
+                        value: Some(Expr::Return(Box::new(Return {
+                            value: None,
+                            span: SPAN,
+                        }))),
+                        span: SPAN,
+                    })),
+                )
+            )
+        );
+
+        assert_eq!(
+            ty,
+            Type::fun(vec![Type::Var(Tyvar(0))], Type::Var(Tyvar(1))),
+        );
     }
 }
