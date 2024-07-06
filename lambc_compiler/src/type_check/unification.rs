@@ -53,6 +53,7 @@ impl super::TypeInference {
         let left = self.normalize_ty(l);
         let right = self.normalize_ty(r);
         match (left, right) {
+            (Type::NEVER, ..) | (.., Type::NEVER) => Ok(()),
             (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
             (Type::Var(l), Type::Var(r)) => self

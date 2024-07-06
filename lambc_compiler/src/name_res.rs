@@ -57,10 +57,11 @@ impl Var {
     pub const BOOL: Self = Self(3);
     pub const DOUBLE: Self = Self(4);
     pub const LIST: Self = Self(5);
+    pub const NEVER: Self = Self(6);
     #[allow(nonstandard_style)]
     // This must be the last item in the list of vars, and must be updated
     // to not include the next var.
-    pub(self) const __BASE: u32 = 6;
+    pub(self) const __BASE: u32 = 7;
 }
 
 pub struct Resolver<'s> {

@@ -573,7 +573,7 @@ impl TypeInference {
         }).unwrap_or_default();
 
         let ret = Expr::Return(Box::new(Return { value, span }));
-        (CheckRes::new(cons, ret), todo!())
+        (CheckRes::new(cons, ret), Type::NEVER)
     }
 
     fn process_stmt(

@@ -31,6 +31,7 @@ impl Type {
     pub const USV: Self = Self::Con(Tycon { id: Var::USV });
     pub const BOOL: Self = Self::Con(Tycon { id: Var::BOOL });
     pub const DOUBLE: Self = Self::Con(Tycon { id: Var::DOUBLE });
+    pub const NEVER: Self = Self::Con(Tycon { id: Var::NEVER });
 
     #[cfg(test)]
     pub fn fun(args: Vec<Self>, ret: Self) -> Self {
