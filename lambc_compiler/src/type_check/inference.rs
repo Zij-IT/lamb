@@ -1,4 +1,3 @@
-use ena::snapshot_vec::VecLike;
 use im::HashMap;
 use lambc_parse::{
     Binary, BinaryOp, Block, Call, Define, Else, Expr, ExprStatement, FnDef,
