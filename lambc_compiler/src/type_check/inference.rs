@@ -68,7 +68,7 @@ impl TypeInference {
         let ret_type = Type::Var(self.fresh_ty_var());
         self.ret_type.push(ret_type.clone());
 
-        let body_out = self.check_expr(env, body, ret_type.clone());
+        let body_out = self.check_expr(env, body, ret_type);
 
         (
             CheckRes {
@@ -80,7 +80,14 @@ impl TypeInference {
                     span,
                 })),
             },
-            Type::Fun(FnType { args: typs, ret_type: Box::new(ret_type) }),
+            Type::Fun(FnType {
+                args: typs,
+                ret_type: Box::new(
+                    self.ret_type
+                        .pop()
+                        .expect("Function type not-already popped"),
+                ),
+            }),
         )
     }
 
