@@ -1,6 +1,6 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{Constraint, FnType, TyClass, Type, TypedVar, Tyvar};
+use super::{Constraint, FnType, TyClass, Type, Tyvar};
 
 impl EqUnifyValue for Type {}
 

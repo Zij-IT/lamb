@@ -1,4 +1,5 @@
 mod check;
+mod env;
 mod inference;
 mod substitution;
 mod unification;
@@ -8,7 +9,7 @@ use std::collections::HashSet;
 use ena::unify::InPlaceUnificationTable;
 use lambc_parse::Expr;
 
-use self::unification::TypeError;
+use self::{env::Env, unification::TypeError};
 use crate::{name_res::Var, State};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -73,7 +74,7 @@ impl<'s> TypeChecker<'s> {
     ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
         let mut inf = TypeInference::new();
 
-        let (out, ty) = inf.infer_expr(Default::default(), expr);
+        let (out, ty) = inf.infer_expr(Env::new(), expr);
         inf.unification(out.cons)?;
 
         let (mut unbound, ty) = inf.substitute(ty);

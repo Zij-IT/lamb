@@ -1,13 +1,14 @@
-use im::HashMap;
 use lambc_parse::{Expr, FnDef};
 
-use super::{CheckRes, Constraint, FnType, Type, TypeInference, TypedVar};
+use super::{
+    env::Env, CheckRes, Constraint, FnType, Type, TypeInference, TypedVar,
+};
 use crate::name_res::Var;
 
 impl TypeInference {
     pub(super) fn check_expr(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         expr: Expr<Var>,
         typ: Type,
     ) -> CheckRes<Expr<TypedVar>> {
@@ -38,7 +39,7 @@ impl TypeInference {
 
     pub(super) fn check_fndef(
         &mut self,
-        mut env: HashMap<Var, Type>,
+        mut env: Env,
         def: FnDef<Var>,
         typ: FnType,
     ) -> CheckRes<Expr<TypedVar>> {
@@ -46,7 +47,7 @@ impl TypeInference {
         assert_eq!(def.args.len(), typ.args.len());
         let mut new_args = Vec::with_capacity(typ.args.len());
         for (ty, arg) in typ.args.into_iter().zip(def.args.into_iter()) {
-            env.insert(arg, ty.clone());
+            env.add_type(arg, ty.clone());
             new_args.push(TypedVar(arg, ty));
         }
         let bodyres = self.check_expr(env, def.body, *typ.ret_type);
@@ -63,7 +64,6 @@ impl TypeInference {
 }
 #[cfg(test)]
 mod tests {
-    use im::HashMap;
     use lambc_parse::{
         CharLit, CharText, Expr, F64Lit, FnDef, I64Base, I64Lit, Span, StrLit,
         StrText,
@@ -74,7 +74,7 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            CheckRes as GenWith, Constraint, FnType, TypedVar, Tyvar,
+            env::Env, CheckRes as GenWith, Constraint, FnType, TypedVar, Tyvar,
         },
     };
 
@@ -108,11 +108,8 @@ mod tests {
 
         let lit = i64_lit();
 
-        let out = checker.check_expr(
-            HashMap::new(),
-            Expr::I64(lit.clone()),
-            Type::INT,
-        );
+        let out =
+            checker.check_expr(Env::new(), Expr::I64(lit.clone()), Type::INT);
 
         assert_eq!(out, GenWith::empty(Expr::I64(lit)))
     }
@@ -124,7 +121,7 @@ mod tests {
         let lit = f64_lit();
 
         let out = checker.check_expr(
-            HashMap::new(),
+            Env::new(),
             Expr::F64(lit.clone()),
             Type::DOUBLE,
         );
@@ -138,11 +135,8 @@ mod tests {
 
         let lit = char_lit();
 
-        let out = checker.check_expr(
-            HashMap::new(),
-            Expr::Char(lit.clone()),
-            Type::USV,
-        );
+        let out =
+            checker.check_expr(Env::new(), Expr::Char(lit.clone()), Type::USV);
 
         assert_eq!(out, GenWith::empty(Expr::Char(lit)))
     }
@@ -154,7 +148,7 @@ mod tests {
         let lit = str_lit();
 
         let out = checker.check_expr(
-            HashMap::new(),
+            Env::new(),
             Expr::String(lit.clone()),
             Type::List(Box::new(Type::USV)),
         );
@@ -178,11 +172,8 @@ mod tests {
             ret_type: Box::new(Type::Var(Tyvar(0))),
         });
 
-        let out = checker.check_expr(
-            HashMap::new(),
-            Expr::FnDef(Box::new(def)),
-            typ,
-        );
+        let out =
+            checker.check_expr(Env::new(), Expr::FnDef(Box::new(def)), typ);
 
         assert_eq!(
             out,
@@ -220,11 +211,8 @@ mod tests {
             ret_type: Box::new(Type::INT),
         });
 
-        let out = checker.check_expr(
-            HashMap::new(),
-            Expr::FnDef(Box::new(def)),
-            typ,
-        );
+        let out =
+            checker.check_expr(Env::new(), Expr::FnDef(Box::new(def)), typ);
 
         assert_eq!(
             out,

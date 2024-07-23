@@ -1,19 +1,18 @@
-use im::HashMap;
 use lambc_parse::{
     Binary, BinaryOp, Block, Call, Define, Else, Expr, ExprStatement, FnDef,
     Group, If, IfCond, Index, List, Return, Statement, Unary, UnaryOp,
 };
 
 use super::{
-    CheckRes, Constraint, FnType, TyClass, Type, TypeInference, TypedVar,
-    Tyvar,
+    env::Env, CheckRes, Constraint, FnType, TyClass, Type, TypeInference,
+    TypedVar, Tyvar,
 };
 use crate::name_res::Var;
 
 impl TypeInference {
     pub(super) fn infer_expr(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         expr: Expr<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         match expr {
@@ -24,7 +23,7 @@ impl TypeInference {
             Expr::Char(c) => (CheckRes::empty(Expr::Char(c)), Type::USV),
             Expr::Bool(b) => (CheckRes::empty(Expr::Bool(b)), Type::BOOL),
             Expr::Ident(i) => {
-                let ty = env[&i].clone();
+                let ty = env.type_of(i);
                 (CheckRes::empty(Expr::Ident(TypedVar(i, ty.clone()))), ty)
             }
             Expr::String(s) => (
@@ -49,7 +48,7 @@ impl TypeInference {
 
     fn infer_fndef(
         &mut self,
-        mut env: HashMap<Var, Type>,
+        mut env: Env,
         fndef: FnDef<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let FnDef { args, body, recursive, span } = fndef;
@@ -60,7 +59,7 @@ impl TypeInference {
             let typ = self.fresh_ty_var();
             typs.push(Type::Var(typ));
             new_args.push(TypedVar(*arg, Type::Var(typ)));
-            env.insert(*arg, Type::Var(typ));
+            env.add_type(*arg, Type::Var(typ));
         }
 
         // Return types need to have access to the return type, so that the value
@@ -93,7 +92,7 @@ impl TypeInference {
 
     fn infer_call(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         call: Call<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let mut cons = Vec::new();
@@ -131,7 +130,7 @@ impl TypeInference {
 
     fn infer_idx(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         idx: Index<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let list_elem_ty = self.fresh_ty_var();
@@ -168,7 +167,7 @@ impl TypeInference {
 
     fn infer_group(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         group: Group<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_expr(env, group.value);
@@ -186,7 +185,7 @@ impl TypeInference {
 
     fn infer_list(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         list: List<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let mut values = list.values.into_iter();
@@ -215,7 +214,7 @@ impl TypeInference {
 
     fn infer_unary(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         unary: Unary<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let Unary { rhs, op, span, op_span } = unary;
@@ -250,7 +249,7 @@ impl TypeInference {
 
     fn infer_binary(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         binary: Binary<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let (lhs, rhs, cons, ty) = match binary.op {
@@ -457,7 +456,7 @@ impl TypeInference {
 
     fn infer_block(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         block: Block<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_block_raw(env, block);
@@ -476,7 +475,7 @@ impl TypeInference {
 
     pub(super) fn infer_block_raw(
         &mut self,
-        mut env: HashMap<Var, Type>,
+        mut env: Env,
         block: Block<Var>,
     ) -> (CheckRes<Block<TypedVar>>, Type) {
         let Block { statements, value, span } = block;
@@ -505,7 +504,7 @@ impl TypeInference {
 
     pub(super) fn infer_if(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         iff: If<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let If { cond, elif, els_, span } = iff;
@@ -565,7 +564,7 @@ impl TypeInference {
 
     fn infer_return(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         ret: Return<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let Return { value, span } = ret;
@@ -593,7 +592,7 @@ impl TypeInference {
 
     fn process_stmt(
         &mut self,
-        env: &mut HashMap<Var, Type>,
+        env: &mut Env,
         stmt: Statement<Var>,
     ) -> CheckRes<Statement<TypedVar>> {
         match stmt {
@@ -604,7 +603,7 @@ impl TypeInference {
 
     fn process_def_stmt(
         &mut self,
-        env: &mut HashMap<Var, Type>,
+        env: &mut Env,
         def: Define<Var>,
     ) -> CheckRes<Statement<TypedVar>> {
         let Define { ident, typ, value, span } = def;
@@ -613,7 +612,7 @@ impl TypeInference {
         let recursive = value.is_recursive();
         if recursive {
             let tvar = self.fresh_ty_var();
-            env.insert(ident, Type::Var(tvar));
+            env.add_type(ident, Type::Var(tvar));
         }
 
         let (out, inferred_ty) = self.infer_expr(env.clone(), value);
@@ -634,7 +633,7 @@ impl TypeInference {
 
         // If recursive, we need to extract out the initial type, and constrain
         // the initial unknown type to the inferred type.
-        let old = env.insert(ident.0, ident.1.clone());
+        let old = env.add_type(ident.0, ident.1.clone());
         if recursive {
             cons.push(Constraint::TypeEqual {
                 expected: old.unwrap(),
@@ -650,7 +649,7 @@ impl TypeInference {
 
     fn process_expr_stmt(
         &mut self,
-        env: HashMap<Var, Type>,
+        env: Env,
         expr: ExprStatement<Var>,
     ) -> CheckRes<Statement<TypedVar>> {
         let ExprStatement { expr, span } = expr;
@@ -672,7 +671,6 @@ impl TypeInference {
 
 #[cfg(test)]
 mod tests {
-    use im::HashMap;
     use lambc_parse::{
         Block, BoolLit, Call, CharLit, CharText, Define, Expr, ExprStatement,
         F64Lit, FnDef, Group, I64Base, I64Lit, If, IfCond, Index, List,
@@ -683,7 +681,7 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            CheckRes as GenWith, Constraint, FnType, TyClass, Type,
+            env::Env, CheckRes as GenWith, Constraint, FnType, TyClass, Type,
             TypeInference, TypedVar, Tyvar,
         },
     };
@@ -726,7 +724,7 @@ mod tests {
 
         let lit = i64_lit();
 
-        let out = checker.infer_expr(HashMap::new(), Expr::I64(lit.clone()));
+        let out = checker.infer_expr(Env::new(), Expr::I64(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::I64(lit)), Type::INT))
     }
 
@@ -735,7 +733,7 @@ mod tests {
         let mut checker = TypeInference::new();
 
         let lit = f64_lit();
-        let out = checker.infer_expr(HashMap::new(), Expr::F64(lit.clone()));
+        let out = checker.infer_expr(Env::new(), Expr::F64(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::F64(lit)), Type::DOUBLE));
     }
 
@@ -745,7 +743,7 @@ mod tests {
 
         let lit = char_lit();
 
-        let out = checker.infer_expr(HashMap::new(), Expr::Char(lit.clone()));
+        let out = checker.infer_expr(Env::new(), Expr::Char(lit.clone()));
         assert_eq!(out, (GenWith::empty(Expr::Char(lit)), Type::USV));
     }
 
@@ -755,8 +753,7 @@ mod tests {
 
         let lit = str_lit();
 
-        let out =
-            checker.infer_expr(HashMap::new(), Expr::String(lit.clone()));
+        let out = checker.infer_expr(Env::new(), Expr::String(lit.clone()));
 
         assert_eq!(
             out,
@@ -773,7 +770,8 @@ mod tests {
 
         let typ = Type::Var(Tyvar(0));
         let var = Var(0);
-        let env = HashMap::from([(var, typ.clone())].as_slice());
+        let mut env = Env::new();
+        env.add_type(var, typ.clone());
         let out = checker.infer_expr(env, Expr::Ident(var));
 
         assert_eq!(
@@ -798,8 +796,7 @@ mod tests {
             ret_type: Box::new(Type::Var(Tyvar(2))),
         });
 
-        let out =
-            checker.infer_expr(HashMap::new(), Expr::FnDef(Box::new(def)));
+        let out = checker.infer_expr(Env::new(), Expr::FnDef(Box::new(def)));
 
         assert_eq!(
             out,
@@ -839,11 +836,8 @@ mod tests {
 
         let typ = Type::Var(Tyvar(0));
 
-        let out = checker.check_expr(
-            HashMap::new(),
-            Expr::Index(Box::new(idx)),
-            typ,
-        );
+        let out =
+            checker.check_expr(Env::new(), Expr::Index(Box::new(idx)), typ);
 
         assert_eq!(
             out,
@@ -879,8 +873,8 @@ mod tests {
         let callee_typ = Type::Var(Tyvar(1000));
         let ret_typ = Type::Var(Tyvar(0));
 
-        let env =
-            HashMap::from([(callee_ident, callee_typ.clone())].as_slice());
+        let mut env = Env::new();
+        env.add_type(callee_ident, callee_typ.clone());
 
         let call = Call {
             callee: Expr::Ident(callee_ident),
@@ -921,8 +915,7 @@ mod tests {
 
         let expr = str_lit();
         let group = Group { value: Expr::String(expr.clone()), span: SPAN };
-        let out =
-            checker.infer_expr(HashMap::new(), Expr::Group(Box::new(group)));
+        let out = checker.infer_expr(Env::new(), Expr::Group(Box::new(group)));
 
         assert_eq!(
             out,
@@ -948,7 +941,7 @@ mod tests {
             span: SPAN,
         };
 
-        let out = checker.infer_expr(HashMap::new(), Expr::List(list));
+        let out = checker.infer_expr(Env::new(), Expr::List(list));
 
         assert_eq!(
             out,
@@ -986,7 +979,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Nneg);
-        let out = checker.infer_expr(HashMap::new(), una);
+        let out = checker.infer_expr(Env::new(), una);
         assert_eq!(
             out,
             (
@@ -1000,7 +993,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Bneg);
-        let out = checker.infer_expr(HashMap::new(), una);
+        let out = checker.infer_expr(Env::new(), una);
         assert_eq!(
             out,
             (
@@ -1017,7 +1010,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Lnot);
-        let out = checker.infer_expr(HashMap::new(), una);
+        let out = checker.infer_expr(Env::new(), una);
         assert_eq!(
             out,
             (
@@ -1101,7 +1094,7 @@ mod tests {
         };
 
         let mut checker = TypeInference::new();
-        let out = checker.infer_block_raw(HashMap::new(), block);
+        let out = checker.infer_block_raw(Env::new(), block);
         assert_eq!(
             out,
             (
@@ -1203,7 +1196,7 @@ mod tests {
         };
 
         let mut checker = TypeInference::new();
-        let out = checker.infer_block_raw(HashMap::new(), block);
+        let out = checker.infer_block_raw(Env::new(), block);
         assert_eq!(
             out,
             (
@@ -1301,7 +1294,7 @@ mod tests {
         };
 
         let mut checker = TypeInference::new();
-        let out = checker.infer_block_raw(HashMap::new(), block);
+        let out = checker.infer_block_raw(Env::new(), block);
         assert_eq!(
             out,
             (
@@ -1375,7 +1368,7 @@ mod tests {
 
         let iff = make_if::<Var>();
         let mut checker = TypeInference::new();
-        let out = checker.infer_if(HashMap::new(), iff);
+        let out = checker.infer_if(Env::new(), iff);
 
         assert_eq!(
             out,
@@ -1442,7 +1435,7 @@ mod tests {
         };
 
         let mut checker = TypeInference::new();
-        let (res, ty) = checker.infer_fndef(HashMap::new(), *test);
+        let (res, ty) = checker.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
             GenWith::new(
@@ -1517,7 +1510,7 @@ mod tests {
         };
 
         let mut checker = TypeInference::new();
-        let (res, ty) = checker.infer_fndef(HashMap::new(), *test);
+        let (res, ty) = checker.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
             GenWith::new(
@@ -1585,7 +1578,7 @@ mod tests {
         };
 
         let mut checker = TypeInference::new();
-        let (res, ty) = checker.infer_fndef(HashMap::new(), *test);
+        let (res, ty) = checker.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
             GenWith::new(
