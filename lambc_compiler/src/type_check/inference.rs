@@ -57,14 +57,14 @@ impl TypeInference {
 
         for arg in &args {
             let typ = self.fresh_ty_var();
-            typs.push(Type::Var(typ));
-            new_args.push(TypedVar(*arg, Type::Var(typ)));
-            env.add_type(*arg, Type::Var(typ));
+            typs.push(Type::UnifiableVar(typ));
+            new_args.push(TypedVar(*arg, Type::UnifiableVar(typ)));
+            env.add_type(*arg, Type::UnifiableVar(typ));
         }
 
         // Return types need to have access to the return type, so that the value
         // can be checked against this type.
-        let ret_type = Type::Var(self.fresh_ty_var());
+        let ret_type = Type::UnifiableVar(self.fresh_ty_var());
         self.ret_type.push(ret_type.clone());
 
         let body_out = self.check_expr(env, body, ret_type);
@@ -106,7 +106,7 @@ impl TypeInference {
             typs.push(typ);
         }
 
-        let ret_typ = Type::Var(self.fresh_ty_var());
+        let ret_typ = Type::UnifiableVar(self.fresh_ty_var());
         let fn_typ = Type::Fun(FnType {
             args: typs,
             ret_type: Box::new(ret_typ.clone()),
@@ -134,7 +134,7 @@ impl TypeInference {
         idx: Index<Var>,
     ) -> (CheckRes<Expr<TypedVar>>, Type) {
         let list_elem_ty = self.fresh_ty_var();
-        let list_ty = Type::List(Box::new(Type::Var(list_elem_ty)));
+        let list_ty = Type::List(Box::new(Type::UnifiableVar(list_elem_ty)));
 
         let (mut idxee_out, indexee_ty) =
             self.infer_expr(env.clone(), idx.lhs);
@@ -161,7 +161,7 @@ impl TypeInference {
                     span: idx.span,
                 })),
             ),
-            Type::Var(list_elem_ty),
+            Type::UnifiableVar(list_elem_ty),
         )
     }
 
@@ -194,7 +194,7 @@ impl TypeInference {
                 let (out, res) = self.infer_expr(env.clone(), e);
                 (out.cons, vec![out.ast], res)
             }
-            None => (vec![], vec![], Type::Var(self.fresh_ty_var())),
+            None => (vec![], vec![], Type::UnifiableVar(self.fresh_ty_var())),
         };
 
         for val in values {
@@ -256,8 +256,8 @@ impl TypeInference {
             // These operators require that both the `[l|r]hs` is a function type
             // with a singular argument, and `[r|l]hs` is the type of the parameter
             BinaryOp::Appl => {
-                let arg = Type::Var(self.fresh_ty_var());
-                let ret = Type::Var(self.fresh_ty_var());
+                let arg = Type::UnifiableVar(self.fresh_ty_var());
+                let ret = Type::UnifiableVar(self.fresh_ty_var());
                 let fun = Type::Fun(FnType {
                     args: vec![arg.clone()],
                     ret_type: Box::new(ret.clone()),
@@ -271,8 +271,8 @@ impl TypeInference {
                 (lhs.ast, rhs.ast, cons, ret)
             }
             BinaryOp::Appr => {
-                let arg = Type::Var(self.fresh_ty_var());
-                let ret = Type::Var(self.fresh_ty_var());
+                let arg = Type::UnifiableVar(self.fresh_ty_var());
+                let ret = Type::UnifiableVar(self.fresh_ty_var());
                 let fun = Type::Fun(FnType {
                     args: vec![arg.clone()],
                     ret_type: Box::new(ret.clone()),
@@ -289,9 +289,9 @@ impl TypeInference {
             // unary functions where the output of the `[l|r]hs` is the only
             // parameter of the `[r|l]hs`.
             BinaryOp::Cpsl => {
-                let rhs_arg = Type::Var(self.fresh_ty_var());
-                let rhs_ret = Type::Var(self.fresh_ty_var());
-                let lhs_ret = Type::Var(self.fresh_ty_var());
+                let rhs_arg = Type::UnifiableVar(self.fresh_ty_var());
+                let rhs_ret = Type::UnifiableVar(self.fresh_ty_var());
+                let lhs_ret = Type::UnifiableVar(self.fresh_ty_var());
 
                 let rhs_fn = Type::Fun(FnType {
                     args: vec![rhs_arg],
@@ -311,9 +311,9 @@ impl TypeInference {
                 (lhs.ast, rhs.ast, cons, lhs_ret)
             }
             BinaryOp::Cpsr => {
-                let lhs_arg = Type::Var(self.fresh_ty_var());
-                let lhs_ret = Type::Var(self.fresh_ty_var());
-                let rhs_ret = Type::Var(self.fresh_ty_var());
+                let lhs_arg = Type::UnifiableVar(self.fresh_ty_var());
+                let lhs_ret = Type::UnifiableVar(self.fresh_ty_var());
+                let rhs_ret = Type::UnifiableVar(self.fresh_ty_var());
 
                 let lhs_fn = Type::Fun(FnType {
                     args: vec![lhs_arg],
@@ -612,7 +612,7 @@ impl TypeInference {
         let recursive = value.is_recursive();
         if recursive {
             let tvar = self.fresh_ty_var();
-            env.add_type(ident, Type::Var(tvar));
+            env.add_type(ident, Type::UnifiableVar(tvar));
         }
 
         let (out, inferred_ty) = self.infer_expr(env.clone(), value);
@@ -768,7 +768,7 @@ mod tests {
     fn infers_var() {
         let mut checker = TypeInference::new();
 
-        let typ = Type::Var(TyUniVar(0));
+        let typ = Type::UnifiableVar(TyUniVar(0));
         let var = Var(0);
         let mut env = Env::new();
         env.add_type(var, typ.clone());
@@ -792,8 +792,11 @@ mod tests {
         };
 
         let typ = Type::Fun(FnType {
-            args: vec![Type::Var(TyUniVar(0)), Type::Var(TyUniVar(1))],
-            ret_type: Box::new(Type::Var(TyUniVar(2))),
+            args: vec![
+                Type::UnifiableVar(TyUniVar(0)),
+                Type::UnifiableVar(TyUniVar(1)),
+            ],
+            ret_type: Box::new(Type::UnifiableVar(TyUniVar(2))),
         });
 
         let out = checker.infer_expr(Env::new(), Expr::FnDef(Box::new(def)));
@@ -803,17 +806,17 @@ mod tests {
             (
                 GenWith::new(
                     vec![Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(2)),
-                        got: Type::Var(TyUniVar(0))
+                        expected: Type::UnifiableVar(TyUniVar(2)),
+                        got: Type::UnifiableVar(TyUniVar(0))
                     }],
                     Expr::FnDef(Box::new(FnDef {
                         args: vec![
-                            TypedVar(Var(0), Type::Var(TyUniVar(0))),
-                            TypedVar(Var(1), Type::Var(TyUniVar(1)))
+                            TypedVar(Var(0), Type::UnifiableVar(TyUniVar(0))),
+                            TypedVar(Var(1), Type::UnifiableVar(TyUniVar(1)))
                         ],
                         body: Expr::Ident(TypedVar(
                             Var(0),
-                            Type::Var(TyUniVar(0))
+                            Type::UnifiableVar(TyUniVar(0))
                         )),
                         recursive: false,
                         span: SPAN
@@ -834,7 +837,7 @@ mod tests {
             span: SPAN,
         };
 
-        let typ = Type::Var(TyUniVar(0));
+        let typ = Type::UnifiableVar(TyUniVar(0));
 
         let out =
             checker.check_expr(Env::new(), Expr::Index(Box::new(idx)), typ);
@@ -849,11 +852,13 @@ mod tests {
                     },
                     Constraint::TypeEqual {
                         expected: Type::NIL,
-                        got: Type::List(Box::new(Type::Var(TyUniVar(0)))),
+                        got: Type::List(Box::new(Type::UnifiableVar(
+                            TyUniVar(0)
+                        ))),
                     },
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(0)),
-                        got: Type::Var(TyUniVar(0))
+                        expected: Type::UnifiableVar(TyUniVar(0)),
+                        got: Type::UnifiableVar(TyUniVar(0))
                     }
                 ],
                 Expr::Index(Box::new(Index {
@@ -870,8 +875,8 @@ mod tests {
         let mut checker = TypeInference::new();
 
         let callee_ident = Var(0);
-        let callee_typ = Type::Var(TyUniVar(1000));
-        let ret_typ = Type::Var(TyUniVar(0));
+        let callee_typ = Type::UnifiableVar(TyUniVar(1000));
+        let ret_typ = Type::UnifiableVar(TyUniVar(0));
 
         let mut env = Env::new();
         env.add_type(callee_ident, callee_typ.clone());
@@ -1035,7 +1040,10 @@ mod tests {
             })
         };
 
-        let fn_ty = mk_fn(Type::Var(TyUniVar(0)), Type::Var(TyUniVar(1)));
+        let fn_ty = mk_fn(
+            Type::UnifiableVar(TyUniVar(0)),
+            Type::UnifiableVar(TyUniVar(1)),
+        );
 
         let def_id = Statement::Define(Define {
             ident: Var(0),
@@ -1053,8 +1061,13 @@ mod tests {
             ident: TypedVar(Var(0), fn_ty.clone()),
             typ: None,
             value: Expr::FnDef(Box::new(FnDef {
-                args: vec![(TypedVar(Var(1), Type::Var(TyUniVar(0))))],
-                body: Expr::Ident(TypedVar(Var(1), Type::Var(TyUniVar(0)))),
+                args: vec![
+                    (TypedVar(Var(1), Type::UnifiableVar(TyUniVar(0)))),
+                ],
+                body: Expr::Ident(TypedVar(
+                    Var(1),
+                    Type::UnifiableVar(TyUniVar(0)),
+                )),
                 recursive: false,
                 span: SPAN,
             })),
@@ -1101,17 +1114,20 @@ mod tests {
                 GenWith::new(
                     vec![
                         Constraint::TypeEqual {
-                            expected: Type::Var(TyUniVar(1)),
-                            got: Type::Var(TyUniVar(0)),
+                            expected: Type::UnifiableVar(TyUniVar(1)),
+                            got: Type::UnifiableVar(TyUniVar(0)),
                         },
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::NIL, Type::Var(TyUniVar(2))),
+                            expected: mk_fn(
+                                Type::NIL,
+                                Type::UnifiableVar(TyUniVar(2))
+                            ),
                             got: fn_ty.clone(),
                         },
                         Constraint::TypeEqual {
                             expected: mk_fn(
                                 Type::BOOL,
-                                Type::Var(TyUniVar(3))
+                                Type::UnifiableVar(TyUniVar(3))
                             ),
                             got: fn_ty.clone(),
                         },
@@ -1140,7 +1156,10 @@ mod tests {
             })
         };
 
-        let fn_ty = mk_fn(Type::Var(TyUniVar(0)), Type::Var(TyUniVar(1)));
+        let fn_ty = mk_fn(
+            Type::UnifiableVar(TyUniVar(0)),
+            Type::UnifiableVar(TyUniVar(1)),
+        );
 
         let def_id = Statement::Define(Define {
             ident: Var(0),
@@ -1158,8 +1177,13 @@ mod tests {
             ident: TypedVar(Var(0), fn_ty.clone()),
             typ: None,
             value: Expr::FnDef(Box::new(FnDef {
-                args: vec![(TypedVar(Var(1), Type::Var(TyUniVar(0))))],
-                body: Expr::Ident(TypedVar(Var(1), Type::Var(TyUniVar(0)))),
+                args: vec![
+                    (TypedVar(Var(1), Type::UnifiableVar(TyUniVar(0)))),
+                ],
+                body: Expr::Ident(TypedVar(
+                    Var(1),
+                    Type::UnifiableVar(TyUniVar(0)),
+                )),
                 recursive: false,
                 span: SPAN,
             })),
@@ -1206,17 +1230,20 @@ mod tests {
                 GenWith::new(
                     vec![
                         Constraint::TypeEqual {
-                            expected: Type::Var(TyUniVar(1)),
-                            got: Type::Var(TyUniVar(0))
+                            expected: Type::UnifiableVar(TyUniVar(1)),
+                            got: Type::UnifiableVar(TyUniVar(0))
                         },
                         Constraint::TypeEqual {
-                            expected: mk_fn(Type::NIL, Type::Var(TyUniVar(2))),
+                            expected: mk_fn(
+                                Type::NIL,
+                                Type::UnifiableVar(TyUniVar(2))
+                            ),
                             got: fn_ty.clone(),
                         },
                         Constraint::TypeEqual {
                             expected: mk_fn(
                                 Type::BOOL,
-                                Type::Var(TyUniVar(3))
+                                Type::UnifiableVar(TyUniVar(3))
                             ),
                             got: fn_ty.clone(),
                         },
@@ -1237,7 +1264,7 @@ mod tests {
                         span: SPAN
                     }
                 ),
-                Type::Var(TyUniVar(3))
+                Type::UnifiableVar(TyUniVar(3))
             )
         )
     }
@@ -1251,7 +1278,10 @@ mod tests {
             })
         };
 
-        let fn_ty = mk_fn(Type::Var(TyUniVar(1)), Type::Var(TyUniVar(2)));
+        let fn_ty = mk_fn(
+            Type::UnifiableVar(TyUniVar(1)),
+            Type::UnifiableVar(TyUniVar(2)),
+        );
 
         // defines a function: fn x(a) { return x(a); }
         let def_rec = Statement::Define(Define {
@@ -1274,15 +1304,17 @@ mod tests {
             ident: TypedVar(Var(0), fn_ty.clone()),
             typ: None,
             value: Expr::FnDef(Box::new(FnDef {
-                args: vec![(TypedVar(Var(1), Type::Var(TyUniVar(1))))],
+                args: vec![
+                    (TypedVar(Var(1), Type::UnifiableVar(TyUniVar(1)))),
+                ],
                 body: Expr::Call(Box::new(Call {
                     callee: Expr::Ident(TypedVar(
                         Var(0),
-                        Type::Var(TyUniVar(0)),
+                        Type::UnifiableVar(TyUniVar(0)),
                     )),
                     args: vec![Expr::Ident(TypedVar(
                         Var(1),
-                        Type::Var(TyUniVar(1)),
+                        Type::UnifiableVar(TyUniVar(1)),
                     ))],
                     span: SPAN,
                 })),
@@ -1311,27 +1343,27 @@ mod tests {
                     vec![
                         Constraint::TypeEqual {
                             expected: mk_fn(
-                                Type::Var(TyUniVar(1)),
-                                Type::Var(TyUniVar(3))
+                                Type::UnifiableVar(TyUniVar(1)),
+                                Type::UnifiableVar(TyUniVar(3))
                             ),
-                            got: Type::Var(TyUniVar(0)),
+                            got: Type::UnifiableVar(TyUniVar(0)),
                         },
                         Constraint::TypeEqual {
-                            expected: Type::Var(TyUniVar(2)),
-                            got: Type::Var(TyUniVar(3)),
+                            expected: Type::UnifiableVar(TyUniVar(2)),
+                            got: Type::UnifiableVar(TyUniVar(3)),
                         },
                         Constraint::TypeEqual {
-                            expected: Type::Var(TyUniVar(0)),
+                            expected: Type::UnifiableVar(TyUniVar(0)),
                             got: fn_ty.clone(),
                         },
                         Constraint::TypeEqual {
                             expected: mk_fn(
                                 Type::BOOL,
-                                Type::Var(TyUniVar(4))
+                                Type::UnifiableVar(TyUniVar(4))
                             ),
                             got: mk_fn(
-                                Type::Var(TyUniVar(1)),
-                                Type::Var(TyUniVar(2))
+                                Type::UnifiableVar(TyUniVar(1)),
+                                Type::UnifiableVar(TyUniVar(2))
                             ),
                         },
                     ],
@@ -1348,7 +1380,7 @@ mod tests {
                         span: SPAN
                     }
                 ),
-                Type::Var(TyUniVar(4))
+                Type::UnifiableVar(TyUniVar(4))
             )
         )
     }
@@ -1453,16 +1485,16 @@ mod tests {
             GenWith::new(
                 vec![
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
                         got: Type::BOOL,
                     },
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
-                        got: Type::Var(TyUniVar(0)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
+                        got: Type::UnifiableVar(TyUniVar(0)),
                     },
                 ],
                 fndef(
-                    vec![TypedVar(x, Type::Var(TyUniVar(0)))],
+                    vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
                     Expr::Block(Box::new(Block {
                         statements: vec![Statement::Expr(ExprStatement {
                             expr: Expr::Return(Box::new(Return {
@@ -1473,7 +1505,7 @@ mod tests {
                         })],
                         value: Some(Expr::Ident(TypedVar(
                             x,
-                            Type::Var(TyUniVar(0))
+                            Type::UnifiableVar(TyUniVar(0))
                         ))),
                         span: SPAN,
                     })),
@@ -1483,7 +1515,10 @@ mod tests {
 
         assert_eq!(
             ty,
-            Type::fun(vec![Type::Var(TyUniVar(0))], Type::Var(TyUniVar(1))),
+            Type::fun(
+                vec![Type::UnifiableVar(TyUniVar(0))],
+                Type::UnifiableVar(TyUniVar(1))
+            ),
         );
     }
 
@@ -1528,16 +1563,16 @@ mod tests {
             GenWith::new(
                 vec![
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
                         got: Type::BOOL,
                     },
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
                         got: Type::NEVER,
                     },
                 ],
                 fndef(
-                    vec![TypedVar(x, Type::Var(TyUniVar(0)))],
+                    vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
                     Expr::Block(Box::new(Block {
                         statements: vec![Statement::Define(Define {
                             ident: TypedVar(y, Type::NEVER),
@@ -1557,7 +1592,10 @@ mod tests {
 
         assert_eq!(
             ty,
-            Type::fun(vec![Type::Var(TyUniVar(0))], Type::Var(TyUniVar(1))),
+            Type::fun(
+                vec![Type::UnifiableVar(TyUniVar(0))],
+                Type::UnifiableVar(TyUniVar(1))
+            ),
         );
     }
 
@@ -1596,20 +1634,20 @@ mod tests {
             GenWith::new(
                 vec![
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
                         got: Type::NIL,
                     },
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
                         got: Type::NEVER,
                     },
                     Constraint::TypeEqual {
-                        expected: Type::Var(TyUniVar(1)),
+                        expected: Type::UnifiableVar(TyUniVar(1)),
                         got: Type::NEVER,
                     },
                 ],
                 fndef(
-                    vec![TypedVar(x, Type::Var(TyUniVar(0)))],
+                    vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
                     Expr::Return(Box::new(Return {
                         value: Some(Expr::Return(Box::new(Return {
                             value: None,
@@ -1623,7 +1661,10 @@ mod tests {
 
         assert_eq!(
             ty,
-            Type::fun(vec![Type::Var(TyUniVar(0))], Type::Var(TyUniVar(1))),
+            Type::fun(
+                vec![Type::UnifiableVar(TyUniVar(0))],
+                Type::UnifiableVar(TyUniVar(1))
+            ),
         );
     }
 }

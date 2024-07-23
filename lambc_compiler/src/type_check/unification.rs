@@ -56,7 +56,7 @@ impl super::TypeInference {
             (Type::NEVER, ..) | (.., Type::NEVER) => Ok(()),
             (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
-            (Type::Var(l), Type::Var(r)) => self
+            (Type::UnifiableVar(l), Type::UnifiableVar(r)) => self
                 .uni_table
                 .unify_var_var(l, r)
                 .map_err(|(l, r)| TypeError::TypeNotEqual(l, r)),
@@ -74,7 +74,7 @@ impl super::TypeInference {
 
                 self.unify_ty_ty(*l.ret_type, *r.ret_type)
             }
-            (Type::Var(v), ty) | (ty, Type::Var(v)) => {
+            (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;
                 self.uni_table
                     .unify_var_value(v, Some(ty))
@@ -94,9 +94,9 @@ impl super::TypeInference {
                 args: args.into_iter().map(|a| self.normalize_ty(a)).collect(),
                 ret_type: Box::new(self.normalize_ty(*ret_type)),
             }),
-            Type::Var(v) => match self.uni_table.probe_value(v) {
+            Type::UnifiableVar(v) => match self.uni_table.probe_value(v) {
                 Some(ty) => self.normalize_ty(ty),
-                None => Type::Var(v),
+                None => Type::UnifiableVar(v),
             },
         }
     }
@@ -108,9 +108,9 @@ impl super::TypeInference {
     ) -> Result<(), TypeError> {
         match ty {
             Type::Con(..) => Ok(()),
-            Type::Var(v) => {
+            Type::UnifiableVar(v) => {
                 if *v == tyvar {
-                    Err(TypeError::InfiniteType(*v, Type::Var(*v)))
+                    Err(TypeError::InfiniteType(*v, Type::UnifiableVar(*v)))
                 } else {
                     Ok(())
                 }

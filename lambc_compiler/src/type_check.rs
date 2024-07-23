@@ -20,7 +20,7 @@ pub struct TyUniVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
-    Var(TyUniVar),
+    UnifiableVar(TyUniVar),
     Con(Tycon),
     List(Box<Self>),
     Fun(FnType),
@@ -211,8 +211,8 @@ mod test {
         assert_eq!(
             expr,
             Expr::FnDef(Box::new(FnDef {
-                args: vec![TypedVar(x, Type::Var(a))],
-                body: Expr::Ident(TypedVar(x, Type::Var(a))),
+                args: vec![TypedVar(x, Type::UnifiableVar(a))],
+                body: Expr::Ident(TypedVar(x, Type::UnifiableVar(a))),
                 recursive: false,
                 span: SPAN,
             }))
@@ -223,8 +223,8 @@ mod test {
             TypeScheme {
                 unbound: set![a],
                 ty: Type::Fun(FnType {
-                    args: vec![Type::Var(a)],
-                    ret_type: Box::new(Type::Var(a))
+                    args: vec![Type::UnifiableVar(a)],
+                    ret_type: Box::new(Type::UnifiableVar(a))
                 })
             }
         );
@@ -257,10 +257,10 @@ mod test {
         assert_eq!(
             expr,
             Expr::FnDef(Box::new(FnDef {
-                args: vec![TypedVar(x, Type::Var(a))],
+                args: vec![TypedVar(x, Type::UnifiableVar(a))],
                 body: Expr::FnDef(Box::new(FnDef {
-                    args: vec![TypedVar(y, Type::Var(b))],
-                    body: Expr::Ident(TypedVar(x, Type::Var(a))),
+                    args: vec![TypedVar(y, Type::UnifiableVar(b))],
+                    body: Expr::Ident(TypedVar(x, Type::UnifiableVar(a))),
                     recursive: false,
                     span: SPAN
                 })),
@@ -274,10 +274,10 @@ mod test {
             TypeScheme {
                 unbound: set![a, b],
                 ty: Type::Fun(FnType {
-                    args: vec![Type::Var(a)],
+                    args: vec![Type::UnifiableVar(a)],
                     ret_type: Box::new(Type::Fun(FnType {
-                        args: vec![Type::Var(b)],
-                        ret_type: Box::new(Type::Var(a))
+                        args: vec![Type::UnifiableVar(b)],
+                        ret_type: Box::new(Type::UnifiableVar(a))
                     }))
                 })
             }
@@ -313,11 +313,12 @@ mod test {
         let c = TyUniVar(7);
 
         let x_ty = Type::fun(
-            vec![Type::Var(a)],
-            Type::fun(vec![Type::Var(b)], Type::Var(c)),
+            vec![Type::UnifiableVar(a)],
+            Type::fun(vec![Type::UnifiableVar(b)], Type::UnifiableVar(c)),
         );
 
-        let y_ty = Type::fun(vec![Type::Var(a)], Type::Var(b));
+        let y_ty =
+            Type::fun(vec![Type::UnifiableVar(a)], Type::UnifiableVar(b));
 
         assert_eq!(
             scheme,
@@ -327,7 +328,10 @@ mod test {
                     vec![x_ty],
                     Type::fun(
                         vec![y_ty],
-                        Type::fun(vec![Type::Var(a)], Type::Var(c))
+                        Type::fun(
+                            vec![Type::UnifiableVar(a)],
+                            Type::UnifiableVar(c)
+                        )
                     )
                 )
             }
@@ -349,7 +353,7 @@ mod test {
         assert_eq!(
             res,
             Err(TypeError::TypeNotEqual(
-                Type::fun(vec![Type::NIL], Type::Var(TyUniVar(1))),
+                Type::fun(vec![Type::NIL], Type::UnifiableVar(TyUniVar(1))),
                 Type::NIL,
             ))
         )

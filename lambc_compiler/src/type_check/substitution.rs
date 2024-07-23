@@ -19,14 +19,14 @@ impl TypeInference {
                 let (unbound, elem) = self.substitute(*elem);
                 (unbound, Type::List(Box::new(elem)))
             }
-            Type::Var(v) => {
+            Type::UnifiableVar(v) => {
                 let root = self.uni_table.find(v);
                 match self.uni_table.probe_value(root) {
                     Some(ty) => self.substitute(ty),
                     None => {
                         let mut unbound = HashSet::new();
                         unbound.insert(root);
-                        (unbound, Type::Var(root))
+                        (unbound, Type::UnifiableVar(root))
                     }
                 }
             }

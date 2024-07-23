@@ -169,8 +169,11 @@ mod tests {
         };
 
         let typ = Type::Fun(FnType {
-            args: vec![Type::Var(TyUniVar(0)), Type::Var(TyUniVar(1))],
-            ret_type: Box::new(Type::Var(TyUniVar(0))),
+            args: vec![
+                Type::UnifiableVar(TyUniVar(0)),
+                Type::UnifiableVar(TyUniVar(1)),
+            ],
+            ret_type: Box::new(Type::UnifiableVar(TyUniVar(0))),
         });
 
         let out =
@@ -180,17 +183,17 @@ mod tests {
             out,
             GenWith::new(
                 vec![Constraint::TypeEqual {
-                    expected: Type::Var(TyUniVar(0)),
-                    got: Type::Var(TyUniVar(0))
+                    expected: Type::UnifiableVar(TyUniVar(0)),
+                    got: Type::UnifiableVar(TyUniVar(0))
                 }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
-                        TypedVar(Var(0), Type::Var(TyUniVar(0))),
-                        TypedVar(Var(1), Type::Var(TyUniVar(1)))
+                        TypedVar(Var(0), Type::UnifiableVar(TyUniVar(0))),
+                        TypedVar(Var(1), Type::UnifiableVar(TyUniVar(1)))
                     ],
                     body: Expr::Ident(TypedVar(
                         Var(0),
-                        Type::Var(TyUniVar(0))
+                        Type::UnifiableVar(TyUniVar(0))
                     )),
                     recursive: false,
                     span: SPAN
