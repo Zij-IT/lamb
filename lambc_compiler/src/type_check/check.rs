@@ -74,7 +74,8 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::Env, CheckRes as GenWith, Constraint, FnType, TypedVar, Tyvar,
+            env::Env, CheckRes as GenWith, Constraint, FnType, TyUniVar,
+            TypedVar,
         },
     };
 
@@ -168,8 +169,8 @@ mod tests {
         };
 
         let typ = Type::Fun(FnType {
-            args: vec![Type::Var(Tyvar(0)), Type::Var(Tyvar(1))],
-            ret_type: Box::new(Type::Var(Tyvar(0))),
+            args: vec![Type::Var(TyUniVar(0)), Type::Var(TyUniVar(1))],
+            ret_type: Box::new(Type::Var(TyUniVar(0))),
         });
 
         let out =
@@ -179,15 +180,18 @@ mod tests {
             out,
             GenWith::new(
                 vec![Constraint::TypeEqual {
-                    expected: Type::Var(Tyvar(0)),
-                    got: Type::Var(Tyvar(0))
+                    expected: Type::Var(TyUniVar(0)),
+                    got: Type::Var(TyUniVar(0))
                 }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
-                        TypedVar(Var(0), Type::Var(Tyvar(0))),
-                        TypedVar(Var(1), Type::Var(Tyvar(1)))
+                        TypedVar(Var(0), Type::Var(TyUniVar(0))),
+                        TypedVar(Var(1), Type::Var(TyUniVar(1)))
                     ],
-                    body: Expr::Ident(TypedVar(Var(0), Type::Var(Tyvar(0)))),
+                    body: Expr::Ident(TypedVar(
+                        Var(0),
+                        Type::Var(TyUniVar(0))
+                    )),
                     recursive: false,
                     span: SPAN
                 })),

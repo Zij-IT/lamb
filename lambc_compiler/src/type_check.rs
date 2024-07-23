@@ -16,11 +16,11 @@ use crate::{name_res::Var, State};
 pub struct TypedVar(Var, Type);
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
-pub struct Tyvar(u32);
+pub struct TyUniVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
-    Var(Tyvar),
+    Var(TyUniVar),
     Con(Tycon),
     List(Box<Self>),
     Fun(FnType),
@@ -55,7 +55,7 @@ pub struct FnType {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TypeScheme {
-    unbound: HashSet<Tyvar>,
+    unbound: HashSet<TyUniVar>,
     ty: Type,
 }
 
@@ -86,7 +86,7 @@ impl<'s> TypeChecker<'s> {
 }
 
 struct TypeInference {
-    uni_table: InPlaceUnificationTable<Tyvar>,
+    uni_table: InPlaceUnificationTable<TyUniVar>,
     ret_type: Vec<Type>,
 }
 
@@ -150,8 +150,8 @@ mod test {
     use crate::{
         name_res::Var,
         type_check::{
-            unification::TypeError, FnType, TyClass, Type, TypeScheme,
-            TypedVar, Tyvar,
+            unification::TypeError, FnType, TyClass, TyUniVar, Type,
+            TypeScheme, TypedVar,
         },
         State,
     };
@@ -196,7 +196,7 @@ mod test {
     #[test]
     fn infers_id() {
         let x = Var(u32::MAX);
-        let a = Tyvar(0);
+        let a = TyUniVar(0);
         let ast = Expr::FnDef(Box::new(FnDef {
             args: vec![x],
             body: Expr::Ident(x),
@@ -235,8 +235,8 @@ mod test {
         let x = Var(u32::MAX);
         let y = Var(u32::MAX - 1);
 
-        let a = Tyvar(0);
-        let b = Tyvar(2);
+        let a = TyUniVar(0);
+        let b = TyUniVar(2);
 
         let ast = Expr::FnDef(Box::new(FnDef {
             args: vec![x],
@@ -308,9 +308,9 @@ mod test {
             .infer(s_comb)
             .expect("Inference to succeed");
 
-        let a = Tyvar(4);
-        let b = Tyvar(6);
-        let c = Tyvar(7);
+        let a = TyUniVar(4);
+        let b = TyUniVar(6);
+        let c = TyUniVar(7);
 
         let x_ty = Type::fun(
             vec![Type::Var(a)],
@@ -349,7 +349,7 @@ mod test {
         assert_eq!(
             res,
             Err(TypeError::TypeNotEqual(
-                Type::fun(vec![Type::NIL], Type::Var(Tyvar(1))),
+                Type::fun(vec![Type::NIL], Type::Var(TyUniVar(1))),
                 Type::NIL,
             ))
         )

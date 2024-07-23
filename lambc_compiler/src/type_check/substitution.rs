@@ -5,11 +5,14 @@ use lambc_parse::{
     IfCond, Index, List, Statement, Unary,
 };
 
-use super::{FnType, Type, TypeInference, Tyvar};
+use super::{FnType, TyUniVar, Type, TypeInference};
 use crate::type_check::TypedVar;
 
 impl TypeInference {
-    pub(super) fn substitute(&mut self, ty: Type) -> (HashSet<Tyvar>, Type) {
+    pub(super) fn substitute(
+        &mut self,
+        ty: Type,
+    ) -> (HashSet<TyUniVar>, Type) {
         match ty {
             ty @ Type::Con(..) => (HashSet::new(), ty),
             Type::List(elem) => {
@@ -53,7 +56,7 @@ impl TypeInference {
     pub(super) fn substitute_expr(
         &mut self,
         expr: Expr<TypedVar>,
-    ) -> (HashSet<Tyvar>, Expr<TypedVar>) {
+    ) -> (HashSet<TyUniVar>, Expr<TypedVar>) {
         match expr {
             Expr::Nil(n) => (HashSet::new(), Expr::Nil(n)),
             Expr::I64(i) => (HashSet::new(), Expr::I64(i)),
@@ -200,7 +203,7 @@ impl TypeInference {
     fn substitute_ifcond(
         &mut self,
         ifcond: IfCond<TypedVar>,
-    ) -> (HashSet<Tyvar>, IfCond<TypedVar>) {
+    ) -> (HashSet<TyUniVar>, IfCond<TypedVar>) {
         let IfCond { cond, body, span } = ifcond;
         let (mut unbound, cond) = self.substitute_expr(cond);
         let (un, block) = self.substitute_block_raw(body);
@@ -212,7 +215,7 @@ impl TypeInference {
     fn substitute_block_raw(
         &mut self,
         block: Block<TypedVar>,
-    ) -> (HashSet<Tyvar>, Block<TypedVar>) {
+    ) -> (HashSet<TyUniVar>, Block<TypedVar>) {
         let Block { statements, value, span } = block;
         let mut unbound = HashSet::new();
 
@@ -231,7 +234,7 @@ impl TypeInference {
     fn substitute_stmt(
         &mut self,
         stmt: Statement<TypedVar>,
-    ) -> (HashSet<Tyvar>, Statement<TypedVar>) {
+    ) -> (HashSet<TyUniVar>, Statement<TypedVar>) {
         match stmt {
             Statement::Define(def) => {
                 let Define { ident, typ, value, span } = def;
