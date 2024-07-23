@@ -4,7 +4,7 @@ mod inference;
 mod substitution;
 mod unification;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use ena::unify::InPlaceUnificationTable;
 use lambc_parse::Expr;
@@ -18,9 +18,13 @@ pub struct TypedVar(Var, Type);
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub struct TyUniVar(u32);
 
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
+pub struct TyRigVar(u32);
+
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
     UnifiableVar(TyUniVar),
+    RigidVar(TyRigVar),
     Con(Tycon),
     List(Box<Self>),
     Fun(FnType),
@@ -55,7 +59,7 @@ pub struct FnType {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TypeScheme {
-    unbound: HashSet<TyUniVar>,
+    unbound: HashSet<TyRigVar>,
     ty: Type,
 }
 
@@ -87,12 +91,19 @@ impl<'s> TypeChecker<'s> {
 
 struct TypeInference {
     uni_table: InPlaceUnificationTable<TyUniVar>,
+    subst_unifiers_to_tyvars: HashMap<TyUniVar, TyRigVar>,
+    next_tyvar: u32,
     ret_type: Vec<Type>,
 }
 
 impl TypeInference {
     fn new() -> Self {
-        Self { uni_table: Default::default(), ret_type: Default::default() }
+        Self {
+            uni_table: Default::default(),
+            subst_unifiers_to_tyvars: Default::default(),
+            next_tyvar: 0,
+            ret_type: Default::default(),
+        }
     }
 }
 
@@ -150,7 +161,7 @@ mod test {
     use crate::{
         name_res::Var,
         type_check::{
-            unification::TypeError, FnType, TyClass, TyUniVar, Type,
+            unification::TypeError, FnType, TyClass, TyRigVar, TyUniVar, Type,
             TypeScheme, TypedVar,
         },
         State,
@@ -196,7 +207,6 @@ mod test {
     #[test]
     fn infers_id() {
         let x = Var(u32::MAX);
-        let a = TyUniVar(0);
         let ast = Expr::FnDef(Box::new(FnDef {
             args: vec![x],
             body: Expr::Ident(x),
@@ -208,11 +218,13 @@ mod test {
             .infer(ast)
             .expect("Inference to succeed");
 
+        let a = TyRigVar(0);
+
         assert_eq!(
             expr,
             Expr::FnDef(Box::new(FnDef {
-                args: vec![TypedVar(x, Type::UnifiableVar(a))],
-                body: Expr::Ident(TypedVar(x, Type::UnifiableVar(a))),
+                args: vec![TypedVar(x, Type::RigidVar(a))],
+                body: Expr::Ident(TypedVar(x, Type::RigidVar(a))),
                 recursive: false,
                 span: SPAN,
             }))
@@ -223,8 +235,8 @@ mod test {
             TypeScheme {
                 unbound: set![a],
                 ty: Type::Fun(FnType {
-                    args: vec![Type::UnifiableVar(a)],
-                    ret_type: Box::new(Type::UnifiableVar(a))
+                    args: vec![Type::RigidVar(a)],
+                    ret_type: Box::new(Type::RigidVar(a))
                 })
             }
         );
@@ -234,9 +246,6 @@ mod test {
     fn infers_k_combinator() {
         let x = Var(u32::MAX);
         let y = Var(u32::MAX - 1);
-
-        let a = TyUniVar(0);
-        let b = TyUniVar(2);
 
         let ast = Expr::FnDef(Box::new(FnDef {
             args: vec![x],
@@ -254,13 +263,16 @@ mod test {
             .infer(ast)
             .expect("Inference to succeed");
 
+        let a = TyRigVar(0);
+        let b = TyRigVar(1);
+
         assert_eq!(
             expr,
             Expr::FnDef(Box::new(FnDef {
-                args: vec![TypedVar(x, Type::UnifiableVar(a))],
+                args: vec![TypedVar(x, Type::RigidVar(a))],
                 body: Expr::FnDef(Box::new(FnDef {
-                    args: vec![TypedVar(y, Type::UnifiableVar(b))],
-                    body: Expr::Ident(TypedVar(x, Type::UnifiableVar(a))),
+                    args: vec![TypedVar(y, Type::RigidVar(b))],
+                    body: Expr::Ident(TypedVar(x, Type::RigidVar(a))),
                     recursive: false,
                     span: SPAN
                 })),
@@ -274,10 +286,10 @@ mod test {
             TypeScheme {
                 unbound: set![a, b],
                 ty: Type::Fun(FnType {
-                    args: vec![Type::UnifiableVar(a)],
+                    args: vec![Type::RigidVar(a)],
                     ret_type: Box::new(Type::Fun(FnType {
-                        args: vec![Type::UnifiableVar(b)],
-                        ret_type: Box::new(Type::UnifiableVar(a))
+                        args: vec![Type::RigidVar(b)],
+                        ret_type: Box::new(Type::RigidVar(a))
                     }))
                 })
             }
@@ -308,17 +320,16 @@ mod test {
             .infer(s_comb)
             .expect("Inference to succeed");
 
-        let a = TyUniVar(4);
-        let b = TyUniVar(6);
-        let c = TyUniVar(7);
+        let a = TyRigVar(0);
+        let b = TyRigVar(1);
+        let c = TyRigVar(2);
 
         let x_ty = Type::fun(
-            vec![Type::UnifiableVar(a)],
-            Type::fun(vec![Type::UnifiableVar(b)], Type::UnifiableVar(c)),
+            vec![Type::RigidVar(a)],
+            Type::fun(vec![Type::RigidVar(b)], Type::RigidVar(c)),
         );
 
-        let y_ty =
-            Type::fun(vec![Type::UnifiableVar(a)], Type::UnifiableVar(b));
+        let y_ty = Type::fun(vec![Type::RigidVar(a)], Type::RigidVar(b));
 
         assert_eq!(
             scheme,
@@ -328,10 +339,7 @@ mod test {
                     vec![x_ty],
                     Type::fun(
                         vec![y_ty],
-                        Type::fun(
-                            vec![Type::UnifiableVar(a)],
-                            Type::UnifiableVar(c)
-                        )
+                        Type::fun(vec![Type::RigidVar(a)], Type::RigidVar(c))
                     )
                 )
             }

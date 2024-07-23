@@ -5,16 +5,16 @@ use lambc_parse::{
     IfCond, Index, List, Statement, Unary,
 };
 
-use super::{FnType, TyUniVar, Type, TypeInference};
+use super::{FnType, TyRigVar, TyUniVar, Type, TypeInference};
 use crate::type_check::TypedVar;
 
 impl TypeInference {
     pub(super) fn substitute(
         &mut self,
         ty: Type,
-    ) -> (HashSet<TyUniVar>, Type) {
+    ) -> (HashSet<TyRigVar>, Type) {
         match ty {
-            ty @ Type::Con(..) => (HashSet::new(), ty),
+            ty @ (Type::Con(..) | Type::RigidVar(..)) => (HashSet::new(), ty),
             Type::List(elem) => {
                 let (unbound, elem) = self.substitute(*elem);
                 (unbound, Type::List(Box::new(elem)))
@@ -24,9 +24,10 @@ impl TypeInference {
                 match self.uni_table.probe_value(root) {
                     Some(ty) => self.substitute(ty),
                     None => {
+                        let tyvar = self.tyvar_for_unifier(root);
                         let mut unbound = HashSet::new();
-                        unbound.insert(root);
-                        (unbound, Type::UnifiableVar(root))
+                        unbound.insert(tyvar);
+                        (unbound, Type::RigidVar(tyvar))
                     }
                 }
             }
@@ -56,7 +57,7 @@ impl TypeInference {
     pub(super) fn substitute_expr(
         &mut self,
         expr: Expr<TypedVar>,
-    ) -> (HashSet<TyUniVar>, Expr<TypedVar>) {
+    ) -> (HashSet<TyRigVar>, Expr<TypedVar>) {
         match expr {
             Expr::Nil(n) => (HashSet::new(), Expr::Nil(n)),
             Expr::I64(i) => (HashSet::new(), Expr::I64(i)),
@@ -203,7 +204,7 @@ impl TypeInference {
     fn substitute_ifcond(
         &mut self,
         ifcond: IfCond<TypedVar>,
-    ) -> (HashSet<TyUniVar>, IfCond<TypedVar>) {
+    ) -> (HashSet<TyRigVar>, IfCond<TypedVar>) {
         let IfCond { cond, body, span } = ifcond;
         let (mut unbound, cond) = self.substitute_expr(cond);
         let (un, block) = self.substitute_block_raw(body);
@@ -215,7 +216,7 @@ impl TypeInference {
     fn substitute_block_raw(
         &mut self,
         block: Block<TypedVar>,
-    ) -> (HashSet<TyUniVar>, Block<TypedVar>) {
+    ) -> (HashSet<TyRigVar>, Block<TypedVar>) {
         let Block { statements, value, span } = block;
         let mut unbound = HashSet::new();
 
@@ -234,7 +235,7 @@ impl TypeInference {
     fn substitute_stmt(
         &mut self,
         stmt: Statement<TypedVar>,
-    ) -> (HashSet<TyUniVar>, Statement<TypedVar>) {
+    ) -> (HashSet<TyRigVar>, Statement<TypedVar>) {
         match stmt {
             Statement::Define(def) => {
                 let Define { ident, typ, value, span } = def;
@@ -265,5 +266,12 @@ impl TypeInference {
                 (unbound, Statement::Expr(ExprStatement { expr, span }))
             }
         }
+    }
+
+    fn tyvar_for_unifier(&mut self, var: TyUniVar) -> TyRigVar {
+        *self.subst_unifiers_to_tyvars.entry(var).or_insert_with(|| {
+            self.next_tyvar += 1;
+            TyRigVar(self.next_tyvar - 1)
+        })
     }
 }
