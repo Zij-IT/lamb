@@ -61,7 +61,7 @@ impl TypeInference {
             new_args.push(TypedVar(arg, ty));
         }
         let bodyres = self.check_expr(env, def.body, *typ.ret_type);
-        Qualified::new(
+        Qualified::constrained(
             bodyres.cons,
             Expr::FnDef(Box::new(FnDef {
                 args: new_args,
@@ -191,7 +191,7 @@ mod tests {
 
         assert_eq!(
             out,
-            GenWith::new(
+            GenWith::constrained(
                 vec![Constraint::TypeEqual {
                     expected: Type::UnifiableVar(TyUniVar(0)),
                     got: Type::UnifiableVar(TyUniVar(0))
@@ -233,7 +233,7 @@ mod tests {
 
         assert_eq!(
             out,
-            GenWith::new(
+            GenWith::constrained(
                 vec![Constraint::TypeEqual {
                     expected: Type::INT,
                     got: Type::INT
