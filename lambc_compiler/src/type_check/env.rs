@@ -1,10 +1,10 @@
 use crate::name_res::Var;
 
-use super::{Qualified, Type};
+use super::{Qualified, Type, TypeScheme};
 
 #[derive(Clone)]
 pub struct Env {
-    inner: im::HashMap<Var, Type>,
+    inner: im::HashMap<Var, TypeScheme>,
 }
 
 impl Env {
@@ -12,12 +12,21 @@ impl Env {
         Self { inner: Default::default() }
     }
 
-    pub fn type_of(&self, v: Var) -> Type {
+    pub fn type_of(&self, v: Var) -> TypeScheme {
         self.inner[&v].clone()
     }
 
-    pub fn add_type(&mut self, v: Var, t: Qualified<Type>) -> Option<Type> {
+    pub fn add_type(
+        &mut self,
+        v: Var,
+        t: Qualified<Type>,
+    ) -> Option<TypeScheme> {
         assert!(t.cons.is_empty());
-        self.inner.insert(v, t.item)
+        let scheme = TypeScheme {
+            unbound: std::collections::HashSet::new(),
+            ty: t.item,
+        };
+
+        self.inner.insert(v, scheme)
     }
 }
