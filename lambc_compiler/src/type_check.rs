@@ -1,6 +1,7 @@
 mod check;
 mod env;
 mod inference;
+mod instantiate;
 mod substitution;
 mod unification;
 

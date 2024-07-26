@@ -34,12 +34,13 @@ impl TypeInference {
             }
             Expr::Ident(i) => {
                 let ty = env.type_of(i);
+                let ty: Qualified<Type> = self.instantiate(ty);
                 (
-                    Qualified::unconstrained(Expr::Ident(TypedVar(
-                        i,
-                        ty.clone(),
-                    ))),
-                    ty,
+                    Qualified::constrained(
+                        Expr::Ident(TypedVar(i, ty.item.clone())),
+                        ty.cons,
+                    ),
+                    ty.item,
                 )
             }
             Expr::String(s) => (
@@ -663,12 +664,15 @@ impl TypeInference {
         // the initial unknown type to the inferred type.
         let old =
             env.add_type(ident.0, Qualified::unconstrained(ident.1.clone()));
+        let old = old.map(|scheme| self.instantiate(scheme));
 
         if recursive {
+            let old = old.unwrap();
             cons.push(Constraint::TypeEqual {
-                expected: old.unwrap(),
+                expected: old.item,
                 got: ident.1.clone(),
             });
+            cons.extend(old.cons);
         }
 
         Qualified::constrained(
@@ -690,7 +694,7 @@ impl TypeInference {
         )
     }
 
-    fn fresh_ty_var(&mut self) -> TyUniVar {
+    pub(super) fn fresh_ty_var(&mut self) -> TyUniVar {
         self.uni_table.new_key(None)
     }
 
