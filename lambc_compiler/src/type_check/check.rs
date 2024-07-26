@@ -1,7 +1,7 @@
 use lambc_parse::{Expr, FnDef};
 
 use super::{
-    env::Env, CheckRes, Constraint, FnType, Type, TypeInference, TypedVar,
+    env::Env, Constraint, FnType, Qualified, Type, TypeInference, TypedVar,
 };
 use crate::name_res::Var;
 
@@ -11,15 +11,15 @@ impl TypeInference {
         env: Env,
         expr: Expr<Var>,
         typ: Type,
-    ) -> CheckRes<Expr<TypedVar>> {
+    ) -> Qualified<Expr<TypedVar>> {
         match (expr, typ) {
-            (Expr::Nil(n), Type::NIL) => CheckRes::empty(Expr::Nil(n)),
-            (Expr::I64(i), Type::INT) => CheckRes::empty(Expr::I64(i)),
-            (Expr::Char(c), Type::USV) => CheckRes::empty(Expr::Char(c)),
-            (Expr::Bool(b), Type::BOOL) => CheckRes::empty(Expr::Bool(b)),
-            (Expr::F64(f), Type::DOUBLE) => CheckRes::empty(Expr::F64(f)),
+            (Expr::Nil(n), Type::NIL) => Qualified::empty(Expr::Nil(n)),
+            (Expr::I64(i), Type::INT) => Qualified::empty(Expr::I64(i)),
+            (Expr::Char(c), Type::USV) => Qualified::empty(Expr::Char(c)),
+            (Expr::Bool(b), Type::BOOL) => Qualified::empty(Expr::Bool(b)),
+            (Expr::F64(f), Type::DOUBLE) => Qualified::empty(Expr::F64(f)),
             (Expr::String(s), Type::List(e)) if *e == Type::USV => {
-                CheckRes::empty(Expr::String(s))
+                Qualified::empty(Expr::String(s))
             }
             (Expr::FnDef(def), Type::Fun(typ)) => {
                 self.check_fndef(env, *def, typ)
@@ -42,7 +42,7 @@ impl TypeInference {
         mut env: Env,
         def: FnDef<Var>,
         typ: FnType,
-    ) -> CheckRes<Expr<TypedVar>> {
+    ) -> Qualified<Expr<TypedVar>> {
         // TODO: Issue type error instead of panic if arg count doesn't match
         assert_eq!(def.args.len(), typ.args.len());
         let mut new_args = Vec::with_capacity(typ.args.len());
@@ -51,7 +51,7 @@ impl TypeInference {
             new_args.push(TypedVar(arg, ty));
         }
         let bodyres = self.check_expr(env, def.body, *typ.ret_type);
-        CheckRes::new(
+        Qualified::new(
             bodyres.cons,
             Expr::FnDef(Box::new(FnDef {
                 args: new_args,
@@ -74,7 +74,7 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::Env, CheckRes as GenWith, Constraint, FnType, TyUniVar,
+            env::Env, Constraint, FnType, Qualified as GenWith, TyUniVar,
             TypedVar,
         },
     };

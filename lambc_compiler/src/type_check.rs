@@ -108,12 +108,12 @@ impl TypeInference {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-struct CheckRes<T> {
+struct Qualified<T> {
     cons: Vec<Constraint>,
     ast: T,
 }
 
-impl<T> CheckRes<T> {
+impl<T> Qualified<T> {
     fn new(cons: Vec<Constraint>, ast: T) -> Self {
         Self { cons, ast }
     }

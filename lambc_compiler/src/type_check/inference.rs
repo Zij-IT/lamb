@@ -4,7 +4,7 @@ use lambc_parse::{
 };
 
 use super::{
-    env::Env, CheckRes, Constraint, FnType, TyClass, TyUniVar, Type,
+    env::Env, Constraint, FnType, Qualified, TyClass, TyUniVar, Type,
     TypeInference, TypedVar,
 };
 use crate::name_res::Var;
@@ -14,20 +14,20 @@ impl TypeInference {
         &mut self,
         env: Env,
         expr: Expr<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         match expr {
             // The easy cases!
-            Expr::Nil(n) => (CheckRes::empty(Expr::Nil(n)), Type::NIL),
-            Expr::I64(i) => (CheckRes::empty(Expr::I64(i)), Type::INT),
-            Expr::F64(f) => (CheckRes::empty(Expr::F64(f)), Type::DOUBLE),
-            Expr::Char(c) => (CheckRes::empty(Expr::Char(c)), Type::USV),
-            Expr::Bool(b) => (CheckRes::empty(Expr::Bool(b)), Type::BOOL),
+            Expr::Nil(n) => (Qualified::empty(Expr::Nil(n)), Type::NIL),
+            Expr::I64(i) => (Qualified::empty(Expr::I64(i)), Type::INT),
+            Expr::F64(f) => (Qualified::empty(Expr::F64(f)), Type::DOUBLE),
+            Expr::Char(c) => (Qualified::empty(Expr::Char(c)), Type::USV),
+            Expr::Bool(b) => (Qualified::empty(Expr::Bool(b)), Type::BOOL),
             Expr::Ident(i) => {
                 let ty = env.type_of(i);
-                (CheckRes::empty(Expr::Ident(TypedVar(i, ty.clone()))), ty)
+                (Qualified::empty(Expr::Ident(TypedVar(i, ty.clone()))), ty)
             }
             Expr::String(s) => (
-                CheckRes::empty(Expr::String(s)),
+                Qualified::empty(Expr::String(s)),
                 Type::List(Box::new(Type::USV)),
             ),
             // The harder cases!
@@ -50,7 +50,7 @@ impl TypeInference {
         &mut self,
         mut env: Env,
         fndef: FnDef<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let FnDef { args, body, recursive, span } = fndef;
         let mut new_args = Vec::with_capacity(args.len());
         let mut typs = Vec::with_capacity(args.len());
@@ -70,7 +70,7 @@ impl TypeInference {
         let body_out = self.check_expr(env, body, ret_type);
 
         (
-            CheckRes {
+            Qualified {
                 cons: body_out.cons,
                 ast: Expr::FnDef(Box::new(FnDef {
                     args: new_args,
@@ -94,7 +94,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         call: Call<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let mut cons = Vec::new();
         let mut asts = Vec::new();
         let mut typs = Vec::new();
@@ -116,7 +116,7 @@ impl TypeInference {
         cons.extend(fn_out.cons);
 
         (
-            CheckRes::new(
+            Qualified::new(
                 cons,
                 Expr::Call(Box::new(Call {
                     callee: fn_out.ast,
@@ -132,7 +132,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         idx: Index<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let list_elem_ty = self.fresh_ty_var();
         let list_ty = Type::List(Box::new(Type::UnifiableVar(list_elem_ty)));
 
@@ -153,7 +153,7 @@ impl TypeInference {
         });
 
         (
-            CheckRes::new(
+            Qualified::new(
                 idxee_out.cons,
                 Expr::Index(Box::new(Index {
                     lhs: idxee_out.ast,
@@ -169,10 +169,10 @@ impl TypeInference {
         &mut self,
         env: Env,
         group: Group<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_expr(env, group.value);
         (
-            CheckRes::new(
+            Qualified::new(
                 res.cons,
                 Expr::Group(Box::new(Group {
                     value: res.ast,
@@ -187,7 +187,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         list: List<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let mut values = list.values.into_iter();
         let (mut cons, mut asts, first_ty) = match values.next() {
             Some(e) => {
@@ -204,7 +204,7 @@ impl TypeInference {
         }
 
         (
-            CheckRes::new(
+            Qualified::new(
                 cons,
                 Expr::List(List { values: asts, span: list.span }),
             ),
@@ -216,7 +216,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         unary: Unary<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let Unary { rhs, op, span, op_span } = unary;
         let (out, ty) = self.infer_expr(env, rhs);
 
@@ -232,7 +232,7 @@ impl TypeInference {
         });
 
         (
-            CheckRes::new(
+            Qualified::new(
                 cons,
                 Expr::Unary(Box::new(Unary {
                     rhs: out.ast,
@@ -251,7 +251,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         binary: Binary<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let (lhs, rhs, cons, ty) = match binary.op {
             // These operators require that both the `[l|r]hs` is a function type
             // with a singular argument, and `[r|l]hs` is the type of the parameter
@@ -451,17 +451,17 @@ impl TypeInference {
             op_span: binary.op_span,
         };
 
-        (CheckRes::new(cons, Expr::Binary(Box::new(bin))), ty)
+        (Qualified::new(cons, Expr::Binary(Box::new(bin))), ty)
     }
 
     fn infer_block(
         &mut self,
         env: Env,
         block: Block<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_block_raw(env, block);
         (
-            CheckRes::new(
+            Qualified::new(
                 res.cons,
                 Expr::Block(Box::new(Block {
                     statements: res.ast.statements,
@@ -477,7 +477,7 @@ impl TypeInference {
         &mut self,
         mut env: Env,
         block: Block<Var>,
-    ) -> (CheckRes<Block<TypedVar>>, Type) {
+    ) -> (Qualified<Block<TypedVar>>, Type) {
         let Block { statements, value, span } = block;
 
         let mut stmts = Vec::with_capacity(statements.len());
@@ -497,7 +497,10 @@ impl TypeInference {
             };
 
         (
-            CheckRes::new(cons, Block { statements: stmts, value: val, span }),
+            Qualified::new(
+                cons,
+                Block { statements: stmts, value: val, span },
+            ),
             ty,
         )
     }
@@ -506,7 +509,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         iff: If<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let If { cond, elif, els_, span } = iff;
         let cond_out = self.check_expr(env.clone(), cond.cond, Type::BOOL);
         let (body_out, body_ty) = self.infer_block_raw(env.clone(), cond.body);
@@ -549,7 +552,7 @@ impl TypeInference {
         });
 
         (
-            CheckRes::new(
+            Qualified::new(
                 cons,
                 Expr::If(Box::new(If {
                     cond: first,
@@ -566,7 +569,7 @@ impl TypeInference {
         &mut self,
         env: Env,
         ret: Return<Var>,
-    ) -> (CheckRes<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
         let Return { value, span } = ret;
         let ret_ty = self.ret_type.last().cloned().expect(
                 "Return outside of a function should have been handled somehow already :/",
@@ -587,14 +590,14 @@ impl TypeInference {
         };
 
         let ret = Expr::Return(Box::new(Return { value, span }));
-        (CheckRes::new(cons, ret), Type::NEVER)
+        (Qualified::new(cons, ret), Type::NEVER)
     }
 
     fn process_stmt(
         &mut self,
         env: &mut Env,
         stmt: Statement<Var>,
-    ) -> CheckRes<Statement<TypedVar>> {
+    ) -> Qualified<Statement<TypedVar>> {
         match stmt {
             Statement::Define(def) => self.process_def_stmt(env, def),
             Statement::Expr(expr) => self.process_expr_stmt(env.clone(), expr),
@@ -605,7 +608,7 @@ impl TypeInference {
         &mut self,
         env: &mut Env,
         def: Define<Var>,
-    ) -> CheckRes<Statement<TypedVar>> {
+    ) -> Qualified<Statement<TypedVar>> {
         let Define { ident, typ, value, span } = def;
 
         // Add an entry in for the identifier with a new type
@@ -641,7 +644,7 @@ impl TypeInference {
             });
         }
 
-        CheckRes::new(
+        Qualified::new(
             cons,
             Statement::Define(Define { ident, typ, value: out.ast, span }),
         )
@@ -651,10 +654,10 @@ impl TypeInference {
         &mut self,
         env: Env,
         expr: ExprStatement<Var>,
-    ) -> CheckRes<Statement<TypedVar>> {
+    ) -> Qualified<Statement<TypedVar>> {
         let ExprStatement { expr, span } = expr;
         let (out, _ty) = self.infer_expr(env, expr);
-        CheckRes::new(
+        Qualified::new(
             out.cons,
             Statement::Expr(ExprStatement { expr: out.ast, span }),
         )
@@ -681,8 +684,8 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::Env, CheckRes as GenWith, Constraint, FnType, TyClass,
-            TyUniVar, Type, TypeInference, TypedVar,
+            env::Env, Constraint, FnType, Qualified, TyClass, TyUniVar, Type,
+            TypeInference, TypedVar,
         },
     };
 
@@ -725,7 +728,7 @@ mod tests {
         let lit = i64_lit();
 
         let out = checker.infer_expr(Env::new(), Expr::I64(lit.clone()));
-        assert_eq!(out, (GenWith::empty(Expr::I64(lit)), Type::INT))
+        assert_eq!(out, (Qualified::empty(Expr::I64(lit)), Type::INT))
     }
 
     #[test]
@@ -734,7 +737,7 @@ mod tests {
 
         let lit = f64_lit();
         let out = checker.infer_expr(Env::new(), Expr::F64(lit.clone()));
-        assert_eq!(out, (GenWith::empty(Expr::F64(lit)), Type::DOUBLE));
+        assert_eq!(out, (Qualified::empty(Expr::F64(lit)), Type::DOUBLE));
     }
 
     #[test]
@@ -744,7 +747,7 @@ mod tests {
         let lit = char_lit();
 
         let out = checker.infer_expr(Env::new(), Expr::Char(lit.clone()));
-        assert_eq!(out, (GenWith::empty(Expr::Char(lit)), Type::USV));
+        assert_eq!(out, (Qualified::empty(Expr::Char(lit)), Type::USV));
     }
 
     #[test]
@@ -758,7 +761,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::empty(Expr::String(lit)),
+                Qualified::empty(Expr::String(lit)),
                 Type::List(Box::new(Type::USV))
             )
         );
@@ -776,7 +779,7 @@ mod tests {
 
         assert_eq!(
             out,
-            (GenWith::empty(Expr::Ident(TypedVar(var, typ.clone()))), typ)
+            (Qualified::empty(Expr::Ident(TypedVar(var, typ.clone()))), typ)
         );
     }
 
@@ -804,7 +807,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![Constraint::TypeEqual {
                         expected: Type::UnifiableVar(TyUniVar(2)),
                         got: Type::UnifiableVar(TyUniVar(0))
@@ -844,7 +847,7 @@ mod tests {
 
         assert_eq!(
             out,
-            GenWith::new(
+            Qualified::new(
                 vec![
                     Constraint::TypeEqual {
                         expected: Type::BOOL,
@@ -892,7 +895,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![Constraint::TypeEqual {
                         expected: Type::Fun(FnType {
                             args: vec![Type::INT, Type::INT],
@@ -925,7 +928,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![],
                     Expr::Group(Box::new(Group {
                         value: Expr::String(expr),
@@ -951,7 +954,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![Constraint::TypeEqual {
                         expected: Type::List(Box::new(Type::USV)),
                         got: Type::USV,
@@ -988,7 +991,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![Constraint::IsIn(TyClass::Num, Type::INT)],
                     unary(lit, UnaryOp::Nneg)
                 ),
@@ -1002,7 +1005,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![Constraint::TypeEqual {
                         expected: Type::INT,
                         got: Type::INT
@@ -1019,7 +1022,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![Constraint::TypeEqual {
                         expected: Type::BOOL,
                         got: Type::INT,
@@ -1111,7 +1114,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![
                         Constraint::TypeEqual {
                             expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1227,7 +1230,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![
                         Constraint::TypeEqual {
                             expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1339,7 +1342,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![
                         Constraint::TypeEqual {
                             expected: mk_fn(
@@ -1417,7 +1420,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                GenWith::new(
+                Qualified::new(
                     vec![
                         // If condition is required to be a boolean
                         Constraint::TypeEqual {
@@ -1482,7 +1485,7 @@ mod tests {
         let (res, ty) = checker.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
-            GenWith::new(
+            Qualified::new(
                 vec![
                     Constraint::TypeEqual {
                         expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1560,7 +1563,7 @@ mod tests {
         let (res, ty) = checker.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
-            GenWith::new(
+            Qualified::new(
                 vec![
                     Constraint::TypeEqual {
                         expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1631,7 +1634,7 @@ mod tests {
         let (res, ty) = checker.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
-            GenWith::new(
+            Qualified::new(
                 vec![
                     Constraint::TypeEqual {
                         expected: Type::UnifiableVar(TyUniVar(1)),
