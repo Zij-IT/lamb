@@ -133,12 +133,12 @@ impl TypeInference {
 
         (
             Qualified::constrained(
-                cons,
                 Expr::Call(Box::new(Call {
                     callee: fn_out.item,
                     args: asts,
                     span: call.span,
                 })),
+                cons,
             ),
             ret_typ,
         )
@@ -170,12 +170,12 @@ impl TypeInference {
 
         (
             Qualified::constrained(
-                idxee_out.cons,
                 Expr::Index(Box::new(Index {
                     lhs: idxee_out.item,
                     rhs: index_out.item,
                     span: idx.span,
                 })),
+                idxee_out.cons,
             ),
             Type::UnifiableVar(list_elem_ty),
         )
@@ -189,11 +189,11 @@ impl TypeInference {
         let (res, ty) = self.infer_expr(env, group.value);
         (
             Qualified::constrained(
-                res.cons,
                 Expr::Group(Box::new(Group {
                     value: res.item,
                     span: group.span,
                 })),
+                res.cons,
             ),
             ty,
         )
@@ -221,8 +221,8 @@ impl TypeInference {
 
         (
             Qualified::constrained(
-                cons,
                 Expr::List(List { values: asts, span: list.span }),
+                cons,
             ),
             Type::List(Box::new(first_ty)),
         )
@@ -249,13 +249,13 @@ impl TypeInference {
 
         (
             Qualified::constrained(
-                cons,
                 Expr::Unary(Box::new(Unary {
                     rhs: out.item,
                     op,
                     span,
                     op_span,
                 })),
+                cons,
             ),
             // Each UnaryOp returns the same type as the original type. Each
             // one is roughly `a -> a`
@@ -467,7 +467,7 @@ impl TypeInference {
             op_span: binary.op_span,
         };
 
-        (Qualified::constrained(cons, Expr::Binary(Box::new(bin))), ty)
+        (Qualified::constrained(Expr::Binary(Box::new(bin)), cons), ty)
     }
 
     fn infer_block(
@@ -478,12 +478,12 @@ impl TypeInference {
         let (res, ty) = self.infer_block_raw(env, block);
         (
             Qualified::constrained(
-                res.cons,
                 Expr::Block(Box::new(Block {
                     statements: res.item.statements,
                     value: res.item.value,
                     span: res.item.span,
                 })),
+                res.cons,
             ),
             ty,
         )
@@ -514,8 +514,8 @@ impl TypeInference {
 
         (
             Qualified::constrained(
-                cons,
                 Block { statements: stmts, value: val, span },
+                cons,
             ),
             ty,
         )
@@ -572,13 +572,13 @@ impl TypeInference {
 
         (
             Qualified::constrained(
-                cons,
                 Expr::If(Box::new(If {
                     cond: first,
                     elif: elifs,
                     els_,
                     span,
                 })),
+                cons,
             ),
             body_ty,
         )
@@ -609,7 +609,7 @@ impl TypeInference {
         };
 
         let ret = Expr::Return(Box::new(Return { value, span }));
-        (Qualified::constrained(cons, ret), Type::NEVER)
+        (Qualified::constrained(ret, cons), Type::NEVER)
     }
 
     fn process_stmt(
@@ -664,8 +664,8 @@ impl TypeInference {
         }
 
         Qualified::constrained(
-            cons,
             Statement::Define(Define { ident, typ, value: out.item, span }),
+            cons,
         )
     }
 
@@ -677,8 +677,8 @@ impl TypeInference {
         let ExprStatement { expr, span } = expr;
         let (out, _ty) = self.infer_expr(env, expr);
         Qualified::constrained(
-            out.cons,
             Statement::Expr(ExprStatement { expr: out.item, span }),
+            out.cons,
         )
     }
 
@@ -839,10 +839,6 @@ mod tests {
             out,
             (
                 Qualified::constrained(
-                    vec![Constraint::TypeEqual {
-                        expected: Type::UnifiableVar(TyUniVar(2)),
-                        got: Type::UnifiableVar(TyUniVar(0))
-                    }],
                     Expr::FnDef(Box::new(FnDef {
                         args: vec![
                             TypedVar(Var(0), Type::UnifiableVar(TyUniVar(0))),
@@ -854,7 +850,11 @@ mod tests {
                         )),
                         recursive: false,
                         span: SPAN
-                    }))
+                    })),
+                    vec![Constraint::TypeEqual {
+                        expected: Type::UnifiableVar(TyUniVar(2)),
+                        got: Type::UnifiableVar(TyUniVar(0))
+                    }],
                 ),
                 typ
             )
@@ -879,6 +879,11 @@ mod tests {
         assert_eq!(
             out,
             Qualified::constrained(
+                Expr::Index(Box::new(Index {
+                    lhs: Expr::Nil(NilLit { span: SPAN }),
+                    rhs: Expr::Bool(BoolLit { value: false, span: SPAN }),
+                    span: SPAN,
+                })),
                 vec![
                     Constraint::TypeEqual {
                         expected: Type::BOOL,
@@ -895,11 +900,6 @@ mod tests {
                         got: Type::UnifiableVar(TyUniVar(0))
                     }
                 ],
-                Expr::Index(Box::new(Index {
-                    lhs: Expr::Nil(NilLit { span: SPAN }),
-                    rhs: Expr::Bool(BoolLit { value: false, span: SPAN }),
-                    span: SPAN,
-                })),
             ),
         );
     }
@@ -927,13 +927,6 @@ mod tests {
             out,
             (
                 Qualified::constrained(
-                    vec![Constraint::TypeEqual {
-                        expected: Type::Fun(FnType {
-                            args: vec![Type::INT, Type::INT],
-                            ret_type: Box::new(ret_typ.clone())
-                        }),
-                        got: callee_typ.clone(),
-                    }],
                     Expr::Call(Box::new(Call {
                         callee: Expr::Ident(TypedVar(
                             callee_ident,
@@ -942,6 +935,13 @@ mod tests {
                         args: vec![Expr::I64(i64_lit()), Expr::I64(i64_lit())],
                         span: SPAN,
                     })),
+                    vec![Constraint::TypeEqual {
+                        expected: Type::Fun(FnType {
+                            args: vec![Type::INT, Type::INT],
+                            ret_type: Box::new(ret_typ.clone())
+                        }),
+                        got: callee_typ.clone(),
+                    }],
                 ),
                 ret_typ
             ),
@@ -960,11 +960,11 @@ mod tests {
             out,
             (
                 Qualified::constrained(
-                    vec![],
                     Expr::Group(Box::new(Group {
                         value: Expr::String(expr),
                         span: SPAN
                     })),
+                    vec![],
                 ),
                 Type::List(Box::new(Type::USV)),
             ),
@@ -986,10 +986,6 @@ mod tests {
             out,
             (
                 Qualified::constrained(
-                    vec![Constraint::TypeEqual {
-                        expected: Type::List(Box::new(Type::USV)),
-                        got: Type::USV,
-                    }],
                     Expr::List(List {
                         values: vec![
                             Expr::String(str_lit()),
@@ -997,6 +993,10 @@ mod tests {
                         ],
                         span: SPAN
                     }),
+                    vec![Constraint::TypeEqual {
+                        expected: Type::List(Box::new(Type::USV)),
+                        got: Type::USV,
+                    }],
                 ),
                 Type::List(Box::new(Type::List(Box::new(Type::USV)))),
             ),
@@ -1023,8 +1023,8 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    unary(lit, UnaryOp::Nneg),
                     vec![Constraint::IsIn(TyClass::Num, Type::INT)],
-                    unary(lit, UnaryOp::Nneg)
                 ),
                 Type::INT
             )
@@ -1037,11 +1037,11 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    unary(lit, UnaryOp::Bneg),
                     vec![Constraint::TypeEqual {
                         expected: Type::INT,
                         got: Type::INT
                     }],
-                    unary(lit, UnaryOp::Bneg)
                 ),
                 Type::INT
             )
@@ -1054,11 +1054,11 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    unary(lit, UnaryOp::Lnot),
                     vec![Constraint::TypeEqual {
                         expected: Type::BOOL,
                         got: Type::INT,
                     }],
-                    unary(lit, UnaryOp::Lnot)
                 ),
                 Type::INT
             )
@@ -1146,6 +1146,15 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    Block {
+                        statements: vec![
+                            def_id_ty,
+                            call_id_ty(Expr::Nil(nil_lit())),
+                            call_id_ty(Expr::Bool(bool_lit())),
+                        ],
+                        value: None,
+                        span: SPAN
+                    },
                     vec![
                         Constraint::TypeEqual {
                             expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1166,15 +1175,6 @@ mod tests {
                             got: fn_ty.clone(),
                         },
                     ],
-                    Block {
-                        statements: vec![
-                            def_id_ty,
-                            call_id_ty(Expr::Nil(nil_lit())),
-                            call_id_ty(Expr::Bool(bool_lit())),
-                        ],
-                        value: None,
-                        span: SPAN
-                    }
                 ),
                 Type::NIL
             )
@@ -1262,6 +1262,21 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    Block {
+                        statements: vec![
+                            def_id_ty,
+                            call_id_ty(Expr::Nil(nil_lit())),
+                        ],
+                        value: Some(Expr::Call(Box::new(Call {
+                            callee: Expr::Ident(TypedVar(
+                                Var(0),
+                                fn_ty.clone()
+                            )),
+                            args: vec![Expr::Bool(bool_lit())],
+                            span: SPAN,
+                        }))),
+                        span: SPAN
+                    },
                     vec![
                         Constraint::TypeEqual {
                             expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1282,21 +1297,6 @@ mod tests {
                             got: fn_ty.clone(),
                         },
                     ],
-                    Block {
-                        statements: vec![
-                            def_id_ty,
-                            call_id_ty(Expr::Nil(nil_lit())),
-                        ],
-                        value: Some(Expr::Call(Box::new(Call {
-                            callee: Expr::Ident(TypedVar(
-                                Var(0),
-                                fn_ty.clone()
-                            )),
-                            args: vec![Expr::Bool(bool_lit())],
-                            span: SPAN,
-                        }))),
-                        span: SPAN
-                    }
                 ),
                 Type::UnifiableVar(TyUniVar(3))
             )
@@ -1374,6 +1374,18 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    Block {
+                        statements: vec![def_rec_ty],
+                        value: Some(Expr::Call(Box::new(Call {
+                            callee: Expr::Ident(TypedVar(
+                                Var(0),
+                                fn_ty.clone(),
+                            )),
+                            args: vec![Expr::Bool(bool_lit())],
+                            span: SPAN,
+                        }))),
+                        span: SPAN
+                    },
                     vec![
                         Constraint::TypeEqual {
                             expected: mk_fn(
@@ -1401,18 +1413,6 @@ mod tests {
                             ),
                         },
                     ],
-                    Block {
-                        statements: vec![def_rec_ty],
-                        value: Some(Expr::Call(Box::new(Call {
-                            callee: Expr::Ident(TypedVar(
-                                Var(0),
-                                fn_ty.clone(),
-                            )),
-                            args: vec![Expr::Bool(bool_lit())],
-                            span: SPAN,
-                        }))),
-                        span: SPAN
-                    }
                 ),
                 Type::UnifiableVar(TyUniVar(4))
             )
@@ -1452,6 +1452,7 @@ mod tests {
             out,
             (
                 Qualified::constrained(
+                    Expr::If(Box::new(make_if::<TypedVar>())),
                     vec![
                         // If condition is required to be a boolean
                         Constraint::TypeEqual {
@@ -1474,7 +1475,6 @@ mod tests {
                             got: Type::BOOL,
                         },
                     ],
-                    Expr::If(Box::new(make_if::<TypedVar>()))
                 ),
                 Type::BOOL
             )
@@ -1517,16 +1517,6 @@ mod tests {
         assert_eq!(
             res,
             Qualified::constrained(
-                vec![
-                    Constraint::TypeEqual {
-                        expected: Type::UnifiableVar(TyUniVar(1)),
-                        got: Type::BOOL,
-                    },
-                    Constraint::TypeEqual {
-                        expected: Type::UnifiableVar(TyUniVar(1)),
-                        got: Type::UnifiableVar(TyUniVar(0)),
-                    },
-                ],
                 fndef(
                     vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
                     Expr::Block(Box::new(Block {
@@ -1543,7 +1533,17 @@ mod tests {
                         ))),
                         span: SPAN,
                     })),
-                )
+                ),
+                vec![
+                    Constraint::TypeEqual {
+                        expected: Type::UnifiableVar(TyUniVar(1)),
+                        got: Type::BOOL,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::UnifiableVar(TyUniVar(1)),
+                        got: Type::UnifiableVar(TyUniVar(0)),
+                    },
+                ],
             )
         );
 
@@ -1595,16 +1595,6 @@ mod tests {
         assert_eq!(
             res,
             Qualified::constrained(
-                vec![
-                    Constraint::TypeEqual {
-                        expected: Type::UnifiableVar(TyUniVar(1)),
-                        got: Type::BOOL,
-                    },
-                    Constraint::TypeEqual {
-                        expected: Type::UnifiableVar(TyUniVar(1)),
-                        got: Type::NEVER,
-                    },
-                ],
                 fndef(
                     vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
                     Expr::Block(Box::new(Block {
@@ -1620,7 +1610,17 @@ mod tests {
                         value: Some(Expr::Ident(TypedVar(y, Type::NEVER))),
                         span: SPAN,
                     })),
-                )
+                ),
+                vec![
+                    Constraint::TypeEqual {
+                        expected: Type::UnifiableVar(TyUniVar(1)),
+                        got: Type::BOOL,
+                    },
+                    Constraint::TypeEqual {
+                        expected: Type::UnifiableVar(TyUniVar(1)),
+                        got: Type::NEVER,
+                    },
+                ],
             )
         );
 
@@ -1666,6 +1666,16 @@ mod tests {
         assert_eq!(
             res,
             Qualified::constrained(
+                fndef(
+                    vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
+                    Expr::Return(Box::new(Return {
+                        value: Some(Expr::Return(Box::new(Return {
+                            value: None,
+                            span: SPAN,
+                        }))),
+                        span: SPAN,
+                    })),
+                ),
                 vec![
                     Constraint::TypeEqual {
                         expected: Type::UnifiableVar(TyUniVar(1)),
@@ -1680,16 +1690,6 @@ mod tests {
                         got: Type::NEVER,
                     },
                 ],
-                fndef(
-                    vec![TypedVar(x, Type::UnifiableVar(TyUniVar(0)))],
-                    Expr::Return(Box::new(Return {
-                        value: Some(Expr::Return(Box::new(Return {
-                            value: None,
-                            span: SPAN,
-                        }))),
-                        span: SPAN,
-                    })),
-                )
             )
         );
 

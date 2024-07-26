@@ -114,8 +114,8 @@ struct Qualified<T> {
 }
 
 impl<T> Qualified<T> {
-    fn constrained(cons: Vec<Constraint>, ast: T) -> Self {
-        Self { cons, item: ast }
+    fn constrained(item: T, cons: Vec<Constraint>) -> Self {
+        Self { cons, item }
     }
 
     fn unconstrained(t: T) -> Self {

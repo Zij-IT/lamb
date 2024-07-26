@@ -62,13 +62,13 @@ impl TypeInference {
         }
         let bodyres = self.check_expr(env, def.body, *typ.ret_type);
         Qualified::constrained(
-            bodyres.cons,
             Expr::FnDef(Box::new(FnDef {
                 args: new_args,
                 body: bodyres.item,
                 recursive: def.recursive,
                 span: def.span,
             })),
+            bodyres.cons,
         )
     }
 }
@@ -192,10 +192,6 @@ mod tests {
         assert_eq!(
             out,
             GenWith::constrained(
-                vec![Constraint::TypeEqual {
-                    expected: Type::UnifiableVar(TyUniVar(0)),
-                    got: Type::UnifiableVar(TyUniVar(0))
-                }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
                         TypedVar(Var(0), Type::UnifiableVar(TyUniVar(0))),
@@ -208,6 +204,10 @@ mod tests {
                     recursive: false,
                     span: SPAN
                 })),
+                vec![Constraint::TypeEqual {
+                    expected: Type::UnifiableVar(TyUniVar(0)),
+                    got: Type::UnifiableVar(TyUniVar(0))
+                }],
             ),
         );
     }
@@ -234,10 +234,6 @@ mod tests {
         assert_eq!(
             out,
             GenWith::constrained(
-                vec![Constraint::TypeEqual {
-                    expected: Type::INT,
-                    got: Type::INT
-                }],
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
                         TypedVar(Var(0), Type::INT),
@@ -247,6 +243,10 @@ mod tests {
                     recursive: false,
                     span: SPAN
                 })),
+                vec![Constraint::TypeEqual {
+                    expected: Type::INT,
+                    got: Type::INT
+                }],
             ),
         );
     }
