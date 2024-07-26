@@ -13,13 +13,23 @@ impl TypeInference {
         typ: Type,
     ) -> Qualified<Expr<TypedVar>> {
         match (expr, typ) {
-            (Expr::Nil(n), Type::NIL) => Qualified::empty(Expr::Nil(n)),
-            (Expr::I64(i), Type::INT) => Qualified::empty(Expr::I64(i)),
-            (Expr::Char(c), Type::USV) => Qualified::empty(Expr::Char(c)),
-            (Expr::Bool(b), Type::BOOL) => Qualified::empty(Expr::Bool(b)),
-            (Expr::F64(f), Type::DOUBLE) => Qualified::empty(Expr::F64(f)),
+            (Expr::Nil(n), Type::NIL) => {
+                Qualified::unconstrained(Expr::Nil(n))
+            }
+            (Expr::I64(i), Type::INT) => {
+                Qualified::unconstrained(Expr::I64(i))
+            }
+            (Expr::Char(c), Type::USV) => {
+                Qualified::unconstrained(Expr::Char(c))
+            }
+            (Expr::Bool(b), Type::BOOL) => {
+                Qualified::unconstrained(Expr::Bool(b))
+            }
+            (Expr::F64(f), Type::DOUBLE) => {
+                Qualified::unconstrained(Expr::F64(f))
+            }
             (Expr::String(s), Type::List(e)) if *e == Type::USV => {
-                Qualified::empty(Expr::String(s))
+                Qualified::unconstrained(Expr::String(s))
             }
             (Expr::FnDef(def), Type::Fun(typ)) => {
                 self.check_fndef(env, *def, typ)
@@ -112,7 +122,7 @@ mod tests {
         let out =
             checker.check_expr(Env::new(), Expr::I64(lit.clone()), Type::INT);
 
-        assert_eq!(out, GenWith::empty(Expr::I64(lit)))
+        assert_eq!(out, GenWith::unconstrained(Expr::I64(lit)))
     }
 
     #[test]
@@ -127,7 +137,7 @@ mod tests {
             Type::DOUBLE,
         );
 
-        assert_eq!(out, GenWith::empty(Expr::F64(lit)))
+        assert_eq!(out, GenWith::unconstrained(Expr::F64(lit)))
     }
 
     #[test]
@@ -139,7 +149,7 @@ mod tests {
         let out =
             checker.check_expr(Env::new(), Expr::Char(lit.clone()), Type::USV);
 
-        assert_eq!(out, GenWith::empty(Expr::Char(lit)))
+        assert_eq!(out, GenWith::unconstrained(Expr::Char(lit)))
     }
 
     #[test]
@@ -154,7 +164,7 @@ mod tests {
             Type::List(Box::new(Type::USV)),
         );
 
-        assert_eq!(out, GenWith::empty(Expr::String(lit)),);
+        assert_eq!(out, GenWith::unconstrained(Expr::String(lit)),);
     }
 
     #[test]

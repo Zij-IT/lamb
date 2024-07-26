@@ -118,7 +118,7 @@ impl<T> Qualified<T> {
         Self { cons, ast }
     }
 
-    fn empty(t: T) -> Self {
+    fn unconstrained(t: T) -> Self {
         Self { ast: t, cons: vec![] }
     }
 }

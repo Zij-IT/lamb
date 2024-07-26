@@ -17,17 +17,33 @@ impl TypeInference {
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         match expr {
             // The easy cases!
-            Expr::Nil(n) => (Qualified::empty(Expr::Nil(n)), Type::NIL),
-            Expr::I64(i) => (Qualified::empty(Expr::I64(i)), Type::INT),
-            Expr::F64(f) => (Qualified::empty(Expr::F64(f)), Type::DOUBLE),
-            Expr::Char(c) => (Qualified::empty(Expr::Char(c)), Type::USV),
-            Expr::Bool(b) => (Qualified::empty(Expr::Bool(b)), Type::BOOL),
+            Expr::Nil(n) => {
+                (Qualified::unconstrained(Expr::Nil(n)), Type::NIL)
+            }
+            Expr::I64(i) => {
+                (Qualified::unconstrained(Expr::I64(i)), Type::INT)
+            }
+            Expr::F64(f) => {
+                (Qualified::unconstrained(Expr::F64(f)), Type::DOUBLE)
+            }
+            Expr::Char(c) => {
+                (Qualified::unconstrained(Expr::Char(c)), Type::USV)
+            }
+            Expr::Bool(b) => {
+                (Qualified::unconstrained(Expr::Bool(b)), Type::BOOL)
+            }
             Expr::Ident(i) => {
                 let ty = env.type_of(i);
-                (Qualified::empty(Expr::Ident(TypedVar(i, ty.clone()))), ty)
+                (
+                    Qualified::unconstrained(Expr::Ident(TypedVar(
+                        i,
+                        ty.clone(),
+                    ))),
+                    ty,
+                )
             }
             Expr::String(s) => (
-                Qualified::empty(Expr::String(s)),
+                Qualified::unconstrained(Expr::String(s)),
                 Type::List(Box::new(Type::USV)),
             ),
             // The harder cases!
@@ -728,7 +744,7 @@ mod tests {
         let lit = i64_lit();
 
         let out = checker.infer_expr(Env::new(), Expr::I64(lit.clone()));
-        assert_eq!(out, (Qualified::empty(Expr::I64(lit)), Type::INT))
+        assert_eq!(out, (Qualified::unconstrained(Expr::I64(lit)), Type::INT))
     }
 
     #[test]
@@ -737,7 +753,10 @@ mod tests {
 
         let lit = f64_lit();
         let out = checker.infer_expr(Env::new(), Expr::F64(lit.clone()));
-        assert_eq!(out, (Qualified::empty(Expr::F64(lit)), Type::DOUBLE));
+        assert_eq!(
+            out,
+            (Qualified::unconstrained(Expr::F64(lit)), Type::DOUBLE)
+        );
     }
 
     #[test]
@@ -747,7 +766,10 @@ mod tests {
         let lit = char_lit();
 
         let out = checker.infer_expr(Env::new(), Expr::Char(lit.clone()));
-        assert_eq!(out, (Qualified::empty(Expr::Char(lit)), Type::USV));
+        assert_eq!(
+            out,
+            (Qualified::unconstrained(Expr::Char(lit)), Type::USV)
+        );
     }
 
     #[test]
@@ -761,7 +783,7 @@ mod tests {
         assert_eq!(
             out,
             (
-                Qualified::empty(Expr::String(lit)),
+                Qualified::unconstrained(Expr::String(lit)),
                 Type::List(Box::new(Type::USV))
             )
         );
@@ -779,7 +801,13 @@ mod tests {
 
         assert_eq!(
             out,
-            (Qualified::empty(Expr::Ident(TypedVar(var, typ.clone()))), typ)
+            (
+                Qualified::unconstrained(Expr::Ident(TypedVar(
+                    var,
+                    typ.clone()
+                ))),
+                typ
+            )
         );
     }
 
