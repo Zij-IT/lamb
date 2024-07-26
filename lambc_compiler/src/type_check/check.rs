@@ -65,7 +65,7 @@ impl TypeInference {
             bodyres.cons,
             Expr::FnDef(Box::new(FnDef {
                 args: new_args,
-                body: bodyres.ast,
+                body: bodyres.item,
                 recursive: def.recursive,
                 span: def.span,
             })),

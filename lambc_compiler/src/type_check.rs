@@ -82,7 +82,7 @@ impl<'s> TypeChecker<'s> {
         inf.unification(out.cons)?;
 
         let (mut unbound, ty) = inf.substitute(ty);
-        let (ast_unbound, expr) = inf.substitute_expr(out.ast);
+        let (ast_unbound, expr) = inf.substitute_expr(out.item);
         unbound.extend(ast_unbound);
 
         Ok((expr, TypeScheme { unbound, ty }))
@@ -110,16 +110,16 @@ impl TypeInference {
 #[derive(Debug, Eq, PartialEq)]
 struct Qualified<T> {
     cons: Vec<Constraint>,
-    ast: T,
+    item: T,
 }
 
 impl<T> Qualified<T> {
     fn new(cons: Vec<Constraint>, ast: T) -> Self {
-        Self { cons, ast }
+        Self { cons, item: ast }
     }
 
     fn unconstrained(t: T) -> Self {
-        Self { ast: t, cons: vec![] }
+        Self { item: t, cons: vec![] }
     }
 }
 

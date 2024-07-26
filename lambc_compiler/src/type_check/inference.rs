@@ -88,9 +88,9 @@ impl TypeInference {
         (
             Qualified {
                 cons: body_out.cons,
-                ast: Expr::FnDef(Box::new(FnDef {
+                item: Expr::FnDef(Box::new(FnDef {
                     args: new_args,
-                    body: body_out.ast,
+                    body: body_out.item,
                     recursive,
                     span,
                 })),
@@ -118,7 +118,7 @@ impl TypeInference {
         for arg in call.args {
             let (out, typ) = self.infer_expr(env.clone(), arg);
             cons.extend(out.cons);
-            asts.push(out.ast);
+            asts.push(out.item);
             typs.push(typ);
         }
 
@@ -135,7 +135,7 @@ impl TypeInference {
             Qualified::new(
                 cons,
                 Expr::Call(Box::new(Call {
-                    callee: fn_out.ast,
+                    callee: fn_out.item,
                     args: asts,
                     span: call.span,
                 })),
@@ -172,8 +172,8 @@ impl TypeInference {
             Qualified::new(
                 idxee_out.cons,
                 Expr::Index(Box::new(Index {
-                    lhs: idxee_out.ast,
-                    rhs: index_out.ast,
+                    lhs: idxee_out.item,
+                    rhs: index_out.item,
                     span: idx.span,
                 })),
             ),
@@ -191,7 +191,7 @@ impl TypeInference {
             Qualified::new(
                 res.cons,
                 Expr::Group(Box::new(Group {
-                    value: res.ast,
+                    value: res.item,
                     span: group.span,
                 })),
             ),
@@ -208,7 +208,7 @@ impl TypeInference {
         let (mut cons, mut asts, first_ty) = match values.next() {
             Some(e) => {
                 let (out, res) = self.infer_expr(env.clone(), e);
-                (out.cons, vec![out.ast], res)
+                (out.cons, vec![out.item], res)
             }
             None => (vec![], vec![], Type::UnifiableVar(self.fresh_ty_var())),
         };
@@ -216,7 +216,7 @@ impl TypeInference {
         for val in values {
             let out = self.check_expr(env.clone(), val, first_ty.clone());
             cons.extend(out.cons);
-            asts.push(out.ast);
+            asts.push(out.item);
         }
 
         (
@@ -251,7 +251,7 @@ impl TypeInference {
             Qualified::new(
                 cons,
                 Expr::Unary(Box::new(Unary {
-                    rhs: out.ast,
+                    rhs: out.item,
                     op,
                     span,
                     op_span,
@@ -284,7 +284,7 @@ impl TypeInference {
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
 
-                (lhs.ast, rhs.ast, cons, ret)
+                (lhs.item, rhs.item, cons, ret)
             }
             BinaryOp::Appr => {
                 let arg = Type::UnifiableVar(self.fresh_ty_var());
@@ -299,7 +299,7 @@ impl TypeInference {
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
 
-                (lhs.ast, rhs.ast, cons, ret)
+                (lhs.item, rhs.item, cons, ret)
             }
             // These operators require that both the `lhs` and `rhs` are both
             // unary functions where the output of the `[l|r]hs` is the only
@@ -324,7 +324,7 @@ impl TypeInference {
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
 
-                (lhs.ast, rhs.ast, cons, lhs_ret)
+                (lhs.item, rhs.item, cons, lhs_ret)
             }
             BinaryOp::Cpsr => {
                 let lhs_arg = Type::UnifiableVar(self.fresh_ty_var());
@@ -346,7 +346,7 @@ impl TypeInference {
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
 
-                (lhs.ast, rhs.ast, cons, rhs_ret)
+                (lhs.item, rhs.item, cons, rhs_ret)
             }
             // These operators always return boolean values, regardless of the
             // type of the `lhs` and `rhs` value
@@ -367,7 +367,7 @@ impl TypeInference {
                     got: rhs_ty,
                 });
 
-                (lhs.ast, rhs.ast, cons, Type::BOOL)
+                (lhs.item, rhs.item, cons, Type::BOOL)
             }
             // These operators require that their values are of the `int` type
             // and they output a value of type `int`.
@@ -382,7 +382,7 @@ impl TypeInference {
                 let mut cons = lhs.cons;
                 cons.extend(rhs.cons);
 
-                (lhs.ast, rhs.ast, cons, Type::INT)
+                (lhs.item, rhs.item, cons, Type::INT)
             }
             // These operators require that their values are of numerical persuasion
             //
@@ -407,7 +407,7 @@ impl TypeInference {
 
                 cons.push(Constraint::IsIn(TyClass::Addable, lhs_ty.clone()));
 
-                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+                (lhs_out.item, rhs_out.item, cons, lhs_ty)
             }
             BinaryOp::Sub => {
                 let (lhs_out, lhs_ty) =
@@ -423,7 +423,7 @@ impl TypeInference {
                 });
 
                 cons.push(Constraint::IsIn(TyClass::Num, lhs_ty.clone()));
-                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+                (lhs_out.item, rhs_out.item, cons, lhs_ty)
             }
             BinaryOp::Div => {
                 let (lhs_out, lhs_ty) =
@@ -439,7 +439,7 @@ impl TypeInference {
                 });
 
                 cons.push(Constraint::IsIn(TyClass::Num, lhs_ty.clone()));
-                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+                (lhs_out.item, rhs_out.item, cons, lhs_ty)
             }
             BinaryOp::Mul => {
                 let (lhs_out, lhs_ty) =
@@ -455,7 +455,7 @@ impl TypeInference {
                 });
 
                 cons.push(Constraint::IsIn(TyClass::Num, lhs_ty.clone()));
-                (lhs_out.ast, rhs_out.ast, cons, lhs_ty)
+                (lhs_out.item, rhs_out.item, cons, lhs_ty)
             }
         };
 
@@ -480,9 +480,9 @@ impl TypeInference {
             Qualified::new(
                 res.cons,
                 Expr::Block(Box::new(Block {
-                    statements: res.ast.statements,
-                    value: res.ast.value,
-                    span: res.ast.span,
+                    statements: res.item.statements,
+                    value: res.item.value,
+                    span: res.item.span,
                 })),
             ),
             ty,
@@ -500,14 +500,14 @@ impl TypeInference {
         let mut cons = vec![];
         for stmt in statements {
             let out = self.process_stmt(&mut env, stmt);
-            stmts.push(out.ast);
+            stmts.push(out.item);
             cons.extend(out.cons);
         }
 
         let (val, ty) =
             if let Some((out, ty)) = value.map(|v| self.infer_expr(env, v)) {
                 cons.extend(out.cons);
-                (Some(out.ast), ty)
+                (Some(out.item), ty)
             } else {
                 (None, Type::NIL)
             };
@@ -530,8 +530,11 @@ impl TypeInference {
         let cond_out = self.check_expr(env.clone(), cond.cond, Type::BOOL);
         let (body_out, body_ty) = self.infer_block_raw(env.clone(), cond.body);
 
-        let first =
-            IfCond { cond: cond_out.ast, body: body_out.ast, span: cond.span };
+        let first = IfCond {
+            cond: cond_out.item,
+            body: body_out.item,
+            span: cond.span,
+        };
 
         let mut cons = vec![];
         cons.extend(cond_out.cons);
@@ -550,8 +553,8 @@ impl TypeInference {
             });
 
             elifs.push(IfCond {
-                cond: cond_out.ast,
-                body: body_out.ast,
+                cond: cond_out.item,
+                body: body_out.item,
                 span,
             });
         }
@@ -564,7 +567,7 @@ impl TypeInference {
                 got: else_ty.clone(),
             });
 
-            Else { body: body_out.ast, span }
+            Else { body: body_out.item, span }
         });
 
         (
@@ -594,7 +597,7 @@ impl TypeInference {
         let (value, cons) = match value {
             Some(val) => {
                 let res = self.check_expr(env, val, ret_ty);
-                (Some(res.ast), res.cons)
+                (Some(res.item), res.cons)
             }
             None => (
                 None,
@@ -662,7 +665,7 @@ impl TypeInference {
 
         Qualified::new(
             cons,
-            Statement::Define(Define { ident, typ, value: out.ast, span }),
+            Statement::Define(Define { ident, typ, value: out.item, span }),
         )
     }
 
@@ -675,7 +678,7 @@ impl TypeInference {
         let (out, _ty) = self.infer_expr(env, expr);
         Qualified::new(
             out.cons,
-            Statement::Expr(ExprStatement { expr: out.ast, span }),
+            Statement::Expr(ExprStatement { expr: out.item, span }),
         )
     }
 
