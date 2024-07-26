@@ -1,6 +1,6 @@
 use crate::name_res::Var;
 
-use super::Type;
+use super::{Qualified, Type};
 
 #[derive(Clone)]
 pub struct Env {
@@ -16,7 +16,8 @@ impl Env {
         self.inner[&v].clone()
     }
 
-    pub fn add_type(&mut self, v: Var, t: Type) -> Option<Type> {
-        self.inner.insert(v, t)
+    pub fn add_type(&mut self, v: Var, t: Qualified<Type>) -> Option<Type> {
+        assert!(t.cons.is_empty());
+        self.inner.insert(v, t.item)
     }
 }

@@ -57,7 +57,7 @@ impl TypeInference {
         assert_eq!(def.args.len(), typ.args.len());
         let mut new_args = Vec::with_capacity(typ.args.len());
         for (ty, arg) in typ.args.into_iter().zip(def.args.into_iter()) {
-            env.add_type(arg, ty.clone());
+            env.add_type(arg, Qualified::unconstrained(ty.clone()));
             new_args.push(TypedVar(arg, ty));
         }
         let bodyres = self.check_expr(env, def.body, *typ.ret_type);

@@ -75,7 +75,10 @@ impl TypeInference {
             let typ = self.fresh_ty_var();
             typs.push(Type::UnifiableVar(typ));
             new_args.push(TypedVar(*arg, Type::UnifiableVar(typ)));
-            env.add_type(*arg, Type::UnifiableVar(typ));
+            env.add_type(
+                *arg,
+                Qualified::unconstrained(Type::UnifiableVar(typ)),
+            );
         }
 
         // Return types need to have access to the return type, so that the value
@@ -634,7 +637,10 @@ impl TypeInference {
         let recursive = value.is_recursive();
         if recursive {
             let tvar = self.fresh_ty_var();
-            env.add_type(ident, Type::UnifiableVar(tvar));
+            env.add_type(
+                ident,
+                Qualified::unconstrained(Type::UnifiableVar(tvar)),
+            );
         }
 
         let (out, inferred_ty) = self.infer_expr(env.clone(), value);
@@ -655,7 +661,9 @@ impl TypeInference {
 
         // If recursive, we need to extract out the initial type, and constrain
         // the initial unknown type to the inferred type.
-        let old = env.add_type(ident.0, ident.1.clone());
+        let old =
+            env.add_type(ident.0, Qualified::unconstrained(ident.1.clone()));
+
         if recursive {
             cons.push(Constraint::TypeEqual {
                 expected: old.unwrap(),
@@ -799,7 +807,7 @@ mod tests {
         let typ = Type::UnifiableVar(TyUniVar(0));
         let var = Var(0);
         let mut env = Env::new();
-        env.add_type(var, typ.clone());
+        env.add_type(var, Qualified::unconstrained(typ.clone()));
         let out = checker.infer_expr(env, Expr::Ident(var));
 
         assert_eq!(
@@ -913,7 +921,10 @@ mod tests {
         let ret_typ = Type::UnifiableVar(TyUniVar(0));
 
         let mut env = Env::new();
-        env.add_type(callee_ident, callee_typ.clone());
+        env.add_type(
+            callee_ident,
+            Qualified::unconstrained(callee_typ.clone()),
+        );
 
         let call = Call {
             callee: Expr::Ident(callee_ident),
