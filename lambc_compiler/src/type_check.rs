@@ -61,6 +61,7 @@ pub struct FnType {
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TypeScheme {
     unbound: HashSet<TyRigVar>,
+    constraints: Vec<Constraint>,
     ty: Type,
 }
 
@@ -88,13 +89,15 @@ impl<'s> TypeChecker<'s> {
     ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
         let mut inf = TypeInference::new();
         let (out, ty) = inf.infer_expr(env, expr);
-        inf.unification(out.cons)?;
+        inf.unification(out.cons.clone())?;
 
         let (mut unbound, ty) = inf.substitute(ty);
         let (ast_unbound, expr) = inf.substitute_expr(out.item);
         unbound.extend(ast_unbound);
 
-        Ok((expr, TypeScheme { unbound, ty }))
+        let reduced = todo!("Substitute {:?}", out.cons);
+
+        Ok((expr, TypeScheme { unbound, constraints: reduced, ty }))
     }
 }
 
@@ -117,7 +120,7 @@ impl TypeInference {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-struct Qualified<T> {
+pub struct Qualified<T> {
     cons: Vec<Constraint>,
     item: T,
 }
@@ -132,7 +135,7 @@ impl<T> Qualified<T> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Constraint {
     IsIn(TyClass, Type),
     TypeEqual { expected: Type, got: Type },
@@ -242,6 +245,7 @@ mod test {
         assert_eq!(
             scheme,
             TypeScheme {
+                constraints: vec![],
                 unbound: set![a],
                 ty: Type::Fun(FnType {
                     args: vec![Type::RigidVar(a)],
@@ -293,6 +297,7 @@ mod test {
         assert_eq!(
             scheme,
             TypeScheme {
+                constraints: vec![],
                 unbound: set![a, b],
                 ty: Type::Fun(FnType {
                     args: vec![Type::RigidVar(a)],
@@ -343,6 +348,7 @@ mod test {
         assert_eq!(
             scheme,
             TypeScheme {
+                constraints: vec![],
                 unbound: set![a, b, c],
                 ty: Type::fun(
                     vec![x_ty],

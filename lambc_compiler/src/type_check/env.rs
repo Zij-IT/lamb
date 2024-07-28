@@ -21,9 +21,9 @@ impl Env {
         v: Var,
         t: Qualified<Type>,
     ) -> Option<TypeScheme> {
-        assert!(t.cons.is_empty());
         let scheme = TypeScheme {
             unbound: std::collections::HashSet::new(),
+            constraints: t.cons,
             ty: t.item,
         };
 
