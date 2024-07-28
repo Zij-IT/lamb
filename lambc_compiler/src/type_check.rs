@@ -78,9 +78,16 @@ impl<'s> TypeChecker<'s> {
         &self,
         expr: Expr<Var>,
     ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
-        let mut inf = TypeInference::new();
+        self.infer_with_env(Env::new(), expr)
+    }
 
-        let (out, ty) = inf.infer_expr(Env::new(), expr);
+    pub fn infer_with_env(
+        &self,
+        env: Env,
+        expr: Expr<Var>,
+    ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
+        let mut inf = TypeInference::new();
+        let (out, ty) = inf.infer_expr(env, expr);
         inf.unification(out.cons)?;
 
         let (mut unbound, ty) = inf.substitute(ty);
