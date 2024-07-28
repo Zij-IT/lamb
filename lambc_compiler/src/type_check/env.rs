@@ -29,4 +29,12 @@ impl Env {
 
         self.inner.insert(v, scheme)
     }
+
+    pub fn add_scheme(
+        &mut self,
+        v: Var,
+        scheme: TypeScheme,
+    ) -> Option<TypeScheme> {
+        self.inner.insert(v, scheme)
+    }
 }

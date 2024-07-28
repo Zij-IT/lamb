@@ -200,10 +200,10 @@ impl TyClass {
 mod test {
     use std::collections::HashSet;
 
-    use lambc_parse::{Call, Expr, FnDef, NilLit, Span};
+    use lambc_parse::{BoolLit, Call, Expr, FnDef, NilLit, Span};
     use pretty_assertions::assert_eq;
 
-    use super::TypeChecker;
+    use super::{env::Env, TypeChecker};
     use crate::{
         name_res::Var,
         type_check::{
@@ -217,10 +217,19 @@ mod test {
 
     macro_rules! set {
         ($($expr:expr),*$(,)?) => {{
+            #[allow(unused_mut)]
             let mut x = HashSet::new();
             $(x.insert($expr);)*
             x
         }};
+    }
+
+    fn nil_lit() -> NilLit {
+        NilLit { span: SPAN }
+    }
+
+    fn bool_lit() -> BoolLit {
+        BoolLit { value: false, span: SPAN }
     }
 
     fn fndef<T>(args: Vec<T>, body: Expr<T>) -> Expr<T> {
@@ -414,5 +423,48 @@ mod test {
                 Type::NIL,
             ))
         )
+    }
+
+    #[test]
+    fn infers_generalized_def() {
+        let id = Var(0);
+        let mut env = Env::new();
+        env.add_scheme(
+            id,
+            TypeScheme {
+                unbound: set![TyRigVar(3)],
+                constraints: vec![],
+                ty: Type::fun(
+                    vec![Type::RigidVar(TyRigVar(0))],
+                    Type::RigidVar(TyRigVar(0)),
+                ),
+            },
+        );
+
+        let x = Var(1);
+        let idexpr = fndef(vec![x], Expr::Ident(x));
+        let type_expr_pair = vec![
+            (Expr::Bool(bool_lit()), Expr::Bool(bool_lit()), Type::BOOL),
+            (Expr::Nil(nil_lit()), Expr::Nil(nil_lit()), Type::NIL),
+        ];
+
+        let mut state = State::default();
+        let type_checker = TypeChecker::new(&mut state);
+
+        for (var_expr, ty_expr, ty) in type_expr_pair {
+            let idcall = call(idexpr.clone(), vec![var_expr]);
+            let (expr, scheme) = type_checker
+                .infer_with_env(env.clone(), idcall)
+                .expect("Inference to succeed");
+
+            let typed_x = TypedVar(x, ty.clone());
+            let typed_id = fndef(vec![typed_x.clone()], Expr::Ident(typed_x));
+
+            assert_eq!(expr, call(typed_id, vec![ty_expr]));
+            assert_eq!(
+                scheme,
+                TypeScheme { unbound: set![], constraints: vec![], ty: ty }
+            );
+        }
     }
 }
