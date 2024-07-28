@@ -27,8 +27,8 @@ impl<'a> Instantiate<'a> {
     }
 
     pub fn scheme(&self, scheme: TypeScheme) -> Qualified<Type> {
-        let TypeScheme { unbound: _, ty } = scheme;
-        Qualified::unconstrained(self.ty(ty))
+        let TypeScheme { unbound: _, ty, constraints } = scheme;
+        Qualified::constrained(self.ty(ty), constraints)
     }
 
     fn ty(&self, ty: Type) -> Type {

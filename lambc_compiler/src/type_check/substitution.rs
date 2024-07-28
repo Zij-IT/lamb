@@ -5,7 +5,7 @@ use lambc_parse::{
     IfCond, Index, List, Statement, Unary,
 };
 
-use super::{FnType, TyRigVar, TyUniVar, Type, TypeInference};
+use super::{Constraint, FnType, TyRigVar, TyUniVar, Type, TypeInference};
 use crate::type_check::TypedVar;
 
 impl TypeInference {
@@ -52,6 +52,34 @@ impl TypeInference {
                 )
             }
         }
+    }
+
+    pub(super) fn substitute_constraints(
+        &mut self,
+        constraints: Vec<Constraint>,
+    ) -> (HashSet<TyRigVar>, Vec<Constraint>) {
+        constraints
+            .into_iter()
+            .map(|con| match con {
+                Constraint::IsIn(tc, ty) => {
+                    let (hs, ty) = self.substitute(ty);
+                    (hs, Constraint::IsIn(tc, ty))
+                }
+                Constraint::TypeEqual { expected, got } => {
+                    let (mut hse, expected) = self.substitute(expected);
+                    let (hsg, got) = self.substitute(got);
+                    hse.extend(hsg);
+                    (hse, Constraint::TypeEqual { expected, got })
+                }
+            })
+            .fold(
+                Default::default(),
+                |(mut hs, mut vec), (next_hs, next_vec)| {
+                    hs.extend(next_hs);
+                    vec.push(next_vec);
+                    (hs, vec)
+                },
+            )
     }
 
     pub(super) fn substitute_expr(

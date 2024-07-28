@@ -95,8 +95,11 @@ impl<'s> TypeChecker<'s> {
         let (ast_unbound, expr) = inf.substitute_expr(out.item);
         unbound.extend(ast_unbound);
 
-        let reduced = todo!("Substitute {:?}", out.cons);
+        let (con_unbound, cons) = inf.substitute_constraints(out.cons);
+        let ambiguities = con_unbound.difference(&unbound).count();
+        assert_eq!(ambiguities, 0);
 
+        let reduced = inf.reduce_constraints(&unbound, cons);
         Ok((expr, TypeScheme { unbound, constraints: reduced, ty }))
     }
 }
@@ -115,6 +118,37 @@ impl TypeInference {
             subst_unifiers_to_tyvars: Default::default(),
             next_tyvar: 0,
             ret_type: Default::default(),
+        }
+    }
+
+    fn reduce_constraints(
+        &self,
+        unbound: &HashSet<TyRigVar>,
+        cons: Vec<Constraint>,
+    ) -> Vec<Constraint> {
+        cons.into_iter()
+            .filter(|c| match c {
+                Constraint::IsIn(_, t1) => self.has_unbound(unbound, t1),
+                // This is post unification, and any `TypeEqual` would have resulted
+                // in a type being inferred to this type. Thus, we don't need to keep
+                // these restraints.
+                Constraint::TypeEqual { expected: _, got: _ } => false,
+            })
+            .collect()
+    }
+
+    fn has_unbound(&self, unbound: &HashSet<TyRigVar>, ty: &Type) -> bool {
+        match ty {
+            Type::Con(_) => false,
+            Type::RigidVar(rig) => unbound.contains(rig),
+            Type::List(elem_ty) => self.has_unbound(unbound, &elem_ty),
+            Type::Fun(f) => {
+                f.args.iter().any(|t| self.has_unbound(unbound, t))
+                    || self.has_unbound(unbound, &f.ret_type)
+            }
+            Type::UnifiableVar(_) => {
+                unreachable!("Should not occur post unification")
+            }
         }
     }
 }
