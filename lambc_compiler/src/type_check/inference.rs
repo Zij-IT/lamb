@@ -1660,7 +1660,6 @@ mod tests {
         }
 
         let x = Var(u32::MAX - 0);
-        let y = Var(u32::MAX - 1);
 
         // fn(x) -> return return;
         let Expr::FnDef(test) = fndef(

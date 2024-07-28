@@ -65,6 +65,7 @@ pub struct TypeScheme {
 }
 
 pub struct TypeChecker<'s> {
+    #[allow(dead_code)]
     state: &'s mut State,
 }
 
