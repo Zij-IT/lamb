@@ -467,4 +467,73 @@ mod test {
             );
         }
     }
+
+    #[test]
+    fn infers_partial_scheme() {
+        // func(a, b) -> nil;
+        //
+        // This `Var` and the rigid variables aren't inferred, but are set by the scheme,
+        // and thus there value is customizable.
+        let func = Var(u32::MAX);
+        let rig_a = TyRigVar(u32::MAX);
+        let rig_b = TyRigVar(u32::MAX - 1);
+        let func_type = TypeScheme {
+            unbound: set![rig_a, rig_b],
+            constraints: vec![],
+            ty: Type::fun(
+                vec![Type::RigidVar(rig_a), Type::RigidVar(rig_b)],
+                Type::NIL,
+            ),
+        };
+
+        let mut env = Env::new();
+        env.add_scheme(func, func_type);
+
+        // fn(a) -> func(a, 1);
+        //
+        // This `Var` also doesn't matter, but cannot conflict with any other vars, but
+        // is also customizable.
+        let param_a = Var(u32::MAX - 1);
+        let def = fndef(
+            vec![param_a],
+            call(
+                Expr::Ident(func),
+                vec![Expr::Ident(param_a), Expr::Nil(nil_lit())],
+            ),
+        );
+
+        let mut state = State::default();
+        let type_checker = TypeChecker::new(&mut state);
+        let (expr, scheme) = type_checker
+            .infer_with_env(env.clone(), def)
+            .expect("Inference to succeed");
+
+        // This rigid variables is inferred, and thus starts at 0
+        let rigvar_a = TyRigVar(0);
+        let typeof_a = Type::RigidVar(rigvar_a);
+        let typed_a = TypedVar(param_a, typeof_a.clone());
+
+        let typed_func =
+            Type::fun(vec![typeof_a.clone(), Type::NIL], Type::NIL);
+
+        assert_eq!(
+            expr,
+            fndef(
+                vec![typed_a.clone()],
+                call(
+                    Expr::Ident(TypedVar(func, typed_func)),
+                    vec![Expr::Ident(typed_a), Expr::Nil(nil_lit())],
+                ),
+            )
+        );
+
+        assert_eq!(
+            scheme,
+            TypeScheme {
+                unbound: set![rigvar_a],
+                constraints: vec![],
+                ty: Type::fun(vec![Type::RigidVar(rigvar_a)], Type::NIL),
+            }
+        );
+    }
 }
