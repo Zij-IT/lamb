@@ -236,7 +236,9 @@ impl TyClass {
 mod test {
     use std::collections::HashSet;
 
-    use lambc_parse::{BoolLit, Call, Define, Expr, FnDef, NilLit, Span};
+    use lambc_parse::{
+        Binary, BinaryOp, BoolLit, Call, Define, Expr, FnDef, NilLit, Span,
+    };
     use pretty_assertions::assert_eq;
 
     use super::{env::Env, TypeChecker};
@@ -614,5 +616,76 @@ mod test {
                 span: SPAN
             }
         )
+    }
+
+    #[test]
+    fn allows_given_type_to_restrict_actual() {
+        let scheme = TypeScheme {
+            unbound: set![],
+            constraints: vec![],
+            ty: Type::fun(vec![Type::BOOL], Type::BOOL),
+        };
+
+        let id = Var(u32::MAX - 2);
+        let x = Var(u32::MAX - 1);
+        let id_value = fndef(vec![x], Expr::Ident(x));
+
+        let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
+
+        let typed_id = TypeChecker::new(&mut State::default())
+            .check_toplevel_def(Env::new(), def, scheme)
+            .expect("Type checking to succeed");
+
+        let typed_x = TypedVar(x, Type::BOOL);
+        let id_value = fndef(vec![typed_x.clone()], Expr::Ident(typed_x));
+
+        assert_eq!(
+            typed_id,
+            Define {
+                ident: TypedVar(id, Type::fun(vec![Type::BOOL], Type::BOOL)),
+                typ: None,
+                value: id_value,
+                span: SPAN
+            }
+        )
+    }
+
+    #[test]
+    fn forbids_inferred_type_from_being_more_general() {
+        let a = TyRigVar(u32::MAX);
+        let scheme = TypeScheme {
+            unbound: set![a],
+            constraints: vec![],
+            ty: Type::fun(vec![Type::RigidVar(a)], Type::RigidVar(a)),
+        };
+
+        let id = Var(u32::MAX - 2);
+        let x = Var(u32::MAX - 1);
+        let id_value = fndef(
+            vec![x],
+            Expr::Binary(Box::new(Binary {
+                lhs: Expr::Ident(x),
+                op: BinaryOp::Add,
+                rhs: Expr::Ident(x),
+                span: SPAN,
+                op_span: SPAN,
+            })),
+        );
+
+        let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
+
+        let err = TypeChecker::new(&mut State::default()).check_toplevel_def(
+            Env::new(),
+            def,
+            scheme,
+        );
+
+        assert_eq!(
+            err,
+            Err(TypeError::NotImpld(
+                TyClass::Addable,
+                Type::UnifiableVar(TyUniVar(0))
+            )),
+        );
     }
 }
