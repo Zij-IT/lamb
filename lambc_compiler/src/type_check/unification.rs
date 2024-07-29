@@ -25,6 +25,7 @@ pub enum TypeError {
     NotImpld(TyClass, Type),
     TypeNotEqual(Type, Type),
     InfiniteType(TyUniVar, Type),
+    NewUnboundTypes,
 }
 
 impl super::TypeInference {

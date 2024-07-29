@@ -8,7 +8,7 @@ mod unification;
 use std::collections::{HashMap, HashSet};
 
 use ena::unify::InPlaceUnificationTable;
-use lambc_parse::Expr;
+use lambc_parse::{Define, Expr};
 
 use self::{env::Env, unification::TypeError};
 use crate::{name_res::Var, State};
@@ -73,6 +73,42 @@ pub struct TypeChecker<'s> {
 impl<'s> TypeChecker<'s> {
     pub fn new(state: &'s mut State) -> Self {
         Self { state }
+    }
+
+    pub fn check_toplevel_def(
+        &self,
+        env: Env,
+        def: Define<Var>,
+        scheme: TypeScheme,
+    ) -> Result<Define<TypedVar>, TypeError> {
+        let mut inf = TypeInference::new();
+        let qual = inf.instantiate(scheme);
+
+        if def.value.is_recursive() {
+            // Nothing to do in the case of a recursive bound because top-level definitions
+            // now require types.
+        }
+
+        let mut qual_value = inf.check_expr(env, def.value, qual.item.clone());
+        qual_value.cons.extend(qual.cons);
+
+        inf.unification(qual_value.cons)?;
+
+        let (expr_unbound, expr) = inf.substitute_expr(qual_value.item);
+        let (ty_unbound, ty) = inf.substitute(qual.item);
+
+        let new_unbound = expr_unbound.difference(&ty_unbound);
+        if new_unbound.count() != 0 {
+            // Handle new generic types being added
+            return Err(TypeError::NewUnboundTypes);
+        }
+
+        Ok(Define {
+            ident: TypedVar(def.ident, ty),
+            typ: None,
+            value: expr,
+            span: def.span,
+        })
     }
 
     pub fn infer(
@@ -200,7 +236,7 @@ impl TyClass {
 mod test {
     use std::collections::HashSet;
 
-    use lambc_parse::{BoolLit, Call, Expr, FnDef, NilLit, Span};
+    use lambc_parse::{BoolLit, Call, Define, Expr, FnDef, NilLit, Span};
     use pretty_assertions::assert_eq;
 
     use super::{env::Env, TypeChecker};
@@ -535,5 +571,48 @@ mod test {
                 ty: Type::fun(vec![Type::RigidVar(rigvar_a)], Type::NIL),
             }
         );
+    }
+
+    #[test]
+    fn checks_toplevel_def() {
+        let a = u32::MAX;
+        let scheme = TypeScheme {
+            unbound: set![TyRigVar(a)],
+            constraints: vec![],
+            ty: Type::fun(
+                vec![Type::RigidVar(TyRigVar(a))],
+                Type::RigidVar(TyRigVar(a)),
+            ),
+        };
+
+        let id = Var(u32::MAX - 2);
+        let x = Var(u32::MAX - 1);
+        let id_value = fndef(vec![x], Expr::Ident(x));
+
+        let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
+
+        let typed_id = TypeChecker::new(&mut State::default())
+            .check_toplevel_def(Env::new(), def, scheme)
+            .expect("Type checking to succeed");
+
+        let rigid_x = TyRigVar(0);
+        let typed_x = TypedVar(x, Type::RigidVar(rigid_x));
+        let id_value = fndef(vec![typed_x.clone()], Expr::Ident(typed_x));
+
+        assert_eq!(
+            typed_id,
+            Define {
+                ident: TypedVar(
+                    id,
+                    Type::fun(
+                        vec![Type::RigidVar(rigid_x)],
+                        Type::RigidVar(rigid_x)
+                    )
+                ),
+                typ: None,
+                value: id_value,
+                span: SPAN
+            }
+        )
     }
 }
