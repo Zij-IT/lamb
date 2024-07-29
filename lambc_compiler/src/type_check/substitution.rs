@@ -5,14 +5,14 @@ use lambc_parse::{
     IfCond, Index, List, Statement, Unary,
 };
 
-use super::{Constraint, FnType, TyRigVar, Type, TypeInference, UnifiableVar};
+use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
 use crate::type_check::TypedVar;
 
 impl TypeInference {
     pub(super) fn substitute(
         &mut self,
         ty: Type,
-    ) -> (HashSet<TyRigVar>, Type) {
+    ) -> (HashSet<RigidVar>, Type) {
         match ty {
             ty @ (Type::Con(..) | Type::RigidVar(..)) => (HashSet::new(), ty),
             Type::List(elem) => {
@@ -57,7 +57,7 @@ impl TypeInference {
     pub(super) fn substitute_constraints(
         &mut self,
         constraints: Vec<Constraint>,
-    ) -> (HashSet<TyRigVar>, Vec<Constraint>) {
+    ) -> (HashSet<RigidVar>, Vec<Constraint>) {
         constraints
             .into_iter()
             .map(|con| match con {
@@ -85,7 +85,7 @@ impl TypeInference {
     pub(super) fn substitute_expr(
         &mut self,
         expr: Expr<TypedVar>,
-    ) -> (HashSet<TyRigVar>, Expr<TypedVar>) {
+    ) -> (HashSet<RigidVar>, Expr<TypedVar>) {
         match expr {
             Expr::Nil(n) => (HashSet::new(), Expr::Nil(n)),
             Expr::I64(i) => (HashSet::new(), Expr::I64(i)),
@@ -232,7 +232,7 @@ impl TypeInference {
     fn substitute_ifcond(
         &mut self,
         ifcond: IfCond<TypedVar>,
-    ) -> (HashSet<TyRigVar>, IfCond<TypedVar>) {
+    ) -> (HashSet<RigidVar>, IfCond<TypedVar>) {
         let IfCond { cond, body, span } = ifcond;
         let (mut unbound, cond) = self.substitute_expr(cond);
         let (un, block) = self.substitute_block_raw(body);
@@ -244,7 +244,7 @@ impl TypeInference {
     fn substitute_block_raw(
         &mut self,
         block: Block<TypedVar>,
-    ) -> (HashSet<TyRigVar>, Block<TypedVar>) {
+    ) -> (HashSet<RigidVar>, Block<TypedVar>) {
         let Block { statements, value, span } = block;
         let mut unbound = HashSet::new();
 
@@ -263,7 +263,7 @@ impl TypeInference {
     fn substitute_stmt(
         &mut self,
         stmt: Statement<TypedVar>,
-    ) -> (HashSet<TyRigVar>, Statement<TypedVar>) {
+    ) -> (HashSet<RigidVar>, Statement<TypedVar>) {
         match stmt {
             Statement::Define(def) => {
                 let Define { ident, typ, value, span } = def;
@@ -296,10 +296,10 @@ impl TypeInference {
         }
     }
 
-    fn tyvar_for_unifier(&mut self, var: UnifiableVar) -> TyRigVar {
+    fn tyvar_for_unifier(&mut self, var: UnifiableVar) -> RigidVar {
         *self.subst_unifiers_to_tyvars.entry(var).or_insert_with(|| {
             self.next_tyvar += 1;
-            TyRigVar(self.next_tyvar - 1)
+            RigidVar(self.next_tyvar - 1)
         })
     }
 }

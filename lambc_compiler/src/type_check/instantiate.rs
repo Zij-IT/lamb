@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::{
-    FnType, Qualified, TyRigVar, Type, TypeInference, TypeScheme, UnifiableVar,
+    FnType, Qualified, RigidVar, Type, TypeInference, TypeScheme, UnifiableVar,
 };
 
 impl TypeInference {
@@ -18,11 +18,11 @@ impl TypeInference {
 }
 
 pub struct Instantiate<'a> {
-    tyvars_to_unif: &'a HashMap<TyRigVar, UnifiableVar>,
+    tyvars_to_unif: &'a HashMap<RigidVar, UnifiableVar>,
 }
 
 impl<'a> Instantiate<'a> {
-    pub fn new(tyvars: &'a HashMap<TyRigVar, UnifiableVar>) -> Self {
+    pub fn new(tyvars: &'a HashMap<RigidVar, UnifiableVar>) -> Self {
         Self { tyvars_to_unif: tyvars }
     }
 

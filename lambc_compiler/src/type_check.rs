@@ -20,12 +20,12 @@ pub struct TypedVar(Var, Type);
 pub struct UnifiableVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
-pub struct TyRigVar(u32);
+pub struct RigidVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
     UnifiableVar(UnifiableVar),
-    RigidVar(TyRigVar),
+    RigidVar(RigidVar),
     Con(Tycon),
     List(Box<Self>),
     Fun(FnType),
@@ -60,7 +60,7 @@ pub struct FnType {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TypeScheme {
-    unbound: HashSet<TyRigVar>,
+    unbound: HashSet<RigidVar>,
     constraints: Vec<Constraint>,
     ty: Type,
 }
@@ -142,7 +142,7 @@ impl<'s> TypeChecker<'s> {
 
 struct TypeInference {
     uni_table: InPlaceUnificationTable<UnifiableVar>,
-    subst_unifiers_to_tyvars: HashMap<UnifiableVar, TyRigVar>,
+    subst_unifiers_to_tyvars: HashMap<UnifiableVar, RigidVar>,
     next_tyvar: u32,
     ret_type: Vec<Type>,
 }
@@ -159,7 +159,7 @@ impl TypeInference {
 
     fn reduce_constraints(
         &self,
-        unbound: &HashSet<TyRigVar>,
+        unbound: &HashSet<RigidVar>,
         cons: Vec<Constraint>,
     ) -> Vec<Constraint> {
         cons.into_iter()
@@ -173,7 +173,7 @@ impl TypeInference {
             .collect()
     }
 
-    fn has_unbound(&self, unbound: &HashSet<TyRigVar>, ty: &Type) -> bool {
+    fn has_unbound(&self, unbound: &HashSet<RigidVar>, ty: &Type) -> bool {
         match ty {
             Type::Con(_) => false,
             Type::RigidVar(rig) => unbound.contains(rig),
@@ -245,7 +245,7 @@ mod test {
     use crate::{
         name_res::Var,
         type_check::{
-            unification::TypeError, FnType, TyClass, TyRigVar, Type,
+            unification::TypeError, FnType, RigidVar, TyClass, Type,
             TypeScheme, TypedVar, UnifiableVar,
         },
         State,
@@ -311,7 +311,7 @@ mod test {
             .infer(ast)
             .expect("Inference to succeed");
 
-        let a = TyRigVar(0);
+        let a = RigidVar(0);
 
         assert_eq!(
             expr,
@@ -357,8 +357,8 @@ mod test {
             .infer(ast)
             .expect("Inference to succeed");
 
-        let a = TyRigVar(0);
-        let b = TyRigVar(1);
+        let a = RigidVar(0);
+        let b = RigidVar(1);
 
         assert_eq!(
             expr,
@@ -415,9 +415,9 @@ mod test {
             .infer(s_comb)
             .expect("Inference to succeed");
 
-        let a = TyRigVar(0);
-        let b = TyRigVar(1);
-        let c = TyRigVar(2);
+        let a = RigidVar(0);
+        let b = RigidVar(1);
+        let c = RigidVar(2);
 
         let x_ty = Type::fun(
             vec![Type::RigidVar(a)],
@@ -473,11 +473,11 @@ mod test {
         env.add_scheme(
             id,
             TypeScheme {
-                unbound: set![TyRigVar(3)],
+                unbound: set![RigidVar(3)],
                 constraints: vec![],
                 ty: Type::fun(
-                    vec![Type::RigidVar(TyRigVar(0))],
-                    Type::RigidVar(TyRigVar(0)),
+                    vec![Type::RigidVar(RigidVar(0))],
+                    Type::RigidVar(RigidVar(0)),
                 ),
             },
         );
@@ -516,8 +516,8 @@ mod test {
         // This `Var` and the rigid variables aren't inferred, but are set by the scheme,
         // and thus there value is customizable.
         let func = Var(u32::MAX);
-        let rig_a = TyRigVar(u32::MAX);
-        let rig_b = TyRigVar(u32::MAX - 1);
+        let rig_a = RigidVar(u32::MAX);
+        let rig_b = RigidVar(u32::MAX - 1);
         let func_type = TypeScheme {
             unbound: set![rig_a, rig_b],
             constraints: vec![],
@@ -550,7 +550,7 @@ mod test {
             .expect("Inference to succeed");
 
         // This rigid variables is inferred, and thus starts at 0
-        let rigvar_a = TyRigVar(0);
+        let rigvar_a = RigidVar(0);
         let typeof_a = Type::RigidVar(rigvar_a);
         let typed_a = TypedVar(param_a, typeof_a.clone());
 
@@ -582,11 +582,11 @@ mod test {
     fn checks_toplevel_def() {
         let a = u32::MAX;
         let scheme = TypeScheme {
-            unbound: set![TyRigVar(a)],
+            unbound: set![RigidVar(a)],
             constraints: vec![],
             ty: Type::fun(
-                vec![Type::RigidVar(TyRigVar(a))],
-                Type::RigidVar(TyRigVar(a)),
+                vec![Type::RigidVar(RigidVar(a))],
+                Type::RigidVar(RigidVar(a)),
             ),
         };
 
@@ -600,7 +600,7 @@ mod test {
             .check_toplevel_def(Env::new(), def, scheme)
             .expect("Type checking to succeed");
 
-        let rigid_x = TyRigVar(0);
+        let rigid_x = RigidVar(0);
         let typed_x = TypedVar(x, Type::RigidVar(rigid_x));
         let id_value = fndef(vec![typed_x.clone()], Expr::Ident(typed_x));
 
@@ -655,7 +655,7 @@ mod test {
 
     #[test]
     fn forbids_inferred_type_from_being_more_general() {
-        let a = TyRigVar(u32::MAX);
+        let a = RigidVar(u32::MAX);
         let scheme = TypeScheme {
             unbound: set![a],
             constraints: vec![],
