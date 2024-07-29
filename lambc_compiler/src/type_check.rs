@@ -17,14 +17,14 @@ use crate::{name_res::Var, State};
 pub struct TypedVar(Var, Type);
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
-pub struct TyUniVar(u32);
+pub struct UnifiableVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub struct TyRigVar(u32);
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
-    UnifiableVar(TyUniVar),
+    UnifiableVar(UnifiableVar),
     RigidVar(TyRigVar),
     Con(Tycon),
     List(Box<Self>),
@@ -141,8 +141,8 @@ impl<'s> TypeChecker<'s> {
 }
 
 struct TypeInference {
-    uni_table: InPlaceUnificationTable<TyUniVar>,
-    subst_unifiers_to_tyvars: HashMap<TyUniVar, TyRigVar>,
+    uni_table: InPlaceUnificationTable<UnifiableVar>,
+    subst_unifiers_to_tyvars: HashMap<UnifiableVar, TyRigVar>,
     next_tyvar: u32,
     ret_type: Vec<Type>,
 }
@@ -245,8 +245,8 @@ mod test {
     use crate::{
         name_res::Var,
         type_check::{
-            unification::TypeError, FnType, TyClass, TyRigVar, TyUniVar, Type,
-            TypeScheme, TypedVar,
+            unification::TypeError, FnType, TyClass, TyRigVar, Type,
+            TypeScheme, TypedVar, UnifiableVar,
         },
         State,
     };
@@ -457,7 +457,10 @@ mod test {
         assert_eq!(
             res,
             Err(TypeError::TypeNotEqual(
-                Type::fun(vec![Type::NIL], Type::UnifiableVar(TyUniVar(1))),
+                Type::fun(
+                    vec![Type::NIL],
+                    Type::UnifiableVar(UnifiableVar(1))
+                ),
                 Type::NIL,
             ))
         )
@@ -684,7 +687,7 @@ mod test {
             err,
             Err(TypeError::NotImpld(
                 TyClass::Addable,
-                Type::UnifiableVar(TyUniVar(0))
+                Type::UnifiableVar(UnifiableVar(0))
             )),
         );
     }

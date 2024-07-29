@@ -5,7 +5,7 @@ use lambc_parse::{
     IfCond, Index, List, Statement, Unary,
 };
 
-use super::{Constraint, FnType, TyRigVar, TyUniVar, Type, TypeInference};
+use super::{Constraint, FnType, TyRigVar, Type, TypeInference, UnifiableVar};
 use crate::type_check::TypedVar;
 
 impl TypeInference {
@@ -296,7 +296,7 @@ impl TypeInference {
         }
     }
 
-    fn tyvar_for_unifier(&mut self, var: TyUniVar) -> TyRigVar {
+    fn tyvar_for_unifier(&mut self, var: UnifiableVar) -> TyRigVar {
         *self.subst_unifiers_to_tyvars.entry(var).or_insert_with(|| {
             self.next_tyvar += 1;
             TyRigVar(self.next_tyvar - 1)

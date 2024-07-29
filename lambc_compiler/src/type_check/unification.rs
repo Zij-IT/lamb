@@ -1,10 +1,10 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{Constraint, FnType, TyClass, TyUniVar, Type};
+use super::{Constraint, FnType, TyClass, Type, UnifiableVar};
 
 impl EqUnifyValue for Type {}
 
-impl UnifyKey for TyUniVar {
+impl UnifyKey for UnifiableVar {
     type Value = Option<Type>;
 
     fn index(&self) -> u32 {
@@ -24,7 +24,7 @@ impl UnifyKey for TyUniVar {
 pub enum TypeError {
     NotImpld(TyClass, Type),
     TypeNotEqual(Type, Type),
-    InfiniteType(TyUniVar, Type),
+    InfiniteType(UnifiableVar, Type),
     NewUnboundTypes,
 }
 
@@ -106,7 +106,7 @@ impl super::TypeInference {
     fn occurs_check(
         &self,
         ty: &Type,
-        tyvar: TyUniVar,
+        tyvar: UnifiableVar,
     ) -> Result<(), TypeError> {
         match ty {
             Type::Con(..) | Type::RigidVar(..) => Ok(()),

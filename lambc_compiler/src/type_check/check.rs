@@ -84,8 +84,8 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::Env, Constraint, FnType, Qualified as GenWith, TyUniVar,
-            TypedVar,
+            env::Env, Constraint, FnType, Qualified as GenWith, TypedVar,
+            UnifiableVar,
         },
     };
 
@@ -180,10 +180,10 @@ mod tests {
 
         let typ = Type::Fun(FnType {
             args: vec![
-                Type::UnifiableVar(TyUniVar(0)),
-                Type::UnifiableVar(TyUniVar(1)),
+                Type::UnifiableVar(UnifiableVar(0)),
+                Type::UnifiableVar(UnifiableVar(1)),
             ],
-            ret_type: Box::new(Type::UnifiableVar(TyUniVar(0))),
+            ret_type: Box::new(Type::UnifiableVar(UnifiableVar(0))),
         });
 
         let out =
@@ -194,19 +194,19 @@ mod tests {
             GenWith::constrained(
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
-                        TypedVar(Var(0), Type::UnifiableVar(TyUniVar(0))),
-                        TypedVar(Var(1), Type::UnifiableVar(TyUniVar(1)))
+                        TypedVar(Var(0), Type::UnifiableVar(UnifiableVar(0))),
+                        TypedVar(Var(1), Type::UnifiableVar(UnifiableVar(1)))
                     ],
                     body: Expr::Ident(TypedVar(
                         Var(0),
-                        Type::UnifiableVar(TyUniVar(0))
+                        Type::UnifiableVar(UnifiableVar(0))
                     )),
                     recursive: false,
                     span: SPAN
                 })),
                 vec![Constraint::TypeEqual {
-                    expected: Type::UnifiableVar(TyUniVar(0)),
-                    got: Type::UnifiableVar(TyUniVar(0))
+                    expected: Type::UnifiableVar(UnifiableVar(0)),
+                    got: Type::UnifiableVar(UnifiableVar(0))
                 }],
             ),
         );
