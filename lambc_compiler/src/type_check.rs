@@ -8,10 +8,10 @@ mod unification;
 use std::collections::{HashMap, HashSet};
 
 use ena::unify::InPlaceUnificationTable;
-use lambc_parse::{Define, Expr};
+use lambc_parse::{Define, Expr, Item, Module};
 
 use self::{env::Env, unification::TypeError};
-use crate::{name_res::Var, State};
+use crate::{name_res::Var, PathRef, State};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct TypedVar(Var, Type);
@@ -73,6 +73,41 @@ pub struct TypeChecker<'s> {
 impl<'s> TypeChecker<'s> {
     pub fn new(state: &'s mut State) -> Self {
         Self { state }
+    }
+
+    pub fn check_module(
+        &self,
+        module: Module<Var, PathRef>,
+    ) -> Result<Module<TypedVar, PathRef>, TypeError> {
+        assert!(module.exports.is_empty());
+        assert!(module.imports.is_empty());
+
+        let Module { exports: _, imports: _, items, path, span } = module;
+        let global = self.build_env(&items);
+        let mut typed_items = Vec::with_capacity(items.len());
+        for item in items {
+            match item {
+                Item::Def(def) => {
+                    let scheme = global.type_of(def.ident);
+                    let ast =
+                        self.check_toplevel_def(global.clone(), def, scheme)?;
+
+                    typed_items.push(Item::Def(ast));
+                }
+            }
+        }
+
+        Ok(Module {
+            exports: vec![],
+            imports: vec![],
+            items: typed_items,
+            path,
+            span,
+        })
+    }
+
+    fn build_env(&self, items: &[Item<Var>]) -> Env {
+        todo!()
     }
 
     pub fn check_toplevel_def(

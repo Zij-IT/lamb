@@ -81,14 +81,18 @@ impl<B: Backend> Compiler<B> {
             return Err(Error::Invalid);
         }
 
+        assert_eq!(parsed.len(), 1);
+
         let mut resolver = name_res::Resolver::new(&mut self.state);
-        let _resolved = resolver.resolve_modules(parsed.clone());
+        let mut resolved = resolver.resolve_modules(parsed.clone());
         if self.state.has_errors() {
             return Err(Error::Invalid);
         }
 
         let checker = TypeChecker::new(&mut self.state);
-        _ = checker.infer(todo());
+        if checker.check_module(resolved.remove(0)).is_err() {
+            return Err(Error::Invalid);
+        }
 
         if self.state.has_errors() {
             return Err(Error::Invalid);
@@ -96,8 +100,4 @@ impl<B: Backend> Compiler<B> {
 
         self.backend.build(&mut self.state, main, parsed)
     }
-}
-
-fn todo<T>() -> T {
-    todo!()
 }
