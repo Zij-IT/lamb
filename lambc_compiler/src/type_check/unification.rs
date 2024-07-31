@@ -26,6 +26,7 @@ pub enum TypeError {
     TypeNotEqual(Type, Type),
     InfiniteType(UnifiableVar, Type),
     NewUnboundTypes,
+    UnknownType,
 }
 
 impl super::TypeInference {

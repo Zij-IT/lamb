@@ -2,6 +2,7 @@ mod check;
 mod env;
 mod inference;
 mod instantiate;
+mod parsing;
 mod substitution;
 mod unification;
 
