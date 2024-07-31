@@ -502,7 +502,7 @@ impl<IdKind> Type<IdKind> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FnType<IdKind> {
     pub args: Vec<Type<IdKind>>,
-    pub gens: Option<Generics<IdKind>>,
+    pub gens: Option<SimpleGenerics<IdKind>>,
     pub ret_type: Option<Type<IdKind>>,
     pub span: Span,
 }
@@ -515,6 +515,18 @@ pub struct NamedType<IdKind> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SimpleGenerics<IdKind> {
+    pub params: Vec<SimpleGeneric<IdKind>>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SimpleGeneric<IdKind> {
+    pub id: IdKind,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Generics<IdKind> {
     pub params: Vec<Generic<IdKind>>,
     pub span: Span,
@@ -522,7 +534,7 @@ pub struct Generics<IdKind> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Generic<IdKind> {
-    pub id: IdKind,
+    pub id: Type<IdKind>,
     pub span: Span,
 }
 

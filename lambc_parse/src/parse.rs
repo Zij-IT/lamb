@@ -9,8 +9,8 @@ use crate::{
     F64Lit, FnDef, FnType, Generic, Generics, Group, I64Base, I64Lit, Ident,
     IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Item,
     Lexer, List, LiteralPattern, Module, NamedType, NilLit, Path, Pattern,
-    RestPattern, Return, Span, Statement, StrLit, StrText, TokKind, Token,
-    Type, Unary, UnaryOp,
+    RestPattern, Return, SimpleGeneric, SimpleGenerics, Span, Statement,
+    StrLit, StrText, TokKind, Token, Type, Unary, UnaryOp,
 };
 
 #[derive(Diagnostic, Debug, ThError, PartialEq, Eq)]
@@ -263,6 +263,9 @@ impl<'a> Parser<'a> {
         // + generic: `list[int]`
         // + function: `fn(int) -> int`
         // + generic function: `fn[t](t) -> t`
+        //
+        // Note: generics specified for a function should be a simple name, and
+        // should *NOT* itself have any type arguments.
         if self.peek1().kind == TokKind::Fn {
             return self.parse_fn_type();
         }
@@ -273,12 +276,12 @@ impl<'a> Parser<'a> {
                 self.parse_node_list(
                     TokKind::OpenBrack,
                     TokKind::CloseBrack,
-                    Self::parse_ident,
+                    Self::parse_type,
                 )
                 .map(|(beg, ids, end)| Generics {
                     params: ids
                         .into_iter()
-                        .map(|i| Generic { span: i.span, id: i })
+                        .map(|ty| Generic { span: ty.span(), id: ty })
                         .collect(),
                     span: Span::connect(beg.span, end.span),
                 })
@@ -302,10 +305,10 @@ impl<'a> Parser<'a> {
                     TokKind::CloseBrack,
                     Self::parse_ident,
                 )
-                .map(|(beg, ids, end)| Generics {
-                    params: ids
+                .map(|(beg, tys, end)| SimpleGenerics {
+                    params: tys
                         .into_iter()
-                        .map(|i| Generic { span: i.span, id: i })
+                        .map(|id| SimpleGeneric { span: id.span, id })
                         .collect(),
                     span: Span::connect(beg.span, end.span),
                 })
