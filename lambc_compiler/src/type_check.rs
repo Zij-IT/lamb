@@ -126,18 +126,25 @@ impl<'s> TypeChecker<'s> {
         }
 
         let mut qual_value = inf.check_expr(env, def.value, qual.item.clone());
-        qual_value.cons.extend(qual.cons);
+        qual_value.cons.extend(qual.cons.clone());
 
-        inf.unification(qual_value.cons)?;
+        inf.unification(qual_value.cons.clone())?;
 
-        let (expr_unbound, expr) = inf.substitute_expr(qual_value.item);
-        let (ty_unbound, ty) = inf.substitute(qual.item);
+        let (mut unbound, ty) = inf.substitute(qual.item);
+        let (ast_unbound, expr) = inf.substitute_expr(qual_value.item);
+        unbound.extend(ast_unbound);
 
-        let new_unbound = expr_unbound.difference(&ty_unbound);
+        let (con_unbound, _cons) = inf.substitute_constraints(qual_value.cons);
+        let ambiguities = con_unbound.difference(&unbound).count();
+        assert_eq!(ambiguities, 0);
+
+        let new_unbound = con_unbound.difference(&unbound);
         if new_unbound.count() != 0 {
             // Handle new generic types being added
             return Err(TypeError::NewUnboundTypes);
         }
+
+        // let reduced = inf.reduce_constraints(&unbound, cons);
 
         Ok(Define {
             ident: TypedVar(def.ident, ty),
