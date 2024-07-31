@@ -9,7 +9,7 @@ mod unification;
 use std::collections::{HashMap, HashSet};
 
 use ena::unify::InPlaceUnificationTable;
-use lambc_parse::{Define, Expr, Item, Module};
+use lambc_parse::{Define, Item, Module};
 
 use self::{env::Env, unification::TypeError};
 use crate::{
