@@ -11,6 +11,9 @@ use std::collections::{HashMap, HashSet};
 use ena::unify::InPlaceUnificationTable;
 use lambc_parse::{Define, Item, Module};
 
+#[cfg(test)]
+use lambc_parse::Expr;
+
 use self::{env::Env, unification::TypeError};
 use crate::{
     name_res::Var,
