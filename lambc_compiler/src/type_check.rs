@@ -12,7 +12,11 @@ use ena::unify::InPlaceUnificationTable;
 use lambc_parse::{Define, Expr, Item, Module};
 
 use self::{env::Env, unification::TypeError};
-use crate::{name_res::Var, PathRef, State};
+use crate::{
+    name_res::Var,
+    type_check::parsing::{TypeEnv, TypeParser},
+    PathRef, State,
+};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct TypedVar(Var, Type);
@@ -84,14 +88,20 @@ impl<'s> TypeChecker<'s> {
         assert!(module.imports.is_empty());
 
         let Module { exports: _, imports: _, items, path, span } = module;
-        let global = self.build_env(&items);
+        let mut inf = TypeInference::new();
+        let global = self.build_env(&mut inf, &items);
+
         let mut typed_items = Vec::with_capacity(items.len());
         for item in items {
             match item {
                 Item::Def(def) => {
                     let scheme = global.type_of(def.ident);
-                    let ast =
-                        self.check_toplevel_def(global.clone(), def, scheme)?;
+                    let ast = self.check_toplevel_def(
+                        &mut inf,
+                        global.clone(),
+                        def,
+                        scheme,
+                    )?;
 
                     typed_items.push(Item::Def(ast));
                 }
@@ -107,17 +117,44 @@ impl<'s> TypeChecker<'s> {
         })
     }
 
-    fn build_env(&self, items: &[Item<Var>]) -> Env {
-        todo!()
+    fn build_env(&self, inf: &mut TypeInference, items: &[Item<Var>]) -> Env {
+        let mut env = Env::new();
+        let mut ty_env = TypeEnv::default();
+        ty_env.add_type(Var::INT, Type::INT);
+        ty_env.add_type(Var::NIL, Type::NIL);
+        ty_env.add_type(Var::USV, Type::USV);
+        ty_env.add_type(Var::BOOL, Type::BOOL);
+        ty_env.add_type(Var::NEVER, Type::NEVER);
+        ty_env.add_type(Var::DOUBLE, Type::DOUBLE);
+
+        let mut parser = TypeParser::new(&mut ty_env, || inf.gen_rigidvar());
+
+        for item in items {
+            match item {
+                Item::Def(id) => {
+                    let Define { ident, typ, value: _, span: _ } = id;
+                    let scheme = parser
+                        .parse_scheme(
+                            typ.as_ref()
+                                .expect("Top level decls to have typs"),
+                        )
+                        .expect("Type to be known");
+
+                    env.add_scheme(*ident, scheme);
+                }
+            }
+        }
+
+        env
     }
 
-    pub fn check_toplevel_def(
+    fn check_toplevel_def(
         &self,
+        inf: &mut TypeInference,
         env: Env,
         def: Define<Var>,
         scheme: TypeScheme,
     ) -> Result<Define<TypedVar>, TypeError> {
-        let mut inf = TypeInference::new();
         let qual = inf.instantiate(scheme);
 
         if def.value.is_recursive() {
@@ -230,6 +267,11 @@ impl TypeInference {
             }
         }
     }
+
+    fn gen_rigidvar(&mut self) -> RigidVar {
+        self.next_tyvar += 1;
+        RigidVar(self.next_tyvar - 1)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -289,7 +331,7 @@ mod test {
         name_res::Var,
         type_check::{
             unification::TypeError, FnType, RigidVar, TyClass, Type,
-            TypeScheme, TypedVar, UnifiableVar,
+            TypeInference, TypeScheme, TypedVar, UnifiableVar,
         },
         State,
     };
@@ -639,8 +681,9 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
+        let mut inf = TypeInference::new();
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(Env::new(), def, scheme)
+            .check_toplevel_def(&mut inf, Env::new(), def, scheme)
             .expect("Type checking to succeed");
 
         let rigid_x = RigidVar(0);
@@ -678,8 +721,9 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
+        let mut inf = TypeInference::new();
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(Env::new(), def, scheme)
+            .check_toplevel_def(&mut inf, Env::new(), def, scheme)
             .expect("Type checking to succeed");
 
         let typed_x = TypedVar(x, Type::BOOL);
@@ -720,7 +764,9 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
+        let mut inf = TypeInference::new();
         let err = TypeChecker::new(&mut State::default()).check_toplevel_def(
+            &mut inf,
             Env::new(),
             def,
             scheme,
