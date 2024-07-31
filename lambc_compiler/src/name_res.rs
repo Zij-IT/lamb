@@ -5,8 +5,8 @@ use lambc_parse::{
     ArrayPattern, Binary, Block, Call, Case, CaseArm, Define, Else, Export,
     ExportItem, Expr, ExprStatement, FnDef, FnType, Generic, Generics, Group,
     Ident, IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern,
-    Item, List, Module, NamedType, Pattern, Return, Span, Statement, Type,
-    Unary,
+    Item, List, Module, NamedType, Pattern, Return, SimpleGeneric,
+    SimpleGenerics, Span, Statement, Type, Unary,
 };
 use miette::{Diagnostic, LabeledSpan};
 
@@ -576,16 +576,16 @@ impl<'s> Resolver<'s> {
                     .map(|t| self.resolve_type(scope, t))
                     .collect();
 
-                let gens = gens.map(|Generics { params, span }| {
+                let gens = gens.map(|SimpleGenerics { params, span }| {
                     let params = params
                         .into_iter()
-                        .map(|i| Generic {
-                            id: self.find_type(scope, &i.id),
+                        .map(|i| SimpleGeneric {
+                            id: self.define_new_type(scope, &i.id),
                             span: i.span,
                         })
                         .collect();
 
-                    Generics { params, span }
+                    SimpleGenerics { params, span }
                 });
 
                 let ret_type = ret_type.map(|i| self.resolve_type(scope, i));
@@ -598,7 +598,7 @@ impl<'s> Resolver<'s> {
                     let params = params
                         .into_iter()
                         .map(|i| Generic {
-                            id: self.find_type(scope, &i.id),
+                            id: self.resolve_type(scope, i.id),
                             span: i.span,
                         })
                         .collect();
@@ -614,6 +614,12 @@ impl<'s> Resolver<'s> {
     fn define_new_var(&mut self, scope: &mut Scope, i: &Ident) -> Var {
         let ident = self.fresh_var();
         scope.add_var(&i.raw, ident);
+        ident
+    }
+
+    fn define_new_type(&mut self, scope: &mut Scope, i: &Ident) -> Var {
+        let ident = self.fresh_var();
+        scope.add_type(&i.raw, ident);
         ident
     }
 
