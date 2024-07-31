@@ -191,14 +191,16 @@ impl<'s> TypeChecker<'s> {
         })
     }
 
-    pub fn infer(
+    #[cfg(test)]
+    fn infer(
         &self,
         expr: Expr<Var>,
     ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
         self.infer_with_env(Env::new(), expr)
     }
 
-    pub fn infer_with_env(
+    #[cfg(test)]
+    fn infer_with_env(
         &self,
         env: Env,
         expr: Expr<Var>,
@@ -237,6 +239,7 @@ impl TypeInference {
         }
     }
 
+    #[cfg(test)]
     fn reduce_constraints(
         &self,
         unbound: &HashSet<RigidVar>,
@@ -253,6 +256,7 @@ impl TypeInference {
             .collect()
     }
 
+    #[cfg(test)]
     fn has_unbound(&self, unbound: &HashSet<RigidVar>, ty: &Type) -> bool {
         match ty {
             Type::Con(_) => false,
