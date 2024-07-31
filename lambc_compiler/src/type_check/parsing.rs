@@ -1,6 +1,8 @@
 use crate::name_res::Var;
 
-use super::{unification::TypeError, FnType, Type, TypeScheme};
+use std::collections::HashSet;
+
+use super::{unification::TypeError, FnType, RigidVar, Type, TypeScheme};
 
 type RawType = lambc_parse::Type<Var>;
 type RawNamed = lambc_parse::NamedType<Var>;
@@ -24,45 +26,86 @@ impl TypeEnv {
     }
 }
 
-pub struct TypeParser<'a> {
+pub struct TypeParser<'a, F> {
     env: &'a mut TypeEnv,
+    rigid_gen: F,
 }
 
-impl<'a> TypeParser<'a> {
-    pub fn new(env: &'a mut TypeEnv) -> TypeParser<'a> {
-        Self { env }
+impl<'a, F> TypeParser<'a, F>
+where
+    F: FnMut() -> RigidVar,
+{
+    pub fn new(env: &'a mut TypeEnv, f: F) -> TypeParser<'a, F> {
+        Self { env, rigid_gen: f }
     }
 
     pub fn parse_scheme(
         &mut self,
         raw: &RawType,
     ) -> Result<TypeScheme, TypeError> {
-        todo!()
+        match raw {
+            RawType::Fn(fntype) => {
+                let mut unbound = HashSet::new();
+                if let Some(gens) = fntype.gens.as_ref() {
+                    for gen in &gens.params {
+                        let rigid = (self.rigid_gen)();
+                        unbound.insert(rigid);
+                        self.env.add_type(gen.id, Type::RigidVar(rigid));
+                    }
+                }
+
+                Ok(TypeScheme {
+                    unbound,
+                    constraints: vec![],
+                    ty: self.parse_fn(fntype)?,
+                })
+            }
+            RawType::Named(named) => Ok(TypeScheme {
+                unbound: Default::default(),
+                constraints: vec![],
+                ty: self.parse_named(named)?,
+            }),
+        }
     }
 
     fn parse_type(&self, raw: &RawType) -> Result<Type, TypeError> {
         match raw {
-            RawType::Fn(fntype) => {
-                let lambc_parse::FnType { args, gens, ret_type, span } =
-                    &**fntype;
+            RawType::Fn(fntype) => self.parse_fn(fntype),
+            RawType::Named(named) => self.parse_named(named),
+        }
+    }
 
-                assert!(gens.is_none());
+    fn parse_fn(&self, fntype: &RawFnType) -> Result<Type, TypeError> {
+        let lambc_parse::FnType { args, gens, ret_type, span: _ } = fntype;
 
-                let args = args
-                    .into_iter()
-                    .map(|a| self.parse_type(a))
-                    .collect::<Result<_, _>>()?;
+        if gens.as_ref().is_some_and(|gens| gens.params.len() != 0) {
+            panic!("This should be a type error because type params at this point aren't allowed");
+        }
 
-                let ret_type = ret_type
-                    .as_ref()
-                    .map_or(Ok(Type::NIL), |ret| self.parse_type(ret))?;
+        let args = args
+            .into_iter()
+            .map(|a| self.parse_type(a))
+            .collect::<Result<_, _>>()?;
 
-                Ok(Type::Fun(FnType { args, ret_type: Box::new(ret_type) }))
+        let ret_type = ret_type
+            .as_ref()
+            .map_or(Ok(Type::NIL), |ret| self.parse_type(ret))?;
+
+        Ok(Type::Fun(FnType { args, ret_type: Box::new(ret_type) }))
+    }
+
+    fn parse_named(&self, named: &RawNamed) -> Result<Type, TypeError> {
+        let RawNamed { name, gens, span: _ } = named;
+        let generic_count = gens.as_ref().map_or(0, |g| g.params.len());
+        match (*name, generic_count) {
+            (Var::LIST, 1) => {
+                let first = &gens.as_ref().unwrap().params[0].id;
+                let ty = self.parse_type(first)?;
+                Ok(Type::List(Box::new(ty)))
             }
-            RawType::Named(named) => {
-                let RawNamed { name, gens, span: _ } = &**named;
-                assert!(gens.is_none());
-                self.env.get_type(*name)
+            (name, 0) => self.env.get_type(name),
+            (_unknown, _) => {
+                panic!("Unexpected generic arguments. This should be an error")
             }
         }
     }
@@ -79,9 +122,10 @@ mod tests {
 
     #[test]
     fn parses_simple_named_type() {
+        let gen = || panic!("This should never be called");
         let mut env = TypeEnv::default();
         env.add_type(Var::INT, Type::INT);
-        let parser = TypeParser::new(&mut env);
+        let parser = TypeParser::new(&mut env, gen);
 
         let typ = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -95,10 +139,11 @@ mod tests {
 
     #[test]
     fn parses_simple_fn_type() {
+        let gen = || panic!("This should never be called");
         let mut env = TypeEnv::default();
         env.add_type(Var::INT, Type::INT);
 
-        let parser = TypeParser::new(&mut env);
+        let parser = TypeParser::new(&mut env, gen);
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -121,10 +166,11 @@ mod tests {
 
     #[test]
     fn parses_nested_simple_fn_type() {
+        let gen = || panic!("This should never be called");
         let mut env = TypeEnv::default();
         env.add_type(Var::INT, Type::INT);
 
-        let parser = TypeParser::new(&mut env);
+        let parser = TypeParser::new(&mut env, gen);
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
