@@ -7,9 +7,9 @@ Ok(
         FnType {
             args: [],
             gens: Some(
-                Generics {
+                SimpleGenerics {
                     params: [
-                        Generic {
+                        SimpleGeneric {
                             id: Ident {
                                 raw: "k",
                                 span: Span {
@@ -22,7 +22,7 @@ Ok(
                                 end: 4,
                             },
                         },
-                        Generic {
+                        SimpleGeneric {
                             id: Ident {
                                 raw: "v",
                                 span: Span {
@@ -56,26 +56,44 @@ Ok(
                             Generics {
                                 params: [
                                     Generic {
-                                        id: Ident {
-                                            raw: "k",
-                                            span: Span {
-                                                start: 18,
-                                                end: 19,
+                                        id: Named(
+                                            NamedType {
+                                                name: Ident {
+                                                    raw: "k",
+                                                    span: Span {
+                                                        start: 18,
+                                                        end: 19,
+                                                    },
+                                                },
+                                                gens: None,
+                                                span: Span {
+                                                    start: 18,
+                                                    end: 19,
+                                                },
                                             },
-                                        },
+                                        ),
                                         span: Span {
                                             start: 18,
                                             end: 19,
                                         },
                                     },
                                     Generic {
-                                        id: Ident {
-                                            raw: "v",
-                                            span: Span {
-                                                start: 21,
-                                                end: 22,
+                                        id: Named(
+                                            NamedType {
+                                                name: Ident {
+                                                    raw: "v",
+                                                    span: Span {
+                                                        start: 21,
+                                                        end: 22,
+                                                    },
+                                                },
+                                                gens: None,
+                                                span: Span {
+                                                    start: 21,
+                                                    end: 22,
+                                                },
                                             },
-                                        },
+                                        ),
                                         span: Span {
                                             start: 21,
                                             end: 22,

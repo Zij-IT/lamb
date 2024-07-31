@@ -16,26 +16,44 @@ Ok(
                 Generics {
                     params: [
                         Generic {
-                            id: Ident {
-                                raw: "k",
-                                span: Span {
-                                    start: 4,
-                                    end: 5,
+                            id: Named(
+                                NamedType {
+                                    name: Ident {
+                                        raw: "k",
+                                        span: Span {
+                                            start: 4,
+                                            end: 5,
+                                        },
+                                    },
+                                    gens: None,
+                                    span: Span {
+                                        start: 4,
+                                        end: 5,
+                                    },
                                 },
-                            },
+                            ),
                             span: Span {
                                 start: 4,
                                 end: 5,
                             },
                         },
                         Generic {
-                            id: Ident {
-                                raw: "v",
-                                span: Span {
-                                    start: 7,
-                                    end: 8,
+                            id: Named(
+                                NamedType {
+                                    name: Ident {
+                                        raw: "v",
+                                        span: Span {
+                                            start: 7,
+                                            end: 8,
+                                        },
+                                    },
+                                    gens: None,
+                                    span: Span {
+                                        start: 7,
+                                        end: 8,
+                                    },
                                 },
-                            },
+                            ),
                             span: Span {
                                 start: 7,
                                 end: 8,

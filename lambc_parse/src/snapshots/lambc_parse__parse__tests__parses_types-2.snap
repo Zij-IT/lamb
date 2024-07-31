@@ -16,13 +16,22 @@ Ok(
                 Generics {
                     params: [
                         Generic {
-                            id: Ident {
-                                raw: "a",
-                                span: Span {
-                                    start: 5,
-                                    end: 6,
+                            id: Named(
+                                NamedType {
+                                    name: Ident {
+                                        raw: "a",
+                                        span: Span {
+                                            start: 5,
+                                            end: 6,
+                                        },
+                                    },
+                                    gens: None,
+                                    span: Span {
+                                        start: 5,
+                                        end: 6,
+                                    },
                                 },
-                            },
+                            ),
                             span: Span {
                                 start: 5,
                                 end: 6,
