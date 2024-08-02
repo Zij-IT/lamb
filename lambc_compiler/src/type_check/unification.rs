@@ -27,7 +27,7 @@ impl super::TypeInference {
                 Constraint::IsIn(class, t) => {
                     let t = self.normalize_ty(t);
                     if !class.impld_by(&t) {
-                        return Err(Error::NotImpld(class, t));
+                        return Err(Error::NotImpld { class, ty: t });
                     }
                 }
                 Constraint::TypeEqual { expected, got } => {
@@ -49,13 +49,13 @@ impl super::TypeInference {
             (Type::UnifiableVar(l), Type::UnifiableVar(r)) => self
                 .uni_table
                 .unify_var_var(l, r)
-                .map_err(|(l, r)| Error::TypeNotEqual(l, r)),
+                .map_err(|(l, r)| Error::TypeNotEqual { expected: l, got: r }),
             (Type::Fun(l), Type::Fun(r)) => {
                 if l.args.len() != r.args.len() {
-                    return Err(Error::TypeNotEqual(
-                        Type::Fun(l),
-                        Type::Fun(r),
-                    ));
+                    return Err(Error::TypeNotEqual {
+                        expected: Type::Fun(l),
+                        got: Type::Fun(r),
+                    });
                 }
 
                 for (l_arg, r_arg) in l.args.into_iter().zip(r.args) {
@@ -66,14 +66,14 @@ impl super::TypeInference {
             }
             (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;
-                self.uni_table
-                    .unify_var_value(v, Some(ty))
-                    .map_err(|(l, r)| Error::TypeNotEqual(l, r))
+                self.uni_table.unify_var_value(v, Some(ty)).map_err(
+                    |(l, r)| Error::TypeNotEqual { expected: l, got: r },
+                )
             }
             (Type::RigidVar(a), Type::RigidVar(b)) if a == b => Ok(()),
             // Modules are never equal... I would like them to be structurally
             // equal at one point, such that exports are normal anonymous structs.
-            (l, r) => Err(Error::TypeNotEqual(l, r)),
+            (l, r) => Err(Error::TypeNotEqual { expected: l, got: r }),
         }
     }
 
@@ -97,7 +97,10 @@ impl super::TypeInference {
             Type::Con(..) | Type::RigidVar(..) => Ok(()),
             Type::UnifiableVar(v) => {
                 if *v == tyvar {
-                    Err(Error::InfiniteType(*v, Type::UnifiableVar(*v)))
+                    Err(Error::InfiniteType {
+                        repr_var: *v,
+                        ty: Type::UnifiableVar(*v),
+                    })
                 } else {
                     Ok(())
                 }

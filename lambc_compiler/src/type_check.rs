@@ -27,14 +27,14 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Diagnostic, thiserror::Error, Debug, Clone, PartialEq)]
 pub enum Error {
     #[diagnostic(code("type-checking::no-impl"))]
-    #[error("no impl of `{}` found for type `..`", .0.name())]
-    NotImpld(TyClass, Type),
+    #[error("no impl of `{}` found for type `..`", .class.name())]
+    NotImpld { class: TyClass, ty: Type },
     #[diagnostic(code("type-checking::expected-found"))]
     #[error("found `..`, but expected `..`")]
-    TypeNotEqual(Type, Type),
+    TypeNotEqual { expected: Type, got: Type },
     #[diagnostic(code("type-checking::infinite-type"))]
     #[error("the inferred type `..` is infinite")]
-    InfiniteType(UnifiableVar, Type),
+    InfiniteType { repr_var: UnifiableVar, ty: Type },
     #[diagnostic(code("type-checking::new-unbound-vars"))]
     #[error("the inferred type introduces new unbound variables")]
     NewUnboundTypes,
@@ -581,13 +581,13 @@ mod test {
         let res = TypeChecker::new(&mut State::default()).infer(ast);
         assert_eq!(
             res,
-            Err(Error::TypeNotEqual(
-                Type::fun(
+            Err(Error::TypeNotEqual {
+                expected: Type::fun(
                     vec![Type::NIL],
                     Type::UnifiableVar(UnifiableVar(1))
                 ),
-                Type::NIL,
-            ))
+                got: Type::NIL
+            })
         )
     }
 
@@ -814,10 +814,10 @@ mod test {
 
         assert_eq!(
             err,
-            Err(Error::NotImpld(
-                TyClass::Addable,
-                Type::UnifiableVar(UnifiableVar(0))
-            )),
+            Err(Error::NotImpld {
+                class: TyClass::Addable,
+                ty: Type::UnifiableVar(UnifiableVar(0))
+            }),
         );
     }
 }
