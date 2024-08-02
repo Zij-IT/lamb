@@ -2,7 +2,7 @@ use crate::name_res::Var;
 
 use std::collections::HashSet;
 
-use super::{unification::TypeError, FnType, RigidVar, Type, TypeScheme};
+use super::{Error, FnType, Result, RigidVar, Type, TypeScheme};
 
 type RawType = lambc_parse::Type<Var>;
 type RawNamed = lambc_parse::NamedType<Var>;
@@ -21,8 +21,8 @@ impl TypeEnv {
         );
     }
 
-    pub fn get_type(&self, var: Var) -> Result<Type, TypeError> {
-        self.inner.get(&var).cloned().ok_or(TypeError::UnknownType)
+    pub fn get_type(&self, var: Var) -> Result<Type> {
+        self.inner.get(&var).cloned().ok_or(Error::UnknownType)
     }
 }
 
@@ -39,10 +39,7 @@ where
         Self { env, rigid_gen: f }
     }
 
-    pub fn parse_scheme(
-        &mut self,
-        raw: &RawType,
-    ) -> Result<TypeScheme, TypeError> {
+    pub fn parse_scheme(&mut self, raw: &RawType) -> Result<TypeScheme> {
         match raw {
             RawType::Fn(fntype) => {
                 let mut unbound = HashSet::new();
@@ -68,7 +65,7 @@ where
         }
     }
 
-    fn parse_type(&self, raw: &RawType) -> Result<Type, TypeError> {
+    fn parse_type(&self, raw: &RawType) -> Result<Type> {
         match raw {
             RawType::Fn(fntype) => self.parse_fn(fntype, false),
             RawType::Named(named) => self.parse_named(named),
@@ -79,7 +76,7 @@ where
         &self,
         fntype: &RawFnType,
         allow_generics: bool,
-    ) -> Result<Type, TypeError> {
+    ) -> Result<Type> {
         let lambc_parse::FnType { args, gens, ret_type, span: _ } = fntype;
 
         if gens.as_ref().is_some_and(|gens| gens.params.len() != 0)
@@ -91,7 +88,7 @@ where
         let args = args
             .into_iter()
             .map(|a| self.parse_type(a))
-            .collect::<Result<_, _>>()?;
+            .collect::<Result<_>>()?;
 
         let ret_type = ret_type
             .as_ref()
@@ -100,7 +97,7 @@ where
         Ok(Type::Fun(FnType { args, ret_type: Box::new(ret_type) }))
     }
 
-    fn parse_named(&self, named: &RawNamed) -> Result<Type, TypeError> {
+    fn parse_named(&self, named: &RawNamed) -> Result<Type> {
         let RawNamed { name, gens, span: _ } = named;
         let generic_count = gens.as_ref().map_or(0, |g| g.params.len());
         match (*name, generic_count) {

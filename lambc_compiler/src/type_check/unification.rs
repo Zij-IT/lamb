@@ -1,6 +1,6 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{Constraint, FnType, TyClass, Type, UnifiableVar};
+use super::{Constraint, Error, FnType, Result, Type, UnifiableVar};
 
 impl EqUnifyValue for Type {}
 
@@ -20,26 +20,14 @@ impl UnifyKey for UnifiableVar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TypeError {
-    NotImpld(TyClass, Type),
-    TypeNotEqual(Type, Type),
-    InfiniteType(UnifiableVar, Type),
-    NewUnboundTypes,
-    UnknownType,
-}
-
 impl super::TypeInference {
-    pub(super) fn unification(
-        &mut self,
-        cons: Vec<Constraint>,
-    ) -> Result<(), TypeError> {
+    pub(super) fn unification(&mut self, cons: Vec<Constraint>) -> Result<()> {
         for con in cons {
             match con {
                 Constraint::IsIn(class, t) => {
                     let t = self.normalize_ty(t);
                     if !class.impld_by(&t) {
-                        return Err(TypeError::NotImpld(class, t));
+                        return Err(Error::NotImpld(class, t));
                     }
                 }
                 Constraint::TypeEqual { expected, got } => {
@@ -51,7 +39,7 @@ impl super::TypeInference {
         Ok(())
     }
 
-    fn unify_ty_ty(&mut self, l: Type, r: Type) -> Result<(), TypeError> {
+    fn unify_ty_ty(&mut self, l: Type, r: Type) -> Result<()> {
         let left = self.normalize_ty(l);
         let right = self.normalize_ty(r);
         match (left, right) {
@@ -61,10 +49,10 @@ impl super::TypeInference {
             (Type::UnifiableVar(l), Type::UnifiableVar(r)) => self
                 .uni_table
                 .unify_var_var(l, r)
-                .map_err(|(l, r)| TypeError::TypeNotEqual(l, r)),
+                .map_err(|(l, r)| Error::TypeNotEqual(l, r)),
             (Type::Fun(l), Type::Fun(r)) => {
                 if l.args.len() != r.args.len() {
-                    return Err(TypeError::TypeNotEqual(
+                    return Err(Error::TypeNotEqual(
                         Type::Fun(l),
                         Type::Fun(r),
                     ));
@@ -80,12 +68,12 @@ impl super::TypeInference {
                 self.occurs_check(&ty, v)?;
                 self.uni_table
                     .unify_var_value(v, Some(ty))
-                    .map_err(|(l, r)| TypeError::TypeNotEqual(l, r))
+                    .map_err(|(l, r)| Error::TypeNotEqual(l, r))
             }
             (Type::RigidVar(a), Type::RigidVar(b)) if a == b => Ok(()),
             // Modules are never equal... I would like them to be structurally
             // equal at one point, such that exports are normal anonymous structs.
-            (l, r) => Err(TypeError::TypeNotEqual(l, r)),
+            (l, r) => Err(Error::TypeNotEqual(l, r)),
         }
     }
 
@@ -104,16 +92,12 @@ impl super::TypeInference {
         }
     }
 
-    fn occurs_check(
-        &self,
-        ty: &Type,
-        tyvar: UnifiableVar,
-    ) -> Result<(), TypeError> {
+    fn occurs_check(&self, ty: &Type, tyvar: UnifiableVar) -> Result<()> {
         match ty {
             Type::Con(..) | Type::RigidVar(..) => Ok(()),
             Type::UnifiableVar(v) => {
                 if *v == tyvar {
-                    Err(TypeError::InfiniteType(*v, Type::UnifiableVar(*v)))
+                    Err(Error::InfiniteType(*v, Type::UnifiableVar(*v)))
                 } else {
                     Ok(())
                 }

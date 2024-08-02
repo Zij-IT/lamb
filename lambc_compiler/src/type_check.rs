@@ -14,12 +14,23 @@ use lambc_parse::{Define, Item, Module};
 #[cfg(test)]
 use lambc_parse::Expr;
 
-use self::{env::Env, unification::TypeError};
+use self::env::Env;
 use crate::{
     name_res::Var,
     type_check::parsing::{TypeEnv, TypeParser},
     PathRef, State,
 };
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Error {
+    NotImpld(TyClass, Type),
+    TypeNotEqual(Type, Type),
+    InfiniteType(UnifiableVar, Type),
+    NewUnboundTypes,
+    UnknownType,
+}
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct TypedVar(Var, Type);
@@ -86,7 +97,7 @@ impl<'s> TypeChecker<'s> {
     pub fn check_module(
         &self,
         module: Module<Var, PathRef>,
-    ) -> Result<Module<TypedVar, PathRef>, TypeError> {
+    ) -> Result<Module<TypedVar, PathRef>> {
         assert!(module.exports.is_empty());
         assert!(module.imports.is_empty());
 
@@ -157,7 +168,7 @@ impl<'s> TypeChecker<'s> {
         env: Env,
         def: Define<Var>,
         scheme: TypeScheme,
-    ) -> Result<Define<TypedVar>, TypeError> {
+    ) -> Result<Define<TypedVar>> {
         let qual = inf.instantiate(scheme);
 
         if def.value.is_recursive() {
@@ -181,7 +192,7 @@ impl<'s> TypeChecker<'s> {
         let new_unbound = con_unbound.difference(&unbound);
         if new_unbound.count() != 0 {
             // Handle new generic types being added
-            return Err(TypeError::NewUnboundTypes);
+            return Err(Error::NewUnboundTypes);
         }
 
         // let reduced = inf.reduce_constraints(&unbound, cons);
@@ -195,10 +206,7 @@ impl<'s> TypeChecker<'s> {
     }
 
     #[cfg(test)]
-    fn infer(
-        &self,
-        expr: Expr<Var>,
-    ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
+    fn infer(&self, expr: Expr<Var>) -> Result<(Expr<TypedVar>, TypeScheme)> {
         self.infer_with_env(Env::new(), expr)
     }
 
@@ -207,7 +215,7 @@ impl<'s> TypeChecker<'s> {
         &self,
         env: Env,
         expr: Expr<Var>,
-    ) -> Result<(Expr<TypedVar>, TypeScheme), TypeError> {
+    ) -> Result<(Expr<TypedVar>, TypeScheme)> {
         let mut inf = TypeInference::new();
         let (out, ty) = inf.infer_expr(env, expr);
         inf.unification(out.cons.clone())?;
@@ -333,12 +341,12 @@ mod test {
     };
     use pretty_assertions::assert_eq;
 
-    use super::{env::Env, TypeChecker};
+    use super::{env::Env, Error, TypeChecker};
     use crate::{
         name_res::Var,
         type_check::{
-            unification::TypeError, FnType, RigidVar, TyClass, Type,
-            TypeInference, TypeScheme, TypedVar, UnifiableVar,
+            FnType, RigidVar, TyClass, Type, TypeInference, TypeScheme,
+            TypedVar, UnifiableVar,
         },
         State,
     };
@@ -548,7 +556,7 @@ mod test {
         let res = TypeChecker::new(&mut State::default()).infer(ast);
         assert_eq!(
             res,
-            Err(TypeError::TypeNotEqual(
+            Err(Error::TypeNotEqual(
                 Type::fun(
                     vec![Type::NIL],
                     Type::UnifiableVar(UnifiableVar(1))
@@ -781,7 +789,7 @@ mod test {
 
         assert_eq!(
             err,
-            Err(TypeError::NotImpld(
+            Err(Error::NotImpld(
                 TyClass::Addable,
                 Type::UnifiableVar(UnifiableVar(0))
             )),
