@@ -571,11 +571,6 @@ impl<'s> Resolver<'s> {
         match t {
             Type::Fn(f) => {
                 let FnType { args, gens, ret_type, span } = *f;
-                let args = args
-                    .into_iter()
-                    .map(|t| self.resolve_type(scope, t))
-                    .collect();
-
                 let gens = gens.map(|SimpleGenerics { params, span }| {
                     let params = params
                         .into_iter()
@@ -587,6 +582,11 @@ impl<'s> Resolver<'s> {
 
                     SimpleGenerics { params, span }
                 });
+
+                let args = args
+                    .into_iter()
+                    .map(|t| self.resolve_type(scope, t))
+                    .collect();
 
                 let ret_type = ret_type.map(|i| self.resolve_type(scope, i));
                 Type::Fn(Box::new(FnType { args, gens, ret_type, span }))
