@@ -57,7 +57,7 @@ where
                 Ok(TypeScheme {
                     unbound,
                     constraints: vec![],
-                    ty: self.parse_fn(fntype)?,
+                    ty: self.parse_fn(fntype, true)?,
                 })
             }
             RawType::Named(named) => Ok(TypeScheme {
@@ -70,15 +70,21 @@ where
 
     fn parse_type(&self, raw: &RawType) -> Result<Type, TypeError> {
         match raw {
-            RawType::Fn(fntype) => self.parse_fn(fntype),
+            RawType::Fn(fntype) => self.parse_fn(fntype, false),
             RawType::Named(named) => self.parse_named(named),
         }
     }
 
-    fn parse_fn(&self, fntype: &RawFnType) -> Result<Type, TypeError> {
+    fn parse_fn(
+        &self,
+        fntype: &RawFnType,
+        allow_generics: bool,
+    ) -> Result<Type, TypeError> {
         let lambc_parse::FnType { args, gens, ret_type, span: _ } = fntype;
 
-        if gens.as_ref().is_some_and(|gens| gens.params.len() != 0) {
+        if gens.as_ref().is_some_and(|gens| gens.params.len() != 0)
+            && !allow_generics
+        {
             panic!("This should be a type error because type params at this point aren't allowed");
         }
 
