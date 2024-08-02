@@ -89,7 +89,7 @@ impl<B: Backend> Compiler<B> {
             return Err(Error::Invalid);
         }
 
-        let checker = TypeChecker::new(&mut self.state);
+        let mut checker = TypeChecker::new(&mut self.state);
         if checker.check_module(resolved.remove(0)).is_err() {
             return Err(Error::Invalid);
         }

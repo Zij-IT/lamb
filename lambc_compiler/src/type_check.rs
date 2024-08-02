@@ -13,6 +13,7 @@ use lambc_parse::{Define, Item, Module};
 
 #[cfg(test)]
 use lambc_parse::Expr;
+use miette::Diagnostic;
 
 use self::env::Env;
 use crate::{
@@ -23,12 +24,22 @@ use crate::{
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Diagnostic, thiserror::Error, Debug, Clone, PartialEq)]
 pub enum Error {
+    #[diagnostic(code("type-checking::no-impl"))]
+    #[error("no impl of `{}` found for type `..`", .0.name())]
     NotImpld(TyClass, Type),
+    #[diagnostic(code("type-checking::expected-found"))]
+    #[error("found `..`, but expected `..`")]
     TypeNotEqual(Type, Type),
+    #[diagnostic(code("type-checking::infinite-type"))]
+    #[error("the inferred type `..` is infinite")]
     InfiniteType(UnifiableVar, Type),
+    #[diagnostic(code("type-checking::new-unbound-vars"))]
+    #[error("the inferred type introduces new unbound variables")]
     NewUnboundTypes,
+    #[diagnostic(code("type-checking::no-such-type"))]
+    #[error("no type found with the name `..`")]
     UnknownType,
 }
 
@@ -95,9 +106,9 @@ impl<'s> TypeChecker<'s> {
     }
 
     pub fn check_module(
-        &self,
+        &mut self,
         module: Module<Var, PathRef>,
-    ) -> Result<Module<TypedVar, PathRef>> {
+    ) -> std::result::Result<Module<TypedVar, PathRef>, ()> {
         assert!(module.exports.is_empty());
         assert!(module.imports.is_empty());
 
@@ -110,16 +121,23 @@ impl<'s> TypeChecker<'s> {
             match item {
                 Item::Def(def) => {
                     let scheme = global.type_of(def.ident);
-                    let ast = self.check_toplevel_def(
+                    let res = self.check_toplevel_def(
                         &mut inf,
                         global.clone(),
                         def,
                         scheme,
-                    )?;
+                    );
 
-                    typed_items.push(Item::Def(ast));
+                    match res {
+                        Ok(ast) => typed_items.push(Item::Def(ast)),
+                        Err(er) => self.state.add_error(er, Some(path)),
+                    }
                 }
             }
+        }
+
+        if self.state.has_errors() {
+            return Err(());
         }
 
         Ok(Module {
@@ -328,6 +346,13 @@ impl TyClass {
             TyClass::Num => {
                 matches!(t, &Type::INT | &Type::DOUBLE)
             }
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            TyClass::Addable => "Add",
+            TyClass::Num => "Num",
         }
     }
 }
