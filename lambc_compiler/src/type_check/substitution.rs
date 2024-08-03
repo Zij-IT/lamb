@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use lambc_parse::{
     Binary, Block, Call, Define, Else, Expr, ExprStatement, FnDef, Group, If,
-    IfCond, Index, List, Statement, Unary,
+    IfCond, Index, List, Return, Statement, Unary,
 };
 
 use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
@@ -225,7 +225,24 @@ impl TypeInference {
             }
             Expr::Case(_) => todo!(),
             Expr::Path(_) => todo!(),
-            Expr::Return(_) => todo!(),
+            Expr::Return(e) => {
+                let Return { value, span } = *e;
+                if let Some(value) = value {
+                    let (unbound, value) = self.substitute_expr(value);
+                    (
+                        unbound,
+                        Expr::Return(Box::new(Return {
+                            value: Some(value),
+                            span,
+                        })),
+                    )
+                } else {
+                    (
+                        Default::default(),
+                        Expr::Return(Box::new(Return { value, span })),
+                    )
+                }
+            }
         }
     }
 
