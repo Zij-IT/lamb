@@ -241,7 +241,6 @@ impl<'s> Resolver<'s> {
                 Item::Def(Define {
                     ident,
                     value,
-                    // TODO: Add type information in `Scope`
                     typ: def.typ.map(|t| self.resolve_type(scope, t)),
                     span: def.span,
                 })
