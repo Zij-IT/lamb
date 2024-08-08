@@ -270,7 +270,12 @@ impl<'a> Parser<'a> {
             return self.parse_fn_type();
         }
 
-        let name = self.parse_ident()?;
+        let name = if let Some(nil) = self.eat(TokKind::Nil) {
+            Ident { raw: nil.slice.into_owned(), span: nil.span }
+        } else {
+            self.parse_ident()?
+        };
+
         let gens = (self.peek1().kind == TokKind::OpenBrack)
             .then(|| {
                 self.parse_node_list(
@@ -1668,5 +1673,35 @@ mod tests {
         typ!(r#"list[a]"#);
         typ!(r#"map[k, v]"#);
         typ!(r#"fn[k, v]() -> map[k, v]"#);
+
+        let mut parser = Parser::new("nil".as_bytes(), "");
+        assert_eq!(
+            parser.parse_type(),
+            Ok(crate::Type::Named(Box::new(crate::NamedType {
+                name: Ident { raw: "nil".into(), span: Span::new(0, 3) },
+                gens: None,
+                span: Span::new(0, 3)
+            })))
+        );
+
+        let mut parser = Parser::new("fn() -> nil".as_bytes(), "");
+        assert_eq!(
+            parser.parse_type(),
+            Ok(crate::Type::Fn(Box::new(crate::FnType {
+                args: vec![],
+                gens: None,
+                span: Span::new(0, 11),
+                ret_type: Some(crate::Type::Named(Box::new(
+                    crate::NamedType {
+                        name: Ident {
+                            raw: "nil".into(),
+                            span: Span::new(8, 11)
+                        },
+                        gens: None,
+                        span: Span::new(8, 11)
+                    }
+                )))
+            })))
+        );
     }
 }
