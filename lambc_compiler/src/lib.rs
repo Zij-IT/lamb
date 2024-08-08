@@ -81,19 +81,14 @@ impl<B: Backend> Compiler<B> {
             return Err(Error::Invalid);
         }
 
-        assert_eq!(parsed.len(), 1);
-
         let mut resolver = name_res::Resolver::new(&mut self.state);
-        let mut resolved = resolver.resolve_modules(parsed.clone());
+        let resolved = resolver.resolve_modules(parsed.clone());
         if self.state.has_errors() {
             return Err(Error::Invalid);
         }
 
         let mut checker = TypeChecker::new(&mut self.state);
-        if checker.check_module(resolved.remove(0)).is_err() {
-            return Err(Error::Invalid);
-        }
-
+        let _checked = checker.check_modules(resolved);
         if self.state.has_errors() {
             return Err(Error::Invalid);
         }

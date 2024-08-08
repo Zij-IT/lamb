@@ -9,7 +9,9 @@ mod unification;
 use std::collections::{HashMap, HashSet};
 
 use ena::unify::InPlaceUnificationTable;
-use lambc_parse::{Define, Item, Module};
+use lambc_parse::{
+    Define, Export, ExportItem, Import, ImportItem, Item, Module,
+};
 
 #[cfg(test)]
 use lambc_parse::Expr;
@@ -105,28 +107,81 @@ impl<'s> TypeChecker<'s> {
         Self { state }
     }
 
-    pub fn check_module(
+    pub fn check_modules(
         &mut self,
-        module: Module<Var, PathRef>,
-    ) -> std::result::Result<Module<TypedVar, PathRef>, ()> {
-        assert!(module.exports.is_empty());
-        assert!(module.imports.is_empty());
-
-        let Module { exports: _, imports: _, items, path, span } = module;
+        mut modules: Vec<Module<Var, PathRef>>,
+    ) -> Vec<Module<TypedVar, PathRef>> {
         let mut inf = TypeInference::new();
-        let global = self.build_env(&mut inf, &items);
+        let globals = self.build_env(
+            &mut inf,
+            modules.iter().map(|i| i.items.as_slice()).flatten(),
+        );
 
+        let mut item_map = HashMap::new();
+        for module in modules.iter_mut() {
+            let items = std::mem::take(&mut module.items);
+            // If this errors we can't properly build the import map because the types
+            // of all the variables aren't able to be used.
+            let items = self
+                .check_items(&mut inf, globals.clone(), module.path, items)
+                .unwrap_or_default();
+
+            item_map.insert(module.path, items);
+        }
+
+        // If we have an error from type-checking such that we can't rebuild the types
+        // for each of the variables for the input map, then we need to bail before we try
+        // to build the import map.
+        if self.state.has_errors() {
+            return Default::default();
+        }
+
+        let typemap = item_map
+            .values()
+            .flatten()
+            .map(|i| match i {
+                Item::Def(def) => (def.ident.0, &def.ident),
+            })
+            .collect();
+
+        let mut import_map = HashMap::new();
+        let mut export_map = HashMap::new();
+        for module in modules.iter_mut() {
+            let imports = std::mem::take(&mut module.imports);
+            import_map
+                .insert(module.path, self.add_import_types(&typemap, imports));
+
+            let exports = std::mem::take(&mut module.exports);
+            export_map
+                .insert(module.path, self.add_export_types(&typemap, exports));
+        }
+
+        modules
+            .into_iter()
+            .map(|m| Module {
+                exports: export_map.remove(&m.path).unwrap(),
+                imports: import_map.remove(&m.path).unwrap(),
+                items: item_map.remove(&m.path).unwrap(),
+                path: m.path,
+                span: m.span,
+            })
+            .collect()
+    }
+
+    fn check_items(
+        &mut self,
+        inf: &mut TypeInference,
+        env: Env,
+        path: PathRef,
+        items: Vec<Item<Var>>,
+    ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
         let mut typed_items = Vec::with_capacity(items.len());
         for item in items {
             match item {
                 Item::Def(def) => {
-                    let scheme = global.type_of(def.ident);
-                    let res = self.check_toplevel_def(
-                        &mut inf,
-                        global.clone(),
-                        def,
-                        scheme,
-                    );
+                    let scheme = env.type_of(def.ident);
+                    let res =
+                        self.check_toplevel_def(inf, env.clone(), def, scheme);
 
                     match res {
                         Ok(ast) => typed_items.push(Item::Def(ast)),
@@ -140,16 +195,14 @@ impl<'s> TypeChecker<'s> {
             return Err(());
         }
 
-        Ok(Module {
-            exports: vec![],
-            imports: vec![],
-            items: typed_items,
-            path,
-            span,
-        })
+        Ok(typed_items)
     }
 
-    fn build_env(&self, inf: &mut TypeInference, items: &[Item<Var>]) -> Env {
+    fn build_env<'a, I: Iterator<Item = &'a Item<Var>>>(
+        &self,
+        inf: &mut TypeInference,
+        items: I,
+    ) -> Env {
         let mut env = Env::new();
         let mut ty_env = TypeEnv::default();
         ty_env.add_type(Var::INT, Type::INT);
@@ -221,6 +274,71 @@ impl<'s> TypeChecker<'s> {
             value: expr,
             span: def.span,
         })
+    }
+
+    fn add_import_types(
+        &self,
+        globals: &HashMap<Var, &TypedVar>,
+        imports: Vec<Import<Var, PathRef>>,
+    ) -> Vec<Import<TypedVar, PathRef>> {
+        imports
+            .into_iter()
+            .map(|Import { file, name: _, items, star, span, path_span }| {
+                Import {
+                    file,
+                    // TODO: Add a type for `name`. This should be done in `build_env`
+                    name: None,
+                    items: items
+                        .into_iter()
+                        .map(|i| self.add_import_item_type(globals, i))
+                        .collect(),
+                    star,
+                    span,
+                    path_span,
+                }
+            })
+            .collect()
+    }
+
+    fn add_import_item_type(
+        &self,
+        globals: &HashMap<Var, &TypedVar>,
+        i: ImportItem<Var>,
+    ) -> ImportItem<TypedVar> {
+        ImportItem {
+            item: globals[&i.item].clone(),
+            alias: i.alias.map(|a| globals[&a].clone()),
+            span: i.span,
+        }
+    }
+
+    fn add_export_types(
+        &self,
+        globals: &HashMap<Var, &TypedVar>,
+        exports: Vec<Export<Var>>,
+    ) -> Vec<Export<TypedVar>> {
+        exports
+            .into_iter()
+            .map(|Export { items, span }| Export {
+                items: items
+                    .into_iter()
+                    .map(|e| self.add_export_item_type(globals, e))
+                    .collect(),
+                span,
+            })
+            .collect()
+    }
+
+    fn add_export_item_type(
+        &self,
+        globals: &HashMap<Var, &TypedVar>,
+        i: ExportItem<Var>,
+    ) -> ExportItem<TypedVar> {
+        ExportItem {
+            item: globals[&i.item].clone(),
+            alias: i.alias.map(|a| globals[&a].clone()),
+            span: i.span,
+        }
     }
 
     #[cfg(test)]
