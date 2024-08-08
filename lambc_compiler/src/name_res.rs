@@ -100,7 +100,7 @@ impl<'s> Resolver<'s> {
     ) -> Module<Var, PathRef> {
         let mut scope = self.new_module_scope(&module);
 
-        self.forward_declare_items(&module, &mut scope);
+        self.forward_declare_items(&module, exportmap, &mut scope);
 
         let exports = exportmap.get(&module.path).expect("module removed?");
 
@@ -674,11 +674,22 @@ impl<'s> Resolver<'s> {
     fn forward_declare_items(
         &mut self,
         module: &Module<Ident, PathRef>,
+        exportmap: &HashMap<PathRef, ExportMap>,
         scope: &mut Scope,
     ) {
         for item in &module.items {
             match item {
-                Item::Def(def) => self.define_new_var(scope, &def.ident),
+                Item::Def(def) => {
+                    if let Some(var) = exportmap
+                        .get(&module.path)
+                        .expect("Module to exist")
+                        .get_from_within(&def.ident)
+                    {
+                        scope.add_var(&def.ident.raw, var);
+                    } else {
+                        self.define_new_var(scope, &def.ident);
+                    }
+                }
             };
         }
     }
