@@ -79,16 +79,14 @@ where
     ) -> Result<Type> {
         let lambc_parse::FnType { args, gens, ret_type, span: _ } = fntype;
 
-        if gens.as_ref().is_some_and(|gens| gens.params.len() != 0)
+        if gens.as_ref().is_some_and(|gens| !gens.params.is_empty())
             && !allow_generics
         {
             panic!("This should be a type error because type params at this point aren't allowed");
         }
 
-        let args = args
-            .into_iter()
-            .map(|a| self.parse_type(a))
-            .collect::<Result<_>>()?;
+        let args =
+            args.iter().map(|a| self.parse_type(a)).collect::<Result<_>>()?;
 
         let ret_type = ret_type
             .as_ref()

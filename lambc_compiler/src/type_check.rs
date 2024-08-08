@@ -114,7 +114,7 @@ impl<'s> TypeChecker<'s> {
         let mut inf = TypeInference::new();
         let globals = self.build_env(
             &mut inf,
-            modules.iter().map(|i| i.items.as_slice()).flatten(),
+            modules.iter().flat_map(|i| i.items.as_slice()),
         );
 
         let mut item_map = HashMap::new();
