@@ -240,19 +240,17 @@ impl<'s> TypeChecker<'s> {
         def: Define<Var>,
         scheme: TypeScheme,
     ) -> Result<Define<TypedVar>> {
-        let qual = inf.instantiate(scheme);
-
         if def.value.is_recursive() {
             // Nothing to do in the case of a recursive bound because top-level definitions
             // now require types.
         }
 
-        let mut qual_value = inf.check_expr(env, def.value, qual.item.clone());
-        qual_value.cons.extend(qual.cons.clone());
+        let mut qual_value = inf.check_expr(env, def.value, scheme.ty.clone());
+        qual_value.cons.extend(scheme.constraints.clone());
 
         inf.unification(qual_value.cons.clone())?;
 
-        let (mut unbound, ty) = inf.substitute(qual.item);
+        let (mut unbound, ty) = inf.substitute(scheme.ty);
         let (ast_unbound, expr) = inf.substitute_expr(qual_value.item);
         unbound.extend(ast_unbound);
 
