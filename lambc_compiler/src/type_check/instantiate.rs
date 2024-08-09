@@ -38,7 +38,7 @@ impl<'a> Instantiate<'a> {
                 .get(&rig)
                 .copied()
                 .map(Type::UnifiableVar)
-                .expect("Unbound variable not found in type-scheme"),
+                .unwrap_or(ty),
             Type::UnifiableVar(_) | Type::Con(_) => ty,
             Type::List(lt) => Type::List(Box::new(self.ty(*lt))),
             Type::Fun(FnType { args, ret_type }) => {
