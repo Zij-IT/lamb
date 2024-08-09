@@ -29,13 +29,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Diagnostic, thiserror::Error, Debug, Clone, PartialEq)]
 pub enum Error {
     #[diagnostic(code("type-checking::no-impl"))]
-    #[error("no impl of `{}` found for type `..`", .class.name())]
+    #[error("no impl of `{}` found for type `{}`", .class.name(), .ty.name())]
     NotImpld { class: TyClass, ty: Type },
     #[diagnostic(code("type-checking::expected-found"))]
-    #[error("found `..`, but expected `..`")]
+    #[error("found `{}`, but expected `{}`", .got.name(), .expected.name())]
     TypeNotEqual { expected: Type, got: Type },
     #[diagnostic(code("type-checking::infinite-type"))]
-    #[error("the inferred type `..` is infinite")]
+    #[error("the inferred type `{}` is infinite", .ty.name())]
     InfiniteType { repr_var: UnifiableVar, ty: Type },
     #[diagnostic(code("type-checking::new-unbound-vars"))]
     #[error("the inferred type introduces new unbound variables")]
@@ -74,6 +74,29 @@ impl Type {
     #[cfg(test)]
     pub fn fun(args: Vec<Self>, ret: Self) -> Self {
         Self::Fun(FnType { args, ret_type: Box::new(ret) })
+    }
+
+    fn name(&self) -> String {
+        match self {
+            &Type::NIL => "nil".into(),
+            &Type::INT => "int".into(),
+            &Type::USV => "usv".into(),
+            &Type::BOOL => "bool".into(),
+            &Type::DOUBLE => "double".into(),
+            Type::UnifiableVar(u) => format!("Uv{}", u.0),
+            Type::RigidVar(r) => format!("Rv{}", r.0),
+            Type::List(l) => format!("list[{}]", l.name()),
+            Type::Fun(f) => format!(
+                "fn({}) -> {}",
+                f.args
+                    .iter()
+                    .map(Type::name)
+                    .reduce(|a, b| a + ", " + b.as_str())
+                    .unwrap_or_default(),
+                f.ret_type.name()
+            ),
+            Type::Con(_) => todo!(),
+        }
     }
 }
 
