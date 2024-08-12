@@ -1,0 +1,7 @@
+def int
+  : int
+  = 0;
+
+def main
+  : fn[a]() -> int[a]
+  = fn() -> { int; };
