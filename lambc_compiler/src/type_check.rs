@@ -862,23 +862,17 @@ mod test {
 
         let mut inf = TypeInference::new();
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, Env::new(), def, scheme)
+            .check_toplevel_def(&mut inf, Env::new(), def, scheme.clone())
             .expect("Type checking to succeed");
 
-        let rigid_x = RigidVar(0);
+        let rigid_x = RigidVar(a);
         let typed_x = TypedVar(x, Type::RigidVar(rigid_x));
         let id_value = fndef(vec![typed_x.clone()], Expr::Ident(typed_x));
 
         assert_eq!(
             typed_id,
             Define {
-                ident: TypedVar(
-                    id,
-                    Type::fun(
-                        vec![Type::RigidVar(rigid_x)],
-                        Type::RigidVar(rigid_x)
-                    )
-                ),
+                ident: TypedVar(id, scheme.ty.clone()),
                 typ: None,
                 value: id_value,
                 span: SPAN
@@ -955,7 +949,7 @@ mod test {
             err,
             Err(Error::NotImpld {
                 class: TyClass::Addable,
-                ty: Type::UnifiableVar(UnifiableVar(0))
+                ty: Type::RigidVar(a)
             }),
         );
     }
