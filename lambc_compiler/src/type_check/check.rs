@@ -34,7 +34,6 @@ impl TypeInference {
             (Expr::FnDef(def), Type::Fun(typ)) => {
                 self.check_fndef(env, *def, typ)
             }
-
             (expr, expected_ty) => {
                 let (mut out, actual_ty) = self.infer_expr(env, expr);
                 out.cons.push(Constraint::TypeEqual {
