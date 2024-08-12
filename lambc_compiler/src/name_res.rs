@@ -792,6 +792,7 @@ impl Scope {
         self.add_type("int", Var::INT);
         self.add_type("usv", Var::USV);
         self.add_type("bool", Var::BOOL);
+        self.add_type("nil", Var::NIL);
         self.add_type("list", Var::LIST);
         self.add_type("double", Var::DOUBLE);
         self
