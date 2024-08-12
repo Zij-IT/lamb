@@ -7,5 +7,6 @@ def x: err = 2;
 def int: int = 2;
 def usv: usv = 'c';
 def bool: bool = true;
+def nil_: nil = nil;
 
 def int_list: list[int] = [2];
