@@ -1,3 +1,12 @@
+//! The home for the Lamb-Parser
+//!
+//! The [`Parser<'_>`][`Parser`] is a recursive-descent parser which uses [Pratt Parsing] to
+//! parse operator-expressions. The parser currently requres a look-ahead of two
+//! tokens, and uses a pull-based lexer to lex the tokens. The parser has no
+//! support for error-recovery, and abandons parsing after encountering an error.
+//!
+//! [Pratt Parsing]: https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+
 use std::path::PathBuf;
 
 use miette::Diagnostic;
@@ -41,13 +50,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parses a module as defined by the following grammar
-    /// ```text
-    /// Grammar:
-    ///
-    ///    module := export? import* item*
-    /// ```
-    ///
+    /// Parses a singular lamb module. A module may consist of the following items
+    /// in the following order:
+    /// + An export declaration
+    /// + Any amount of Import declarations
+    /// + Any amount of Items
     pub fn parse_module(&mut self) -> Result<Module<Ident, PathBuf>> {
         // Only a singular export is expected, however this is a simple way to catch
         // when the user writes multiple
@@ -91,8 +98,24 @@ impl<'a> Parser<'a> {
         Ok(Module { exports, imports, items, path: self.file.clone(), span })
     }
 
-    /// Parses an item, which can either be a `def`, `struct` or `union`
-    /// declaration
+    /// Parses an item, such as a top-level definition.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lambc_parse::{ Parser, Define, Expr, Span, Ident, I64Lit, I64Base, Item };
+    ///
+    /// let mut parser = Parser::new("def x := 2;".as_bytes(), "<PATH>");
+    /// let item = parser.parse_item()?;
+    ///
+    /// assert_eq!(item, Item::Def(Define {
+    ///       ident: Ident { raw: "x".into(), span: Span::new(4, 5) },
+    ///       typ: None,
+    ///       value: Expr::I64(I64Lit { base: I64Base::Dec, span: Span::new(9, 10), value: "2".into() }),
+    ///       span: Span::new(0, 11),
+    /// }));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn parse_item(&mut self) -> Result<Item<Ident>> {
         match self.peek1().kind {
             TokKind::Def => Ok(Item::Def(self.parse_definition()?)),
@@ -100,7 +123,24 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parses an expression with no trailing input.
+    /// Parses a complete top-level definition
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lambc_parse::{ Parser, Define, Expr, Span, Ident, I64Lit, I64Base };
+    ///
+    /// let mut parser = Parser::new("def x := 2;".as_bytes(), "<PATH>");
+    /// let def = parser.parse_definition()?;
+    ///
+    /// assert_eq!(def, Define {
+    ///       ident: Ident { raw: "x".into(), span: Span::new(4, 5) },
+    ///       typ: None,
+    ///       value: Expr::I64(I64Lit { base: I64Base::Dec, span: Span::new(9, 10), value: "2".into() }),
+    ///       span: Span::new(0, 11),
+    /// });
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn parse_definition(&mut self) -> Result<Define<Ident>> {
         let start = self.expect(TokKind::Def)?;
         let mut def = self.parse_define()?;
@@ -116,13 +156,29 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    /// Parses an import declaration as defined by the following grammar
-    /// ```text
-    /// Grammar:
+    /// Parses import declarations
     ///
-    ///     import := 'from' string ('as' ident)? 'import' ('*'? | '(' ident_list ')') ';'
+    /// # Example
+    ///
     /// ```
-    fn parse_import(&mut self) -> Result<Import<Ident, PathBuf>> {
+    /// use lambc_parse::{ Parser };
+    ///
+    /// let imports = [
+    ///     r#"from "./path1" as path1 import *;"#,
+    ///     r#"from "./path2" import { item1, item2 }; "#,
+    ///     r#"from "./path3" import { item1 as a, item2 as b }; "#,
+    /// ].join("\n");
+    ///
+    /// let mut parser = Parser::new(imports.as_bytes(), "<PATH>");
+    ///
+    /// let path1 = parser.parse_import()?;
+    /// let path2 = parser.parse_import()?;
+    /// let path3 = parser.parse_import()?;
+    /// assert!(parser.parse_import().is_err());
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn parse_import(&mut self) -> Result<Import<Ident, PathBuf>> {
         // 'from' is not a keyword, and because of this we check the slice
         let start = self.expect_ident("from")?;
         let path = self.parse_string()?;
@@ -177,7 +233,26 @@ impl<'a> Parser<'a> {
         Ok(ImportItem { item, alias, span })
     }
 
-    fn parse_export(&mut self) -> Result<Export<Ident>> {
+    /// Parses export declarations
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lambc_parse::{ Parser };
+    ///
+    /// let exports = [
+    ///     r#"export { a, b, c };"#,
+    ///     r#"export { a as x, b as y, c as z };"#,
+    /// ].join("\n");
+    ///
+    /// let mut parser = Parser::new(exports.as_bytes(), "<PATH>");
+    ///
+    /// let simple_exports = parser.parse_export()?;
+    /// let renamed_exports  = parser.parse_export()?;
+    ///
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn parse_export(&mut self) -> Result<Export<Ident>> {
         let export = self.expect_ident("export")?;
         let (_, items, _) = self.parse_node_list(
             TokKind::OpenBrace,
