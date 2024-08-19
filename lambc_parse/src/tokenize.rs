@@ -1,3 +1,14 @@
+//! Tokenization of Lamb source-code
+//!
+//! The [`Lexer<'_>`][`Lexer`] is a lazy-lexer, which requires the input be
+//! pulled from it using either the [`next_token`][`Lexer::next_token`] or
+//! [`next_nontrivial_token`][`Lexer::next_nontrival_token`]. Of note, is that
+//! the [`Lexer`] will always output a token. If it has reached the end of the
+//! input, a token with [`TokKind::End`] will be produced.
+//!
+//! The [`Lexer`] the lexer operates on the bytes of the input, and converts
+//! sections of the input into `&str` when required.
+
 use std::borrow::Cow;
 
 use crate::Span;
@@ -35,6 +46,9 @@ pub enum TokKind {
     CharStart,
     /// The text of a `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
     /// type
+    ///
+    /// Note: The current escape character for lamb is `:`. That means that a newline
+    /// is written as `:n` instead of `\n`.
     CharText,
     /// The end '\'' of a string literal
     CharEnd,
@@ -47,6 +61,9 @@ pub enum TokKind {
     /// The beginning '"' of a string literal
     StringStart,
     /// The text within a string literal
+    ///
+    /// Note: The current escape character for lamb is `:`. That means that a newline
+    /// is written as `:n` instead of `\n`.
     StringText,
     /// The end '"' of a string literal
     StringEnd,
@@ -148,7 +165,7 @@ pub enum TokKind {
     Comment,
     /// Used to indicate the end of the input
     End,
-    /// Used to indicate a character not usable by the lexer
+    /// Used to indicate a character not recognized by Lamb
     Invalid,
 }
 
@@ -259,7 +276,8 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next [`Token`] in the input that isn't whitespace or a comment. If the lexer
-    /// has reached the end of the input, it will return [`TokKind::End`]
+    /// has reached the end of the input, it will return [`TokKind::End`]. Do note that the lexer
+    /// will continue to return [`TokKind::End`] as long as `next_nontrivial_token` is called.
     pub fn next_nontrival_token(&mut self) -> Token<'a> {
         let mut next = self.next_token();
         while next.kind == TokKind::Comment {
@@ -269,8 +287,10 @@ impl<'a> Lexer<'a> {
         next
     }
 
-    /// Returns the next [`Token`] in the input. If the lexer
-    /// has reached the end of the input, it will return [`TokKind::End`]
+    /// Returns the next [`Token`] in the input. If the lexer has reached the end
+    /// of the input, it will return [`TokKind::End`]. Do note that the lexer
+    /// will continue to return [`TokKind::End`] as long as `next_token`
+    /// is called.
     fn next_token(&mut self) -> Token<'a> {
         match self.state {
             State::Default => self.default_token(),
@@ -336,10 +356,14 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Gets the byte of input that the lexer is currently [`at`][`Lexer::at`],
+    /// or the null-byte if there is no character
     fn current(&self) -> u8 {
         self.input.get(self.at).copied().unwrap_or(0)
     }
 
+    /// Gets the next byte of input, or the null-byte if there is no character.
+    /// This does *not* advance the lexer.
     fn next(&self) -> u8 {
         self.input.get(self.at + 1).copied().unwrap_or(0)
     }
