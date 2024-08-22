@@ -18,17 +18,17 @@ use crate::Span;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TokKind {
     // Delimiters
-    /// '{'
+    /// `{`
     OpenBrace,
-    /// '}'
+    /// `}`
     CloseBrace,
-    /// '['
+    /// `[`
     OpenBrack,
-    /// ']'
+    /// `]`
     CloseBrack,
-    /// '('
+    /// `(`
     OpenParen,
-    /// ')'
+    /// `)`
     CloseParen,
 
     // Literals
@@ -42,7 +42,7 @@ pub enum TokKind {
     HexI64,
     /// Signed 8-Byte integer literal with the no prefix
     DecI64,
-    /// The beginning '\'' of a string literal
+    /// The beginning `'` of a char literal
     CharStart,
     /// The text of a `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
     /// type
@@ -50,114 +50,114 @@ pub enum TokKind {
     /// Note: The current escape character for lamb is `:`. That means that a newline
     /// is written as `:n` instead of `\n`.
     CharText,
-    /// The end '\'' of a string literal
+    /// The end `'` of a char literal
     CharEnd,
-    /// The `f64` literal`
+    /// The `f64` literal
     F64,
     /// The literal `true`
     True,
     /// The literal `false`
     False,
-    /// The beginning '"' of a string literal
+    /// The beginning `"` of a string literal
     StringStart,
     /// The text within a string literal
     ///
     /// Note: The current escape character for lamb is `:`. That means that a newline
     /// is written as `:n` instead of `\n`.
     StringText,
-    /// The end '"' of a string literal
+    /// The end `"` of a string literal
     StringEnd,
 
     // Operators
-    /// '+'
+    /// `+`
     Add,
-    /// '-'
+    /// `-`
     Sub,
-    /// '/'
+    /// `/`
     Div,
-    /// '*'
+    /// `*`
     Mul,
-    /// '%'
+    /// `%`
     Mod,
-    /// '&'
+    /// `&`
     Band,
-    /// '|'
+    /// `|`
     Bor,
-    /// '^'
+    /// `^`
     Xor,
-    /// '~'
+    /// `~`
     Bneg,
-    /// '<<'
+    /// `<<`
     Shl,
-    /// '>>'
+    /// `>>`
     Shr,
-    /// '='
+    /// `=`
     Eq,
-    /// '!='
+    /// `!=`
     Ne,
-    /// '>'
+    /// `>`
     Gt,
-    /// '<'
+    /// `<`
     Lt,
-    /// '>='
+    /// `>=`
     Ge,
-    /// '<='
+    /// `<=`
     Le,
-    /// '&&'
+    /// `&&`
     Land,
-    /// '||'
+    /// `||`
     Lor,
-    /// '!'
+    /// `!`
     Lnot,
-    /// '<.'
+    /// `<.`
     Cpsl,
-    /// '.>'
+    /// `.>`
     Cpsr,
-    /// '<$'
+    /// `<$`
     Appl,
-    /// '$>'
+    /// `$>`
     Appr,
 
     // Keyword
-    /// 'fn'
+    /// `fn`
     Fn,
-    /// 'if'
+    /// `if`
     If,
-    /// 'def'
+    /// `def`
     Def,
-    /// 'let'
+    /// `let`
     Let,
-    /// 'elif'
+    /// `elif`
     Elif,
-    /// 'else'
+    /// `else`
     Else,
-    /// 'rec'
+    /// `rec`
     Rec,
-    /// 'case'
+    /// `case`
     Case,
-    /// 'union'
+    /// `union`
     Union,
-    /// 'struct'
+    /// `struct`
     Struct,
-    /// 'return'
+    /// `return`
     Return,
-    /// '/[A-Za-z_][A-Za-z_0-9]*/'
+    /// `/[A-Za-z_][A-Za-z_0-9]*/`
     Ident,
 
     // Syntax
-    /// ':'
+    /// `:`
     Colon,
-    /// ','
+    /// `,`
     Comma,
-    /// ';'
+    /// `;`
     Semi,
-    /// '@'
+    /// `@`
     Bind,
-    /// '->'
+    /// `->`
     Arrow,
-    /// '..'
+    /// `..`
     DotDot,
-    /// '::'
+    /// `::`
     PathSep,
 
     // Meta
@@ -252,12 +252,15 @@ impl TokKind {
     }
 }
 
-/// Represents a lexeme from the lamb language. See [`TokKind`] for the possible
+/// A lexeme from the lamb language. See [`TokKind`] for the possible
 /// token kinds.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token<'a> {
+    /// The kind of token that [`slice`][Token::slice] corresponds to
     pub kind: TokKind,
+    /// The span of the token
     pub span: Span,
+    /// The text which this token refers to
     pub slice: Cow<'a, str>,
 }
 

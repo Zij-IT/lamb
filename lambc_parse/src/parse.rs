@@ -22,6 +22,7 @@ use crate::{
     StrLit, StrText, TokKind, Token, Type, Unary, UnaryOp,
 };
 
+/// A syntax error which occured either while lexing or parsing
 #[derive(Diagnostic, Debug, ThError, PartialEq, Eq)]
 #[error("error[Parse Error]: {message}")]
 #[diagnostic()]
@@ -33,6 +34,7 @@ pub struct Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+/// The Lamb parser, which is used to parse entire [`Module`].
 pub struct Parser<'a> {
     file: PathBuf,
     lexer: Lexer<'a>,
@@ -41,6 +43,8 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new parser which will parse `input` and use `file` for references to files
+    /// within the module (such as for [`Module::path`])
     pub fn new<P: Into<PathBuf>>(input: &'a [u8], file: P) -> Self {
         Self {
             lexer: Lexer::new(input),

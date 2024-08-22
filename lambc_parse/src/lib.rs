@@ -1,3 +1,11 @@
+//! Parsing Lamb Source Code
+//!
+//! This crate defines the tools necessary to parse Lamb source code, including
+//! the [`Parser`] and the components of the [Abstract Syntax Tree]. Additionally
+//! the location of an item in the source code can be tracked using the [`Span`]
+//! type.
+//!
+//! [Abstract Syntax Tree]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
 mod ast;
 mod parse;
 mod tokenize;
@@ -8,6 +16,7 @@ pub use parse::{Error, Parser};
 use tokenize::Lexer;
 pub use tokenize::{TokKind, Token};
 
+/// A location within a source file
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Span {
     start: usize,
