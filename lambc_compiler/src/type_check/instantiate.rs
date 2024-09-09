@@ -5,6 +5,8 @@ use super::{
 };
 
 impl TypeInference {
+    /// Instantiates a type-scheme, so a (possibly) new monomorphization of the
+    /// type can be constructed.
     pub fn instantiate(&mut self, scheme: TypeScheme) -> Qualified<Type> {
         let tyvar_to_unifiers = scheme
             .unbound
@@ -17,6 +19,7 @@ impl TypeInference {
     }
 }
 
+// todo: remove `pub`
 pub struct Instantiate<'a> {
     tyvars_to_unif: &'a HashMap<RigidVar, UnifiableVar>,
 }

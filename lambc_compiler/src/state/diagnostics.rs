@@ -6,6 +6,7 @@ use crate::PathRef;
 
 pub type MietteReportable = Box<dyn MietteDiagnostic + Send + Sync + 'static>;
 
+/// A collection of error messages relating to a single file
 #[derive(Debug, Default, MietteDiagnostic, thiserror::Error)]
 #[error("{} errors", .errors.len())]
 pub struct Diagnostic {
@@ -13,6 +14,7 @@ pub struct Diagnostic {
     pub errors: Vec<MietteReportable>,
 }
 
+/// A collection of error messages from various source files.
 #[derive(Default)]
 pub struct Diagnostics {
     pub inner: HashMap<Option<PathRef>, Diagnostic>,

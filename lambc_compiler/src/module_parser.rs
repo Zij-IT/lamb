@@ -31,16 +31,35 @@ enum Error {
     },
 }
 
+/// A Parser responsible for parsing all files connected to the input file via
+/// imports.
 #[derive(Debug)]
 pub struct ModuleParser<'b> {
     state: &'b mut State,
 }
 
 impl<'b> ModuleParser<'b> {
+    /// Constructs a new `ModuleParser` which writes errors to `state`.
     pub fn new(state: &'b mut State) -> Self {
         Self { state }
     }
 
+    /// Parses files starting with the `initial` list. The list returned
+    /// is guarunteed to be traversed in a BFS manner. Given the files
+    ///
+    /// ```
+    /// -- File A:
+    /// from "file_b.lb" import { a, b };
+    /// from "file_c.lb" import { a, b };
+    ///
+    /// -- File B:
+    /// from "file_d.lb" import { a, b };
+    ///
+    /// -- File C:
+    /// from "file_e.lb" import { a, b };
+    /// ```
+    ///
+    /// the output order will be as follows: a, b, c, d, e
     pub fn parse(
         &mut self,
         initial: Vec<PathBuf>,

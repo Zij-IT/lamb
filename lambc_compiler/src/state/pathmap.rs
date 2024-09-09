@@ -4,9 +4,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// A key represnting a source-file path.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash)]
 pub struct PathRef(usize);
 
+/// A map from keys to source files.
 pub struct PathMap {
     from_ref: HashMap<PathRef, PathBuf>,
     to_ref: HashMap<PathBuf, PathRef>,
@@ -14,6 +16,7 @@ pub struct PathMap {
 }
 
 impl PathMap {
+    /// Constructs a new empty map.
     pub fn new() -> Self {
         Self {
             from_ref: Default::default(),
@@ -22,6 +25,9 @@ impl PathMap {
         }
     }
 
+    /// Inserts a file path into the map, which will be [`canonicalized`](`canonicalize`)
+    /// so that the same key will be used for the same file regardless of where it is being
+    /// imported from.
     pub fn insert<P: Into<PathBuf>>(&mut self, path: P) -> PathRef {
         let path = path.into();
         let path = path.canonicalize().unwrap_or(path);

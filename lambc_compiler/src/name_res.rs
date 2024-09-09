@@ -1,3 +1,27 @@
+//! Name Resolution
+//!
+//! This module is responsible for performing the matching of variable references
+//! to the correct definition. This is performed across files in the events of
+//! imports and exports. During this step aliases are resolved, and variables
+//! are pinned to certain definitions. Additionally, this step connects type
+//! references to the definition of that type, so that it can be known what
+//! `int` the user can be referring to.
+//!
+//! It should be known that there are two namespaces in which names are resolved:
+//! + type names
+//! + variable names
+//!
+//! This allows the user to make the use of a type name for a variable name, without
+//! a conflict arising. This enables the user to write (though this isn't encouraged)
+//! the following:
+//!
+//! ```
+//! def int: int = 0;
+//! ```
+//!
+//! Finally, this step is responsible for requiring that patterns are well formed,
+//! and bind an identifier in all sub-patterns.
+
 mod pattern;
 use std::collections::HashMap;
 
@@ -13,10 +37,12 @@ use miette::{Diagnostic, LabeledSpan};
 use self::pattern::PatternChecker;
 use crate::{PathRef, State};
 
+/// The error type for errors encountered during name-resolution
 #[derive(Diagnostic, thiserror::Error, Debug)]
 pub enum Error {
     #[diagnostic(code("name-res::not-found"))]
     #[error("cannot find `{}` in this scope", .name)]
+    /// A reference is being made to a variable or type which does not exist.
     NotFound {
         name: String,
         #[label]
@@ -24,6 +50,8 @@ pub enum Error {
     },
     #[diagnostic(code("name-res::not-exported"))]
     #[error("`{}` not found", .name)]
+    /// An attempt is being made to import a variable from a file which doesn't
+    /// export a variable by that name.
     NotExported {
         name: String,
         #[label]
@@ -33,6 +61,8 @@ pub enum Error {
     },
     #[diagnostic(code("name-res::too-many-defs"))]
     #[error("`{}` is defined multiple times", .name)]
+    /// A variable is being defined too many times in a conflicting manner, such
+    /// as in an argument list, or a pattern.
     MultipleDefinitions {
         name: String,
         #[label(collection)]
@@ -40,6 +70,7 @@ pub enum Error {
     },
     #[diagnostic(code("name-res::missing-bindings"))]
     #[error("`{}` isn't bound in all cases", .binding)]
+    /// A patten does not bind an identifier in all sub-patterns.
     MissingBinding {
         binding: String,
         #[label]
@@ -47,16 +78,26 @@ pub enum Error {
     },
 }
 
+/// A struct representing a variable or type reference within a program.
+/// In the example `def x: int = 0` both `x` and `int` are converted to
+/// `Var`, though `int` will later be converted to the proper type.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Var(pub u32);
 
 impl Var {
+    /// The `Var` representing the `int` type
     pub const INT: Self = Self(0);
+    /// The `Var` representing the `nil` type
     pub const NIL: Self = Self(1);
+    /// The `Var` representing the `usv` type
     pub const USV: Self = Self(2);
+    /// The `Var` representing the `bool` type
     pub const BOOL: Self = Self(3);
+    /// The `Var` representing the `double` type
     pub const DOUBLE: Self = Self(4);
+    /// The `Var` representing the `list` type
     pub const LIST: Self = Self(5);
+    /// The `Var` representing the `never` type
     pub const NEVER: Self = Self(6);
     #[allow(nonstandard_style)]
     // This must be the last item in the list of vars, and must be updated
@@ -64,16 +105,27 @@ impl Var {
     pub(self) const __BASE: u32 = 7;
 }
 
+/// The struct responsible for performing name resolution over a compilation unit.
 pub struct Resolver<'s> {
+    /// the state to which errors will be reported
     pub state: &'s mut State,
+    /// a number representing the current `Var` count.
+    // todo: change this name
     pub start: u32,
 }
 
 impl<'s> Resolver<'s> {
+    /// Constructs a new `Resolver` which reports errors through `state`.
     pub fn new(state: &'s mut State) -> Self {
         Self { state, start: Var::__BASE }
     }
 
+    /// Performs name resolution over all the modules, reporting any errors,
+    /// such as missing variable definitions or duplicate definitions to the
+    /// state.
+    ///
+    /// Note: The length of the output is guarunteed to be the same as the length
+    /// of `modules`.
     pub fn resolve_modules(
         &mut self,
         modules: Vec<Module<Ident, PathRef>>,

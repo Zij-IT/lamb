@@ -8,6 +8,7 @@ type RawType = lambc_parse::Type<Var>;
 type RawNamed = lambc_parse::NamedType<Var>;
 type RawFnType = lambc_parse::FnType<Var>;
 
+/// A map from `Var` to the actual Lamb `Type` being referred to.
 #[derive(Clone, Default)]
 pub struct TypeEnv {
     inner: im::HashMap<Var, Type>,

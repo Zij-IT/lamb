@@ -9,6 +9,8 @@ use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
 use crate::type_check::TypedVar;
 
 impl TypeInference {
+    /// Performs substitution of `UnifiableVar` for `RigidVar`. This is used
+    /// after unification to create a type with unbound type variables.
     pub(super) fn substitute(
         &mut self,
         ty: Type,
@@ -54,6 +56,7 @@ impl TypeInference {
         }
     }
 
+    /// Substitutes the [`UnifiableVar`](`UnifiableVar`) within a [`Constraint`] for the [`RigidVar`]
     pub(super) fn substitute_constraints(
         &mut self,
         constraints: Vec<Constraint>,
@@ -82,6 +85,7 @@ impl TypeInference {
             )
     }
 
+    /// Substitutes the [`UnifiableVar`](`UnifiableVar`) within an [`Expr`] for the [`RigidVar`]
     pub(super) fn substitute_expr(
         &mut self,
         expr: Expr<TypedVar>,
