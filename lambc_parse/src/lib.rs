@@ -24,7 +24,7 @@ pub struct Span {
 }
 
 impl Span {
-    /// Creates a new `Span` for the specified `FileId`. `start` and `end` mark byte offsets in
+    /// Creates a new `Span` with `start` and `end` mark byte offsets in
     /// the source file.
     pub const fn new(start: usize, end: usize) -> Self {
         Self { start, end }
