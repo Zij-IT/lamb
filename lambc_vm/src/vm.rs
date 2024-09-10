@@ -20,38 +20,50 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(miette::Diagnostic, thiserror::Error, Debug)]
 pub enum Error {
+    // todo: this should be impossible since name-resolution, but it is
+    // unfortunately not be because the top-level scope is not limited to
+    // function definitions and constants.
     #[diagnostic(code("runtime::no-such-global"))]
     #[error("No global with the name '{0}'")]
     NoSuchGlobal(String),
 
+    // todo: this should be removed once type-checking for pattern-matching
+    // is complete.
     #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to test a value of type {0} against an array pattern")]
     BadArrayScrutinee(&'static str),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to use a value of type {0} as an index")]
     BadIndexType(&'static str),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to index into a value of type {0}")]
     BadIndexeeType(&'static str),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error("Callee accepts {0} arguments, but was provided {1}")]
     ArgAmountMismatch(usize, usize),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error("Type Error: Attempt to call a value of type {0}")]
     BadCalleeType(&'static str),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error("Type Error: Expected bool, recieved {0}")]
     CtrlFlowNotBool(&'static str),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error("Type Error: The binary op {2} can't be used with values of types {1} and {0}")]
     BinaryTypeMismatch(&'static str, &'static str, &'static str),
 
+    // todo: this should be removed after type-checking is finished
     #[diagnostic(code("type-error"))]
     #[error(
         "Type Error: The unary op {1} can't be used with a value of type {0}"
@@ -62,27 +74,34 @@ pub enum Error {
     #[error("Index {0} is out of bounds (max {1})")]
     IndexOutOfBounds(usize, usize),
 
+    // todo: this should be removed once errors can be returned by built-in functions
     #[diagnostic(code("runtime::unreadble-user-input"))]
     #[error("IoError: {0}")]
     Io(#[from] std::io::Error),
 
+    // todo: this should be removed once errors can be returned by built-in functions
     #[diagnostic(code("runtime::bad-user-input"))]
     #[error("Cant convert input to a value of type {0}")]
     InputConv(&'static str),
 
+    // todo: this should be removed once typing for modules has been added
     #[diagnostic(code("type-error"))]
     #[error("No module with path '{0}' has been loaded.")]
     NoSuchModule(String),
 
+    // todo: this should be removed once typing for modules has been added
     #[diagnostic(code("type-error"))]
     #[error("Attempt to treat a value of type '{0}' as a module.")]
     NotAModule(&'static str),
 
+    // todo: this should be removed once type-checking has finished
     #[diagnostic(code("runtime::no-such-export"))]
     #[error("Module '{1}' doesn't export an item named '{0}'")]
     NoExportViaName(String, String),
 }
 
+// todo: value should have functions for these operations and this should
+// be removed
 macro_rules! num_bin_op {
     (__ONLY_INT, $op:tt, $this:expr) => {{
         let rhs = $this.pop();
@@ -123,6 +142,8 @@ macro_rules! num_bin_op {
     }};
 }
 
+// todo: value should have functions for these operations and this should
+// be removed
 macro_rules! num_un_op {
     ($op:tt, $this:expr) => {{
         let rhs = $this.pop();
@@ -140,6 +161,17 @@ macro_rules! num_un_op {
     }};
 }
 
+/// The Virtual Machine behind Lamb, which operates on the bytecode generated
+/// by the [`Bytecode`](crate::Backend) backend.
+///
+/// The design of this virtual machine is largely similar to the one designed
+/// by Robert Nystrom, with extensions made to support more frames, a larger
+/// stack and block-expressions.
+///
+/// Note: The Virtual Machine does not have a stack, nor a callframe limit and
+/// can therefore overflow the host-stack or the consume all available memory by
+/// adding infinite values to the stack (such as by calling an infinitely
+/// recursive) function.
 pub struct Vm<'gc> {
     gc: &'gc mut LambGc,
     builtins: HashMap<GcRef<Str>, Value>,
@@ -151,6 +183,8 @@ pub struct Vm<'gc> {
 }
 
 impl<'gc> Vm<'gc> {
+    /// Constructs a new virtual machine which constructs values within this
+    /// garbage collector.
     pub fn new(gc: &'gc mut LambGc) -> Self {
         let mut this = Self {
             gc,
@@ -170,6 +204,8 @@ impl<'gc> Vm<'gc> {
         this
     }
 
+    /// Loads an [`Exe`] into the compiler, so that it may be run. Doing so will
+    /// cause any imports from the source file to not only be loaded, but run.
     pub fn load_exe(&mut self, exe: Exe) -> Result<()> {
         let main = &exe.main;
         let modules = &exe.modules;
@@ -275,6 +311,12 @@ impl<'gc> Vm<'gc> {
         Ok(())
     }
 
+    /// Runs the loaded input and returns `Ok(())` if the code was able to be executed
+    /// successfully.
+    ///
+    /// Note: Calling this twice without loading a module in between will result in a panic
+    /// as a module is "unloaded" after execution.
+    // todo: Calling this twice should not panic.
     pub fn run(&mut self) -> Result<()> {
         loop {
             let op = self.chunk().code[self.frame().ip];
