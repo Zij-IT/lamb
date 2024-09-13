@@ -58,11 +58,30 @@ impl super::TypeInference {
                     });
                 }
 
-                for (l_arg, r_arg) in l.args.into_iter().zip(r.args) {
-                    self.unify_ty_ty(l_arg, r_arg)?;
+                for (l_arg, r_arg) in l.args.iter().zip(r.args.iter()) {
+                    if self.unify_ty_ty(l_arg.clone(), r_arg.clone()).is_err()
+                    {
+                        return Err(Error::TypeNotEqual {
+                            expected: Type::Fun(l),
+                            got: Type::Fun(r),
+                        });
+                    }
                 }
 
-                self.unify_ty_ty(*l.ret_type, *r.ret_type)
+                if self
+                    .unify_ty_ty(
+                        Type::clone(&l.ret_type),
+                        Type::clone(&r.ret_type),
+                    )
+                    .is_err()
+                {
+                    return Err(Error::TypeNotEqual {
+                        expected: Type::Fun(l),
+                        got: Type::Fun(r),
+                    });
+                }
+
+                Ok(())
             }
             (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;

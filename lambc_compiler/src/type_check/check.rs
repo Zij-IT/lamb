@@ -1,8 +1,6 @@
-use lambc_parse::{Expr, FnDef};
+use lambc_parse::Expr;
 
-use super::{
-    env::Env, Constraint, FnType, Qualified, Type, TypeInference, TypedVar,
-};
+use super::{env::Env, Constraint, Qualified, Type, TypeInference, TypedVar};
 use crate::name_res::Var;
 
 impl TypeInference {
@@ -33,9 +31,6 @@ impl TypeInference {
             (Expr::String(s), Type::List(e)) if *e == Type::USV => {
                 Qualified::unconstrained(Expr::String(s))
             }
-            (Expr::FnDef(def), Type::Fun(typ)) => {
-                self.check_fndef(env, *def, typ)
-            }
             (expr, expected_ty) => {
                 let (mut out, actual_ty) = self.infer_expr(env, expr);
                 out.cons.push(Constraint::TypeEqual {
@@ -46,31 +41,6 @@ impl TypeInference {
                 out
             }
         }
-    }
-
-    pub(super) fn check_fndef(
-        &mut self,
-        mut env: Env,
-        def: FnDef<Var>,
-        typ: FnType,
-    ) -> Qualified<Expr<TypedVar>> {
-        // TODO: Issue type error instead of panic if arg count doesn't match
-        assert_eq!(def.args.len(), typ.args.len());
-        let mut new_args = Vec::with_capacity(typ.args.len());
-        for (ty, arg) in typ.args.into_iter().zip(def.args.into_iter()) {
-            env.add_type(arg, Qualified::unconstrained(ty.clone()));
-            new_args.push(TypedVar(arg, ty));
-        }
-        let bodyres = self.check_expr(env, def.body, *typ.ret_type);
-        Qualified::constrained(
-            Expr::FnDef(Box::new(FnDef {
-                args: new_args,
-                body: bodyres.item,
-                recursive: def.recursive,
-                span: def.span,
-            })),
-            bodyres.cons,
-        )
     }
 }
 #[cfg(test)]
