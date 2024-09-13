@@ -5,7 +5,7 @@ def lies_1
   = fn(a) -> a;
 
 -- should-type-error
--- expected-got: `int`, `list[csv]`
+-- expected-got: `fn(int) -> int`, `fn(_) -> list[csv]`
 def lies_2
   : fn(int) -> int
   = fn(_) -> "hi";
