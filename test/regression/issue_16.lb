@@ -1,0 +1,12 @@
+-- should-type-error
+-- expected-got: `fn(a, b) -> a`, `fn(a) -> a`
+def lies_1
+  : fn[a, b](a, b) -> a
+  = fn(a) -> a;
+
+-- should-type-error
+-- expected-got: `int`, `list[csv]`
+def lies_2
+  : fn(int) -> int
+  = fn(_) -> "hi";
+  
