@@ -8,17 +8,23 @@ use lambc_parse::{Ident, IdentPattern, InnerPattern, Pattern, Span};
 use super::{Error, Resolver};
 use crate::PathRef;
 
-// collect all idents from inner pattern
+/// A helper-struct which assists in validating pattern requirements. This includes:
+/// + verifying both the left and right half of a pattern contain the same identifiers
+/// + verifying a pattern does not bind the same identifier twice
 pub struct PatternChecker<'r, 's> {
     module: PathRef,
     resolver: &'r mut Resolver<'s>,
 }
 
 impl<'r, 's> PatternChecker<'r, 's> {
+    /// Creates a new `PatternChecker` which writes errors to the `Resolver::state`.
+    /// This instance should then only be used on patterns from the same `module`.
     pub fn new(module: PathRef, resolver: &'r mut Resolver<'s>) -> Self {
         Self { module, resolver }
     }
 
+    /// Verifies that the passed `pattern` is well-formed as described in the
+    /// documentation for [`PatternChecker`]
     pub fn check(&mut self, pattern: &Pattern<Ident>) {
         self.pattern_names(pattern);
     }
@@ -112,6 +118,7 @@ impl<'r, 's> PatternChecker<'r, 's> {
     }
 }
 
+/// A helper-struct to help compare idents purely based on their `raw` contents.
 #[derive(Clone)]
 struct Wrapped<'a>(&'a Ident);
 

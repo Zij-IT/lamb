@@ -10,10 +10,14 @@ use super::{
 use crate::name_res::Var;
 
 impl TypeInference {
+    /// Infers the type of `expr` given the environment `Env`. Returns a tuple
+    /// of a constrained expression, and the type of that expression.
     pub(super) fn infer_expr(
         &mut self,
         env: Env,
         expr: Expr<Var>,
+        // todo: The type is what is actually constrained here, so move `Qualified`
+        // over to the type.
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         match expr {
             // The easy cases!

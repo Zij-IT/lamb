@@ -6,6 +6,8 @@ use super::{
 use crate::name_res::Var;
 
 impl TypeInference {
+    /// Checks the type of an expression, returning an [`Expr`] with the
+    /// requirements for the expression to type-check.
     pub(super) fn check_expr(
         &mut self,
         env: Env,

@@ -1,3 +1,14 @@
+//! Tokenization of Lamb source-code
+//!
+//! The [`Lexer<'_>`][`Lexer`] is a lazy-lexer, which requires the input be
+//! pulled from it using either the [`next_token`][`Lexer::next_token`] or
+//! [`next_nontrivial_token`][`Lexer::next_nontrival_token`]. Of note, is that
+//! the [`Lexer`] will always output a token. If it has reached the end of the
+//! input, a token with [`TokKind::End`] will be produced.
+//!
+//! The [`Lexer`] the lexer operates on the bytes of the input, and converts
+//! sections of the input into `&str` when required.
+
 use std::borrow::Cow;
 
 use crate::Span;
@@ -7,17 +18,17 @@ use crate::Span;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TokKind {
     // Delimiters
-    /// '{'
+    /// `{`
     OpenBrace,
-    /// '}'
+    /// `}`
     CloseBrace,
-    /// '['
+    /// `[`
     OpenBrack,
-    /// ']'
+    /// `]`
     CloseBrack,
-    /// '('
+    /// `(`
     OpenParen,
-    /// ')'
+    /// `)`
     CloseParen,
 
     // Literals
@@ -31,116 +42,122 @@ pub enum TokKind {
     HexI64,
     /// Signed 8-Byte integer literal with the no prefix
     DecI64,
-    /// The beginning '\'' of a string literal
+    /// The beginning `'` of a char literal
     CharStart,
     /// The text of a `char` literal which has the same semantics as the Rust [`char`](https://doc.rust-lang.org/std/primitive.char.html)
     /// type
+    ///
+    /// Note: The current escape character for lamb is `:`. That means that a newline
+    /// is written as `:n` instead of `\n`.
     CharText,
-    /// The end '\'' of a string literal
+    /// The end `'` of a char literal
     CharEnd,
-    /// The `f64` literal`
+    /// The `f64` literal
     F64,
     /// The literal `true`
     True,
     /// The literal `false`
     False,
-    /// The beginning '"' of a string literal
+    /// The beginning `"` of a string literal
     StringStart,
     /// The text within a string literal
+    ///
+    /// Note: The current escape character for lamb is `:`. That means that a newline
+    /// is written as `:n` instead of `\n`.
     StringText,
-    /// The end '"' of a string literal
+    /// The end `"` of a string literal
     StringEnd,
 
     // Operators
-    /// '+'
+    /// `+`
     Add,
-    /// '-'
+    /// `-`
     Sub,
-    /// '/'
+    /// `/`
     Div,
-    /// '*'
+    /// `*`
     Mul,
-    /// '%'
+    /// `%`
     Mod,
-    /// '&'
+    /// `&`
     Band,
-    /// '|'
+    /// `|`
     Bor,
-    /// '^'
+    /// `^`
     Xor,
-    /// '~'
+    /// `~`
     Bneg,
-    /// '<<'
+    /// `<<`
     Shl,
-    /// '>>'
+    /// `>>`
     Shr,
-    /// '='
+    /// `=`
     Eq,
-    /// '!='
+    /// `!=`
     Ne,
-    /// '>'
+    /// `>`
     Gt,
-    /// '<'
+    /// `<`
     Lt,
-    /// '>='
+    /// `>=`
     Ge,
-    /// '<='
+    /// `<=`
     Le,
-    /// '&&'
+    /// `&&`
     Land,
-    /// '||'
+    /// `||`
     Lor,
-    /// '!'
+    /// `!`
     Lnot,
-    /// '<.'
+    /// `<.`
     Cpsl,
-    /// '.>'
+    /// `.>`
     Cpsr,
-    /// '<$'
+    /// `<$`
     Appl,
-    /// '$>'
+    /// `$>`
     Appr,
 
     // Keyword
-    /// 'fn'
+    /// `fn`
     Fn,
-    /// 'if'
+    /// `if`
     If,
-    /// 'def'
+    /// `def`
     Def,
-    /// 'let'
+    /// `let`
     Let,
-    /// 'elif'
+    /// `elif`
     Elif,
-    /// 'else'
+    /// `else`
     Else,
-    /// 'rec'
+    /// `rec`
     Rec,
-    /// 'case'
+    /// `case`
     Case,
-    /// 'union'
+    /// `union`
     Union,
-    /// 'struct'
+    /// `struct`
     Struct,
-    /// 'return'
+    /// `return`
     Return,
-    /// '/[A-Za-z_][A-Za-z_0-9]*/'
+    /// `/[A-Za-z_][A-Za-z_0-9]*/`
     Ident,
 
     // Syntax
-    /// ':'
+    /// `:`
     Colon,
-    /// ','
+    /// `,`
     Comma,
-    /// ';'
+    /// `;`
     Semi,
-    /// '@'
+    /// `@`
     Bind,
-    /// '->'
+    /// `->`
     Arrow,
-    /// '..'
+    /// `..`
     DotDot,
-    /// '::'
+    /// `::`
     PathSep,
 
     // Meta
@@ -148,7 +165,7 @@ pub enum TokKind {
     Comment,
     /// Used to indicate the end of the input
     End,
-    /// Used to indicate a character not usable by the lexer
+    /// Used to indicate a character not recognized by Lamb
     Invalid,
 }
 
@@ -235,12 +252,15 @@ impl TokKind {
     }
 }
 
-/// Represents a lexeme from the lamb language. See [`TokKind`] for the possible
+/// A lexeme from the lamb language. See [`TokKind`] for the possible
 /// token kinds.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token<'a> {
+    /// The kind of token that [`slice`][Token::slice] corresponds to
     pub kind: TokKind,
+    /// The span of the token
     pub span: Span,
+    /// The text which this token refers to
     pub slice: Cow<'a, str>,
 }
 
@@ -259,7 +279,8 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next [`Token`] in the input that isn't whitespace or a comment. If the lexer
-    /// has reached the end of the input, it will return [`TokKind::End`]
+    /// has reached the end of the input, it will return [`TokKind::End`]. Do note that the lexer
+    /// will continue to return [`TokKind::End`] as long as `next_nontrivial_token` is called.
     pub fn next_nontrival_token(&mut self) -> Token<'a> {
         let mut next = self.next_token();
         while next.kind == TokKind::Comment {
@@ -269,8 +290,10 @@ impl<'a> Lexer<'a> {
         next
     }
 
-    /// Returns the next [`Token`] in the input. If the lexer
-    /// has reached the end of the input, it will return [`TokKind::End`]
+    /// Returns the next [`Token`] in the input. If the lexer has reached the end
+    /// of the input, it will return [`TokKind::End`]. Do note that the lexer
+    /// will continue to return [`TokKind::End`] as long as `next_token`
+    /// is called.
     fn next_token(&mut self) -> Token<'a> {
         match self.state {
             State::Default => self.default_token(),
@@ -336,10 +359,14 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Gets the byte of input that the lexer is currently [`at`][`Lexer::at`],
+    /// or the null-byte if there is no character
     fn current(&self) -> u8 {
         self.input.get(self.at).copied().unwrap_or(0)
     }
 
+    /// Gets the next byte of input, or the null-byte if there is no character.
+    /// This does *not* advance the lexer.
     fn next(&self) -> u8 {
         self.input.get(self.at + 1).copied().unwrap_or(0)
     }

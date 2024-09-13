@@ -48,12 +48,15 @@ pub enum Error {
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct TypedVar(Var, Type);
 
+/// A type variable which is allowed to be unified with another type
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub struct UnifiableVar(u32);
 
+/// A type variable which is *not* allowed to be unified with another type.
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub struct RigidVar(u32);
 
+/// The representation of a type within the compiler
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub enum Type {
     UnifiableVar(UnifiableVar),
@@ -64,11 +67,17 @@ pub enum Type {
 }
 
 impl Type {
+    /// the `int` type
     pub const INT: Self = Self::Con(Tycon { id: Var::INT });
+    /// the `nil` type
     pub const NIL: Self = Self::Con(Tycon { id: Var::NIL });
+    /// the `usv` type
     pub const USV: Self = Self::Con(Tycon { id: Var::USV });
+    /// the `bool` type
     pub const BOOL: Self = Self::Con(Tycon { id: Var::BOOL });
+    /// the `double` type
     pub const DOUBLE: Self = Self::Con(Tycon { id: Var::DOUBLE });
+    /// the `never` type
     pub const NEVER: Self = Self::Con(Tycon { id: Var::NEVER });
 
     #[cfg(test)]

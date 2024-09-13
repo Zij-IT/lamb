@@ -11,6 +11,9 @@ use crate::{
 const KB: usize = 1024;
 const GROWTH_FACTOR: usize = 2;
 
+/// A [mark-and-sweep](https://en.wikipedia.org/wiki/Tracing_garbage_collection)
+/// [garbage collector](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science))
+/// for the lamb virtual machine.
 pub struct LambGc {
     bytes_alloced: usize,
     bytes_till_gc: usize,
@@ -27,6 +30,7 @@ impl Default for LambGc {
 }
 
 impl LambGc {
+    /// Constructs a new `LambGc` with no allocations
     pub fn new() -> Self {
         Self {
             bytes_alloced: 0,
@@ -38,6 +42,7 @@ impl LambGc {
         }
     }
 
+    /// Allocates a new `T` returning a `GcRef` to the item.
     pub fn alloc<T: Allocable>(&mut self, obj: T) -> GcRef<T> {
         let obj = obj.into_raw();
         let size = obj.size() + std::mem::size_of::<GcItem>();
@@ -58,6 +63,7 @@ impl LambGc {
         GcRef { idx, _type: PhantomData }
     }
 
+    /// Interns a string and returns a reference to the interned value
     pub fn intern(&mut self, s: impl Into<String>) -> GcRef<Str> {
         let s = s.into();
         if let Some(s) = self.strings.get(&s) {
@@ -70,18 +76,45 @@ impl LambGc {
         }
     }
 
+    /// Dereferences an `GcRef` returning a reference to the value.
+    ///
+    /// # Panics
+    ///
+    /// This function is guarunteed to panic if an attempt is made to dereference
+    /// a value which was already collected by the gc.
+    ///
+    /// This function can also panic, but is not guarunteed to panic, if a reference
+    /// from one `LambGc` is used in another `LambGc`. It will only not panic if the
+    /// reference points to a value of the same type which is not already deallocated.
     pub fn deref<T: Allocable>(&self, gcref: GcRef<T>) -> &T {
         self.objects[gcref.idx].as_ref().unwrap().obj.as_inner()
     }
 
+    /// Dereferences an `GcRef` returning an exclusive reference to the value.
+    ///
+    /// # Panics
+    ///
+    /// This function is guarunteed to panic if an attempt is made to dereference
+    /// a value which was already collected by the gc.
+    ///
+    /// This function can also panic, but is not guarunteed to panic, if a reference
+    /// from one `LambGc` is used in another `LambGc`. It will only not panic if the
+    /// reference points to a value of the same type
     pub fn deref_mut<T: Allocable>(&mut self, gcref: GcRef<T>) -> &mut T {
         self.objects[gcref.idx].as_mut().unwrap().obj.as_inner_mut()
     }
 
+    /// returns `true` if the garbage-collector has allocated enough bytes to warrant
+    /// another collection. Otherwise false.
+    ///
+    /// If `true` is returned all items should be marked using [`mark_value`](Self::mark_value) or
+    /// [`mark_object`](Self::mark_object) and then [`collect_garbage`](Self::collect_garbage) should
+    /// be called to free allocations.
     pub fn should_collect(&mut self) -> bool {
         self.bytes_alloced > self.bytes_till_gc
     }
 
+    /// Collects all unmarked allocations, allowing for their reuse.
     pub fn collect_garbage(&mut self) {
         self.trace_refs();
         self.remove_weak_refs();
@@ -89,6 +122,8 @@ impl LambGc {
         self.bytes_till_gc = self.bytes_alloced * GROWTH_FACTOR;
     }
 
+    /// Marks a value so that it is not collected when [`collect_garbage`](Self::collect_garbage)
+    /// is next called
     pub fn mark_value(&mut self, val: Value) {
         match val {
             Value::Nil => (),
@@ -105,6 +140,8 @@ impl LambGc {
         }
     }
 
+    /// Marks a reference so that it is not collected when [`collect_garbage`](Self::collect_garbage)
+    /// is next called
     pub fn mark_object<T: Allocable>(&mut self, gcref: GcRef<T>) {
         if let Some(obj) = self.objects[gcref.idx].as_mut() {
             if obj.is_marked {
@@ -181,6 +218,7 @@ impl LambGc {
     }
 }
 
+/// A reference to an item within a [`LambGc`] of type `T`.
 pub struct GcRef<T> {
     idx: usize,
     _type: PhantomData<T>,
@@ -214,14 +252,20 @@ impl<T> std::hash::Hash for GcRef<T> {
     }
 }
 
+/// An object which is able to allocated by a [`LambGc`].
 pub trait Allocable {
+    /// Converts the object into a [`GcItemRaw`]
     fn into_raw(self) -> GcItemRaw;
 
+    /// Converts a [`GcItemRaw`] reference into a `Self` reference
     fn from_raw(item: &GcItemRaw) -> &Self;
 
+    /// Converts an exclusive [`GcItemRaw`] reference into an exclusive `Self`
+    /// reference
     fn from_raw_mut(item: &mut GcItemRaw) -> &mut Self;
 }
 
+/// All possible types which are allocable by a [`LambGc`].
 pub enum GcItemRaw {
     Array(Array),
     Closure(Closure),
@@ -231,6 +275,7 @@ pub enum GcItemRaw {
 }
 
 impl GcItemRaw {
+    /// Returns an approximation of the size of the item in bytes
     pub(super) fn size(&self) -> usize {
         match self {
             GcItemRaw::Upvalue(_u) => std::mem::size_of::<ResolvedUpvalue>(),
@@ -252,10 +297,12 @@ impl GcItemRaw {
         }
     }
 
+    /// Turns the `&mut Self` into `&T`
     pub(super) fn as_inner<T: Allocable>(&self) -> &T {
         <T as Allocable>::from_raw(self)
     }
 
+    /// Turns the `&mut Self` into `&mut T`
     pub(super) fn as_inner_mut<T: Allocable>(&mut self) -> &mut T {
         <T as Allocable>::from_raw_mut(self)
     }

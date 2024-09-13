@@ -6,6 +6,8 @@ use crate::{
     vm::{self, Vm},
 };
 
+/// All possible values which are able to be constructed and used within the Lamb
+/// language.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Value {
     Nil,
@@ -22,6 +24,7 @@ pub enum Value {
 }
 
 impl Value {
+    // todo: these should be able to be removed when type-checking is complete
     pub const NIL_TYPE_NAME: &'static str = "nil";
     pub const INT_TYPE_NAME: &'static str = "i64";
     pub const BOOL_TYPE_NAME: &'static str = "bool";
@@ -34,6 +37,8 @@ impl Value {
     pub const NATIVE_TYPE_NAME: &'static str = "native";
     pub const MODULE_TYPE_NAME: &'static str = "module";
 
+    /// Turns a value into its string representation. Basically [`Display::fmt`](std::fmt::Display::fmt),
+    /// but requiring the `LambGc`
     pub(crate) fn format(&self, gc: &LambGc) -> String {
         match self {
             Value::Nil => "nil".into(),
@@ -71,6 +76,8 @@ impl Value {
         }
     }
 
+    /// Returns the ordering between the two items, or `None` if there is no
+    /// reasonable ordering (such as the comparison between `nil` and `int`).
     pub fn compare(&self, other: &Self, gc: &LambGc) -> Option<Ordering> {
         match (self, other) {
             (Value::Nil, Value::Nil) => Some(Ordering::Equal),
@@ -92,6 +99,7 @@ impl Value {
         }
     }
 
+    /// Returns the name of the type of `self`
     pub fn type_name(&self) -> &'static str {
         match self {
             Value::Nil => Self::NIL_TYPE_NAME,
@@ -109,6 +117,10 @@ impl Value {
     }
 }
 
+/// The Lamb String type.
+// todo: this should probably actually use `Vec<char>` because lamb strings
+// are pattern matched on quite a bit, and getting the chars repeatedly could
+// be costly due to its O(n) nature.
 #[derive(Debug)]
 pub struct Str(pub String);
 
@@ -137,6 +149,8 @@ impl Str {
     }
 }
 
+/// The struct which represents the Lamb `list[t]`. This representation doesn't
+/// require that it's contents be homogenous.
 #[derive(Debug)]
 pub struct Array {
     items: Vec<Value>,
@@ -229,16 +243,23 @@ impl<'a> IntoIterator for &'a mut Array {
     }
 }
 
+/// A function whose body has been compiled to bytecode.
 #[derive(Debug)]
 pub struct Function {
+    /// the amount of parameters required by the function
     pub arity: usize,
+    /// the code and constants of the function
     pub chunk: Chunk,
+    /// the name of the function
     pub name: GcRef<Str>,
+    /// the module that this function belongs to
     pub module: GcRef<Str>,
+    /// the upvalues which the function requires when turned into a closure
     pub upvalues: Vec<UnresolvedUpvalue>,
 }
 
 impl Function {
+    /// Constructs a new empty function
     pub fn new(name: GcRef<Str>, module: GcRef<Str>) -> Self {
         Self {
             name,
@@ -268,6 +289,8 @@ impl Closure {
     }
 }
 
+/// An upvalue an either found on the stack using `index` or has been closed
+/// over and stored in `closed`.
 #[derive(Debug)]
 pub struct ResolvedUpvalue {
     pub index: usize,
@@ -280,6 +303,7 @@ impl ResolvedUpvalue {
     }
 }
 
+/// A small wrapper around native functions.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct NativeFunction {
     raw: vm::RawNative,
