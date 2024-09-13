@@ -15,7 +15,7 @@
 //! a conflict arising. This enables the user to write (though this isn't encouraged)
 //! the following:
 //!
-//! ```
+//! ```text
 //! def int: int = 0;
 //! ```
 //!

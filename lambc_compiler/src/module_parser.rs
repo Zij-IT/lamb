@@ -47,7 +47,7 @@ impl<'b> ModuleParser<'b> {
     /// Parses files starting with the `initial` list. The list returned
     /// is guarunteed to be traversed in a BFS manner. Given the files
     ///
-    /// ```
+    /// ```text
     /// -- File A:
     /// from "file_b.lb" import { a, b };
     /// from "file_c.lb" import { a, b };
