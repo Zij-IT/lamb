@@ -456,6 +456,17 @@ impl<IdKind> InnerPattern<IdKind> {
             InnerPattern::Rest(p) => p.span,
         }
     }
+
+    pub fn is_rest_pattern(&self) -> bool {
+        match self {
+            InnerPattern::Ident(i) => {
+                i.bound.as_ref().map_or(false, |b| b.is_rest_pattern())
+            }
+            InnerPattern::Rest(_) => true,
+            InnerPattern::Literal(_) => false,
+            InnerPattern::Array(_) => false,
+        }
+    }
 }
 
 /// The rest pattern, which always matches and can be used to bind to the unlisted

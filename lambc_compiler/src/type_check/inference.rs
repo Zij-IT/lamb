@@ -1,6 +1,8 @@
 use lambc_parse::{
-    Binary, BinaryOp, Block, Call, Define, Else, Expr, ExprStatement, FnDef,
-    Group, If, IfCond, Index, List, Return, Statement, Unary, UnaryOp,
+    ArrayPattern, Binary, BinaryOp, Block, Call, Case, CaseArm, Define, Else,
+    Expr, ExprStatement, FnDef, Group, IdentPattern, If, IfCond, Index,
+    InnerPattern, List, LiteralPattern, Pattern, Return, Statement, Unary,
+    UnaryOp,
 };
 
 use super::{
@@ -52,7 +54,7 @@ impl TypeInference {
                 Type::List(Box::new(Type::USV)),
             ),
             // The harder cases!
-            Expr::Case(_) => todo!(),
+            Expr::Case(case) => self.infer_case(env, *case),
             Expr::Path(_) => todo!(),
             Expr::If(iff) => self.infer_if(env, *iff),
             Expr::Group(g) => self.infer_group(env, *g),
@@ -526,6 +528,264 @@ impl TypeInference {
                 cons,
             ),
             ty,
+        )
+    }
+
+    fn infer_case(
+        &mut self,
+        env: Env,
+        case: Case<Var>,
+    ) -> (Qualified<Expr<TypedVar>>, Type) {
+        let Case { scrutinee, arms, span } = case;
+        let (scrut, scrut_ty) = self.infer_expr(env.clone(), scrutinee);
+        let mut cons = scrut.cons;
+
+        let mut ty_arms = Vec::with_capacity(arms.len());
+        let mut arm_tys = Vec::with_capacity(arms.len());
+        for arm in arms {
+            let (arm, arm_ty) =
+                self.infer_case_arm(env.clone(), arm, scrut_ty.clone());
+            ty_arms.push(arm.item);
+            arm_tys.push(arm_ty);
+            cons.extend(arm.cons);
+        }
+
+        // All types are required to be equal to the first, and the first determines
+        // the expected type. If there are no types, the type is `nil`
+        // todo: this skips over that it is possible that none of the branches be taken.
+        //       I believe that it would be best to require an irrefutable pattern until
+        //       the compiler is capable of determining if all patterns are covered.
+        let case_ty = arm_tys
+            .into_iter()
+            .reduce(|l, r| {
+                cons.push(Constraint::TypeEqual {
+                    expected: l.clone(),
+                    got: r,
+                });
+                l
+            })
+            .unwrap_or(Type::NIL);
+
+        (
+            Qualified::constrained(
+                Expr::Case(Box::new(Case {
+                    scrutinee: scrut.item,
+                    arms: ty_arms,
+                    span,
+                })),
+                cons,
+            ),
+            case_ty,
+        )
+    }
+
+    fn infer_case_arm(
+        &mut self,
+        mut env: Env,
+        arm: CaseArm<Var>,
+        scrut_ty: Type,
+    ) -> (Qualified<CaseArm<TypedVar>>, Type) {
+        let CaseArm { pattern, body, span } = arm;
+        let (pat, pat_ty) = self.infer_pattern(&mut env, pattern);
+        let (body, body_ty) = self.infer_expr(env, body);
+
+        let mut cons =
+            vec![Constraint::TypeEqual { expected: scrut_ty, got: pat_ty }];
+        cons.extend(pat.cons);
+        cons.extend(body.cons);
+
+        (
+            Qualified::constrained(
+                CaseArm { pattern: pat.item, body: body.item, span },
+                cons,
+            ),
+            body_ty,
+        )
+    }
+
+    fn infer_pattern(
+        &mut self,
+        env: &mut Env,
+        pat: Pattern<Var>,
+    ) -> (Qualified<Pattern<TypedVar>>, Type) {
+        let mut idents: Vec<Var> =
+            pat.binding_names().into_iter().copied().collect();
+        idents.sort_by_key(|v| v.0);
+        idents.dedup();
+
+        for ident in &idents {
+            env.add_type(
+                *ident,
+                Qualified::unconstrained(Type::UnifiableVar(
+                    self.fresh_ty_var(),
+                )),
+            );
+        }
+
+        let Pattern { inner, span } = pat;
+
+        let mut cons = vec![];
+        let mut inner_tys = vec![];
+        let mut ty_inners = vec![];
+        let mut envs = vec![];
+        for inner in inner {
+            let mut env = env.clone();
+            let (ty_inner, inner_ty) =
+                self.infer_inner_pattern(&mut env, inner);
+
+            ty_inners.push(ty_inner.item);
+            inner_tys.push(inner_ty);
+            cons.extend(ty_inner.cons);
+            envs.push(env);
+        }
+
+        // Add constraints so that all patterns must declare all variables to have
+        // the same types.
+        if let Some(first_env) = envs.first() {
+            let rest = envs.iter().skip(1);
+            for env in rest {
+                let first = idents.iter().map(|v| first_env.type_of(*v).ty);
+                let next = idents.iter().map(|v| env.type_of(*v).ty);
+                for (l, r) in first.zip(next) {
+                    cons.push(Constraint::TypeEqual { expected: l, got: r });
+                }
+            }
+        }
+
+        let ty = inner_tys
+            .into_iter()
+            .reduce(|l, r| {
+                cons.push(Constraint::TypeEqual {
+                    expected: l.clone(),
+                    got: r,
+                });
+                l
+            })
+            .unwrap();
+
+        (Qualified::constrained(Pattern { inner: ty_inners, span }, cons), ty)
+    }
+
+    fn infer_inner_pattern(
+        &mut self,
+        env: &mut Env,
+        pat: InnerPattern<Var>,
+    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+        use InnerPattern as Ip;
+        match pat {
+            Ip::Literal(lit) => self.infer_literal_pattern(*lit),
+            Ip::Array(arr) => self.infer_array_pattern(env, *arr),
+            Ip::Ident(id) => self.infer_ident_pattern(env, *id),
+            Ip::Rest(r) => (
+                Qualified::unconstrained(Ip::Rest(r)),
+                Type::List(Box::new(Type::UnifiableVar(self.fresh_ty_var()))),
+            ),
+        }
+    }
+
+    fn infer_literal_pattern(
+        &mut self,
+        lit: LiteralPattern,
+    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+        use LiteralPattern as Lp;
+        let (lit, ty) = match lit {
+            Lp::String(s) => (Lp::String(s), Type::List(Box::new(Type::USV))),
+            Lp::Bool(b) => (Lp::Bool(b), Type::BOOL),
+            Lp::Char(c) => (Lp::Char(c), Type::USV),
+            Lp::I64(i) => (Lp::I64(i), Type::INT),
+            Lp::Nil(n) => (Lp::Nil(n), Type::NIL),
+        };
+
+        (Qualified::unconstrained(InnerPattern::Literal(Box::new(lit))), ty)
+    }
+
+    fn infer_ident_pattern(
+        &mut self,
+        env: &mut Env,
+        id: IdentPattern<Var>,
+    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+        let IdentPattern { ident, bound, span } = id;
+        let (bound, ty, mut cons) = match bound {
+            Some(pat) => {
+                let (ty_pat, pat_ty) = self.infer_inner_pattern(env, *pat);
+                (Some(Box::new(ty_pat.item)), pat_ty, ty_pat.cons)
+            }
+            None => {
+                let t = Type::UnifiableVar(self.fresh_ty_var());
+                (None, t, vec![])
+            }
+        };
+
+        let is_ty = env.type_of(ident).ty;
+        cons.push(Constraint::TypeEqual { expected: is_ty, got: ty.clone() });
+
+        (
+            Qualified::constrained(
+                InnerPattern::Ident(Box::new(IdentPattern {
+                    ident: TypedVar(ident, ty.clone()),
+                    bound,
+                    span,
+                })),
+                cons,
+            ),
+            ty,
+        )
+    }
+
+    fn infer_array_pattern(
+        &mut self,
+        env: &mut Env,
+        arr: ArrayPattern<Var>,
+    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+        let ArrayPattern { patterns, span } = arr;
+
+        let mut constraints = vec![];
+        let mut ty_patterns = vec![];
+        let mut element_tys = vec![];
+        let mut rest_tys = vec![];
+
+        for pat in patterns {
+            let (ty_pat, pat_ty) = self.infer_pattern(env, pat);
+            if ty_pat.item.inner.iter().all(|i| i.is_rest_pattern()) {
+                rest_tys.push(pat_ty)
+            } else {
+                element_tys.push(pat_ty);
+            }
+
+            constraints.extend(ty_pat.cons);
+            ty_patterns.push(ty_pat.item);
+        }
+
+        let elem_typ = element_tys
+            .into_iter()
+            .reduce(|l, r| {
+                constraints.push(Constraint::TypeEqual {
+                    expected: l.clone(),
+                    got: r,
+                });
+                l
+            })
+            .unwrap_or_else(|| Type::UnifiableVar(self.fresh_ty_var()));
+
+        // There should only ever be one. Before this but after name resolution
+        // there should be a syntactic analysis step which transforms the AST so
+        // that the fact there should only be one is built into the type.
+        for rest in rest_tys {
+            constraints.push(Constraint::TypeEqual {
+                expected: Type::List(Box::new(elem_typ.clone())),
+                got: rest.clone(),
+            });
+        }
+
+        (
+            Qualified::constrained(
+                InnerPattern::Array(Box::new(ArrayPattern {
+                    patterns: ty_patterns,
+                    span,
+                })),
+                constraints,
+            ),
+            Type::List(Box::new(elem_typ)),
         )
     }
 
