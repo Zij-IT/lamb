@@ -559,6 +559,15 @@ impl<'s> Resolver<'s> {
     ) -> Pattern<Var> {
         self.report_duplicates_in_pattern(scope.module, &pattern);
 
+        // Add all names from this pattern into scope, so that all names use the same `Var`
+        let mut names = pattern.binding_names();
+        names.sort_by_key(|k| k.raw.as_str());
+        names.dedup();
+
+        for name in names {
+            self.define_new_var(scope, name);
+        }
+
         let Pattern { inner, span } = pattern;
         let inner = inner
             .into_iter()
@@ -591,7 +600,9 @@ impl<'s> Resolver<'s> {
         i: IdentPattern<Ident>,
     ) -> Box<IdentPattern<Var>> {
         Box::new(IdentPattern {
-            ident: self.define_new_var(scope, &i.ident),
+            ident: scope
+                .get_var(&i.ident.raw)
+                .expect("The outermost pattern should have define all names"),
             bound: i
                 .bound
                 .map(|i| Box::new(self.resolve_inner_pattern(scope, *i))),
