@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
 use lambc_parse::{
-    Binary, Block, Call, Define, Else, Expr, ExprStatement, FnDef, Group, If,
-    IfCond, Index, List, Return, Statement, Unary,
+    ArrayPattern, Binary, Block, Call, Case, CaseArm, Define, Else, Expr,
+    ExprStatement, FnDef, Group, IdentPattern, If, IfCond, Index,
+    InnerPattern, List, Pattern, Return, Statement, Unary,
 };
 
 use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
@@ -227,7 +228,7 @@ impl TypeInference {
                     })),
                 )
             }
-            Expr::Case(_) => todo!(),
+            Expr::Case(c) => self.substitute_case(*c),
             Expr::Path(_) => todo!(),
             Expr::Return(e) => {
                 let Return { value, span } = *e;
@@ -313,6 +314,102 @@ impl TypeInference {
                 let ExprStatement { expr, span } = ex;
                 let (unbound, expr) = self.substitute_expr(expr);
                 (unbound, Statement::Expr(ExprStatement { expr, span }))
+            }
+        }
+    }
+
+    fn substitute_case(
+        &mut self,
+        c: Case<TypedVar>,
+    ) -> (HashSet<RigidVar>, Expr<TypedVar>) {
+        let Case { scrutinee, arms, span } = c;
+        let (mut un, scrutinee) = self.substitute_expr(scrutinee);
+        let arms = arms
+            .into_iter()
+            .map(|arm| {
+                let (u, arm) = self.substitute_case_arm(arm);
+                un.extend(u);
+                arm
+            })
+            .collect();
+
+        (un, Expr::Case(Box::new(Case { scrutinee, arms, span })))
+    }
+
+    fn substitute_case_arm(
+        &mut self,
+        arm: CaseArm<TypedVar>,
+    ) -> (HashSet<RigidVar>, CaseArm<TypedVar>) {
+        let CaseArm { pattern, body, span } = arm;
+        let (mut un, pattern) = self.substitute_pattern(pattern);
+        let (u, body) = self.substitute_expr(body);
+        un.extend(u);
+
+        (un, CaseArm { pattern, body, span })
+    }
+
+    fn substitute_pattern(
+        &mut self,
+        pattern: Pattern<TypedVar>,
+    ) -> (HashSet<RigidVar>, Pattern<TypedVar>) {
+        let Pattern { inner, span } = pattern;
+        let mut un = HashSet::default();
+        let inner = inner
+            .into_iter()
+            .map(|ip| {
+                let (u, ip) = self.substitute_inner_pattern(ip);
+                un.extend(u);
+                ip
+            })
+            .collect();
+
+        (un, Pattern { inner, span })
+    }
+
+    fn substitute_inner_pattern(
+        &mut self,
+        ip: InnerPattern<TypedVar>,
+    ) -> (HashSet<RigidVar>, InnerPattern<TypedVar>) {
+        match ip {
+            InnerPattern::Rest(_) => (HashSet::default(), ip),
+            InnerPattern::Literal(..) => (HashSet::default(), ip),
+            InnerPattern::Array(arr) => {
+                let ArrayPattern { patterns, span } = *arr;
+                let mut un = HashSet::default();
+                let patterns = patterns
+                    .into_iter()
+                    .map(|p| {
+                        let (u, p) = self.substitute_pattern(p);
+                        un.extend(u);
+                        p
+                    })
+                    .collect();
+
+                let arr = ArrayPattern { patterns, span };
+                (un, InnerPattern::Array(Box::new(arr)))
+            }
+            InnerPattern::Ident(i) => {
+                let IdentPattern { ident: TypedVar(v, ty), bound, span } = *i;
+                let (mut un, ty) = self.substitute(ty);
+                let ident = TypedVar(v, ty);
+
+                let bound = match bound {
+                    Some(ip) => {
+                        let (u, ip) = self.substitute_inner_pattern(*ip);
+                        un.extend(u);
+                        Some(Box::new(ip))
+                    }
+                    None => None,
+                };
+
+                (
+                    un,
+                    InnerPattern::Ident(Box::new(IdentPattern {
+                        ident,
+                        bound,
+                        span,
+                    })),
+                )
             }
         }
     }
