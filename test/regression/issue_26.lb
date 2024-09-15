@@ -1,0 +1,5 @@
+def main
+  : fn() -> nil
+  = fn() -> {
+    let inf := rec fn() -> inf();
+  };

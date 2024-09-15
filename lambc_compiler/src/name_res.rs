@@ -307,18 +307,18 @@ impl<'s> Resolver<'s> {
     ) -> Statement<Var> {
         match stmt {
             Statement::Define(def) => {
-                let value = if def.value.is_recursive() {
-                    self.define_new_var(scope, &def.ident);
-                    self.resolve_expr(scope, def.value)
+                let (ident, value) = if def.value.is_recursive() {
+                    let ident = self.define_new_var(scope, &def.ident);
+                    let value = self.resolve_expr(scope, def.value);
+                    (ident, value)
                 } else {
                     let value = self.resolve_expr(scope, def.value);
-                    self.define_new_var(scope, &def.ident);
-                    value
+                    let ident = self.define_new_var(scope, &def.ident);
+                    (ident, value)
                 };
 
                 Statement::Define(Define {
-                    // This is incorrect for recursive bindings
-                    ident: self.define_new_var(scope, &def.ident),
+                    ident,
                     value,
                     typ: None,
                     span: def.span,
