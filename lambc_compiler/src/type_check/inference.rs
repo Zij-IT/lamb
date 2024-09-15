@@ -551,10 +551,11 @@ impl TypeInference {
         }
 
         // All types are required to be equal to the first, and the first determines
-        // the expected type. If there are no types, the type is `nil`
-        // todo: this skips over that it is possible that none of the branches be taken.
-        //       I believe that it would be best to require an irrefutable pattern until
-        //       the compiler is capable of determining if all patterns are covered.
+        // the expected type.
+        //
+        // todo: if there are no arms, then the type is never, as the code
+        //       will never progress past that point. The behavior of case
+        //       expressions with no arms should be specified in #25.
         let case_ty = arm_tys
             .into_iter()
             .reduce(|l, r| {
@@ -564,7 +565,7 @@ impl TypeInference {
                 });
                 l
             })
-            .unwrap_or(Type::NIL);
+            .unwrap_or(Type::NEVER);
 
         (
             Qualified::constrained(
