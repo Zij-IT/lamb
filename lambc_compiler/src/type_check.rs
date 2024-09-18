@@ -80,7 +80,6 @@ impl Type {
     /// the `never` type
     pub const NEVER: Self = Self::Con(Tycon { id: Var::NEVER });
 
-    #[cfg(test)]
     pub fn fun(args: Vec<Self>, ret: Self) -> Self {
         Self::Fun(FnType { args, ret_type: Box::new(ret) })
     }

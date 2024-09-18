@@ -311,52 +311,47 @@ impl TypeInference {
 
                 (lhs.item, rhs.item, cons, ret)
             }
-            // These operators require that both the `lhs` and `rhs` are both
-            // unary functions where the output of the `[l|r]hs` is the only
-            // parameter of the `[r|l]hs`.
+            // lhs <. rhs
+            // (fn(t2) -> t3) <. (fn(t1) -> t2)
+            // => (fn(t1) -> t3)
             BinaryOp::Cpsl => {
-                let rhs_arg = Type::UnifiableVar(self.fresh_ty_var());
-                let rhs_ret = Type::UnifiableVar(self.fresh_ty_var());
-                let lhs_ret = Type::UnifiableVar(self.fresh_ty_var());
+                let t1 = Type::UnifiableVar(self.fresh_ty_var());
+                let t2 = Type::UnifiableVar(self.fresh_ty_var());
+                let t3 = Type::UnifiableVar(self.fresh_ty_var());
 
-                let rhs_fn = Type::Fun(FnType {
-                    args: vec![rhs_arg],
-                    ret_type: Box::new(rhs_ret.clone()),
-                });
-
-                let lhs_fn = Type::Fun(FnType {
-                    args: vec![rhs_ret],
-                    ret_type: Box::new(lhs_ret.clone()),
-                });
+                let lhs_fn = Type::fun(vec![t2.clone()], t3.clone());
+                let rhs_fn = Type::fun(vec![t1.clone()], t2.clone());
+                let ret_fn = Type::fun(vec![t1.clone()], t3.clone());
 
                 let lhs = self.check_expr(env.clone(), binary.lhs, lhs_fn);
                 let rhs = self.check_expr(env, binary.rhs, rhs_fn);
-                let mut cons = lhs.cons;
+
+                let mut cons = vec![];
+                cons.extend(lhs.cons);
                 cons.extend(rhs.cons);
 
-                (lhs.item, rhs.item, cons, lhs_ret)
+                (lhs.item, rhs.item, cons, ret_fn)
             }
+            // lhs <. rhs
+            // (fn(t1) -> t2) .> (fn(t2) -> t3)
+            // => (fn(t1) -> t3)
             BinaryOp::Cpsr => {
-                let lhs_arg = Type::UnifiableVar(self.fresh_ty_var());
-                let lhs_ret = Type::UnifiableVar(self.fresh_ty_var());
-                let rhs_ret = Type::UnifiableVar(self.fresh_ty_var());
+                let t1 = Type::UnifiableVar(self.fresh_ty_var());
+                let t2 = Type::UnifiableVar(self.fresh_ty_var());
+                let t3 = Type::UnifiableVar(self.fresh_ty_var());
 
-                let lhs_fn = Type::Fun(FnType {
-                    args: vec![lhs_arg],
-                    ret_type: Box::new(lhs_ret.clone()),
-                });
-
-                let rhs_fn = Type::Fun(FnType {
-                    args: vec![lhs_ret],
-                    ret_type: Box::new(rhs_ret.clone()),
-                });
+                let lhs_fn = Type::fun(vec![t1.clone()], t2.clone());
+                let rhs_fn = Type::fun(vec![t2.clone()], t3.clone());
+                let ret_fn = Type::fun(vec![t1.clone()], t3.clone());
 
                 let lhs = self.check_expr(env.clone(), binary.lhs, lhs_fn);
                 let rhs = self.check_expr(env, binary.rhs, rhs_fn);
-                let mut cons = lhs.cons;
+
+                let mut cons = vec![];
+                cons.extend(lhs.cons);
                 cons.extend(rhs.cons);
 
-                (lhs.item, rhs.item, cons, rhs_ret)
+                (lhs.item, rhs.item, cons, ret_fn)
             }
             // These operators always return boolean values, regardless of the
             // type of the `lhs` and `rhs` value
