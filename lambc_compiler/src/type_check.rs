@@ -235,6 +235,8 @@ impl<'s> TypeChecker<'s> {
         items: I,
     ) -> Env {
         let mut env = Env::new();
+        self.add_builtin_functions(&mut env, inf);
+
         let mut ty_env = TypeEnv::default();
         ty_env.add_type(Var::INT, Type::INT);
         ty_env.add_type(Var::NIL, Type::NIL);
@@ -262,6 +264,41 @@ impl<'s> TypeChecker<'s> {
         }
 
         env
+    }
+
+    fn add_builtin_functions(&self, env: &mut Env, inf: &mut TypeInference) {
+        let to_simple_scheme = |t| TypeScheme {
+            unbound: Default::default(),
+            constraints: vec![],
+            ty: t,
+        };
+
+        let assert_ty = Type::fun(vec![Type::BOOL], Type::NIL);
+        env.add_scheme(Var::ASSERT, to_simple_scheme(assert_ty));
+
+        let user_char_ty = Type::fun(vec![], Type::USV);
+        env.add_scheme(Var::USER_CHAR, to_simple_scheme(user_char_ty));
+
+        let user_int_ty = Type::fun(vec![], Type::INT);
+        env.add_scheme(Var::USER_INT, to_simple_scheme(user_int_ty));
+
+        let rand_ty = Type::fun(vec![], Type::INT);
+        env.add_scheme(Var::RAND, to_simple_scheme(rand_ty));
+
+        let mut to_one_gen_scheme = |make_ty: fn(RigidVar) -> Type| {
+            let rigid = inf.gen_rigidvar();
+            TypeScheme {
+                unbound: HashSet::from([rigid]),
+                constraints: vec![],
+                ty: make_ty(rigid),
+            }
+        };
+
+        let print_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
+        env.add_scheme(Var::PRINT, to_one_gen_scheme(print_ty));
+
+        let println_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
+        env.add_scheme(Var::PRINTLN, to_one_gen_scheme(println_ty));
     }
 
     fn check_toplevel_def(

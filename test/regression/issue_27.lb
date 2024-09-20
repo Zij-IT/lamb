@@ -1,0 +1,8 @@
+def main
+  : fn() -> nil
+  = fn() -> {
+    let _ = rand;
+    user_char .> print;
+    user_int .> println;
+    assert(true);
+  };

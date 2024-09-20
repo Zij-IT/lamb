@@ -99,10 +99,22 @@ impl Var {
     pub const LIST: Self = Self(5);
     /// The `Var` representing the `never` type
     pub const NEVER: Self = Self(6);
+    /// The `print` builtin
+    pub const PRINT: Self = Self(7);
+    /// The `println` builtin
+    pub const PRINTLN: Self = Self(8);
+    /// The `assert` builtin
+    pub const ASSERT: Self = Self(9);
+    /// The `rand` builtin
+    pub const RAND: Self = Self(10);
+    /// The `user_char` builtin
+    pub const USER_CHAR: Self = Self(11);
+    /// The `user_int` builtin
+    pub const USER_INT: Self = Self(12);
     #[allow(nonstandard_style)]
     // This must be the last item in the list of vars, and must be updated
     // to not include the next var.
-    pub(self) const __BASE: u32 = 7;
+    pub(self) const __BASE: u32 = 13;
 }
 
 /// The struct responsible for performing name resolution over a compilation unit.
@@ -729,8 +741,7 @@ impl<'s> Resolver<'s> {
 
     fn new_module_scope(&mut self, module: &Module<Ident, PathRef>) -> Scope {
         let mut scope = Scope::new(module.path);
-        scope.add_builtin_vars(|| self.fresh_var()).add_builtin_types();
-
+        scope.add_builtin_vars().add_builtin_types();
         scope
     }
 
@@ -838,16 +849,13 @@ impl Scope {
         Self { module, ..Default::default() }
     }
 
-    pub fn add_builtin_vars(
-        &mut self,
-        mut new_id: impl FnMut() -> Var,
-    ) -> &mut Self {
-        self.add_var("assert", new_id());
-        self.add_var("print", new_id());
-        self.add_var("println", new_id());
-        self.add_var("rand", new_id());
-        self.add_var("user_int", new_id());
-        self.add_var("user_char", new_id());
+    pub fn add_builtin_vars(&mut self) -> &mut Self {
+        self.add_var("assert", Var::ASSERT);
+        self.add_var("print", Var::PRINT);
+        self.add_var("println", Var::PRINTLN);
+        self.add_var("rand", Var::RAND);
+        self.add_var("user_int", Var::USER_INT);
+        self.add_var("user_char", Var::USER_CHAR);
         self
     }
 
