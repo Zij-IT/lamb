@@ -1,6 +1,10 @@
 from "./exports.lb" as E import { add };
 
-def main := fn() -> {
-  println(add(2, 3));
-  println(E::sub(3, 1));
-};
+def main
+  : fn() -> nil
+  = fn() -> {
+    println(add(2, 3));
+    -- This feature currently isn't usable with the type-checker in it's current
+    -- state
+    -- println(E::sub(3, 1));
+  };

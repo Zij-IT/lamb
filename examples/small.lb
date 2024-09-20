@@ -1,3 +1,5 @@
-def id := fn(x) -> x;
+def id: fn[a](a) -> a = fn(x) -> x;
 
-def main := fn() -> (id .> id .> id);
+def main
+  : fn[t]() -> fn(t) -> t
+  = fn() -> (id .> id .> id);

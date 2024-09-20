@@ -1,15 +1,17 @@
-def main := fn() -> {
-  let inc := fn(x) -> x + 1;
+def main
+  : fn() -> nil
+  = fn() -> {
+    let inc := fn(x) -> x + 1;
 
-  let dec := fn(x) -> x - 1;
+    let dec := fn(x) -> x - 1;
 
-  let dub := fn(x) -> x * 2;
+    let dub := fn(x) -> x * 2;
 
-  let fib := rec fn(x) -> if x <= 1 { x } else { fib(x - 1) + fib(x - 2) };
+    let fib := rec fn(x) -> if x <= 1 { x } else { fib(x - 1) + fib(x - 2) };
 
-  print("Should print 17:: ");
-  println <. dec <. dub <. inc <$ 8;
+    print("Should print 17:: ");
+    println <. dec <. dub <. inc <$ 8;
 
-  print("Should print 5:: ");
-  2 $> inc .> dub .> dec .> println;
-};
+    print("Should print 5:: ");
+    2 $> inc .> dub .> dec .> println;
+  };

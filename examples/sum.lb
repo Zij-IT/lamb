@@ -1,44 +1,51 @@
-def len := rec fn(xs) -> case xs {
-  [x, rest @ ..] -> 1 + len(rest),
-  [] -> 0,
-};
-
-def sum := fn(xs) -> { 
-  let x := "THIS SHOULD NOT BE PRINTED";
-  let length := len(xs);                
-  let helper := rec fn(xs, n) -> {
-    if n = 0 {
-      xs[n]
-    } else {
-      xs[n] + helper(xs, n - 1)
-    }
+def len
+  : fn[a](list[a]) -> int
+  = rec fn(xs) -> case xs {
+    [x, rest @ ..] -> 1 + len(rest),
+    [] -> 0,
   };
 
-  helper(xs, len(xs) - 1)
-};
+def sum
+  : fn(list[int]) -> int
+  = fn(xs) -> { 
+    -- This was previously because of a bug in the VM with stack offsets
+    let x := "THIS SHOULD NOT BE PRINTED";
+    let length := len(xs);                
+    let helper := rec fn(xs, n) -> {
+      if n = 0 {
+        xs[n]
+      } else {
+        xs[n] + helper(xs, n - 1)
+      }
+    };
 
-def main := fn() -> {
-  print("Should print 0:: ");
-  sum([4,3,2,1,-1,-2,-3,-4]) $> println;
-  print("Should print 10:: ");
-  sum([1,2,3,4]) $> println;
-
-  let sum2 := fn(xs) -> { 
-    4
+    helper(xs, len(xs) - 1)
   };
 
-  print("Should print 4:: ");
-  [1,2] $> sum2 .> println;
+def main
+  : fn() -> nil
+  = fn() -> {
+    print("Should print 0:: ");
+    sum([4,3,2,1,-1,-2,-3,-4]) $> println;
+    print("Should print 10:: ");
+    sum([1,2,3,4]) $> println;
 
-  let helper := rec fn(xs, n) -> {
-  if n = 0 {
-    xs[n]
-  } else {
-    xs[n] + helper(xs, n - 1)
-  }
+    let sum2 := fn(xs) -> { 
+      4
+    };
+
+    print("Should print 4:: ");
+    [1,2] $> sum2 .> println;
+
+    let helper := rec fn(xs, n) -> {
+      if n = 0 {
+        xs[n]
+      } else {
+        xs[n] + helper(xs, n - 1)
+      }
+    };
+
+
+    print("Should print 10:: ");
+    helper([1,2,3,4], 3) $> print;
   };
-
-
-  print("Should print 10:: ");
-  helper([1,2,3,4], 3) $> print;
-};

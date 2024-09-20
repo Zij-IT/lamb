@@ -3,15 +3,15 @@ export { w as x, y as z };
 from "exports.lb" as m import { add as s, sub as a };
 from "exports.lb" as n import { add as a, sub as s };
 
-def a := 1;
-def s := {
+def a: int = 1;
+def s: nil = {
   1 + 1;
   1 + 1;
   1 + 1;
 };
 
-def m := 2;
-def n := {
+def m: int = 2;
+def n: nil = {
   1 + 1;
   1 + 1;
   1 + 1;

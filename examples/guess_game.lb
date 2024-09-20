@@ -1,33 +1,37 @@
 -- Guessing Game
-def new_num := fn() -> {
-	let r := rand();
-	if r < 0 { -r } else { r } % 200
-};
-
-def main := fn() -> {
-	println("Enter a number! (0 .. 200)");
-	let guess := rec fn(n, guess_count) -> {
-		let x := user_int();
-		if x = n {
-			println("You guessed it");
-			print("You needed ");
-			print(guess_count);
-			println(" guesses!");
-			println("Would you like to play again (y/n)");
-		
-			if user_char() = 'y' {
-				guess(new_num(), 1);
-			};
-		} else {
-			if x > n {
-				println("Your number was too high!");
-			} else {
-				println("Your number was too low!");
-			};
-
-			println("Guess again!");
-			guess(n, guess_count + 1);
-		};
+def new_num
+	: fn() -> int
+	= fn() -> {
+		let r := rand();
+		if r < 0 { -r } else { r } % 200
 	};
-	guess(new_num(), 1);
-};
+
+def main
+	: fn() -> nil
+	= fn() -> {
+		println("Enter a number! (0 .. 200)");
+		let guess := rec fn(n, guess_count) -> {
+			let x := user_int();
+			if x = n {
+				println("You guessed it");
+				print("You needed ");
+				print(guess_count);
+				println(" guesses!");
+				println("Would you like to play again (y/n)");
+		
+				if user_char() = 'y' {
+					guess(new_num(), 1);
+				};
+			} else {
+				if x > n {
+					println("Your number was too high!");
+				} else {
+					println("Your number was too low!");
+				};
+
+				println("Guess again!");
+				guess(n, guess_count + 1);
+			};
+		};
+		guess(new_num(), 1);
+	};

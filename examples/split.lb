@@ -3,5 +3,5 @@ def int
   = 0;
 
 def main
-  : fn[a]() -> int[a]
+  : fn() -> nil
   = fn() -> { int; };

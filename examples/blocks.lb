@@ -1,38 +1,40 @@
-def main := fn() -> {
-	print("Should print 1:: ");
-	println({ 1 });
+def main
+	: fn() -> nil
+	= fn() -> {
+		print("Should print 1:: ");
+		println({ 1 });
 
-	print("Should print 1:: ");
-	println({{{{{ 1 }}}}});
+		print("Should print 1:: ");
+		println({{{{{ 1 }}}}});
 
-	print("Should print 1nil:: ");
-	println({ print(1); nil });
+		print("Should print 1nil:: ");
+		println({ print(1); nil });
 
-	print("Should print 1:: ");
-	println(if true { 1 } else { 0 });
+		print("Should print 1:: ");
+		println(if true { 1 } else { 0 });
 
-	print("Should print 2:: ");
-	println(if false { 1 } elif true { 2 } else { 3 });
+		print("Should print 2:: ");
+		println(if false { 1 } elif true { 2 } else { 3 });
 
-	print("Should print 3:: ");
-	println(if false { 1 } elif false { 2 } else { 3 });
+		print("Should print 3:: ");
+		println(if false { 1 } elif false { 2 } else { 3 });
 
-	print("Should print nil:: ");
-	println(if false { 0 });
+		print("Should print nil:: ");
+		println(if false { 0 });
 
-	print("Should print 1:: ");
-	println((fn() -> { 1 })());
+		print("Should print 1:: ");
+		println((fn() -> { 1 })());
 
-	print("Should print 5:: ");
-	case 1 {
-		1 -> { 5 }
-	} $> println;
+		print("Should print 5:: ");
+		case 1 {
+			1 -> { 5 }
+		} $> println;
 
-	print("Should print nil:: ");
-	case 2 {
-		1 -> { 5 }
-	} $> println;
+		print("Should print nil:: ");
+		case 2 {
+			1 -> { 5 }
+		} $> println;
 
-	print("Should print 3:: ");
-	print({ let x := 2; 3 });
-};
+		print("Should print 3:: ");
+		print({ let x := 2; 3 });
+	};

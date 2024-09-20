@@ -1,11 +1,13 @@
 -- This file can be run to see different errors that the lamb compiler outputs
 -- for a lamb file with different kinds of errors.
-def main := fn() -> {
-  ''; -- Empty char literal
+def main
+  : fn() -> nil
+  = fn() -> {
+    ''; -- Empty char literal
 
-  'deadbeef'; -- Char literal with too many characters
+    'deadbeef'; -- Char literal with too many characters
 
-  1_029_812_308_509_123_851_253; -- A number literal which is too large for an i64
+    1_029_812_308_509_123_851_253; -- A number literal which is too large for an i64
 
-  0x; 0b; 0o; -- Prefixed number literals without an actual number
-};
+    0x; 0b; 0o; -- Prefixed number literals without an actual number
+  };

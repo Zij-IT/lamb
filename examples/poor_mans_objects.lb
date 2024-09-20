@@ -1,34 +1,41 @@
-def new_vector := fn(x, y) 
-	-> fn(method_name) -> case method_name {
+def new_vector
+	: fn(int, int) -> fn(list[usv]) -> int
+	= fn(x, y) -> fn(method_name) -> case method_name {
  		"x" -> x,
  		"y" -> y,
 		"norm" -> x + y, 
-		"dist" -> fn(v2) -> {
-			let x := x - v2("x");
-			let y := y - v2("y");
-
-			if x < 0 && y < 0 {
-				-x + -y
-			} elif x < 0 {
-				-x + y
-			} elif y < 0 {
-				x + -y
-			} else {
-				x + y
-			}
-		},
+		-- This 'member' isn't possible with the new type-system, so it is commented
+		-- out and will be removed in a future version
+		-- "dist" -> fn(v2) -> {
+		-- 	let x := x - v2("x");
+		-- 	let y := y - v2("y");
+    --
+		-- 	if x < 0 && y < 0 {
+		-- 		-x + -y
+		-- 	} elif x < 0 {
+		-- 		-x + y
+		-- 	} elif y < 0 {
+		-- 		x + -y
+		-- 	} else {
+		-- 		x + y
+		-- 	}
+		-- },
 	};
 
-def main := fn() -> {
-	let v1 := new_vector(0, 1);
-	let v2 := new_vector(5, 3);
+def main
+	: fn() -> nil
+	= fn() -> {
+		let v1 := new_vector(0, 1);
+		let v2 := new_vector(5, 3);
 
-	print("Manhattan Distance:: ");
-	println(v2("dist")(v1));
+		-- This 'member' isn't possible with the new type-system, so it is commented
+		-- out and will be removed in a future version
+		-- print("Manhattan Distance:: ");
+		-- println(v2("dist")(v1));
 
-	print("Norm of v2:: ");
-	println(v2("norm"));
+		print("Norm of v2:: ");
+		println(v2("norm"));
 
-	print("Norm of v1:: ");
-	println(v1("norm"));
-};
+		print("Norm of v1:: ");
+		println(v1("norm"));
+	};

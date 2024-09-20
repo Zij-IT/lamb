@@ -10,16 +10,12 @@ def num_id
   : fn(int) -> int
   = id2;
 
-def num1: bool = id1(2);  
+def num1: bool = id1(true);  
 
 def num2: int = id2(2);  
 
 def num3: int = num_id(2);  
 
 def main
-  : fn(int, int) -> int
+  : fn(int) -> int
   = id1;
-
--- def id1
---   : fn[a](a) -> a
---   = fn(a) -> 1;

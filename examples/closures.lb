@@ -1,46 +1,48 @@
-def x := "global";
+def x: list[usv] = "global";
 
-def main := fn() -> {
-	let outer := fn() -> {
-		let x := "outer";
-		let y := "hi";
-		let z := fn() -> print(x + y);
-		z(); 
+def main
+	: fn() -> nil
+	= fn() -> {
+		let outer := fn() -> {
+			let x := "outer";
+			let y := "hi";
+			let z := fn() -> print(x + y);
+			z(); 
+		};
+
+		print("This should output 'outerhi':: ");
+		outer();
+		println("");
+
+		println("=====");
+
+		let make_closure := fn() -> {
+			let local := "local";
+			return fn() -> print(local)
+		};
+
+		let closure := make_closure();
+
+		print("This should output 'local':: ");
+		closure();
+		println("");
+
+		println("=====");
+
+		let make_name := fn(name) -> {
+			return fn() -> print(name)
+		};
+
+		let doughnut := make_name("doughnut");
+		let bagel := make_name("bagel");
+
+		print("This should output 'doughnut':: ");
+		doughnut();
+		println("");
+
+		print("This should output 'bagel':: ");
+		bagel();
+		println("");
+
+		println("=====");
 	};
-
-	print("This should output 'outerhi':: ");
-	outer();
-	println();
-
-	println("=====");
-
-	let make_closure := fn() -> {
-		let local := "local";
-		return fn() -> print(local);
-	};
-
-	let closure := make_closure();
-
-	print("This should output 'local':: ");
-	closure();
-	println();
-
-	println("=====");
-
-	let make_name := fn(name) -> {
-		return fn() -> print(name);
-	};
-
-	let doughnut := make_name("doughnut");
-	let bagel := make_name("bagel");
-
-	print("This should output 'doughnut':: ");
-	doughnut();
-	println();
-
-	print("This should output 'bagel':: ");
-	bagel();
-	println();
-
-	println("=====");
-};

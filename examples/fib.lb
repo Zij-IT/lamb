@@ -1,11 +1,13 @@
 -- Fib 
-def main := fn() -> {
-	let fib := rec fn(n) -> if n <= 1 {
-		n
-	} else {
-		fib(n - 1) + fib(n - 2)
-	};
+def main
+	: fn() -> nil
+	= fn() -> {
+		let fib := rec fn(n) -> if n <= 1 {
+			n
+		} else {
+			fib(n - 1) + fib(n - 2)
+		};
 
-	println("Enter a number to get the nth fibonacci number (n < 30 probably best)");
-	print(fib(user_int()));
-};
+		println("Enter a number to get the nth fibonacci number (n < 30 probably best)");
+		print(fib(user_int()));
+	};

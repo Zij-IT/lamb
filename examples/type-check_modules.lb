@@ -1,10 +1,8 @@
 from "./type-check_export.lb" import { add, sub };
--- def x: int = 0;
+def x: int = 0;
 
 def main
-  : fn() -> int
+  : fn() -> nil
   = fn() -> {
-    -- add + sub;
-    -- add(sub(3, 1), add(2, 3))
-    -add
+    add(sub(3, 1), add(2, x)) $> println;
   };
