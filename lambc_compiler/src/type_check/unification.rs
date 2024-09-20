@@ -22,16 +22,27 @@ impl UnifyKey for UnifiableVar {
 
 impl super::TypeInference {
     pub(super) fn unification(&mut self, cons: Vec<Constraint>) -> Result<()> {
-        for con in cons {
+        let (teq, isin): (Vec<_>, Vec<_>) = cons
+            .into_iter()
+            .partition(|c| matches!(c, Constraint::TypeEqual { .. }));
+
+        for con in teq {
             match con {
-                Constraint::IsIn(class, t) => {
-                    let t = self.normalize_ty(t);
-                    if !class.impld_by(&t) {
-                        return Err(Error::NotImpld { class, ty: t });
-                    }
-                }
                 Constraint::TypeEqual { expected, got } => {
                     self.unify_ty_ty(expected, got)?
+                }
+                Constraint::IsIn(..) => unreachable!(),
+            }
+        }
+
+        for con in isin {
+            match con {
+                Constraint::TypeEqual { .. } => unreachable!(),
+                Constraint::IsIn(class, ty) => {
+                    let ty = self.normalize_ty(ty);
+                    if !class.impld_by(&ty) {
+                        return Err(Error::NotImpld { class, ty });
+                    }
                 }
             }
         }

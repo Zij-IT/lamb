@@ -1,0 +1,3 @@
+def no_num_impl
+  : fn(int) -> int
+  = fn(x) -> x * x;
