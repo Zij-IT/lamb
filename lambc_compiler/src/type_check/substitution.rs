@@ -17,7 +17,9 @@ impl TypeInference {
         ty: Type,
     ) -> (HashSet<RigidVar>, Type) {
         match ty {
-            ty @ (Type::Con(..) | Type::RigidVar(..)) => (HashSet::new(), ty),
+            ty @ (Type::Con(..) | Type::RigidVar(..) | Type::Error) => {
+                (HashSet::new(), ty)
+            }
             Type::List(elem) => {
                 let (unbound, elem) = self.substitute(*elem);
                 (unbound, Type::List(Box::new(elem)))

@@ -38,6 +38,7 @@ impl super::TypeInference {
         for con in isin {
             match con {
                 Constraint::TypeEqual { .. } => unreachable!(),
+                Constraint::IsIn(_, Type::Error) => (),
                 Constraint::IsIn(class, ty) => {
                     let ty = self.normalize_ty(ty);
                     if !class.impld_by(&ty) {
@@ -101,6 +102,7 @@ impl super::TypeInference {
                 )
             }
             (Type::RigidVar(a), Type::RigidVar(b)) if a == b => Ok(()),
+            (Type::Error, ..) | (.., Type::Error) => Ok(()),
             // Modules are never equal... I would like them to be structurally
             // equal at one point, such that exports are normal anonymous structs.
             (l, r) => Err(Error::TypeNotEqual { expected: l, got: r }),
@@ -109,7 +111,7 @@ impl super::TypeInference {
 
     fn normalize_ty(&mut self, ty: Type) -> Type {
         match ty {
-            t @ (Type::Con(..) | Type::RigidVar(..)) => t,
+            t @ (Type::Con(..) | Type::RigidVar(..) | Type::Error) => t,
             Type::List(t) => Type::List(Box::new(self.normalize_ty(*t))),
             Type::Fun(FnType { args, ret_type }) => Type::Fun(FnType {
                 args: args.into_iter().map(|a| self.normalize_ty(a)).collect(),
@@ -124,7 +126,7 @@ impl super::TypeInference {
 
     fn occurs_check(&self, ty: &Type, tyvar: UnifiableVar) -> Result<()> {
         match ty {
-            Type::Con(..) | Type::RigidVar(..) => Ok(()),
+            Type::Con(..) | Type::RigidVar(..) | Type::Error => Ok(()),
             Type::UnifiableVar(v) => {
                 if *v == tyvar {
                     Err(Error::InfiniteType {

@@ -36,6 +36,7 @@ impl<'a> Instantiate<'a> {
 
     fn ty(&self, ty: Type) -> Type {
         match ty {
+            Type::Error => ty,
             Type::RigidVar(rig) => self
                 .tyvars_to_unif
                 .get(&rig)

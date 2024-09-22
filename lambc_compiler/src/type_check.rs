@@ -43,6 +43,12 @@ pub enum Error {
     #[diagnostic(code("type-checking::no-such-type"))]
     #[error("no type found with the name `..`")]
     UnknownType,
+    #[diagnostic(code("type-checking::new-type-params"))]
+    #[error("new generics cannot be introduced here")]
+    NewTypeNotAllowed,
+    #[diagnostic(code("type-checking::type-param-count"))]
+    #[error("The type takes {} type parameters, but received {} instead", .expected, .got)]
+    TypeParamCountMismatch { got: usize, expected: i32 },
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -64,6 +70,7 @@ pub enum Type {
     Con(Tycon),
     List(Box<Self>),
     Fun(FnType),
+    Error,
 }
 
 impl Type {
@@ -86,6 +93,7 @@ impl Type {
 
     fn name(&self) -> String {
         match self {
+            &Type::Error => "^error^".into(),
             &Type::NIL => "nil".into(),
             &Type::INT => "int".into(),
             &Type::USV => "usv".into(),
@@ -230,7 +238,7 @@ impl<'s> TypeChecker<'s> {
     }
 
     fn build_env<'a, I: Iterator<Item = &'a Item<Var>>>(
-        &self,
+        &mut self,
         inf: &mut TypeInference,
         items: I,
     ) -> Env {
@@ -256,7 +264,15 @@ impl<'s> TypeChecker<'s> {
                             typ.as_ref()
                                 .expect("Top level decls to have typs"),
                         )
-                        .expect("Type to be known");
+                        .unwrap_or_else(|err| {
+                            // todo: add module path to the error
+                            self.state.add_error(err, None);
+                            TypeScheme {
+                                unbound: Default::default(),
+                                constraints: Default::default(),
+                                ty: Type::Error,
+                            }
+                        });
 
                     env.add_scheme(*ident, scheme);
                 }
@@ -472,7 +488,7 @@ impl TypeInference {
     #[cfg(test)]
     fn has_unbound(&self, unbound: &HashSet<RigidVar>, ty: &Type) -> bool {
         match ty {
-            Type::Con(_) => false,
+            Type::Error | Type::Con(_) => false,
             Type::RigidVar(rig) => unbound.contains(rig),
             Type::List(elem_ty) => self.has_unbound(unbound, &elem_ty),
             Type::Fun(f) => {

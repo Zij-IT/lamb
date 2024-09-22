@@ -83,7 +83,7 @@ where
         if gens.as_ref().is_some_and(|gens| !gens.params.is_empty())
             && !allow_generics
         {
-            panic!("This should be a type error because type params at this point aren't allowed");
+            return Err(Error::NewTypeNotAllowed);
         }
 
         let args =
@@ -106,8 +106,8 @@ where
                 Ok(Type::List(Box::new(ty)))
             }
             (name, 0) => self.env.get_type(name),
-            (_unknown, _) => {
-                panic!("Unexpected generic arguments. This should be an error")
+            (_unknown, c) => {
+                Err(Error::TypeParamCountMismatch { got: c, expected: 0 })
             }
         }
     }
