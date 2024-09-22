@@ -1,0 +1,15 @@
+def works_1
+  : fn() -> int
+  = fn() -> 1;
+
+def works_2
+  : fn() -> int
+  = fn() -> return 1;
+
+def works_3
+  : fn() -> int
+  = fn() -> { return 1 };
+
+def doesnt
+  : fn() -> int
+  = fn() -> { return 1; };

@@ -499,6 +499,7 @@ impl TypeInference {
         mut env: Env,
         block: Block<Var>,
     ) -> (Qualified<Block<TypedVar>>, Type) {
+        let returns = does_block_unconditionally_return(&block);
         let Block { statements, value, span } = block;
 
         let mut stmts = Vec::with_capacity(statements.len());
@@ -514,7 +515,9 @@ impl TypeInference {
                 cons.extend(out.cons);
                 (Some(out.item), ty)
             } else {
-                (None, Type::NIL)
+                // If a block returns, then it never produces a value
+                let typ = if returns { Type::NEVER } else { Type::NIL };
+                (None, typ)
             };
 
         (
@@ -961,6 +964,72 @@ impl TypeInference {
     fn parse_ty(&mut self, _ty: lambc_parse::Type<Var>) -> Type {
         todo!()
     }
+}
+
+fn does_stmt_return<T>(s: &Statement<T>) -> bool {
+    match s {
+        Statement::Define(Define { value, .. }) => {
+            does_expr_unconditionally_return(value)
+        }
+        Statement::Expr(e) => does_expr_unconditionally_return(&e.expr),
+    }
+}
+
+fn does_expr_unconditionally_return<T>(e: &Expr<T>) -> bool {
+    match e {
+        Expr::Nil(_) => false,
+        Expr::I64(_) => false,
+        Expr::F64(_) => false,
+        Expr::Bool(_) => false,
+        Expr::Char(_) => false,
+        Expr::Ident(_) => false,
+        Expr::String(_) => false,
+        Expr::FnDef(_) => false,
+        Expr::Return(_) => true,
+        Expr::List(li) => {
+            li.values.iter().any(does_expr_unconditionally_return)
+        }
+        Expr::Group(g) => does_expr_unconditionally_return(&g.value),
+        Expr::Block(b) => b.statements.iter().any(does_stmt_return),
+        Expr::If(i) => {
+            does_ifcond_unconditionally_return(&i.cond)
+                && i.elif.iter().all(does_ifcond_unconditionally_return)
+                && i.els_.as_ref().map_or(false, |e| {
+                    does_block_unconditionally_return(&e.body)
+                })
+        }
+        // todo: this is unsound if the case is missing arms
+        Expr::Case(c) => {
+            does_expr_unconditionally_return(&c.scrutinee)
+                || c.arms
+                    .iter()
+                    .all(|arm| does_expr_unconditionally_return(&arm.body))
+        }
+        Expr::Index(i) => {
+            does_expr_unconditionally_return(&i.lhs)
+                || does_expr_unconditionally_return(&i.rhs)
+        }
+        Expr::Call(c) => {
+            does_expr_unconditionally_return(&c.callee)
+                || c.args.iter().any(does_expr_unconditionally_return)
+        }
+        Expr::Unary(u) => does_expr_unconditionally_return(&u.rhs),
+        Expr::Binary(b) => {
+            does_expr_unconditionally_return(&b.lhs)
+                || does_expr_unconditionally_return(&b.rhs)
+        }
+        Expr::Path(_) => todo!(),
+    }
+}
+
+fn does_block_unconditionally_return<T>(b: &Block<T>) -> bool {
+    b.statements.iter().any(does_stmt_return)
+        || b.value.as_ref().map_or(false, does_expr_unconditionally_return)
+}
+
+fn does_ifcond_unconditionally_return<T>(i: &IfCond<T>) -> bool {
+    does_expr_unconditionally_return(&i.cond)
+        || does_block_unconditionally_return(&i.body)
 }
 
 #[cfg(test)]
