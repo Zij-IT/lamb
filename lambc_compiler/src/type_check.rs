@@ -49,6 +49,9 @@ pub enum Error {
     #[diagnostic(code("type-checking::type-param-count"))]
     #[error("The type takes {} type parameters, but received {} instead", .expected, .got)]
     TypeParamCountMismatch { got: usize, expected: i32 },
+    #[diagnostic(code("type-checking::missing-type"))]
+    #[error("top-level definitions require a type, but none was provided")]
+    MissingTypeAscription,
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -259,20 +262,20 @@ impl<'s> TypeChecker<'s> {
             match item {
                 Item::Def(id) => {
                     let Define { ident, typ, value: _, span: _ } = id;
-                    let scheme = parser
-                        .parse_scheme(
-                            typ.as_ref()
-                                .expect("Top level decls to have typs"),
-                        )
-                        .unwrap_or_else(|err| {
-                            // todo: add module path to the error
-                            self.state.add_error(err, None);
-                            TypeScheme {
-                                unbound: Default::default(),
-                                constraints: Default::default(),
-                                ty: Type::Error,
-                            }
-                        });
+                    let res =
+                        match typ.as_ref().map(|sc| parser.parse_scheme(sc)) {
+                            Some(res) => res,
+                            None => Err(Error::MissingTypeAscription),
+                        };
+
+                    let scheme = res.unwrap_or_else(|err| {
+                        self.state.add_error(err, None);
+                        TypeScheme {
+                            unbound: Default::default(),
+                            constraints: Default::default(),
+                            ty: Type::Error,
+                        }
+                    });
 
                     env.add_scheme(*ident, scheme);
                 }
