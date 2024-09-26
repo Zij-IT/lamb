@@ -784,9 +784,15 @@ mod test {
             Err(Error::TypeNotEqual {
                 expected: Type::fun(
                     vec![Type::NIL],
-                    Type::UnifiableVar(UnifiableVar(1))
+                    Type::UnifiableVar(UnifiableVar(0))
                 ),
-                got: Type::NIL
+                got: Type::fun(
+                    vec![Type::fun(
+                        vec![Type::NIL],
+                        Type::UnifiableVar(UnifiableVar(3))
+                    )],
+                    Type::UnifiableVar(UnifiableVar(2))
+                )
             })
         )
     }

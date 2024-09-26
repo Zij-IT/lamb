@@ -160,6 +160,8 @@ mod tests {
         let out =
             checker.check_expr(Env::new(), Expr::FnDef(Box::new(def)), typ);
 
+        let uvar = |n| Type::UnifiableVar(UnifiableVar(n));
+
         assert_eq!(
             out,
             GenWith::constrained(
@@ -175,10 +177,13 @@ mod tests {
                     recursive: false,
                     span: SPAN
                 })),
-                vec![Constraint::TypeEqual {
-                    expected: Type::UnifiableVar(UnifiableVar(0)),
-                    got: Type::UnifiableVar(UnifiableVar(0))
-                }],
+                vec![
+                    Constraint::TypeEqual { expected: uvar(2), got: uvar(0) },
+                    Constraint::TypeEqual {
+                        expected: Type::fun(vec![uvar(0), uvar(1)], uvar(0)),
+                        got: Type::fun(vec![uvar(0), uvar(1)], uvar(2)),
+                    },
+                ],
             ),
         );
     }
@@ -202,22 +207,30 @@ mod tests {
         let out =
             checker.check_expr(Env::new(), Expr::FnDef(Box::new(def)), typ);
 
+        let uvar = |n| Type::UnifiableVar(UnifiableVar(n));
+
         assert_eq!(
             out,
             GenWith::constrained(
                 Expr::FnDef(Box::new(FnDef {
                     args: vec![
-                        TypedVar(Var(0), Type::INT),
-                        TypedVar(Var(1), Type::DOUBLE)
+                        TypedVar(Var(0), uvar(0)),
+                        TypedVar(Var(1), uvar(1))
                     ],
-                    body: Expr::Ident(TypedVar(Var(0), Type::INT)),
+                    body: Expr::Ident(TypedVar(Var(0), uvar(0))),
                     recursive: false,
                     span: SPAN
                 })),
-                vec![Constraint::TypeEqual {
-                    expected: Type::INT,
-                    got: Type::INT
-                }],
+                vec![
+                    Constraint::TypeEqual { expected: uvar(2), got: uvar(0) },
+                    Constraint::TypeEqual {
+                        expected: Type::fun(
+                            vec![Type::INT, Type::DOUBLE],
+                            Type::INT
+                        ),
+                        got: Type::fun(vec![uvar(0), uvar(1)], uvar(2))
+                    }
+                ],
             ),
         );
     }
