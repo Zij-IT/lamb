@@ -3,6 +3,7 @@ mod env;
 mod inference;
 mod instantiate;
 mod parsing;
+mod scheme;
 mod substitution;
 mod unification;
 
@@ -17,7 +18,7 @@ use lambc_parse::{
 use lambc_parse::Expr;
 use miette::Diagnostic;
 
-use self::env::Env;
+use self::{env::Env, scheme::TypeScheme};
 use crate::{
     name_res::Var,
     type_check::parsing::{TypeEnv, TypeParser},
@@ -130,13 +131,6 @@ pub struct Tycon {
 pub struct FnType {
     args: Vec<Type>,
     ret_type: Box<Type>,
-}
-
-#[derive(PartialEq, Eq, Clone, Debug)]
-pub struct TypeScheme {
-    unbound: HashSet<RigidVar>,
-    constraints: Vec<Constraint>,
-    ty: Type,
 }
 
 pub struct TypeChecker<'s> {
