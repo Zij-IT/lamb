@@ -329,12 +329,9 @@ impl<'s> Resolver<'s> {
                     (ident, value)
                 };
 
-                Statement::Define(Define {
-                    ident,
-                    value,
-                    typ: None,
-                    span: def.span,
-                })
+                let typ = def.typ.map(|typ| self.resolve_type(scope, typ));
+
+                Statement::Define(Define { ident, value, typ, span: def.span })
             }
             Statement::Expr(ExprStatement { expr, span }) => {
                 Statement::Expr(ExprStatement {

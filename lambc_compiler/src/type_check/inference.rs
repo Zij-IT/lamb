@@ -9,7 +9,10 @@ use super::{
     env::Env, Constraint, FnType, Qualified, TyClass, Type, TypeInference,
     TypedVar, UnifiableVar,
 };
-use crate::name_res::Var;
+use crate::{
+    name_res::Var,
+    type_check::parsing::{TypeEnv, TypeParser},
+};
 
 impl TypeInference {
     /// Infers the type of `expr` given the environment `Env`. Returns a tuple
@@ -961,8 +964,27 @@ impl TypeInference {
         self.uni_table.new_key(None)
     }
 
-    fn parse_ty(&mut self, _ty: lambc_parse::Type<Var>) -> Type {
-        todo!()
+    fn parse_ty(&mut self, ty: lambc_parse::Type<Var>) -> Type {
+        // todo: this environment should be the same as the one from earlier. Since the TypeInference doesn't
+        //       have to mutate the types, I would expect that this can be given as a reference.
+        let mut ty_env = TypeEnv::default();
+        ty_env.add_type(Var::INT, Type::INT);
+        ty_env.add_type(Var::NIL, Type::NIL);
+        ty_env.add_type(Var::USV, Type::USV);
+        ty_env.add_type(Var::BOOL, Type::BOOL);
+        ty_env.add_type(Var::NEVER, Type::NEVER);
+        ty_env.add_type(Var::DOUBLE, Type::DOUBLE);
+
+        let mut parser = TypeParser::new(&mut ty_env, || self.gen_rigidvar());
+        let res = parser.parse_scheme(&ty);
+        let sc = res.unwrap_or_else(|_| todo!("Add state to TypeInference so that this error can be reported"));
+        assert_eq!(
+            sc.unbound.len(),
+            0,
+            "A statement type definition can't have unbound variables"
+        );
+
+        sc.ty
     }
 }
 
