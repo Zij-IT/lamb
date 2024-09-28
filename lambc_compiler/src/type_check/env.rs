@@ -1,6 +1,6 @@
 use crate::name_res::Var;
 
-use super::{Qualified, Type, TypeScheme};
+use super::{Error, Qualified, Result, Type, TypeScheme};
 
 /// A map from `Var` to their `Type(Scheme)`.
 #[derive(Clone)]
@@ -45,5 +45,24 @@ impl Env {
         scheme: TypeScheme,
     ) -> Option<TypeScheme> {
         self.inner.insert(v, scheme)
+    }
+}
+
+/// A map from `Var` to the actual Lamb `Type` being referred to.
+#[derive(Clone, Default)]
+pub struct TypeEnv {
+    inner: im::HashMap<Var, Type>,
+}
+
+impl TypeEnv {
+    pub fn add_type(&mut self, var: Var, ty: Type) {
+        assert!(
+            self.inner.insert(var, ty).is_none(),
+            "A var had it's type redefined... this should not be possible"
+        );
+    }
+
+    pub fn get_type(&self, var: Var) -> Result<Type> {
+        self.inner.get(&var).cloned().ok_or(Error::UnknownType)
     }
 }

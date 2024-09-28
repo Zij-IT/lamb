@@ -2,30 +2,11 @@ use crate::name_res::Var;
 
 use std::collections::HashSet;
 
-use super::{Error, FnType, Result, RigidVar, Type, TypeScheme};
+use super::{Error, FnType, Result, RigidVar, Type, TypeEnv, TypeScheme};
 
 type RawType = lambc_parse::Type<Var>;
 type RawNamed = lambc_parse::NamedType<Var>;
 type RawFnType = lambc_parse::FnType<Var>;
-
-/// A map from `Var` to the actual Lamb `Type` being referred to.
-#[derive(Clone, Default)]
-pub struct TypeEnv {
-    inner: im::HashMap<Var, Type>,
-}
-
-impl TypeEnv {
-    pub fn add_type(&mut self, var: Var, ty: Type) {
-        assert!(
-            self.inner.insert(var, ty).is_none(),
-            "A var had it's type redefined... this should not be possible"
-        );
-    }
-
-    pub fn get_type(&self, var: Var) -> Result<Type> {
-        self.inner.get(&var).cloned().ok_or(Error::UnknownType)
-    }
-}
 
 pub struct TypeParser<'a, F> {
     env: &'a mut TypeEnv,

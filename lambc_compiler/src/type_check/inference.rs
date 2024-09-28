@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     name_res::Var,
-    type_check::parsing::{TypeEnv, TypeParser},
+    type_check::{env::TypeEnv, parsing::TypeParser},
 };
 
 pub struct TypeInference {

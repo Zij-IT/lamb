@@ -16,18 +16,14 @@ use lambc_parse::{
 
 use miette::Diagnostic;
 
-use self::{
+pub use self::{
     constraints::{Constraint, Qualified, TyClass},
-    env::Env,
+    env::{Env, TypeEnv},
     inference::TypeInference,
     scheme::TypeScheme,
     types::*,
 };
-use crate::{
-    name_res::Var,
-    type_check::parsing::{TypeEnv, TypeParser},
-    PathRef, State,
-};
+use crate::{name_res::Var, type_check::parsing::TypeParser, PathRef, State};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
