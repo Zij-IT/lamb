@@ -15,6 +15,7 @@ use lambc_parse::{
 };
 
 use miette::Diagnostic;
+use unification::Unifier;
 
 pub use self::{
     constraints::{Constraint, Qualified, TyClass},
@@ -254,8 +255,7 @@ impl<'s> TypeChecker<'s> {
 
         let mut qual_value = inf.check_expr(env, def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());
-
-        inf.unification(qual_value.cons.clone())?;
+        Unifier::new(inf).unify(qual_value.cons.clone())?;
 
         let (mut unbound, ty) = inf.substitute(scheme.ty);
         let (ast_unbound, expr) = inf.substitute_expr(qual_value.item);

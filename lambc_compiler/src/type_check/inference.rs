@@ -1129,9 +1129,9 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::VarEnv, scheme::TypeScheme, Constraint, Error, FnType,
-            Qualified, RigidVar, TyClass, Type, TypeInference, TypedVar,
-            UnifiableVar,
+            env::VarEnv, scheme::TypeScheme, unification::Unifier, Constraint,
+            Error, FnType, Qualified, RigidVar, TyClass, Type, TypeInference,
+            TypedVar, UnifiableVar,
         },
     };
 
@@ -1153,7 +1153,7 @@ mod tests {
         ) -> Result<(Expr<TypedVar>, TypeScheme)> {
             let mut inf = TypeInference::new();
             let (out, ty) = inf.infer_expr(env, expr);
-            inf.unification(out.cons.clone())?;
+            Unifier::new(&mut inf).unify(out.cons.clone())?;
 
             let (mut unbound, ty) = inf.substitute(ty);
             let (ast_unbound, expr) = inf.substitute_expr(out.item);

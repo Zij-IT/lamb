@@ -1,6 +1,8 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{Constraint, Error, FnType, Result, Type, UnifiableVar};
+use super::{
+    Constraint, Error, FnType, Result, Type, TypeInference, UnifiableVar,
+};
 
 impl EqUnifyValue for Type {}
 
@@ -20,8 +22,16 @@ impl UnifyKey for UnifiableVar {
     }
 }
 
-impl super::TypeInference {
-    pub(super) fn unification(&mut self, cons: Vec<Constraint>) -> Result<()> {
+pub struct Unifier<'a> {
+    ctx: &'a mut TypeInference,
+}
+
+impl<'a> Unifier<'a> {
+    pub fn new(ctx: &'a mut TypeInference) -> Self {
+        Self { ctx }
+    }
+
+    pub(super) fn unify(&mut self, cons: Vec<Constraint>) -> Result<()> {
         let (teq, isin): (Vec<_>, Vec<_>) = cons
             .into_iter()
             .partition(|c| matches!(c, Constraint::TypeEqual { .. }));
@@ -58,10 +68,11 @@ impl super::TypeInference {
             (Type::NEVER, ..) | (.., Type::NEVER) => Ok(()),
             (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
-            (Type::UnifiableVar(l), Type::UnifiableVar(r)) => self
-                .uni_table
-                .unify_var_var(l, r)
-                .map_err(|(l, r)| Error::TypeNotEqual { expected: l, got: r }),
+            (Type::UnifiableVar(l), Type::UnifiableVar(r)) => {
+                self.ctx.uni_table.unify_var_var(l, r).map_err(|(l, r)| {
+                    Error::TypeNotEqual { expected: l, got: r }
+                })
+            }
             (Type::Fun(l), Type::Fun(r)) => {
                 if l.args.len() != r.args.len() {
                     return Err(Error::TypeNotEqual {
@@ -97,7 +108,7 @@ impl super::TypeInference {
             }
             (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;
-                self.uni_table.unify_var_value(v, Some(ty)).map_err(
+                self.ctx.uni_table.unify_var_value(v, Some(ty)).map_err(
                     |(l, r)| Error::TypeNotEqual { expected: l, got: r },
                 )
             }
@@ -117,7 +128,7 @@ impl super::TypeInference {
                 args: args.into_iter().map(|a| self.normalize_ty(a)).collect(),
                 ret_type: Box::new(self.normalize_ty(*ret_type)),
             }),
-            Type::UnifiableVar(v) => match self.uni_table.probe_value(v) {
+            Type::UnifiableVar(v) => match self.ctx.uni_table.probe_value(v) {
                 Some(ty) => self.normalize_ty(ty),
                 None => Type::UnifiableVar(v),
             },
