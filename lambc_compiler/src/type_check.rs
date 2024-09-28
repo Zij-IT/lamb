@@ -1,4 +1,5 @@
 mod check;
+mod constraints;
 mod env;
 mod inference;
 mod instantiate;
@@ -16,7 +17,13 @@ use lambc_parse::{
 
 use miette::Diagnostic;
 
-use self::{env::Env, inference::TypeInference, scheme::TypeScheme, types::*};
+use self::{
+    constraints::{Constraint, Qualified, TyClass},
+    env::Env,
+    inference::TypeInference,
+    scheme::TypeScheme,
+    types::*,
+};
 use crate::{
     name_res::Var,
     type_check::parsing::{TypeEnv, TypeParser},
@@ -337,56 +344,6 @@ impl<'s> TypeChecker<'s> {
             item: globals[&i.item].clone(),
             alias: i.alias.map(|a| globals[&a].clone()),
             span: i.span,
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Qualified<T> {
-    cons: Vec<Constraint>,
-    item: T,
-}
-
-impl<T> Qualified<T> {
-    fn constrained(item: T, cons: Vec<Constraint>) -> Self {
-        Self { cons, item }
-    }
-
-    fn unconstrained(t: T) -> Self {
-        Self { item: t, cons: vec![] }
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum Constraint {
-    IsIn(TyClass, Type),
-    TypeEqual { expected: Type, got: Type },
-}
-
-/// Represents a type-class (think trait) which are builtin
-/// There probably won't be a way to add these for a while
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum TyClass {
-    Addable,
-    Num,
-}
-
-impl TyClass {
-    pub fn impld_by(&self, t: &Type) -> bool {
-        match self {
-            TyClass::Addable => {
-                matches!(t, &Type::INT | &Type::DOUBLE | &Type::List(..))
-            }
-            TyClass::Num => {
-                matches!(t, &Type::INT | &Type::DOUBLE)
-            }
-        }
-    }
-
-    pub fn name(&self) -> &'static str {
-        match self {
-            TyClass::Addable => "Add",
-            TyClass::Num => "Num",
         }
     }
 }
