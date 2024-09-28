@@ -1,6 +1,8 @@
 use lambc_parse::Expr;
 
-use super::{env::Env, Constraint, Qualified, Type, TypeInference, TypedVar};
+use super::{
+    env::Env, inference::TypeInference, Constraint, Qualified, Type, TypedVar,
+};
 use crate::name_res::Var;
 
 impl TypeInference {

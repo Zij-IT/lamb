@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use ena::unify::InPlaceUnificationTable;
 use lambc_parse::{
     ArrayPattern, Binary, BinaryOp, Block, Call, Case, CaseArm, Define, Else,
     Expr, ExprStatement, FnDef, Group, IdentPattern, If, IfCond, Index,
@@ -6,7 +9,7 @@ use lambc_parse::{
 };
 
 use super::{
-    env::Env, Constraint, FnType, Qualified, TyClass, Type, TypeInference,
+    env::Env, Constraint, FnType, Qualified, RigidVar, TyClass, Type,
     TypedVar, UnifiableVar,
 };
 use crate::{
@@ -14,7 +17,28 @@ use crate::{
     type_check::parsing::{TypeEnv, TypeParser},
 };
 
+pub struct TypeInference {
+    pub uni_table: InPlaceUnificationTable<UnifiableVar>,
+    pub subst_unifiers_to_tyvars: HashMap<UnifiableVar, RigidVar>,
+    pub next_tyvar: u32,
+    pub ret_type: Vec<Type>,
+}
+
 impl TypeInference {
+    pub fn new() -> Self {
+        Self {
+            uni_table: Default::default(),
+            subst_unifiers_to_tyvars: Default::default(),
+            next_tyvar: 0,
+            ret_type: Default::default(),
+        }
+    }
+
+    pub fn gen_rigidvar(&mut self) -> RigidVar {
+        self.next_tyvar += 1;
+        RigidVar(self.next_tyvar - 1)
+    }
+
     /// Infers the type of `expr` given the environment `Env`. Returns a tuple
     /// of a constrained expression, and the type of that expression.
     pub(super) fn infer_expr(

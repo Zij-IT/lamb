@@ -10,14 +10,13 @@ mod unification;
 
 use std::collections::{HashMap, HashSet};
 
-use ena::unify::InPlaceUnificationTable;
 use lambc_parse::{
     Define, Export, ExportItem, Import, ImportItem, Item, Module,
 };
 
 use miette::Diagnostic;
 
-use self::{env::Env, scheme::TypeScheme, types::*};
+use self::{env::Env, inference::TypeInference, scheme::TypeScheme, types::*};
 use crate::{
     name_res::Var,
     type_check::parsing::{TypeEnv, TypeParser},
@@ -342,29 +341,6 @@ impl<'s> TypeChecker<'s> {
     }
 }
 
-struct TypeInference {
-    uni_table: InPlaceUnificationTable<UnifiableVar>,
-    subst_unifiers_to_tyvars: HashMap<UnifiableVar, RigidVar>,
-    next_tyvar: u32,
-    ret_type: Vec<Type>,
-}
-
-impl TypeInference {
-    fn new() -> Self {
-        Self {
-            uni_table: Default::default(),
-            subst_unifiers_to_tyvars: Default::default(),
-            next_tyvar: 0,
-            ret_type: Default::default(),
-        }
-    }
-
-    fn gen_rigidvar(&mut self) -> RigidVar {
-        self.next_tyvar += 1;
-        RigidVar(self.next_tyvar - 1)
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct Qualified<T> {
     cons: Vec<Constraint>,
@@ -419,9 +395,7 @@ impl TyClass {
 mod test {
     use std::collections::HashSet;
 
-    use lambc_parse::{
-        Binary, BinaryOp, BoolLit, Define, Expr, FnDef, NilLit, Span,
-    };
+    use lambc_parse::{Binary, BinaryOp, Define, Expr, FnDef, Span};
     use pretty_assertions::assert_eq;
 
     use super::{env::Env, Error, TypeChecker};
