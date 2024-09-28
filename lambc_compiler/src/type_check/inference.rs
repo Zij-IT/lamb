@@ -1066,10 +1066,75 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::Env, Constraint, FnType, Qualified, TyClass, Type,
-            TypeInference, TypedVar, UnifiableVar,
+            env::Env, scheme::TypeScheme, Constraint, Error, FnType,
+            Qualified, RigidVar, TyClass, Type, TypeInference, TypedVar,
+            UnifiableVar,
         },
     };
+
+    use crate::type_check::Result;
+    use std::collections::HashSet;
+
+    impl TypeInference {
+        fn infer(
+            &self,
+            expr: Expr<Var>,
+        ) -> Result<(Expr<TypedVar>, TypeScheme)> {
+            self.infer_with_env(Env::new(), expr)
+        }
+
+        fn infer_with_env(
+            &self,
+            env: Env,
+            expr: Expr<Var>,
+        ) -> Result<(Expr<TypedVar>, TypeScheme)> {
+            let mut inf = TypeInference::new();
+            let (out, ty) = inf.infer_expr(env, expr);
+            inf.unification(out.cons.clone())?;
+
+            let (mut unbound, ty) = inf.substitute(ty);
+            let (ast_unbound, expr) = inf.substitute_expr(out.item);
+            unbound.extend(ast_unbound);
+
+            let (con_unbound, cons) = inf.substitute_constraints(out.cons);
+            let ambiguities = con_unbound.difference(&unbound).count();
+            assert_eq!(ambiguities, 0);
+
+            let reduced = inf.reduce_constraints(&unbound, cons);
+            Ok((expr, TypeScheme { unbound, constraints: reduced, ty }))
+        }
+
+        fn reduce_constraints(
+            &self,
+            unbound: &HashSet<RigidVar>,
+            cons: Vec<Constraint>,
+        ) -> Vec<Constraint> {
+            cons.into_iter()
+                .filter(|c| match c {
+                    Constraint::IsIn(_, t1) => self.has_unbound(unbound, t1),
+                    // This is post unification, and any `TypeEqual` would have resulted
+                    // in a type being inferred to this type. Thus, we don't need to keep
+                    // these restraints.
+                    Constraint::TypeEqual { expected: _, got: _ } => false,
+                })
+                .collect()
+        }
+
+        fn has_unbound(&self, unbound: &HashSet<RigidVar>, ty: &Type) -> bool {
+            match ty {
+                Type::Error | Type::Con(_) => false,
+                Type::RigidVar(rig) => unbound.contains(rig),
+                Type::List(elem_ty) => self.has_unbound(unbound, &elem_ty),
+                Type::Fun(f) => {
+                    f.args.iter().any(|t| self.has_unbound(unbound, t))
+                        || self.has_unbound(unbound, &f.ret_type)
+                }
+                Type::UnifiableVar(_) => {
+                    unreachable!("Should not occur post unification")
+                }
+            }
+        }
+    }
 
     const SPAN: Span = Span::new(0, 0);
 
@@ -1103,22 +1168,44 @@ mod tests {
         }
     }
 
+    fn fndef<T>(args: Vec<T>, body: Expr<T>) -> Expr<T> {
+        Expr::FnDef(Box::new(FnDef {
+            args,
+            body,
+            recursive: false,
+            span: SPAN,
+        }))
+    }
+
+    fn call<T>(callee: Expr<T>, args: Vec<Expr<T>>) -> Expr<T> {
+        Expr::Call(Box::new(Call { callee, args, span: SPAN }))
+    }
+
+    macro_rules! set {
+        ($($expr:expr),*$(,)?) => {{
+            #[allow(unused_mut)]
+            let mut x = std::collections::HashSet::new();
+            $(x.insert($expr);)*
+            x
+        }};
+    }
+
     #[test]
     fn infers_int() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let lit = i64_lit();
 
-        let out = checker.infer_expr(Env::new(), Expr::I64(lit.clone()));
+        let out = inferer.infer_expr(Env::new(), Expr::I64(lit.clone()));
         assert_eq!(out, (Qualified::unconstrained(Expr::I64(lit)), Type::INT))
     }
 
     #[test]
     fn infers_double() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let lit = f64_lit();
-        let out = checker.infer_expr(Env::new(), Expr::F64(lit.clone()));
+        let out = inferer.infer_expr(Env::new(), Expr::F64(lit.clone()));
         assert_eq!(
             out,
             (Qualified::unconstrained(Expr::F64(lit)), Type::DOUBLE)
@@ -1127,11 +1214,11 @@ mod tests {
 
     #[test]
     fn infers_usv() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let lit = char_lit();
 
-        let out = checker.infer_expr(Env::new(), Expr::Char(lit.clone()));
+        let out = inferer.infer_expr(Env::new(), Expr::Char(lit.clone()));
         assert_eq!(
             out,
             (Qualified::unconstrained(Expr::Char(lit)), Type::USV)
@@ -1140,11 +1227,11 @@ mod tests {
 
     #[test]
     fn infers_string() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let lit = str_lit();
 
-        let out = checker.infer_expr(Env::new(), Expr::String(lit.clone()));
+        let out = inferer.infer_expr(Env::new(), Expr::String(lit.clone()));
 
         assert_eq!(
             out,
@@ -1157,13 +1244,13 @@ mod tests {
 
     #[test]
     fn infers_var() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let typ = Type::UnifiableVar(UnifiableVar(0));
         let var = Var(0);
         let mut env = Env::new();
         env.add_type(var, Qualified::unconstrained(typ.clone()));
-        let out = checker.infer_expr(env, Expr::Ident(var));
+        let out = inferer.infer_expr(env, Expr::Ident(var));
 
         assert_eq!(
             out,
@@ -1179,7 +1266,7 @@ mod tests {
 
     #[test]
     fn infers_fndef() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],
@@ -1196,7 +1283,7 @@ mod tests {
             ret_type: Box::new(Type::UnifiableVar(UnifiableVar(2))),
         });
 
-        let out = checker.infer_expr(Env::new(), Expr::FnDef(Box::new(def)));
+        let out = inferer.infer_expr(Env::new(), Expr::FnDef(Box::new(def)));
 
         assert_eq!(
             out,
@@ -1232,7 +1319,7 @@ mod tests {
 
     #[test]
     fn infers_idx() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let idx = Index {
             lhs: Expr::Nil(nil_lit()),
@@ -1243,7 +1330,7 @@ mod tests {
         let typ = Type::UnifiableVar(UnifiableVar(0));
 
         let out =
-            checker.check_expr(Env::new(), Expr::Index(Box::new(idx)), typ);
+            inferer.check_expr(Env::new(), Expr::Index(Box::new(idx)), typ);
 
         assert_eq!(
             out,
@@ -1275,7 +1362,7 @@ mod tests {
 
     #[test]
     fn infers_call() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let callee_ident = Var(0);
         let callee_typ = Type::UnifiableVar(UnifiableVar(1000));
@@ -1293,7 +1380,7 @@ mod tests {
             span: SPAN,
         };
 
-        let out = checker.infer_expr(env, Expr::Call(Box::new(call)));
+        let out = inferer.infer_expr(env, Expr::Call(Box::new(call)));
 
         assert_eq!(
             out,
@@ -1322,11 +1409,11 @@ mod tests {
 
     #[test]
     fn infers_group() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let expr = str_lit();
         let group = Group { value: Expr::String(expr.clone()), span: SPAN };
-        let out = checker.infer_expr(Env::new(), Expr::Group(Box::new(group)));
+        let out = inferer.infer_expr(Env::new(), Expr::Group(Box::new(group)));
 
         assert_eq!(
             out,
@@ -1345,14 +1432,14 @@ mod tests {
 
     #[test]
     fn infers_list() {
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let list = List {
             values: vec![Expr::String(str_lit()), Expr::Char(char_lit())],
             span: SPAN,
         };
 
-        let out = checker.infer_expr(Env::new(), Expr::List(list));
+        let out = inferer.infer_expr(Env::new(), Expr::List(list));
 
         assert_eq!(
             out,
@@ -1386,11 +1473,11 @@ mod tests {
             }))
         }
 
-        let mut checker = TypeInference::new();
+        let mut inferer = TypeInference::new();
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Nneg);
-        let out = checker.infer_expr(Env::new(), una);
+        let out = inferer.infer_expr(Env::new(), una);
         assert_eq!(
             out,
             (
@@ -1404,7 +1491,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Bneg);
-        let out = checker.infer_expr(Env::new(), una);
+        let out = inferer.infer_expr(Env::new(), una);
         assert_eq!(
             out,
             (
@@ -1421,7 +1508,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Lnot);
-        let out = checker.infer_expr(Env::new(), una);
+        let out = inferer.infer_expr(Env::new(), una);
         assert_eq!(
             out,
             (
@@ -1512,8 +1599,8 @@ mod tests {
             span: SPAN,
         };
 
-        let mut checker = TypeInference::new();
-        let out = checker.infer_block_raw(Env::new(), block);
+        let mut inferer = TypeInference::new();
+        let out = inferer.infer_block_raw(Env::new(), block);
         assert_eq!(
             out,
             (
@@ -1628,8 +1715,8 @@ mod tests {
             span: SPAN,
         };
 
-        let mut checker = TypeInference::new();
-        let out = checker.infer_block_raw(Env::new(), block);
+        let mut inferer = TypeInference::new();
+        let out = inferer.infer_block_raw(Env::new(), block);
         assert_eq!(
             out,
             (
@@ -1740,8 +1827,8 @@ mod tests {
             span: SPAN,
         };
 
-        let mut checker = TypeInference::new();
-        let out = checker.infer_block_raw(Env::new(), block);
+        let mut inferer = TypeInference::new();
+        let out = inferer.infer_block_raw(Env::new(), block);
         assert_eq!(
             out,
             (
@@ -1817,8 +1904,8 @@ mod tests {
         }
 
         let iff = make_if::<Var>();
-        let mut checker = TypeInference::new();
-        let out = checker.infer_if(Env::new(), iff);
+        let mut inferer = TypeInference::new();
+        let out = inferer.infer_if(Env::new(), iff);
 
         assert_eq!(
             out,
@@ -1884,8 +1971,8 @@ mod tests {
             panic!()
         };
 
-        let mut checker = TypeInference::new();
-        let (res, ty) = checker.infer_fndef(Env::new(), *test);
+        let mut inferer = TypeInference::new();
+        let (res, ty) = inferer.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
             Qualified::constrained(
@@ -1962,8 +2049,8 @@ mod tests {
             panic!()
         };
 
-        let mut checker = TypeInference::new();
-        let (res, ty) = checker.infer_fndef(Env::new(), *test);
+        let mut inferer = TypeInference::new();
+        let (res, ty) = inferer.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
             Qualified::constrained(
@@ -2032,8 +2119,8 @@ mod tests {
             panic!()
         };
 
-        let mut checker = TypeInference::new();
-        let (res, ty) = checker.infer_fndef(Env::new(), *test);
+        let mut inferer = TypeInference::new();
+        let (res, ty) = inferer.infer_fndef(Env::new(), *test);
         assert_eq!(
             res,
             Qualified::constrained(
@@ -2070,6 +2157,288 @@ mod tests {
                 vec![Type::UnifiableVar(UnifiableVar(0))],
                 Type::UnifiableVar(UnifiableVar(1))
             ),
+        );
+    }
+
+    #[test]
+    fn infers_id() {
+        let x = Var(u32::MAX);
+        let ast = Expr::FnDef(Box::new(FnDef {
+            args: vec![x],
+            body: Expr::Ident(x),
+            recursive: false,
+            span: SPAN,
+        }));
+
+        let (expr, scheme) =
+            TypeInference::new().infer(ast).expect("Inference to succeed");
+
+        let a = RigidVar(0);
+
+        assert_eq!(
+            expr,
+            Expr::FnDef(Box::new(FnDef {
+                args: vec![TypedVar(x, Type::RigidVar(a))],
+                body: Expr::Ident(TypedVar(x, Type::RigidVar(a))),
+                recursive: false,
+                span: SPAN,
+            }))
+        );
+
+        assert_eq!(
+            scheme,
+            TypeScheme {
+                constraints: vec![],
+                unbound: set![a],
+                ty: Type::Fun(FnType {
+                    args: vec![Type::RigidVar(a)],
+                    ret_type: Box::new(Type::RigidVar(a))
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn infers_k_combinator() {
+        let x = Var(u32::MAX);
+        let y = Var(u32::MAX - 1);
+
+        let ast = Expr::FnDef(Box::new(FnDef {
+            args: vec![x],
+            body: Expr::FnDef(Box::new(FnDef {
+                args: vec![y],
+                body: Expr::Ident(x),
+                recursive: false,
+                span: SPAN,
+            })),
+            recursive: false,
+            span: SPAN,
+        }));
+
+        let (expr, scheme) =
+            TypeInference::new().infer(ast).expect("Inference to succeed");
+
+        let a = RigidVar(0);
+        let b = RigidVar(1);
+
+        assert_eq!(
+            expr,
+            Expr::FnDef(Box::new(FnDef {
+                args: vec![TypedVar(x, Type::RigidVar(a))],
+                body: Expr::FnDef(Box::new(FnDef {
+                    args: vec![TypedVar(y, Type::RigidVar(b))],
+                    body: Expr::Ident(TypedVar(x, Type::RigidVar(a))),
+                    recursive: false,
+                    span: SPAN
+                })),
+                recursive: false,
+                span: SPAN,
+            }))
+        );
+
+        assert_eq!(
+            scheme,
+            TypeScheme {
+                constraints: vec![],
+                unbound: set![a, b],
+                ty: Type::Fun(FnType {
+                    args: vec![Type::RigidVar(a)],
+                    ret_type: Box::new(Type::Fun(FnType {
+                        args: vec![Type::RigidVar(b)],
+                        ret_type: Box::new(Type::RigidVar(a))
+                    }))
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn infers_s_combinator() {
+        let x = Var(u32::MAX);
+        let y = Var(u32::MAX - 1);
+        let z = Var(u32::MAX - 2);
+
+        let s_comb = fndef(
+            vec![x],
+            fndef(
+                vec![y],
+                fndef(
+                    vec![z],
+                    call(
+                        call(Expr::Ident(x), vec![Expr::Ident(z)]),
+                        vec![call(Expr::Ident(y), vec![Expr::Ident(z)])],
+                    ),
+                ),
+            ),
+        );
+
+        let (_expr, scheme) =
+            TypeInference::new().infer(s_comb).expect("Inference to succeed");
+
+        let a = RigidVar(0);
+        let b = RigidVar(1);
+        let c = RigidVar(2);
+
+        let x_ty = Type::fun(
+            vec![Type::RigidVar(a)],
+            Type::fun(vec![Type::RigidVar(b)], Type::RigidVar(c)),
+        );
+
+        let y_ty = Type::fun(vec![Type::RigidVar(a)], Type::RigidVar(b));
+
+        assert_eq!(
+            scheme,
+            TypeScheme {
+                constraints: vec![],
+                unbound: set![a, b, c],
+                ty: Type::fun(
+                    vec![x_ty],
+                    Type::fun(
+                        vec![y_ty],
+                        Type::fun(vec![Type::RigidVar(a)], Type::RigidVar(c))
+                    )
+                )
+            }
+        )
+    }
+
+    #[test]
+    fn infer_fails() {
+        let x = Var(0);
+        let ast = call(
+            fndef(
+                vec![x],
+                call(Expr::Ident(x), vec![Expr::Nil(NilLit { span: SPAN })]),
+            ),
+            vec![Expr::Nil(NilLit { span: SPAN })],
+        );
+
+        let res = TypeInference::new().infer(ast);
+        assert_eq!(
+            res,
+            Err(Error::TypeNotEqual {
+                expected: Type::fun(
+                    vec![Type::NIL],
+                    Type::UnifiableVar(UnifiableVar(0))
+                ),
+                got: Type::fun(
+                    vec![Type::fun(
+                        vec![Type::NIL],
+                        Type::UnifiableVar(UnifiableVar(3))
+                    )],
+                    Type::UnifiableVar(UnifiableVar(2))
+                )
+            })
+        )
+    }
+
+    #[test]
+    fn infers_generalized_def() {
+        let id = Var(0);
+        let mut env = Env::new();
+        env.add_scheme(
+            id,
+            TypeScheme {
+                unbound: set![RigidVar(3)],
+                constraints: vec![],
+                ty: Type::fun(
+                    vec![Type::RigidVar(RigidVar(0))],
+                    Type::RigidVar(RigidVar(0)),
+                ),
+            },
+        );
+
+        let x = Var(1);
+        let idexpr = fndef(vec![x], Expr::Ident(x));
+        let type_expr_pair = vec![
+            (Expr::Bool(bool_lit()), Expr::Bool(bool_lit()), Type::BOOL),
+            (Expr::Nil(nil_lit()), Expr::Nil(nil_lit()), Type::NIL),
+        ];
+
+        let inferer = TypeInference::new();
+
+        for (var_expr, ty_expr, ty) in type_expr_pair {
+            let idcall = call(idexpr.clone(), vec![var_expr]);
+            let (expr, scheme) = inferer
+                .infer_with_env(env.clone(), idcall)
+                .expect("Inference to succeed");
+
+            let typed_x = TypedVar(x, ty.clone());
+            let typed_id = fndef(vec![typed_x.clone()], Expr::Ident(typed_x));
+
+            assert_eq!(expr, call(typed_id, vec![ty_expr]));
+            assert_eq!(
+                scheme,
+                TypeScheme { unbound: set![], constraints: vec![], ty: ty }
+            );
+        }
+    }
+
+    #[test]
+    fn infers_partial_scheme() {
+        // func(a, b) -> nil;
+        //
+        // This `Var` and the rigid variables aren't inferred, but are set by the scheme,
+        // and thus there value is customizable.
+        let func = Var(u32::MAX);
+        let rig_a = RigidVar(u32::MAX);
+        let rig_b = RigidVar(u32::MAX - 1);
+        let func_type = TypeScheme {
+            unbound: set![rig_a, rig_b],
+            constraints: vec![],
+            ty: Type::fun(
+                vec![Type::RigidVar(rig_a), Type::RigidVar(rig_b)],
+                Type::NIL,
+            ),
+        };
+
+        let mut env = Env::new();
+        env.add_scheme(func, func_type);
+
+        // fn(a) -> func(a, 1);
+        //
+        // This `Var` also doesn't matter, but cannot conflict with any other vars, but
+        // is also customizable.
+        let param_a = Var(u32::MAX - 1);
+        let def = fndef(
+            vec![param_a],
+            call(
+                Expr::Ident(func),
+                vec![Expr::Ident(param_a), Expr::Nil(nil_lit())],
+            ),
+        );
+
+        let inferer = TypeInference::new();
+        let (expr, scheme) = inferer
+            .infer_with_env(env.clone(), def)
+            .expect("Inference to succeed");
+
+        // This rigid variables is inferred, and thus starts at 0
+        let rigvar_a = RigidVar(0);
+        let typeof_a = Type::RigidVar(rigvar_a);
+        let typed_a = TypedVar(param_a, typeof_a.clone());
+
+        let typed_func =
+            Type::fun(vec![typeof_a.clone(), Type::NIL], Type::NIL);
+
+        assert_eq!(
+            expr,
+            fndef(
+                vec![typed_a.clone()],
+                call(
+                    Expr::Ident(TypedVar(func, typed_func)),
+                    vec![Expr::Ident(typed_a), Expr::Nil(nil_lit())],
+                ),
+            )
+        );
+
+        assert_eq!(
+            scheme,
+            TypeScheme {
+                unbound: set![rigvar_a],
+                constraints: vec![],
+                ty: Type::fun(vec![Type::RigidVar(rigvar_a)], Type::NIL),
+            }
         );
     }
 }
