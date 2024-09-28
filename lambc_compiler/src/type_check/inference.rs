@@ -9,7 +9,7 @@ use lambc_parse::{
 };
 
 use super::{
-    env::Env, Constraint, FnType, Qualified, RigidVar, TyClass, Type,
+    env::VarEnv, Constraint, FnType, Qualified, RigidVar, TyClass, Type,
     TypedVar, UnifiableVar,
 };
 use crate::{
@@ -43,7 +43,7 @@ impl TypeInference {
     /// requirements for the expression to type-check.
     pub fn check_expr(
         &mut self,
-        env: Env,
+        env: VarEnv,
         expr: Expr<Var>,
         typ: Type,
     ) -> Qualified<Expr<TypedVar>> {
@@ -82,7 +82,7 @@ impl TypeInference {
     /// of a constrained expression, and the type of that expression.
     pub(super) fn infer_expr(
         &mut self,
-        env: Env,
+        env: VarEnv,
         expr: Expr<Var>,
         // todo: The type is what is actually constrained here, so move `Qualified`
         // over to the type.
@@ -137,7 +137,7 @@ impl TypeInference {
 
     fn infer_fndef(
         &mut self,
-        mut env: Env,
+        mut env: VarEnv,
         fndef: FnDef<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let FnDef { args, body, recursive, span } = fndef;
@@ -184,7 +184,7 @@ impl TypeInference {
 
     fn infer_call(
         &mut self,
-        env: Env,
+        env: VarEnv,
         call: Call<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let mut cons = Vec::new();
@@ -222,7 +222,7 @@ impl TypeInference {
 
     fn infer_idx(
         &mut self,
-        env: Env,
+        env: VarEnv,
         idx: Index<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let list_elem_ty = self.fresh_ty_var();
@@ -259,7 +259,7 @@ impl TypeInference {
 
     fn infer_group(
         &mut self,
-        env: Env,
+        env: VarEnv,
         group: Group<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_expr(env, group.value);
@@ -277,7 +277,7 @@ impl TypeInference {
 
     fn infer_list(
         &mut self,
-        env: Env,
+        env: VarEnv,
         list: List<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let mut values = list.values.into_iter();
@@ -306,7 +306,7 @@ impl TypeInference {
 
     fn infer_unary(
         &mut self,
-        env: Env,
+        env: VarEnv,
         unary: Unary<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let Unary { rhs, op, span, op_span } = unary;
@@ -341,7 +341,7 @@ impl TypeInference {
 
     fn infer_binary(
         &mut self,
-        env: Env,
+        env: VarEnv,
         binary: Binary<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let (lhs, rhs, cons, ty) = match binary.op {
@@ -543,7 +543,7 @@ impl TypeInference {
 
     fn infer_block(
         &mut self,
-        env: Env,
+        env: VarEnv,
         block: Block<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let (res, ty) = self.infer_block_raw(env, block);
@@ -562,7 +562,7 @@ impl TypeInference {
 
     pub(super) fn infer_block_raw(
         &mut self,
-        mut env: Env,
+        mut env: VarEnv,
         block: Block<Var>,
     ) -> (Qualified<Block<TypedVar>>, Type) {
         let returns = does_block_unconditionally_return(&block);
@@ -597,7 +597,7 @@ impl TypeInference {
 
     fn infer_case(
         &mut self,
-        env: Env,
+        env: VarEnv,
         case: Case<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let Case { scrutinee, arms, span } = case;
@@ -646,7 +646,7 @@ impl TypeInference {
 
     fn infer_case_arm(
         &mut self,
-        mut env: Env,
+        mut env: VarEnv,
         arm: CaseArm<Var>,
         scrut_ty: Type,
     ) -> (Qualified<CaseArm<TypedVar>>, Type) {
@@ -670,7 +670,7 @@ impl TypeInference {
 
     fn infer_pattern(
         &mut self,
-        env: &mut Env,
+        env: &mut VarEnv,
         pat: Pattern<Var>,
     ) -> (Qualified<Pattern<TypedVar>>, Type) {
         let mut idents: Vec<Var> =
@@ -733,7 +733,7 @@ impl TypeInference {
 
     fn infer_inner_pattern(
         &mut self,
-        env: &mut Env,
+        env: &mut VarEnv,
         pat: InnerPattern<Var>,
     ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
         use InnerPattern as Ip;
@@ -766,7 +766,7 @@ impl TypeInference {
 
     fn infer_ident_pattern(
         &mut self,
-        env: &mut Env,
+        env: &mut VarEnv,
         id: IdentPattern<Var>,
     ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
         let IdentPattern { ident, bound, span } = id;
@@ -799,7 +799,7 @@ impl TypeInference {
 
     fn infer_array_pattern(
         &mut self,
-        env: &mut Env,
+        env: &mut VarEnv,
         arr: ArrayPattern<Var>,
     ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
         let ArrayPattern { patterns, span } = arr;
@@ -856,7 +856,7 @@ impl TypeInference {
 
     pub(super) fn infer_if(
         &mut self,
-        env: Env,
+        env: VarEnv,
         iff: If<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let If { cond, elif, els_, span } = iff;
@@ -919,7 +919,7 @@ impl TypeInference {
 
     fn infer_return(
         &mut self,
-        env: Env,
+        env: VarEnv,
         ret: Return<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let Return { value, span } = ret;
@@ -947,7 +947,7 @@ impl TypeInference {
 
     fn process_stmt(
         &mut self,
-        env: &mut Env,
+        env: &mut VarEnv,
         stmt: Statement<Var>,
     ) -> Qualified<Statement<TypedVar>> {
         match stmt {
@@ -958,7 +958,7 @@ impl TypeInference {
 
     fn process_def_stmt(
         &mut self,
-        env: &mut Env,
+        env: &mut VarEnv,
         def: Define<Var>,
     ) -> Qualified<Statement<TypedVar>> {
         let Define { ident, typ, value, span } = def;
@@ -1012,7 +1012,7 @@ impl TypeInference {
 
     fn process_expr_stmt(
         &mut self,
-        env: Env,
+        env: VarEnv,
         expr: ExprStatement<Var>,
     ) -> Qualified<Statement<TypedVar>> {
         let ExprStatement { expr, span } = expr;
@@ -1129,7 +1129,7 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::Env, scheme::TypeScheme, Constraint, Error, FnType,
+            env::VarEnv, scheme::TypeScheme, Constraint, Error, FnType,
             Qualified, RigidVar, TyClass, Type, TypeInference, TypedVar,
             UnifiableVar,
         },
@@ -1143,12 +1143,12 @@ mod tests {
             &self,
             expr: Expr<Var>,
         ) -> Result<(Expr<TypedVar>, TypeScheme)> {
-            self.infer_with_env(Env::new(), expr)
+            self.infer_with_env(VarEnv::new(), expr)
         }
 
         fn infer_with_env(
             &self,
-            env: Env,
+            env: VarEnv,
             expr: Expr<Var>,
         ) -> Result<(Expr<TypedVar>, TypeScheme)> {
             let mut inf = TypeInference::new();
@@ -1259,7 +1259,7 @@ mod tests {
 
         let lit = i64_lit();
 
-        let out = inferer.infer_expr(Env::new(), Expr::I64(lit.clone()));
+        let out = inferer.infer_expr(VarEnv::new(), Expr::I64(lit.clone()));
         assert_eq!(out, (Qualified::unconstrained(Expr::I64(lit)), Type::INT))
     }
 
@@ -1268,7 +1268,7 @@ mod tests {
         let mut inferer = TypeInference::new();
 
         let lit = f64_lit();
-        let out = inferer.infer_expr(Env::new(), Expr::F64(lit.clone()));
+        let out = inferer.infer_expr(VarEnv::new(), Expr::F64(lit.clone()));
         assert_eq!(
             out,
             (Qualified::unconstrained(Expr::F64(lit)), Type::DOUBLE)
@@ -1281,7 +1281,7 @@ mod tests {
 
         let lit = char_lit();
 
-        let out = inferer.infer_expr(Env::new(), Expr::Char(lit.clone()));
+        let out = inferer.infer_expr(VarEnv::new(), Expr::Char(lit.clone()));
         assert_eq!(
             out,
             (Qualified::unconstrained(Expr::Char(lit)), Type::USV)
@@ -1294,7 +1294,7 @@ mod tests {
 
         let lit = str_lit();
 
-        let out = inferer.infer_expr(Env::new(), Expr::String(lit.clone()));
+        let out = inferer.infer_expr(VarEnv::new(), Expr::String(lit.clone()));
 
         assert_eq!(
             out,
@@ -1311,7 +1311,7 @@ mod tests {
 
         let typ = Type::UnifiableVar(UnifiableVar(0));
         let var = Var(0);
-        let mut env = Env::new();
+        let mut env = VarEnv::new();
         env.add_type(var, Qualified::unconstrained(typ.clone()));
         let out = inferer.infer_expr(env, Expr::Ident(var));
 
@@ -1346,7 +1346,8 @@ mod tests {
             ret_type: Box::new(Type::UnifiableVar(UnifiableVar(2))),
         });
 
-        let out = inferer.infer_expr(Env::new(), Expr::FnDef(Box::new(def)));
+        let out =
+            inferer.infer_expr(VarEnv::new(), Expr::FnDef(Box::new(def)));
 
         assert_eq!(
             out,
@@ -1393,7 +1394,7 @@ mod tests {
         let typ = Type::UnifiableVar(UnifiableVar(0));
 
         let out =
-            inferer.check_expr(Env::new(), Expr::Index(Box::new(idx)), typ);
+            inferer.check_expr(VarEnv::new(), Expr::Index(Box::new(idx)), typ);
 
         assert_eq!(
             out,
@@ -1431,7 +1432,7 @@ mod tests {
         let callee_typ = Type::UnifiableVar(UnifiableVar(1000));
         let ret_typ = Type::UnifiableVar(UnifiableVar(0));
 
-        let mut env = Env::new();
+        let mut env = VarEnv::new();
         env.add_type(
             callee_ident,
             Qualified::unconstrained(callee_typ.clone()),
@@ -1476,7 +1477,8 @@ mod tests {
 
         let expr = str_lit();
         let group = Group { value: Expr::String(expr.clone()), span: SPAN };
-        let out = inferer.infer_expr(Env::new(), Expr::Group(Box::new(group)));
+        let out =
+            inferer.infer_expr(VarEnv::new(), Expr::Group(Box::new(group)));
 
         assert_eq!(
             out,
@@ -1502,7 +1504,7 @@ mod tests {
             span: SPAN,
         };
 
-        let out = inferer.infer_expr(Env::new(), Expr::List(list));
+        let out = inferer.infer_expr(VarEnv::new(), Expr::List(list));
 
         assert_eq!(
             out,
@@ -1540,7 +1542,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Nneg);
-        let out = inferer.infer_expr(Env::new(), una);
+        let out = inferer.infer_expr(VarEnv::new(), una);
         assert_eq!(
             out,
             (
@@ -1554,7 +1556,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Bneg);
-        let out = inferer.infer_expr(Env::new(), una);
+        let out = inferer.infer_expr(VarEnv::new(), una);
         assert_eq!(
             out,
             (
@@ -1571,7 +1573,7 @@ mod tests {
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Lnot);
-        let out = inferer.infer_expr(Env::new(), una);
+        let out = inferer.infer_expr(VarEnv::new(), una);
         assert_eq!(
             out,
             (
@@ -1663,7 +1665,7 @@ mod tests {
         };
 
         let mut inferer = TypeInference::new();
-        let out = inferer.infer_block_raw(Env::new(), block);
+        let out = inferer.infer_block_raw(VarEnv::new(), block);
         assert_eq!(
             out,
             (
@@ -1779,7 +1781,7 @@ mod tests {
         };
 
         let mut inferer = TypeInference::new();
-        let out = inferer.infer_block_raw(Env::new(), block);
+        let out = inferer.infer_block_raw(VarEnv::new(), block);
         assert_eq!(
             out,
             (
@@ -1891,7 +1893,7 @@ mod tests {
         };
 
         let mut inferer = TypeInference::new();
-        let out = inferer.infer_block_raw(Env::new(), block);
+        let out = inferer.infer_block_raw(VarEnv::new(), block);
         assert_eq!(
             out,
             (
@@ -1968,7 +1970,7 @@ mod tests {
 
         let iff = make_if::<Var>();
         let mut inferer = TypeInference::new();
-        let out = inferer.infer_if(Env::new(), iff);
+        let out = inferer.infer_if(VarEnv::new(), iff);
 
         assert_eq!(
             out,
@@ -2035,7 +2037,7 @@ mod tests {
         };
 
         let mut inferer = TypeInference::new();
-        let (res, ty) = inferer.infer_fndef(Env::new(), *test);
+        let (res, ty) = inferer.infer_fndef(VarEnv::new(), *test);
         assert_eq!(
             res,
             Qualified::constrained(
@@ -2113,7 +2115,7 @@ mod tests {
         };
 
         let mut inferer = TypeInference::new();
-        let (res, ty) = inferer.infer_fndef(Env::new(), *test);
+        let (res, ty) = inferer.infer_fndef(VarEnv::new(), *test);
         assert_eq!(
             res,
             Qualified::constrained(
@@ -2183,7 +2185,7 @@ mod tests {
         };
 
         let mut inferer = TypeInference::new();
-        let (res, ty) = inferer.infer_fndef(Env::new(), *test);
+        let (res, ty) = inferer.infer_fndef(VarEnv::new(), *test);
         assert_eq!(
             res,
             Qualified::constrained(
@@ -2398,7 +2400,7 @@ mod tests {
     #[test]
     fn infers_generalized_def() {
         let id = Var(0);
-        let mut env = Env::new();
+        let mut env = VarEnv::new();
         env.add_scheme(
             id,
             TypeScheme {
@@ -2455,7 +2457,7 @@ mod tests {
             ),
         };
 
-        let mut env = Env::new();
+        let mut env = VarEnv::new();
         env.add_scheme(func, func_type);
 
         // fn(a) -> func(a, 1);
@@ -2511,8 +2513,11 @@ mod tests {
 
         let lit = i64_lit();
 
-        let out =
-            checker.check_expr(Env::new(), Expr::I64(lit.clone()), Type::INT);
+        let out = checker.check_expr(
+            VarEnv::new(),
+            Expr::I64(lit.clone()),
+            Type::INT,
+        );
 
         assert_eq!(out, Qualified::unconstrained(Expr::I64(lit)))
     }
@@ -2524,7 +2529,7 @@ mod tests {
         let lit = f64_lit();
 
         let out = checker.check_expr(
-            Env::new(),
+            VarEnv::new(),
             Expr::F64(lit.clone()),
             Type::DOUBLE,
         );
@@ -2538,8 +2543,11 @@ mod tests {
 
         let lit = char_lit();
 
-        let out =
-            checker.check_expr(Env::new(), Expr::Char(lit.clone()), Type::USV);
+        let out = checker.check_expr(
+            VarEnv::new(),
+            Expr::Char(lit.clone()),
+            Type::USV,
+        );
 
         assert_eq!(out, Qualified::unconstrained(Expr::Char(lit)))
     }
@@ -2551,7 +2559,7 @@ mod tests {
         let lit = str_lit();
 
         let out = checker.check_expr(
-            Env::new(),
+            VarEnv::new(),
             Expr::String(lit.clone()),
             Type::List(Box::new(Type::USV)),
         );
@@ -2579,7 +2587,7 @@ mod tests {
         });
 
         let out =
-            checker.check_expr(Env::new(), Expr::FnDef(Box::new(def)), typ);
+            checker.check_expr(VarEnv::new(), Expr::FnDef(Box::new(def)), typ);
 
         let uvar = |n| Type::UnifiableVar(UnifiableVar(n));
 
@@ -2626,7 +2634,7 @@ mod tests {
         });
 
         let out =
-            checker.check_expr(Env::new(), Expr::FnDef(Box::new(def)), typ);
+            checker.check_expr(VarEnv::new(), Expr::FnDef(Box::new(def)), typ);
 
         let uvar = |n| Type::UnifiableVar(UnifiableVar(n));
 

@@ -18,7 +18,7 @@ use miette::Diagnostic;
 
 pub use self::{
     constraints::{Constraint, Qualified, TyClass},
-    env::{Env, TypeEnv},
+    env::{TypeEnv, VarEnv},
     inference::TypeInference,
     scheme::TypeScheme,
     types::*,
@@ -129,7 +129,7 @@ impl<'s> TypeChecker<'s> {
     fn check_items(
         &mut self,
         inf: &mut TypeInference,
-        env: Env,
+        env: VarEnv,
         path: PathRef,
         items: Vec<Item<Var>>,
     ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
@@ -160,8 +160,8 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         inf: &mut TypeInference,
         items: I,
-    ) -> Env {
-        let mut env = Env::new();
+    ) -> VarEnv {
+        let mut env = VarEnv::new();
         self.add_builtin_functions(&mut env, inf);
 
         let mut ty_env = TypeEnv::default();
@@ -201,7 +201,11 @@ impl<'s> TypeChecker<'s> {
         env
     }
 
-    fn add_builtin_functions(&self, env: &mut Env, inf: &mut TypeInference) {
+    fn add_builtin_functions(
+        &self,
+        env: &mut VarEnv,
+        inf: &mut TypeInference,
+    ) {
         let to_simple_scheme = |t| TypeScheme {
             unbound: Default::default(),
             constraints: vec![],
@@ -239,7 +243,7 @@ impl<'s> TypeChecker<'s> {
     fn check_toplevel_def(
         &self,
         inf: &mut TypeInference,
-        env: Env,
+        env: VarEnv,
         def: Define<Var>,
         scheme: TypeScheme,
     ) -> Result<Define<TypedVar>> {
@@ -350,7 +354,7 @@ mod test {
     use lambc_parse::{Binary, BinaryOp, Define, Expr, FnDef, Span};
     use pretty_assertions::assert_eq;
 
-    use super::{env::Env, Error, TypeChecker};
+    use super::{env::VarEnv, Error, TypeChecker};
     use crate::{
         name_res::Var,
         type_check::{
@@ -413,7 +417,7 @@ mod test {
 
         let mut inf = TypeInference::new();
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, Env::new(), def, scheme.clone())
+            .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme.clone())
             .expect("Type checking to succeed");
 
         let rigid_x = RigidVar(a);
@@ -447,7 +451,7 @@ mod test {
 
         let mut inf = TypeInference::new();
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, Env::new(), def, scheme)
+            .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme)
             .expect("Type checking to succeed");
 
         let typed_x = TypedVar(x, Type::BOOL);
@@ -491,7 +495,7 @@ mod test {
         let mut inf = TypeInference::new();
         let err = TypeChecker::new(&mut State::default()).check_toplevel_def(
             &mut inf,
-            Env::new(),
+            VarEnv::new(),
             def,
             scheme,
         );

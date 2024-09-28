@@ -4,11 +4,11 @@ use super::{Error, Qualified, Result, Type, TypeScheme};
 
 /// A map from `Var` to their `Type(Scheme)`.
 #[derive(Clone)]
-pub struct Env {
+pub struct VarEnv {
     inner: im::HashMap<Var, TypeScheme>,
 }
 
-impl Env {
+impl VarEnv {
     /// Constructs a new empty `Env`
     pub fn new() -> Self {
         Self { inner: Default::default() }
