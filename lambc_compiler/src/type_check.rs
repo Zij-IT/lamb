@@ -1,4 +1,3 @@
-mod check;
 mod constraints;
 mod env;
 mod inference;
