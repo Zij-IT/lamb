@@ -11,8 +11,7 @@ use super::{
     parsing::ParserContext,
     substitution::SubstitutionContext,
     unification::UnificationContext,
-    Constraint, FnType, Qualified, RigidVar, TyClass, Type, TypedVar,
-    UnifiableVar,
+    Constraint, FnType, Qualified, TyClass, Type, TypedVar, UnifiableVar,
 };
 use crate::{name_res::Var, type_check::parsing::TypeParser};
 
@@ -33,10 +32,6 @@ where
 {
     pub fn new(ctx: &'ctx mut C) -> Self {
         Self { ctx, ret_type: Default::default() }
-    }
-
-    pub fn gen_rigidvar(&mut self) -> RigidVar {
-        self.ctx.new_rigid_var()
     }
 
     /// Checks the type of an expression, returning an [`Expr`] with the

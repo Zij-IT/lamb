@@ -75,12 +75,12 @@ impl<'s> TypeChecker<'s> {
         mut modules: Vec<Module<Var, PathRef>>,
     ) -> Vec<Module<TypedVar, PathRef>> {
         let mut binding = Context::new();
-        let mut inf = TypeInference::new(&mut binding);
         let globals = self.build_env(
-            &mut inf,
+            &mut binding,
             modules.iter().flat_map(|i| i.items.as_slice()),
         );
 
+        let mut inf = TypeInference::new(&mut binding);
         let mut item_map = HashMap::new();
         for module in modules.iter_mut() {
             let items = std::mem::take(&mut module.items);
@@ -164,19 +164,19 @@ impl<'s> TypeChecker<'s> {
 
     fn build_env<'a, I: Iterator<Item = &'a Item<Var>>>(
         &mut self,
-        inf: &mut TypeInference<Context>,
+        ctx: &mut Context,
         items: I,
     ) -> VarEnv {
         let mut env = VarEnv::new();
-        self.add_builtin_functions(&mut env, inf);
+        self.add_builtin_functions(&mut env, ctx);
 
-        inf.ctx.add_type(Var::INT, Type::INT);
-        inf.ctx.add_type(Var::NIL, Type::NIL);
-        inf.ctx.add_type(Var::USV, Type::USV);
-        inf.ctx.add_type(Var::BOOL, Type::BOOL);
-        inf.ctx.add_type(Var::NEVER, Type::NEVER);
-        inf.ctx.add_type(Var::DOUBLE, Type::DOUBLE);
-        let mut parser = TypeParser::new(inf.ctx);
+        ctx.add_type(Var::INT, Type::INT);
+        ctx.add_type(Var::NIL, Type::NIL);
+        ctx.add_type(Var::USV, Type::USV);
+        ctx.add_type(Var::BOOL, Type::BOOL);
+        ctx.add_type(Var::NEVER, Type::NEVER);
+        ctx.add_type(Var::DOUBLE, Type::DOUBLE);
+        let mut parser = TypeParser::new(ctx);
 
         for item in items {
             match item {
@@ -205,11 +205,7 @@ impl<'s> TypeChecker<'s> {
         env
     }
 
-    fn add_builtin_functions(
-        &self,
-        env: &mut VarEnv,
-        inf: &mut TypeInference<Context>,
-    ) {
+    fn add_builtin_functions(&self, env: &mut VarEnv, ctx: &mut Context) {
         let to_simple_scheme = |t| TypeScheme {
             unbound: Default::default(),
             constraints: vec![],
@@ -229,7 +225,7 @@ impl<'s> TypeChecker<'s> {
         env.add_scheme(Var::RAND, to_simple_scheme(rand_ty));
 
         let mut to_one_gen_scheme = |make_ty: fn(RigidVar) -> Type| {
-            let rigid = inf.gen_rigidvar();
+            let rigid = ctx.new_rigid_var();
             TypeScheme {
                 unbound: HashSet::from([rigid]),
                 constraints: vec![],
