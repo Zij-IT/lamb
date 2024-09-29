@@ -9,8 +9,8 @@ use lambc_parse::{
 };
 
 use super::{
-    env::VarEnv, Constraint, FnType, Qualified, RigidVar, TyClass, Type,
-    TypedVar, UnifiableVar,
+    env::VarEnv, instantiate::Instantiate, Constraint, FnType, Qualified,
+    RigidVar, TyClass, Type, TypedVar, UnifiableVar,
 };
 use crate::{
     name_res::Var,
@@ -106,7 +106,7 @@ impl TypeInference {
             }
             Expr::Ident(i) => {
                 let ty = env.type_of(i);
-                let ty: Qualified<Type> = self.instantiate(ty);
+                let ty = Instantiate::new(self).scheme(ty);
                 (
                     Qualified::constrained(
                         Expr::Ident(TypedVar(i, ty.item.clone())),
@@ -993,7 +993,7 @@ impl TypeInference {
         // the initial unknown type to the inferred type.
         let old =
             env.add_type(ident.0, Qualified::unconstrained(ident.1.clone()));
-        let old = old.map(|scheme| self.instantiate(scheme));
+        let old = old.map(|scheme| Instantiate::new(self).scheme(scheme));
 
         if recursive {
             let old = old.unwrap();
