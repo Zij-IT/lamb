@@ -15,6 +15,7 @@ use lambc_parse::{
 };
 
 use miette::Diagnostic;
+use substitution::Substitute;
 use unification::Unifier;
 
 pub use self::{
@@ -257,11 +258,12 @@ impl<'s> TypeChecker<'s> {
         qual_value.cons.extend(scheme.constraints.clone());
         Unifier::new(inf).unify(qual_value.cons.clone())?;
 
-        let (mut unbound, ty) = inf.substitute(scheme.ty);
-        let (ast_unbound, expr) = inf.substitute_expr(qual_value.item);
+        let mut sub = Substitute::new(inf);
+        let (mut unbound, ty) = sub.rigidify(scheme.ty);
+        let (ast_unbound, expr) = sub.rigidify_expr(qual_value.item);
         unbound.extend(ast_unbound);
 
-        let (con_unbound, _cons) = inf.substitute_constraints(qual_value.cons);
+        let (con_unbound, _cons) = sub.rigidify_constraints(qual_value.cons);
         let ambiguities = con_unbound.difference(&unbound).count();
         assert_eq!(ambiguities, 0);
 

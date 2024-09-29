@@ -9,25 +9,29 @@ use lambc_parse::{
 use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
 use crate::type_check::TypedVar;
 
-impl TypeInference {
+pub struct Substitute<'a> {
+    ctx: &'a mut TypeInference,
+}
+
+impl<'a> Substitute<'a> {
+    pub fn new(ctx: &'a mut TypeInference) -> Self {
+        Self { ctx }
+    }
     /// Performs substitution of `UnifiableVar` for `RigidVar`. This is used
     /// after unification to create a type with unbound type variables.
-    pub(super) fn substitute(
-        &mut self,
-        ty: Type,
-    ) -> (HashSet<RigidVar>, Type) {
+    pub(super) fn rigidify(&mut self, ty: Type) -> (HashSet<RigidVar>, Type) {
         match ty {
             ty @ (Type::Con(..) | Type::RigidVar(..) | Type::Error) => {
                 (HashSet::new(), ty)
             }
             Type::List(elem) => {
-                let (unbound, elem) = self.substitute(*elem);
+                let (unbound, elem) = self.rigidify(*elem);
                 (unbound, Type::List(Box::new(elem)))
             }
             Type::UnifiableVar(v) => {
-                let root = self.uni_table.find(v);
-                match self.uni_table.probe_value(root) {
-                    Some(ty) => self.substitute(ty),
+                let root = self.ctx.uni_table.find(v);
+                match self.ctx.uni_table.probe_value(root) {
+                    Some(ty) => self.rigidify(ty),
                     None => {
                         let tyvar = self.tyvar_for_unifier(root);
                         let mut unbound = HashSet::new();
@@ -42,13 +46,13 @@ impl TypeInference {
                     .args
                     .into_iter()
                     .map(|ty| {
-                        let (s, ty) = self.substitute(ty);
+                        let (s, ty) = self.rigidify(ty);
                         unbound.extend(s);
                         ty
                     })
                     .collect();
 
-                let (ret_s, ret_ty) = self.substitute(*fn_ty.ret_type);
+                let (ret_s, ret_ty) = self.rigidify(*fn_ty.ret_type);
                 unbound.extend(ret_s);
 
                 (
@@ -60,7 +64,7 @@ impl TypeInference {
     }
 
     /// Substitutes the [`UnifiableVar`](`UnifiableVar`) within a [`Constraint`] for the [`RigidVar`]
-    pub(super) fn substitute_constraints(
+    pub(super) fn rigidify_constraints(
         &mut self,
         constraints: Vec<Constraint>,
     ) -> (HashSet<RigidVar>, Vec<Constraint>) {
@@ -68,12 +72,12 @@ impl TypeInference {
             .into_iter()
             .map(|con| match con {
                 Constraint::IsIn(tc, ty) => {
-                    let (hs, ty) = self.substitute(ty);
+                    let (hs, ty) = self.rigidify(ty);
                     (hs, Constraint::IsIn(tc, ty))
                 }
                 Constraint::TypeEqual { expected, got } => {
-                    let (mut hse, expected) = self.substitute(expected);
-                    let (hsg, got) = self.substitute(got);
+                    let (mut hse, expected) = self.rigidify(expected);
+                    let (hsg, got) = self.rigidify(got);
                     hse.extend(hsg);
                     (hse, Constraint::TypeEqual { expected, got })
                 }
@@ -89,7 +93,7 @@ impl TypeInference {
     }
 
     /// Substitutes the [`UnifiableVar`](`UnifiableVar`) within an [`Expr`] for the [`RigidVar`]
-    pub(super) fn substitute_expr(
+    pub(super) fn rigidify_expr(
         &mut self,
         expr: Expr<TypedVar>,
     ) -> (HashSet<RigidVar>, Expr<TypedVar>) {
@@ -101,7 +105,7 @@ impl TypeInference {
             Expr::Bool(b) => (HashSet::new(), Expr::Bool(b)),
             Expr::String(s) => (HashSet::new(), Expr::String(s)),
             Expr::Ident(TypedVar(var, ty)) => {
-                let (unbound, ty) = self.substitute(ty);
+                let (unbound, ty) = self.rigidify(ty);
                 (unbound, Expr::Ident(TypedVar(var, ty)))
             }
             Expr::List(list) => {
@@ -110,7 +114,7 @@ impl TypeInference {
                 let values = values
                     .into_iter()
                     .map(|i| {
-                        let (un, expr) = self.substitute_expr(i);
+                        let (un, expr) = self.rigidify_expr(i);
                         unbound.extend(un);
                         expr
                     })
@@ -120,7 +124,7 @@ impl TypeInference {
             }
             Expr::Group(g) => {
                 let Group { value, span } = *g;
-                let (unbound, expr) = self.substitute_expr(value);
+                let (unbound, expr) = self.rigidify_expr(value);
                 (unbound, Expr::Group(Box::new(Group { value: expr, span })))
             }
             Expr::FnDef(fndef) => {
@@ -129,13 +133,13 @@ impl TypeInference {
                 let args = args
                     .into_iter()
                     .map(|TypedVar(v, ty)| {
-                        let (un, ty) = self.substitute(ty);
+                        let (un, ty) = self.rigidify(ty);
                         unbound.extend(un);
                         TypedVar(v, ty)
                     })
                     .collect();
 
-                let (un, body) = self.substitute_expr(body);
+                let (un, body) = self.rigidify_expr(body);
                 unbound.extend(un);
 
                 (
@@ -149,25 +153,25 @@ impl TypeInference {
                 )
             }
             Expr::Block(block) => {
-                let (unbound, block) = self.substitute_block_raw(*block);
+                let (unbound, block) = self.rigidify_block_raw(*block);
                 (unbound, Expr::Block(Box::new(block)))
             }
             Expr::If(iff) => {
                 let If { cond, elif, els_, span } = *iff;
-                let (mut unbound, cond) = self.substitute_ifcond(cond);
+                let (mut unbound, cond) = self.rigidify_ifcond(cond);
                 let elif = elif
                     .into_iter()
                     .map(|IfCond { cond, body, span }| {
-                        let (un, cond) = self.substitute_expr(cond);
+                        let (un, cond) = self.rigidify_expr(cond);
                         unbound.extend(un);
-                        let (un, block) = self.substitute_block_raw(body);
+                        let (un, block) = self.rigidify_block_raw(body);
                         unbound.extend(un);
                         IfCond { cond, body: block, span }
                     })
                     .collect();
 
                 let els_ = els_.map(|Else { body, span }| {
-                    let (un, body) = self.substitute_block_raw(body);
+                    let (un, body) = self.rigidify_block_raw(body);
                     unbound.extend(un);
                     Else { body, span }
                 });
@@ -176,8 +180,8 @@ impl TypeInference {
             }
             Expr::Index(idx) => {
                 let Index { lhs, rhs, span } = *idx;
-                let (mut unbound, idxee) = self.substitute_expr(lhs);
-                let (un, index) = self.substitute_expr(rhs);
+                let (mut unbound, idxee) = self.rigidify_expr(lhs);
+                let (un, index) = self.rigidify_expr(rhs);
                 unbound.extend(un);
                 (
                     unbound,
@@ -190,11 +194,11 @@ impl TypeInference {
             }
             Expr::Call(call) => {
                 let Call { callee, args, span } = *call;
-                let (mut unbound, func) = self.substitute_expr(callee);
+                let (mut unbound, func) = self.rigidify_expr(callee);
                 let args = args
                     .into_iter()
                     .map(|a| {
-                        let (un, a) = self.substitute_expr(a);
+                        let (un, a) = self.rigidify_expr(a);
                         unbound.extend(un);
                         a
                     })
@@ -207,7 +211,7 @@ impl TypeInference {
             }
             Expr::Unary(unary) => {
                 let Unary { rhs, op, span, op_span } = *unary;
-                let (unbound, rhs) = self.substitute_expr(rhs);
+                let (unbound, rhs) = self.rigidify_expr(rhs);
                 (
                     unbound,
                     Expr::Unary(Box::new(Unary { rhs, op, span, op_span })),
@@ -215,8 +219,8 @@ impl TypeInference {
             }
             Expr::Binary(binary) => {
                 let Binary { lhs, op, rhs, span, op_span } = *binary;
-                let (mut unbound, lhs) = self.substitute_expr(lhs);
-                let (un, rhs) = self.substitute_expr(rhs);
+                let (mut unbound, lhs) = self.rigidify_expr(lhs);
+                let (un, rhs) = self.rigidify_expr(rhs);
                 unbound.extend(un);
 
                 (
@@ -230,12 +234,12 @@ impl TypeInference {
                     })),
                 )
             }
-            Expr::Case(c) => self.substitute_case(*c),
+            Expr::Case(c) => self.rigidify_case(*c),
             Expr::Path(_) => todo!(),
             Expr::Return(e) => {
                 let Return { value, span } = *e;
                 if let Some(value) = value {
-                    let (unbound, value) = self.substitute_expr(value);
+                    let (unbound, value) = self.rigidify_expr(value);
                     (
                         unbound,
                         Expr::Return(Box::new(Return {
@@ -253,19 +257,19 @@ impl TypeInference {
         }
     }
 
-    fn substitute_ifcond(
+    fn rigidify_ifcond(
         &mut self,
         ifcond: IfCond<TypedVar>,
     ) -> (HashSet<RigidVar>, IfCond<TypedVar>) {
         let IfCond { cond, body, span } = ifcond;
-        let (mut unbound, cond) = self.substitute_expr(cond);
-        let (un, block) = self.substitute_block_raw(body);
+        let (mut unbound, cond) = self.rigidify_expr(cond);
+        let (un, block) = self.rigidify_block_raw(body);
         unbound.extend(un);
 
         (unbound, IfCond { cond, body: block, span })
     }
 
-    fn substitute_block_raw(
+    fn rigidify_block_raw(
         &mut self,
         block: Block<TypedVar>,
     ) -> (HashSet<RigidVar>, Block<TypedVar>) {
@@ -275,7 +279,7 @@ impl TypeInference {
         let statements = statements
             .into_iter()
             .map(|s| {
-                let (un, s) = self.substitute_stmt(s);
+                let (un, s) = self.rigidify_stmt(s);
                 unbound.extend(un);
                 s
             })
@@ -284,14 +288,14 @@ impl TypeInference {
         (unbound, Block { statements, value, span })
     }
 
-    fn substitute_stmt(
+    fn rigidify_stmt(
         &mut self,
         stmt: Statement<TypedVar>,
     ) -> (HashSet<RigidVar>, Statement<TypedVar>) {
         match stmt {
             Statement::Define(def) => {
                 let Define { ident, typ, value, span } = def;
-                let (mut unbound, ty) = self.substitute(ident.1);
+                let (mut unbound, ty) = self.rigidify(ident.1);
 
                 if typ.is_some() {
                     todo!(
@@ -299,7 +303,7 @@ impl TypeInference {
                     )
                 }
 
-                let (un, ex) = self.substitute_expr(value);
+                let (un, ex) = self.rigidify_expr(value);
                 unbound.extend(un);
 
                 (
@@ -314,22 +318,22 @@ impl TypeInference {
             }
             Statement::Expr(ex) => {
                 let ExprStatement { expr, span } = ex;
-                let (unbound, expr) = self.substitute_expr(expr);
+                let (unbound, expr) = self.rigidify_expr(expr);
                 (unbound, Statement::Expr(ExprStatement { expr, span }))
             }
         }
     }
 
-    fn substitute_case(
+    fn rigidify_case(
         &mut self,
         c: Case<TypedVar>,
     ) -> (HashSet<RigidVar>, Expr<TypedVar>) {
         let Case { scrutinee, arms, span } = c;
-        let (mut un, scrutinee) = self.substitute_expr(scrutinee);
+        let (mut un, scrutinee) = self.rigidify_expr(scrutinee);
         let arms = arms
             .into_iter()
             .map(|arm| {
-                let (u, arm) = self.substitute_case_arm(arm);
+                let (u, arm) = self.rigidify_case_arm(arm);
                 un.extend(u);
                 arm
             })
@@ -338,19 +342,19 @@ impl TypeInference {
         (un, Expr::Case(Box::new(Case { scrutinee, arms, span })))
     }
 
-    fn substitute_case_arm(
+    fn rigidify_case_arm(
         &mut self,
         arm: CaseArm<TypedVar>,
     ) -> (HashSet<RigidVar>, CaseArm<TypedVar>) {
         let CaseArm { pattern, body, span } = arm;
-        let (mut un, pattern) = self.substitute_pattern(pattern);
-        let (u, body) = self.substitute_expr(body);
+        let (mut un, pattern) = self.rigidify_pattern(pattern);
+        let (u, body) = self.rigidify_expr(body);
         un.extend(u);
 
         (un, CaseArm { pattern, body, span })
     }
 
-    fn substitute_pattern(
+    fn rigidify_pattern(
         &mut self,
         pattern: Pattern<TypedVar>,
     ) -> (HashSet<RigidVar>, Pattern<TypedVar>) {
@@ -359,7 +363,7 @@ impl TypeInference {
         let inner = inner
             .into_iter()
             .map(|ip| {
-                let (u, ip) = self.substitute_inner_pattern(ip);
+                let (u, ip) = self.rigidify_inner_pattern(ip);
                 un.extend(u);
                 ip
             })
@@ -368,7 +372,7 @@ impl TypeInference {
         (un, Pattern { inner, span })
     }
 
-    fn substitute_inner_pattern(
+    fn rigidify_inner_pattern(
         &mut self,
         ip: InnerPattern<TypedVar>,
     ) -> (HashSet<RigidVar>, InnerPattern<TypedVar>) {
@@ -381,7 +385,7 @@ impl TypeInference {
                 let patterns = patterns
                     .into_iter()
                     .map(|p| {
-                        let (u, p) = self.substitute_pattern(p);
+                        let (u, p) = self.rigidify_pattern(p);
                         un.extend(u);
                         p
                     })
@@ -392,12 +396,12 @@ impl TypeInference {
             }
             InnerPattern::Ident(i) => {
                 let IdentPattern { ident: TypedVar(v, ty), bound, span } = *i;
-                let (mut un, ty) = self.substitute(ty);
+                let (mut un, ty) = self.rigidify(ty);
                 let ident = TypedVar(v, ty);
 
                 let bound = match bound {
                     Some(ip) => {
-                        let (u, ip) = self.substitute_inner_pattern(*ip);
+                        let (u, ip) = self.rigidify_inner_pattern(*ip);
                         un.extend(u);
                         Some(Box::new(ip))
                     }
@@ -417,9 +421,9 @@ impl TypeInference {
     }
 
     fn tyvar_for_unifier(&mut self, var: UnifiableVar) -> RigidVar {
-        *self.subst_unifiers_to_tyvars.entry(var).or_insert_with(|| {
-            self.next_tyvar += 1;
-            RigidVar(self.next_tyvar - 1)
+        *self.ctx.subst_unifiers_to_tyvars.entry(var).or_insert_with(|| {
+            self.ctx.next_tyvar += 1;
+            RigidVar(self.ctx.next_tyvar - 1)
         })
     }
 }

@@ -1129,9 +1129,9 @@ mod tests {
     use crate::{
         name_res::Var,
         type_check::{
-            env::VarEnv, scheme::TypeScheme, unification::Unifier, Constraint,
-            Error, FnType, Qualified, RigidVar, TyClass, Type, TypeInference,
-            TypedVar, UnifiableVar,
+            env::VarEnv, scheme::TypeScheme, substitution::Substitute,
+            unification::Unifier, Constraint, Error, FnType, Qualified,
+            RigidVar, TyClass, Type, TypeInference, TypedVar, UnifiableVar,
         },
     };
 
@@ -1155,11 +1155,12 @@ mod tests {
             let (out, ty) = inf.infer_expr(env, expr);
             Unifier::new(&mut inf).unify(out.cons.clone())?;
 
-            let (mut unbound, ty) = inf.substitute(ty);
-            let (ast_unbound, expr) = inf.substitute_expr(out.item);
+            let mut sub = Substitute::new(&mut inf);
+            let (mut unbound, ty) = sub.rigidify(ty);
+            let (ast_unbound, expr) = sub.rigidify_expr(out.item);
             unbound.extend(ast_unbound);
 
-            let (con_unbound, cons) = inf.substitute_constraints(out.cons);
+            let (con_unbound, cons) = sub.rigidify_constraints(out.cons);
             let ambiguities = con_unbound.difference(&unbound).count();
             assert_eq!(ambiguities, 0);
 
