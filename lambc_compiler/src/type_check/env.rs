@@ -55,6 +55,10 @@ pub struct TypeEnv {
 }
 
 impl TypeEnv {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn add_type(&mut self, var: Var, ty: Type) {
         assert!(
             self.inner.insert(var, ty).is_none(),

@@ -6,7 +6,7 @@ use lambc_parse::{
     InnerPattern, List, Pattern, Return, Statement, Unary,
 };
 
-use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
+use super::{Constraint, FnType, RigidVar, Type, UnifiableVar};
 use crate::type_check::TypedVar;
 
 pub trait SubstitutionContext {
@@ -18,20 +18,6 @@ pub trait SubstitutionContext {
 
     /// Returns a new `RigidVar`
     fn gen_rigid_var(&mut self) -> RigidVar;
-}
-
-impl SubstitutionContext for &mut TypeInference {
-    fn get_value(&mut self, var: UnifiableVar) -> Option<Type> {
-        self.uni_table.probe_value(var)
-    }
-
-    fn get_root(&mut self, var: UnifiableVar) -> UnifiableVar {
-        self.uni_table.find(var)
-    }
-
-    fn gen_rigid_var(&mut self) -> RigidVar {
-        self.gen_rigidvar()
-    }
 }
 
 pub struct Substitute<C> {

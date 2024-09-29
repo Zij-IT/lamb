@@ -2,9 +2,7 @@ use crate::name_res::Var;
 
 use std::collections::HashSet;
 
-use super::{
-    Error, FnType, Result, RigidVar, Type, TypeEnv, TypeInference, TypeScheme,
-};
+use super::{Error, FnType, Result, RigidVar, Type, TypeScheme};
 
 type RawType = lambc_parse::Type<Var>;
 type RawNamed = lambc_parse::NamedType<Var>;
@@ -14,20 +12,6 @@ pub trait ParserContext {
     fn get_type(&mut self, var: Var) -> Result<Type>;
     fn add_type(&mut self, var: Var, ty: Type);
     fn new_rigid_var(&mut self) -> RigidVar;
-}
-
-impl ParserContext for (&mut TypeInference, &mut TypeEnv) {
-    fn get_type(&mut self, var: Var) -> Result<Type> {
-        self.1.get_type(var)
-    }
-
-    fn add_type(&mut self, var: Var, ty: Type) {
-        self.1.add_type(var, ty)
-    }
-
-    fn new_rigid_var(&mut self) -> RigidVar {
-        self.0.gen_rigidvar()
-    }
 }
 
 pub struct TypeParser<P> {
@@ -116,6 +100,8 @@ impl<P: ParserContext> TypeParser<P> {
 mod tests {
     use lambc_parse::Span;
 
+    use crate::type_check::TypeInference;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
@@ -123,11 +109,9 @@ mod tests {
 
     #[test]
     fn parses_simple_named_type() {
-        let mut env = TypeEnv::default();
-        env.add_type(Var::INT, Type::INT);
-
         let mut inf = TypeInference::new();
-        let mut parser = TypeParser::new((&mut inf, &mut env));
+        inf.ctx.add_type(Var::INT, Type::INT);
+        let mut parser = TypeParser::new(&mut inf.ctx);
 
         let typ = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -141,11 +125,9 @@ mod tests {
 
     #[test]
     fn parses_simple_fn_type() {
-        let mut env = TypeEnv::default();
-        env.add_type(Var::INT, Type::INT);
-
         let mut inf = TypeInference::new();
-        let mut parser = TypeParser::new((&mut inf, &mut env));
+        inf.ctx.add_type(Var::INT, Type::INT);
+        let mut parser = TypeParser::new(&mut inf.ctx);
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -168,11 +150,9 @@ mod tests {
 
     #[test]
     fn parses_nested_simple_fn_type() {
-        let mut env = TypeEnv::default();
-        env.add_type(Var::INT, Type::INT);
-
         let mut inf = TypeInference::new();
-        let mut parser = TypeParser::new((&mut inf, &mut env));
+        inf.ctx.add_type(Var::INT, Type::INT);
+        let mut parser = TypeParser::new(&mut inf.ctx);
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,

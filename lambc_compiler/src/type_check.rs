@@ -1,4 +1,5 @@
 mod constraints;
+mod context;
 mod env;
 mod inference;
 mod instantiate;
@@ -15,6 +16,7 @@ use lambc_parse::{
 };
 
 use miette::Diagnostic;
+use parsing::ParserContext;
 use substitution::Substitute;
 use unification::Unifier;
 
@@ -166,15 +168,13 @@ impl<'s> TypeChecker<'s> {
         let mut env = VarEnv::new();
         self.add_builtin_functions(&mut env, inf);
 
-        let mut ty_env = TypeEnv::default();
-        ty_env.add_type(Var::INT, Type::INT);
-        ty_env.add_type(Var::NIL, Type::NIL);
-        ty_env.add_type(Var::USV, Type::USV);
-        ty_env.add_type(Var::BOOL, Type::BOOL);
-        ty_env.add_type(Var::NEVER, Type::NEVER);
-        ty_env.add_type(Var::DOUBLE, Type::DOUBLE);
-
-        let mut parser = TypeParser::new((&mut *inf, &mut ty_env));
+        inf.ctx.add_type(Var::INT, Type::INT);
+        inf.ctx.add_type(Var::NIL, Type::NIL);
+        inf.ctx.add_type(Var::USV, Type::USV);
+        inf.ctx.add_type(Var::BOOL, Type::BOOL);
+        inf.ctx.add_type(Var::NEVER, Type::NEVER);
+        inf.ctx.add_type(Var::DOUBLE, Type::DOUBLE);
+        let mut parser = TypeParser::new(&mut inf.ctx);
 
         for item in items {
             match item {
@@ -256,9 +256,9 @@ impl<'s> TypeChecker<'s> {
 
         let mut qual_value = inf.check_expr(env, def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());
-        Unifier::new(&mut *inf).unify(qual_value.cons.clone())?;
+        Unifier::new(&mut inf.ctx).unify(qual_value.cons.clone())?;
 
-        let mut sub = Substitute::new(inf);
+        let mut sub = Substitute::new(&mut inf.ctx);
         let (mut unbound, ty) = sub.rigidify(scheme.ty);
         let (ast_unbound, expr) = sub.rigidify_expr(qual_value.item);
         unbound.extend(ast_unbound);

@@ -1,8 +1,6 @@
 use ena::unify::{EqUnifyValue, UnifyKey};
 
-use super::{
-    Constraint, Error, FnType, Result, Type, TypeInference, UnifiableVar,
-};
+use super::{Constraint, Error, FnType, Result, Type, UnifiableVar};
 
 impl EqUnifyValue for Type {}
 
@@ -39,33 +37,6 @@ pub trait UnificationTable {
 
     /// Returns the current value of the `key`
     fn get(&mut self, key: UnifiableVar) -> Option<Type>;
-}
-
-// todo: replace this impl later with a future Inf-Context struct
-impl UnificationTable for &mut TypeInference {
-    fn unify_var_var(
-        &mut self,
-        v1: UnifiableVar,
-        v2: UnifiableVar,
-    ) -> Result<()> {
-        self.uni_table
-            .unify_var_var(v1, v2)
-            .map_err(|(e, g)| Error::TypeNotEqual { expected: e, got: g })
-    }
-
-    fn unify_var_value(
-        &mut self,
-        key: UnifiableVar,
-        ty: Option<Type>,
-    ) -> Result<()> {
-        self.uni_table
-            .unify_var_value(key, ty)
-            .map_err(|(e, g)| Error::TypeNotEqual { expected: e, got: g })
-    }
-
-    fn get(&mut self, key: UnifiableVar) -> Option<Type> {
-        self.uni_table.probe_value(key)
-    }
 }
 
 pub struct Unifier<T> {

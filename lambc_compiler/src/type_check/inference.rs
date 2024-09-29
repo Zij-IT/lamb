@@ -1,4 +1,3 @@
-use ena::unify::InPlaceUnificationTable;
 use lambc_parse::{
     ArrayPattern, Binary, BinaryOp, Block, Call, Case, CaseArm, Define, Else,
     Expr, ExprStatement, FnDef, Group, IdentPattern, If, IfCond, Index,
@@ -7,32 +6,23 @@ use lambc_parse::{
 };
 
 use super::{
-    env::VarEnv, instantiate::Instantiate, Constraint, FnType, Qualified,
-    RigidVar, TyClass, Type, TypedVar, UnifiableVar,
+    context::Context, env::VarEnv, instantiate::Instantiate, Constraint,
+    FnType, Qualified, RigidVar, TyClass, Type, TypedVar, UnifiableVar,
 };
-use crate::{
-    name_res::Var,
-    type_check::{env::TypeEnv, parsing::TypeParser},
-};
+use crate::{name_res::Var, type_check::parsing::TypeParser};
 
 pub struct TypeInference {
-    pub uni_table: InPlaceUnificationTable<UnifiableVar>,
-    pub next_tyvar: u32,
+    pub ctx: Context,
     pub ret_type: Vec<Type>,
 }
 
 impl TypeInference {
     pub fn new() -> Self {
-        Self {
-            uni_table: Default::default(),
-            next_tyvar: 0,
-            ret_type: Default::default(),
-        }
+        Self { ctx: Context::new(), ret_type: Default::default() }
     }
 
     pub fn gen_rigidvar(&mut self) -> RigidVar {
-        self.next_tyvar += 1;
-        RigidVar(self.next_tyvar - 1)
+        self.ctx.new_rigid_var()
     }
 
     /// Checks the type of an expression, returning an [`Expr`] with the
@@ -1020,21 +1010,11 @@ impl TypeInference {
     }
 
     pub(super) fn fresh_ty_var(&mut self) -> UnifiableVar {
-        self.uni_table.new_key(None)
+        self.ctx.new_unif_var()
     }
 
     fn parse_ty(&mut self, ty: lambc_parse::Type<Var>) -> Type {
-        // todo: this environment should be the same as the one from earlier. Since the TypeInference doesn't
-        //       have to mutate the types, I would expect that this can be given as a reference.
-        let mut ty_env = TypeEnv::default();
-        ty_env.add_type(Var::INT, Type::INT);
-        ty_env.add_type(Var::NIL, Type::NIL);
-        ty_env.add_type(Var::USV, Type::USV);
-        ty_env.add_type(Var::BOOL, Type::BOOL);
-        ty_env.add_type(Var::NEVER, Type::NEVER);
-        ty_env.add_type(Var::DOUBLE, Type::DOUBLE);
-
-        let mut parser = TypeParser::new((self, &mut ty_env));
+        let mut parser = TypeParser::new(&mut self.ctx);
         let res = parser.parse_scheme(&ty);
         let sc = res.unwrap_or_else(|_| todo!("Add state to TypeInference so that this error can be reported"));
         assert_eq!(
@@ -1149,9 +1129,9 @@ mod tests {
         ) -> Result<(Expr<TypedVar>, TypeScheme)> {
             let mut inf = TypeInference::new();
             let (out, ty) = inf.infer_expr(env, expr);
-            Unifier::new(&mut inf).unify(out.cons.clone())?;
+            Unifier::new(&mut inf.ctx).unify(out.cons.clone())?;
 
-            let mut sub = Substitute::new(&mut inf);
+            let mut sub = Substitute::new(&mut inf.ctx);
             let (mut unbound, ty) = sub.rigidify(ty);
             let (ast_unbound, expr) = sub.rigidify_expr(out.item);
             unbound.extend(ast_unbound);
