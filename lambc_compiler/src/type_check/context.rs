@@ -6,10 +6,11 @@ use super::{
     inference::InferenceContext, instantiate::InstantiationContext,
     parsing::ParserContext, substitution::SubstitutionContext,
     unification::UnificationContext, Error, Result, RigidVar, Type, TypeEnv,
-    UnifiableVar,
+    UnifiableVar, VarEnv,
 };
 
 pub struct Context {
+    vars: VarEnv,
     types: TypeEnv,
     uni_table: InPlaceUnificationTable<UnifiableVar>,
     next_tyvar: u32,
@@ -18,10 +19,15 @@ pub struct Context {
 impl Context {
     pub fn new() -> Self {
         Self {
+            vars: VarEnv::new(),
             types: TypeEnv::new(),
             uni_table: InPlaceUnificationTable::new(),
             next_tyvar: 0,
         }
+    }
+
+    pub fn vars_mut(&mut self) -> &mut VarEnv {
+        &mut self.vars
     }
 
     pub fn new_unif_var(&mut self) -> UnifiableVar {
@@ -37,6 +43,10 @@ impl Context {
 impl InferenceContext for Context {
     fn new_unif_var(&mut self) -> UnifiableVar {
         Context::new_unif_var(self)
+    }
+
+    fn vars_mut(&mut self) -> &mut VarEnv {
+        Context::vars_mut(self)
     }
 }
 

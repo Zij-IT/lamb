@@ -18,7 +18,7 @@ use lambc_parse::{
 
 use miette::Diagnostic;
 use parsing::ParserContext;
-use substitution::Substitute;
+use substitution::{Substitute, SubstitutionContext};
 use unification::Unifier;
 
 pub use self::{
@@ -75,7 +75,7 @@ impl<'s> TypeChecker<'s> {
         mut modules: Vec<Module<Var, PathRef>>,
     ) -> Vec<Module<TypedVar, PathRef>> {
         let mut binding = Context::new();
-        let globals = self.build_env(
+        self.build_env(
             &mut binding,
             modules.iter().flat_map(|i| i.items.as_slice()),
         );
@@ -87,7 +87,7 @@ impl<'s> TypeChecker<'s> {
             // If this errors we can't properly build the import map because the types
             // of all the variables aren't able to be used.
             let items = self
-                .check_items(&mut inf, globals.clone(), module.path, items)
+                .check_items(&mut inf, module.path, items)
                 .unwrap_or_default();
 
             item_map.insert(module.path, items);
@@ -135,7 +135,6 @@ impl<'s> TypeChecker<'s> {
     fn check_items(
         &mut self,
         inf: &mut TypeInference<Context>,
-        env: VarEnv,
         path: PathRef,
         items: Vec<Item<Var>>,
     ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
@@ -143,9 +142,8 @@ impl<'s> TypeChecker<'s> {
         for item in items {
             match item {
                 Item::Def(def) => {
-                    let scheme = env.type_of(def.ident);
-                    let res =
-                        self.check_toplevel_def(inf, env.clone(), def, scheme);
+                    let scheme = inf.ctx.vars_mut().type_of(def.ident);
+                    let res = self.check_toplevel_def(inf, def, scheme);
 
                     match res {
                         Ok(ast) => typed_items.push(Item::Def(ast)),
@@ -166,9 +164,8 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         ctx: &mut Context,
         items: I,
-    ) -> VarEnv {
-        let mut env = VarEnv::new();
-        self.add_builtin_functions(&mut env, ctx);
+    ) {
+        self.add_builtin_functions(ctx);
 
         ctx.add_type(Var::INT, Type::INT);
         ctx.add_type(Var::NIL, Type::NIL);
@@ -176,17 +173,18 @@ impl<'s> TypeChecker<'s> {
         ctx.add_type(Var::BOOL, Type::BOOL);
         ctx.add_type(Var::NEVER, Type::NEVER);
         ctx.add_type(Var::DOUBLE, Type::DOUBLE);
-        let mut parser = TypeParser::new(ctx);
 
         for item in items {
             match item {
                 Item::Def(id) => {
                     let Define { ident, typ, value: _, span: _ } = id;
-                    let res =
-                        match typ.as_ref().map(|sc| parser.parse_scheme(sc)) {
-                            Some(res) => res,
-                            None => Err(Error::MissingTypeAscription),
-                        };
+                    let res = match typ
+                        .as_ref()
+                        .map(|sc| TypeParser::new(ctx).parse_scheme(sc))
+                    {
+                        Some(res) => res,
+                        None => Err(Error::MissingTypeAscription),
+                    };
 
                     let scheme = res.unwrap_or_else(|err| {
                         self.state.add_error(err, None);
@@ -197,15 +195,13 @@ impl<'s> TypeChecker<'s> {
                         }
                     });
 
-                    env.add_scheme(*ident, scheme);
+                    ctx.vars_mut().add_scheme(*ident, scheme);
                 }
             }
         }
-
-        env
     }
 
-    fn add_builtin_functions(&self, env: &mut VarEnv, ctx: &mut Context) {
+    fn add_builtin_functions(&self, ctx: &mut Context) {
         let to_simple_scheme = |t| TypeScheme {
             unbound: Default::default(),
             constraints: vec![],
@@ -213,37 +209,38 @@ impl<'s> TypeChecker<'s> {
         };
 
         let assert_ty = Type::fun(vec![Type::BOOL], Type::NIL);
-        env.add_scheme(Var::ASSERT, to_simple_scheme(assert_ty));
+        ctx.vars_mut().add_scheme(Var::ASSERT, to_simple_scheme(assert_ty));
 
         let user_char_ty = Type::fun(vec![], Type::USV);
-        env.add_scheme(Var::USER_CHAR, to_simple_scheme(user_char_ty));
+        ctx.vars_mut()
+            .add_scheme(Var::USER_CHAR, to_simple_scheme(user_char_ty));
 
         let user_int_ty = Type::fun(vec![], Type::INT);
-        env.add_scheme(Var::USER_INT, to_simple_scheme(user_int_ty));
+        ctx.vars_mut()
+            .add_scheme(Var::USER_INT, to_simple_scheme(user_int_ty));
 
         let rand_ty = Type::fun(vec![], Type::INT);
-        env.add_scheme(Var::RAND, to_simple_scheme(rand_ty));
+        ctx.vars_mut().add_scheme(Var::RAND, to_simple_scheme(rand_ty));
 
-        let mut to_one_gen_scheme = |make_ty: fn(RigidVar) -> Type| {
-            let rigid = ctx.new_rigid_var();
-            TypeScheme {
+        let to_one_gen_scheme =
+            |rigid: RigidVar, make_ty: fn(RigidVar) -> Type| TypeScheme {
                 unbound: HashSet::from([rigid]),
                 constraints: vec![],
                 ty: make_ty(rigid),
-            }
-        };
+            };
 
         let print_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
-        env.add_scheme(Var::PRINT, to_one_gen_scheme(print_ty));
+        let print_ty = to_one_gen_scheme(ctx.gen_rigid_var(), print_ty);
+        ctx.vars_mut().add_scheme(Var::PRINT, print_ty);
 
         let println_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
-        env.add_scheme(Var::PRINTLN, to_one_gen_scheme(println_ty));
+        let println_ty = to_one_gen_scheme(ctx.gen_rigid_var(), println_ty);
+        ctx.vars_mut().add_scheme(Var::PRINTLN, println_ty);
     }
 
     fn check_toplevel_def(
         &self,
         inf: &mut TypeInference<Context>,
-        env: VarEnv,
         def: Define<Var>,
         scheme: TypeScheme,
     ) -> Result<Define<TypedVar>> {
@@ -252,7 +249,7 @@ impl<'s> TypeChecker<'s> {
             // now require types.
         }
 
-        let mut qual_value = inf.check_expr(env, def.value, scheme.ty.clone());
+        let mut qual_value = inf.check_expr(def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());
         Unifier::new(inf.ctx).unify(qual_value.cons.clone())?;
 
@@ -354,7 +351,7 @@ mod test {
     use lambc_parse::{Binary, BinaryOp, Define, Expr, FnDef, Span};
     use pretty_assertions::assert_eq;
 
-    use super::{env::VarEnv, Error, TypeChecker};
+    use super::{Error, TypeChecker};
     use crate::{
         name_res::Var,
         type_check::{
@@ -419,7 +416,7 @@ mod test {
         let mut ctx = Context::new();
         let mut inf = TypeInference::new(&mut ctx);
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme.clone())
+            .check_toplevel_def(&mut inf, def, scheme.clone())
             .expect("Type checking to succeed");
 
         let rigid_x = RigidVar(a);
@@ -454,7 +451,7 @@ mod test {
         let mut ctx = Context::new();
         let mut inf = TypeInference::new(&mut ctx);
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme)
+            .check_toplevel_def(&mut inf, def, scheme)
             .expect("Type checking to succeed");
 
         let typed_x = TypedVar(x, Type::BOOL);
@@ -497,12 +494,8 @@ mod test {
 
         let mut ctx = Context::new();
         let mut inf = TypeInference::new(&mut ctx);
-        let err = TypeChecker::new(&mut State::default()).check_toplevel_def(
-            &mut inf,
-            VarEnv::new(),
-            def,
-            scheme,
-        );
+        let err = TypeChecker::new(&mut State::default())
+            .check_toplevel_def(&mut inf, def, scheme);
 
         assert_eq!(
             err,
