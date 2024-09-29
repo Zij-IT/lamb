@@ -1,17 +1,9 @@
 use std::collections::HashMap;
 
-use super::{
-    FnType, Qualified, RigidVar, Type, TypeInference, TypeScheme, UnifiableVar,
-};
+use super::{FnType, Qualified, RigidVar, Type, TypeScheme, UnifiableVar};
 
 pub trait InstantiationContext {
     fn gen_uni_var(&mut self) -> UnifiableVar;
-}
-
-impl InstantiationContext for &mut TypeInference {
-    fn gen_uni_var(&mut self) -> UnifiableVar {
-        self.fresh_ty_var()
-    }
 }
 
 pub struct Instantiate<C> {

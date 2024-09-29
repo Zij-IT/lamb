@@ -3,9 +3,10 @@ use ena::unify::InPlaceUnificationTable;
 use crate::name_res::Var;
 
 use super::{
-    instantiate::InstantiationContext, parsing::ParserContext,
-    substitution::SubstitutionContext, unification::UnificationContext, Error,
-    Result, RigidVar, Type, TypeEnv, UnifiableVar,
+    inference::InferenceContext, instantiate::InstantiationContext,
+    parsing::ParserContext, substitution::SubstitutionContext,
+    unification::UnificationContext, Error, Result, RigidVar, Type, TypeEnv,
+    UnifiableVar,
 };
 
 pub struct Context {
@@ -30,6 +31,18 @@ impl Context {
     pub fn new_rigid_var(&mut self) -> RigidVar {
         self.next_tyvar += 1;
         RigidVar(self.next_tyvar - 1)
+    }
+}
+
+impl InferenceContext for Context {
+    fn new_unif_var(&mut self) -> UnifiableVar {
+        Context::new_unif_var(self)
+    }
+}
+
+impl InferenceContext for &mut Context {
+    fn new_unif_var(&mut self) -> UnifiableVar {
+        Context::new_unif_var(self)
     }
 }
 

@@ -11,6 +11,7 @@ mod unification;
 
 use std::collections::{HashMap, HashSet};
 
+use context::Context;
 use lambc_parse::{
     Define, Export, ExportItem, Import, ImportItem, Item, Module,
 };
@@ -73,7 +74,7 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         mut modules: Vec<Module<Var, PathRef>>,
     ) -> Vec<Module<TypedVar, PathRef>> {
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         let globals = self.build_env(
             &mut inf,
             modules.iter().flat_map(|i| i.items.as_slice()),
@@ -132,7 +133,7 @@ impl<'s> TypeChecker<'s> {
 
     fn check_items(
         &mut self,
-        inf: &mut TypeInference,
+        inf: &mut TypeInference<Context>,
         env: VarEnv,
         path: PathRef,
         items: Vec<Item<Var>>,
@@ -162,7 +163,7 @@ impl<'s> TypeChecker<'s> {
 
     fn build_env<'a, I: Iterator<Item = &'a Item<Var>>>(
         &mut self,
-        inf: &mut TypeInference,
+        inf: &mut TypeInference<Context>,
         items: I,
     ) -> VarEnv {
         let mut env = VarEnv::new();
@@ -206,7 +207,7 @@ impl<'s> TypeChecker<'s> {
     fn add_builtin_functions(
         &self,
         env: &mut VarEnv,
-        inf: &mut TypeInference,
+        inf: &mut TypeInference<Context>,
     ) {
         let to_simple_scheme = |t| TypeScheme {
             unbound: Default::default(),
@@ -244,7 +245,7 @@ impl<'s> TypeChecker<'s> {
 
     fn check_toplevel_def(
         &self,
-        inf: &mut TypeInference,
+        inf: &mut TypeInference<Context>,
         env: VarEnv,
         def: Define<Var>,
         scheme: TypeScheme,
@@ -360,7 +361,8 @@ mod test {
     use crate::{
         name_res::Var,
         type_check::{
-            RigidVar, TyClass, Type, TypeInference, TypeScheme, TypedVar,
+            context::Context, RigidVar, TyClass, Type, TypeInference,
+            TypeScheme, TypedVar,
         },
         State,
     };
@@ -417,7 +419,7 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         let typed_id = TypeChecker::new(&mut State::default())
             .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme.clone())
             .expect("Type checking to succeed");
@@ -451,7 +453,7 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         let typed_id = TypeChecker::new(&mut State::default())
             .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme)
             .expect("Type checking to succeed");
@@ -494,7 +496,7 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         let err = TypeChecker::new(&mut State::default()).check_toplevel_def(
             &mut inf,
             VarEnv::new(),

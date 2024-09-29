@@ -100,7 +100,7 @@ impl<P: ParserContext> TypeParser<P> {
 mod tests {
     use lambc_parse::Span;
 
-    use crate::type_check::TypeInference;
+    use crate::type_check::{context::Context, TypeInference};
 
     use super::*;
     use pretty_assertions::assert_eq;
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn parses_simple_named_type() {
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         inf.ctx.add_type(Var::INT, Type::INT);
         let mut parser = TypeParser::new(&mut inf.ctx);
 
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn parses_simple_fn_type() {
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         inf.ctx.add_type(Var::INT, Type::INT);
         let mut parser = TypeParser::new(&mut inf.ctx);
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn parses_nested_simple_fn_type() {
-        let mut inf = TypeInference::new();
+        let mut inf = TypeInference::new(Context::new());
         inf.ctx.add_type(Var::INT, Type::INT);
         let mut parser = TypeParser::new(&mut inf.ctx);
 
