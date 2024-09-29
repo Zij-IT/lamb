@@ -256,7 +256,7 @@ impl<'s> TypeChecker<'s> {
 
         let mut qual_value = inf.check_expr(env, def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());
-        Unifier::new(inf).unify(qual_value.cons.clone())?;
+        Unifier::new(&mut *inf).unify(qual_value.cons.clone())?;
 
         let mut sub = Substitute::new(inf);
         let (mut unbound, ty) = sub.rigidify(scheme.ty);

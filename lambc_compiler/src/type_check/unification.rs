@@ -22,13 +22,59 @@ impl UnifyKey for UnifiableVar {
     }
 }
 
-pub struct Unifier<'a> {
-    ctx: &'a mut TypeInference,
+pub trait UnificationTable {
+    /// Unifies two `UnifiableVar`, returning an error if the two aren't able to be unified
+    fn unify_var_var(
+        &mut self,
+        v1: UnifiableVar,
+        v2: UnifiableVar,
+    ) -> Result<()>;
+
+    /// Attempts to set the value of the `key` to `Value` by merging with the previous value if present
+    fn unify_var_value(
+        &mut self,
+        key: UnifiableVar,
+        ty: Option<Type>,
+    ) -> Result<()>;
+
+    /// Returns the current value of the `key`
+    fn get(&mut self, key: UnifiableVar) -> Option<Type>;
 }
 
-impl<'a> Unifier<'a> {
-    pub fn new(ctx: &'a mut TypeInference) -> Self {
-        Self { ctx }
+// todo: replace this impl later with a future Inf-Context struct
+impl UnificationTable for &mut TypeInference {
+    fn unify_var_var(
+        &mut self,
+        v1: UnifiableVar,
+        v2: UnifiableVar,
+    ) -> Result<()> {
+        self.uni_table
+            .unify_var_var(v1, v2)
+            .map_err(|(e, g)| Error::TypeNotEqual { expected: e, got: g })
+    }
+
+    fn unify_var_value(
+        &mut self,
+        key: UnifiableVar,
+        ty: Option<Type>,
+    ) -> Result<()> {
+        self.uni_table
+            .unify_var_value(key, ty)
+            .map_err(|(e, g)| Error::TypeNotEqual { expected: e, got: g })
+    }
+
+    fn get(&mut self, key: UnifiableVar) -> Option<Type> {
+        self.uni_table.probe_value(key)
+    }
+}
+
+pub struct Unifier<T> {
+    table: T,
+}
+
+impl<T: UnificationTable> Unifier<T> {
+    pub fn new(table: T) -> Self {
+        Self { table }
     }
 
     pub(super) fn unify(&mut self, cons: Vec<Constraint>) -> Result<()> {
@@ -69,9 +115,7 @@ impl<'a> Unifier<'a> {
             (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
             (Type::UnifiableVar(l), Type::UnifiableVar(r)) => {
-                self.ctx.uni_table.unify_var_var(l, r).map_err(|(l, r)| {
-                    Error::TypeNotEqual { expected: l, got: r }
-                })
+                self.table.unify_var_var(l, r)
             }
             (Type::Fun(l), Type::Fun(r)) => {
                 if l.args.len() != r.args.len() {
@@ -108,9 +152,7 @@ impl<'a> Unifier<'a> {
             }
             (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;
-                self.ctx.uni_table.unify_var_value(v, Some(ty)).map_err(
-                    |(l, r)| Error::TypeNotEqual { expected: l, got: r },
-                )
+                self.table.unify_var_value(v, Some(ty))
             }
             (Type::RigidVar(a), Type::RigidVar(b)) if a == b => Ok(()),
             (Type::Error, ..) | (.., Type::Error) => Ok(()),
@@ -128,7 +170,7 @@ impl<'a> Unifier<'a> {
                 args: args.into_iter().map(|a| self.normalize_ty(a)).collect(),
                 ret_type: Box::new(self.normalize_ty(*ret_type)),
             }),
-            Type::UnifiableVar(v) => match self.ctx.uni_table.probe_value(v) {
+            Type::UnifiableVar(v) => match self.table.get(v) {
                 Some(ty) => self.normalize_ty(ty),
                 None => Type::UnifiableVar(v),
             },
