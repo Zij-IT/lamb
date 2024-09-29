@@ -80,14 +80,13 @@ impl<'s> TypeChecker<'s> {
             modules.iter().flat_map(|i| i.items.as_slice()),
         );
 
-        let mut inf = TypeInference::new(&mut binding);
         let mut item_map = HashMap::new();
         for module in modules.iter_mut() {
             let items = std::mem::take(&mut module.items);
             // If this errors we can't properly build the import map because the types
             // of all the variables aren't able to be used.
             let items = self
-                .check_items(&mut inf, module.path, items)
+                .check_items(&mut binding, module.path, items)
                 .unwrap_or_default();
 
             item_map.insert(module.path, items);
@@ -134,7 +133,7 @@ impl<'s> TypeChecker<'s> {
 
     fn check_items(
         &mut self,
-        inf: &mut TypeInference<Context>,
+        ctx: &mut Context,
         path: PathRef,
         items: Vec<Item<Var>>,
     ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
@@ -142,8 +141,8 @@ impl<'s> TypeChecker<'s> {
         for item in items {
             match item {
                 Item::Def(def) => {
-                    let scheme = inf.ctx.vars_mut().type_of(def.ident);
-                    let res = self.check_toplevel_def(inf, def, scheme);
+                    let scheme = ctx.vars_mut().type_of(def.ident);
+                    let res = self.check_toplevel_def(ctx, def, scheme);
 
                     match res {
                         Ok(ast) => typed_items.push(Item::Def(ast)),
@@ -240,7 +239,7 @@ impl<'s> TypeChecker<'s> {
 
     fn check_toplevel_def(
         &self,
-        inf: &mut TypeInference<Context>,
+        ctx: &mut Context,
         def: Define<Var>,
         scheme: TypeScheme,
     ) -> Result<Define<TypedVar>> {
@@ -249,6 +248,7 @@ impl<'s> TypeChecker<'s> {
             // now require types.
         }
 
+        let mut inf = TypeInference::new(ctx);
         let mut qual_value = inf.check_expr(def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());
         Unifier::new(inf.ctx).unify(qual_value.cons.clone())?;
@@ -355,8 +355,7 @@ mod test {
     use crate::{
         name_res::Var,
         type_check::{
-            context::Context, RigidVar, TyClass, Type, TypeInference,
-            TypeScheme, TypedVar,
+            context::Context, RigidVar, TyClass, Type, TypeScheme, TypedVar,
         },
         State,
     };
@@ -414,9 +413,8 @@ mod test {
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
         let mut ctx = Context::new();
-        let mut inf = TypeInference::new(&mut ctx);
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, def, scheme.clone())
+            .check_toplevel_def(&mut ctx, def, scheme.clone())
             .expect("Type checking to succeed");
 
         let rigid_x = RigidVar(a);
@@ -449,9 +447,8 @@ mod test {
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
         let mut ctx = Context::new();
-        let mut inf = TypeInference::new(&mut ctx);
         let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, def, scheme)
+            .check_toplevel_def(&mut ctx, def, scheme)
             .expect("Type checking to succeed");
 
         let typed_x = TypedVar(x, Type::BOOL);
@@ -493,9 +490,8 @@ mod test {
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
         let mut ctx = Context::new();
-        let mut inf = TypeInference::new(&mut ctx);
         let err = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut inf, def, scheme);
+            .check_toplevel_def(&mut ctx, def, scheme);
 
         assert_eq!(
             err,
