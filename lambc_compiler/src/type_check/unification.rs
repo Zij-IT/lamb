@@ -20,7 +20,7 @@ impl UnifyKey for UnifiableVar {
     }
 }
 
-pub trait UnificationTable {
+pub trait UnificationContext {
     /// Unifies two `UnifiableVar`, returning an error if the two aren't able to be unified
     fn unify_var_var(
         &mut self,
@@ -43,7 +43,7 @@ pub struct Unifier<T> {
     table: T,
 }
 
-impl<T: UnificationTable> Unifier<T> {
+impl<T: UnificationContext> Unifier<T> {
     pub fn new(table: T) -> Self {
         Self { table }
     }

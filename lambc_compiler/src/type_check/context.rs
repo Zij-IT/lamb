@@ -4,7 +4,7 @@ use crate::name_res::Var;
 
 use super::{
     instantiate::InstantiationContext, parsing::ParserContext,
-    substitution::SubstitutionContext, unification::UnificationTable, Error,
+    substitution::SubstitutionContext, unification::UnificationContext, Error,
     Result, RigidVar, Type, TypeEnv, UnifiableVar,
 };
 
@@ -33,7 +33,7 @@ impl Context {
     }
 }
 
-impl UnificationTable for Context {
+impl UnificationContext for Context {
     fn unify_var_var(
         &mut self,
         v1: UnifiableVar,
@@ -59,7 +59,7 @@ impl UnificationTable for Context {
     }
 }
 
-impl UnificationTable for &mut Context {
+impl UnificationContext for &mut Context {
     fn unify_var_var(
         &mut self,
         v1: UnifiableVar,
