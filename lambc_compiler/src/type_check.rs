@@ -74,11 +74,8 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         mut modules: Vec<Module<Var, PathRef>>,
     ) -> Vec<Module<TypedVar, PathRef>> {
-        let mut binding = Context::new();
-        self.build_env(
-            &mut binding,
-            modules.iter().flat_map(|i| i.items.as_slice()),
-        );
+        let mut ctx =
+            self.build_ctx(modules.iter().flat_map(|i| i.items.as_slice()));
 
         let mut item_map = HashMap::new();
         for module in modules.iter_mut() {
@@ -86,7 +83,7 @@ impl<'s> TypeChecker<'s> {
             // If this errors we can't properly build the import map because the types
             // of all the variables aren't able to be used.
             let items = self
-                .check_items(&mut binding, module.path, items)
+                .check_items(&mut ctx, module.path, items)
                 .unwrap_or_default();
 
             item_map.insert(module.path, items);
@@ -159,12 +156,12 @@ impl<'s> TypeChecker<'s> {
         Ok(typed_items)
     }
 
-    fn build_env<'a, I: Iterator<Item = &'a Item<Var>>>(
+    fn build_ctx<'a, I: Iterator<Item = &'a Item<Var>>>(
         &mut self,
-        ctx: &mut Context,
         items: I,
-    ) {
-        self.add_builtin_functions(ctx);
+    ) -> Context {
+        let mut ctx = Context::new();
+        self.add_builtin_functions(&mut ctx);
 
         ctx.add_type(Var::INT, Type::INT);
         ctx.add_type(Var::NIL, Type::NIL);
@@ -179,7 +176,7 @@ impl<'s> TypeChecker<'s> {
                     let Define { ident, typ, value: _, span: _ } = id;
                     let res = match typ
                         .as_ref()
-                        .map(|sc| TypeParser::new(ctx).parse_scheme(sc))
+                        .map(|sc| TypeParser::new(&mut ctx).parse_scheme(sc))
                     {
                         Some(res) => res,
                         None => Err(Error::MissingTypeAscription),
@@ -198,6 +195,8 @@ impl<'s> TypeChecker<'s> {
                 }
             }
         }
+
+        ctx
     }
 
     fn add_builtin_functions(&self, ctx: &mut Context) {
