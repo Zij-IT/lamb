@@ -20,14 +20,14 @@ pub trait SubstitutionContext {
     fn gen_rigid_var(&mut self) -> RigidVar;
 }
 
-pub struct Substitute<C> {
-    ctx: C,
+pub struct Substitute<'ctx, C> {
+    ctx: &'ctx mut C,
     // todo: this should be handled by the `Types` struct as opposed to a single substitute instance
     unif_to_rigid: HashMap<UnifiableVar, RigidVar>,
 }
 
-impl<C: SubstitutionContext> Substitute<C> {
-    pub fn new(ctx: C) -> Self {
+impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
+    pub fn new(ctx: &'ctx mut C) -> Self {
         Self { ctx, unif_to_rigid: Default::default() }
     }
     /// Performs substitution of `UnifiableVar` for `RigidVar`. This is used

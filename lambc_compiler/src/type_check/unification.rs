@@ -39,13 +39,13 @@ pub trait UnificationContext {
     fn get(&mut self, key: UnifiableVar) -> Option<Type>;
 }
 
-pub struct Unifier<T> {
-    table: T,
+pub struct Unifier<'ctx, C> {
+    ctx: &'ctx mut C,
 }
 
-impl<T: UnificationContext> Unifier<T> {
-    pub fn new(table: T) -> Self {
-        Self { table }
+impl<'ctx, C: UnificationContext> Unifier<'ctx, C> {
+    pub fn new(ctx: &'ctx mut C) -> Self {
+        Self { ctx }
     }
 
     pub(super) fn unify(&mut self, cons: Vec<Constraint>) -> Result<()> {
@@ -86,7 +86,7 @@ impl<T: UnificationContext> Unifier<T> {
             (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
             (Type::UnifiableVar(l), Type::UnifiableVar(r)) => {
-                self.table.unify_var_var(l, r)
+                self.ctx.unify_var_var(l, r)
             }
             (Type::Fun(l), Type::Fun(r)) => {
                 if l.args.len() != r.args.len() {
@@ -123,7 +123,7 @@ impl<T: UnificationContext> Unifier<T> {
             }
             (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;
-                self.table.unify_var_value(v, Some(ty))
+                self.ctx.unify_var_value(v, Some(ty))
             }
             (Type::RigidVar(a), Type::RigidVar(b)) if a == b => Ok(()),
             (Type::Error, ..) | (.., Type::Error) => Ok(()),
@@ -141,7 +141,7 @@ impl<T: UnificationContext> Unifier<T> {
                 args: args.into_iter().map(|a| self.normalize_ty(a)).collect(),
                 ret_type: Box::new(self.normalize_ty(*ret_type)),
             }),
-            Type::UnifiableVar(v) => match self.table.get(v) {
+            Type::UnifiableVar(v) => match self.ctx.get(v) {
                 Some(ty) => self.normalize_ty(ty),
                 None => Type::UnifiableVar(v),
             },

@@ -22,17 +22,16 @@ pub trait InferenceContext:
     fn new_unif_var(&mut self) -> UnifiableVar;
 }
 
-pub struct TypeInference<C> {
-    pub ctx: C,
+pub struct TypeInference<'ctx, C> {
+    pub ctx: &'ctx mut C,
     pub ret_type: Vec<Type>,
 }
 
-impl<C> TypeInference<C>
+impl<'ctx, C> TypeInference<'ctx, C>
 where
     C: InferenceContext,
-    for<'a> &'a mut C: InferenceContext,
 {
-    pub fn new(ctx: C) -> Self {
+    pub fn new(ctx: &'ctx mut C) -> Self {
         Self { ctx, ret_type: Default::default() }
     }
 
@@ -107,7 +106,7 @@ where
             }
             Expr::Ident(i) => {
                 let ty = env.type_of(i);
-                let ty = Instantiate::new(&mut self.ctx).scheme(ty);
+                let ty = Instantiate::new(self.ctx).scheme(ty);
                 (
                     Qualified::constrained(
                         Expr::Ident(TypedVar(i, ty.item.clone())),
@@ -994,8 +993,7 @@ where
         // the initial unknown type to the inferred type.
         let old =
             env.add_type(ident.0, Qualified::unconstrained(ident.1.clone()));
-        let old =
-            old.map(|scheme| Instantiate::new(&mut self.ctx).scheme(scheme));
+        let old = old.map(|scheme| Instantiate::new(self.ctx).scheme(scheme));
 
         if recursive {
             let old = old.unwrap();
@@ -1030,7 +1028,7 @@ where
     }
 
     fn parse_ty(&mut self, ty: lambc_parse::Type<Var>) -> Type {
-        let mut parser = TypeParser::new(&mut self.ctx);
+        let mut parser = TypeParser::new(self.ctx);
         let res = parser.parse_scheme(&ty);
         let sc = res.unwrap_or_else(|_| todo!("Add state to TypeInference so that this error can be reported"));
         assert_eq!(
@@ -1131,9 +1129,7 @@ mod tests {
     use crate::type_check::Result;
     use std::collections::HashSet;
 
-    use super::InferenceContext;
-
-    impl<C: InferenceContext> TypeInference<C> {
+    impl<'ctx> TypeInference<'ctx, Context> {
         fn infer(
             &self,
             expr: Expr<Var>,
@@ -1146,12 +1142,12 @@ mod tests {
             env: VarEnv,
             expr: Expr<Var>,
         ) -> Result<(Expr<TypedVar>, TypeScheme)> {
-            let ctx = Context::new();
-            let mut inf = TypeInference::new(ctx);
+            let mut ctx = Context::new();
+            let mut inf = TypeInference::new(&mut ctx);
             let (out, ty) = inf.infer_expr(env, expr);
-            Unifier::new(&mut inf.ctx).unify(out.cons.clone())?;
+            Unifier::new(inf.ctx).unify(out.cons.clone())?;
 
-            let mut sub = Substitute::new(&mut inf.ctx);
+            let mut sub = Substitute::new(inf.ctx);
             let (mut unbound, ty) = sub.rigidify(ty);
             let (ast_unbound, expr) = sub.rigidify_expr(out.item);
             unbound.extend(ast_unbound);
@@ -1252,8 +1248,8 @@ mod tests {
 
     #[test]
     fn infers_int() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let lit = i64_lit();
 
@@ -1263,8 +1259,8 @@ mod tests {
 
     #[test]
     fn infers_double() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let lit = f64_lit();
         let out = inferer.infer_expr(VarEnv::new(), Expr::F64(lit.clone()));
@@ -1276,8 +1272,8 @@ mod tests {
 
     #[test]
     fn infers_usv() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let lit = char_lit();
 
@@ -1290,8 +1286,8 @@ mod tests {
 
     #[test]
     fn infers_string() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let lit = str_lit();
 
@@ -1308,8 +1304,8 @@ mod tests {
 
     #[test]
     fn infers_var() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let typ = Type::UnifiableVar(UnifiableVar(0));
         let var = Var(0);
@@ -1331,8 +1327,8 @@ mod tests {
 
     #[test]
     fn infers_fndef() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],
@@ -1386,8 +1382,8 @@ mod tests {
 
     #[test]
     fn infers_idx() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let idx = Index {
             lhs: Expr::Nil(nil_lit()),
@@ -1430,8 +1426,8 @@ mod tests {
 
     #[test]
     fn infers_call() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let callee_ident = Var(0);
         let callee_typ = Type::UnifiableVar(UnifiableVar(1000));
@@ -1478,8 +1474,8 @@ mod tests {
 
     #[test]
     fn infers_group() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let expr = str_lit();
         let group = Group { value: Expr::String(expr.clone()), span: SPAN };
@@ -1503,8 +1499,8 @@ mod tests {
 
     #[test]
     fn infers_list() {
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let list = List {
             values: vec![Expr::String(str_lit()), Expr::Char(char_lit())],
@@ -1545,8 +1541,8 @@ mod tests {
             }))
         }
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
 
         let lit = i64_lit();
         let una = unary(lit.clone(), UnaryOp::Nneg);
@@ -1672,8 +1668,8 @@ mod tests {
             span: SPAN,
         };
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let out = inferer.infer_block_raw(VarEnv::new(), block);
         assert_eq!(
             out,
@@ -1789,8 +1785,8 @@ mod tests {
             span: SPAN,
         };
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let out = inferer.infer_block_raw(VarEnv::new(), block);
         assert_eq!(
             out,
@@ -1902,8 +1898,8 @@ mod tests {
             span: SPAN,
         };
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let out = inferer.infer_block_raw(VarEnv::new(), block);
         assert_eq!(
             out,
@@ -1980,8 +1976,8 @@ mod tests {
         }
 
         let iff = make_if::<Var>();
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let out = inferer.infer_if(VarEnv::new(), iff);
 
         assert_eq!(
@@ -2048,8 +2044,8 @@ mod tests {
             panic!()
         };
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let (res, ty) = inferer.infer_fndef(VarEnv::new(), *test);
         assert_eq!(
             res,
@@ -2127,8 +2123,8 @@ mod tests {
             panic!()
         };
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let (res, ty) = inferer.infer_fndef(VarEnv::new(), *test);
         assert_eq!(
             res,
@@ -2198,8 +2194,8 @@ mod tests {
             panic!()
         };
 
-        let ctx = Context::new();
-        let mut inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut inferer = TypeInference::new(&mut ctx);
         let (res, ty) = inferer.infer_fndef(VarEnv::new(), *test);
         assert_eq!(
             res,
@@ -2250,9 +2246,10 @@ mod tests {
             span: SPAN,
         }));
 
-        let ctx = Context::new();
-        let (expr, scheme) =
-            TypeInference::new(ctx).infer(ast).expect("Inference to succeed");
+        let mut ctx = Context::new();
+        let (expr, scheme) = TypeInference::new(&mut ctx)
+            .infer(ast)
+            .expect("Inference to succeed");
 
         let a = RigidVar(0);
 
@@ -2296,9 +2293,10 @@ mod tests {
             span: SPAN,
         }));
 
-        let ctx = Context::new();
-        let (expr, scheme) =
-            TypeInference::new(ctx).infer(ast).expect("Inference to succeed");
+        let mut ctx = Context::new();
+        let (expr, scheme) = TypeInference::new(&mut ctx)
+            .infer(ast)
+            .expect("Inference to succeed");
 
         let a = RigidVar(0);
         let b = RigidVar(1);
@@ -2354,8 +2352,8 @@ mod tests {
             ),
         );
 
-        let ctx = Context::new();
-        let (_expr, scheme) = TypeInference::new(ctx)
+        let mut ctx = Context::new();
+        let (_expr, scheme) = TypeInference::new(&mut ctx)
             .infer(s_comb)
             .expect("Inference to succeed");
 
@@ -2397,8 +2395,8 @@ mod tests {
             vec![Expr::Nil(NilLit { span: SPAN })],
         );
 
-        let ctx = Context::new();
-        let res = TypeInference::new(ctx).infer(ast);
+        let mut ctx = Context::new();
+        let res = TypeInference::new(&mut ctx).infer(ast);
         assert_eq!(
             res,
             Err(Error::TypeNotEqual {
@@ -2440,8 +2438,8 @@ mod tests {
             (Expr::Nil(nil_lit()), Expr::Nil(nil_lit()), Type::NIL),
         ];
 
-        let ctx = Context::new();
-        let inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let inferer = TypeInference::new(&mut ctx);
 
         for (var_expr, ty_expr, ty) in type_expr_pair {
             let idcall = call(idexpr.clone(), vec![var_expr]);
@@ -2494,8 +2492,8 @@ mod tests {
             ),
         );
 
-        let ctx = Context::new();
-        let inferer = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let inferer = TypeInference::new(&mut ctx);
         let (expr, scheme) = inferer
             .infer_with_env(env.clone(), def)
             .expect("Inference to succeed");
@@ -2531,8 +2529,8 @@ mod tests {
 
     #[test]
     fn checks_int() {
-        let ctx = Context::new();
-        let mut checker = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut checker = TypeInference::new(&mut ctx);
 
         let lit = i64_lit();
 
@@ -2547,8 +2545,8 @@ mod tests {
 
     #[test]
     fn checks_double() {
-        let ctx = Context::new();
-        let mut checker = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut checker = TypeInference::new(&mut ctx);
 
         let lit = f64_lit();
 
@@ -2563,8 +2561,8 @@ mod tests {
 
     #[test]
     fn checks_usv() {
-        let ctx = Context::new();
-        let mut checker = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut checker = TypeInference::new(&mut ctx);
 
         let lit = char_lit();
 
@@ -2579,8 +2577,8 @@ mod tests {
 
     #[test]
     fn checks_string() {
-        let ctx = Context::new();
-        let mut checker = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut checker = TypeInference::new(&mut ctx);
 
         let lit = str_lit();
 
@@ -2595,8 +2593,8 @@ mod tests {
 
     #[test]
     fn checks_fndef() {
-        let ctx = Context::new();
-        let mut checker = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut checker = TypeInference::new(&mut ctx);
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],
@@ -2646,8 +2644,8 @@ mod tests {
 
     #[test]
     fn checks_fndef_refined() {
-        let ctx = Context::new();
-        let mut checker = TypeInference::new(ctx);
+        let mut ctx = Context::new();
+        let mut checker = TypeInference::new(&mut ctx);
 
         let def = FnDef {
             args: vec![Var(0), Var(1)],

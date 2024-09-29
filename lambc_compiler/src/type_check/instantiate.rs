@@ -6,13 +6,13 @@ pub trait InstantiationContext {
     fn gen_uni_var(&mut self) -> UnifiableVar;
 }
 
-pub struct Instantiate<C> {
-    ctx: C,
+pub struct Instantiate<'ctx, C> {
+    ctx: &'ctx mut C,
     rigid_to_unif: HashMap<RigidVar, UnifiableVar>,
 }
 
-impl<C: InstantiationContext> Instantiate<C> {
-    pub fn new(ctx: C) -> Self {
+impl<'ctx, C: InstantiationContext> Instantiate<'ctx, C> {
+    pub fn new(ctx: &'ctx mut C) -> Self {
         Self { ctx, rigid_to_unif: HashMap::new() }
     }
 

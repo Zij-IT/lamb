@@ -40,39 +40,7 @@ impl InferenceContext for Context {
     }
 }
 
-impl InferenceContext for &mut Context {
-    fn new_unif_var(&mut self) -> UnifiableVar {
-        Context::new_unif_var(self)
-    }
-}
-
 impl UnificationContext for Context {
-    fn unify_var_var(
-        &mut self,
-        v1: UnifiableVar,
-        v2: UnifiableVar,
-    ) -> Result<()> {
-        self.uni_table
-            .unify_var_var(v1, v2)
-            .map_err(|(e, g)| Error::TypeNotEqual { expected: e, got: g })
-    }
-
-    fn unify_var_value(
-        &mut self,
-        key: UnifiableVar,
-        ty: Option<Type>,
-    ) -> Result<()> {
-        self.uni_table
-            .unify_var_value(key, ty)
-            .map_err(|(e, g)| Error::TypeNotEqual { expected: e, got: g })
-    }
-
-    fn get(&mut self, key: UnifiableVar) -> Option<Type> {
-        self.uni_table.probe_value(key)
-    }
-}
-
-impl UnificationContext for &mut Context {
     fn unify_var_var(
         &mut self,
         v1: UnifiableVar,
@@ -112,20 +80,6 @@ impl SubstitutionContext for Context {
     }
 }
 
-impl SubstitutionContext for &mut Context {
-    fn get_value(&mut self, var: UnifiableVar) -> Option<Type> {
-        self.uni_table.probe_value(var)
-    }
-
-    fn get_root(&mut self, var: UnifiableVar) -> UnifiableVar {
-        self.uni_table.find(var)
-    }
-
-    fn gen_rigid_var(&mut self) -> RigidVar {
-        self.new_rigid_var()
-    }
-}
-
 impl ParserContext for Context {
     fn get_type(&mut self, var: Var) -> Result<Type> {
         self.types.get_type(var)
@@ -140,27 +94,7 @@ impl ParserContext for Context {
     }
 }
 
-impl ParserContext for &mut Context {
-    fn get_type(&mut self, var: Var) -> Result<Type> {
-        self.types.get_type(var)
-    }
-
-    fn add_type(&mut self, var: Var, ty: Type) {
-        self.types.add_type(var, ty)
-    }
-
-    fn new_rigid_var(&mut self) -> RigidVar {
-        Context::new_rigid_var(self)
-    }
-}
-
 impl InstantiationContext for Context {
-    fn gen_uni_var(&mut self) -> UnifiableVar {
-        self.new_unif_var()
-    }
-}
-
-impl InstantiationContext for &mut Context {
     fn gen_uni_var(&mut self) -> UnifiableVar {
         self.new_unif_var()
     }

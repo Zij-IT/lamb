@@ -74,7 +74,8 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         mut modules: Vec<Module<Var, PathRef>>,
     ) -> Vec<Module<TypedVar, PathRef>> {
-        let mut inf = TypeInference::new(Context::new());
+        let mut binding = Context::new();
+        let mut inf = TypeInference::new(&mut binding);
         let globals = self.build_env(
             &mut inf,
             modules.iter().flat_map(|i| i.items.as_slice()),
@@ -175,7 +176,7 @@ impl<'s> TypeChecker<'s> {
         inf.ctx.add_type(Var::BOOL, Type::BOOL);
         inf.ctx.add_type(Var::NEVER, Type::NEVER);
         inf.ctx.add_type(Var::DOUBLE, Type::DOUBLE);
-        let mut parser = TypeParser::new(&mut inf.ctx);
+        let mut parser = TypeParser::new(inf.ctx);
 
         for item in items {
             match item {
@@ -257,9 +258,9 @@ impl<'s> TypeChecker<'s> {
 
         let mut qual_value = inf.check_expr(env, def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());
-        Unifier::new(&mut inf.ctx).unify(qual_value.cons.clone())?;
+        Unifier::new(inf.ctx).unify(qual_value.cons.clone())?;
 
-        let mut sub = Substitute::new(&mut inf.ctx);
+        let mut sub = Substitute::new(inf.ctx);
         let (mut unbound, ty) = sub.rigidify(scheme.ty);
         let (ast_unbound, expr) = sub.rigidify_expr(qual_value.item);
         unbound.extend(ast_unbound);
@@ -419,7 +420,8 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut inf = TypeInference::new(Context::new());
+        let mut ctx = Context::new();
+        let mut inf = TypeInference::new(&mut ctx);
         let typed_id = TypeChecker::new(&mut State::default())
             .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme.clone())
             .expect("Type checking to succeed");
@@ -453,7 +455,8 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut inf = TypeInference::new(Context::new());
+        let mut ctx = Context::new();
+        let mut inf = TypeInference::new(&mut ctx);
         let typed_id = TypeChecker::new(&mut State::default())
             .check_toplevel_def(&mut inf, VarEnv::new(), def, scheme)
             .expect("Type checking to succeed");
@@ -496,7 +499,8 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut inf = TypeInference::new(Context::new());
+        let mut ctx = Context::new();
+        let mut inf = TypeInference::new(&mut ctx);
         let err = TypeChecker::new(&mut State::default()).check_toplevel_def(
             &mut inf,
             VarEnv::new(),

@@ -14,12 +14,12 @@ pub trait ParserContext {
     fn new_rigid_var(&mut self) -> RigidVar;
 }
 
-pub struct TypeParser<P> {
-    ctx: P,
+pub struct TypeParser<'ctx, C> {
+    ctx: &'ctx mut C,
 }
 
-impl<P: ParserContext> TypeParser<P> {
-    pub fn new(ctx: P) -> TypeParser<P> {
+impl<'ctx, C: ParserContext> TypeParser<'ctx, C> {
+    pub fn new(ctx: &'ctx mut C) -> TypeParser<C> {
         Self { ctx }
     }
 
@@ -100,18 +100,22 @@ impl<P: ParserContext> TypeParser<P> {
 mod tests {
     use lambc_parse::Span;
 
-    use crate::type_check::{context::Context, TypeInference};
+    use crate::type_check::context::Context;
 
     use super::*;
     use pretty_assertions::assert_eq;
 
     const SPAN: Span = Span::new(0, 0);
 
+    fn make_ctx() -> impl ParserContext {
+        Context::new()
+    }
+
     #[test]
     fn parses_simple_named_type() {
-        let mut inf = TypeInference::new(Context::new());
-        inf.ctx.add_type(Var::INT, Type::INT);
-        let mut parser = TypeParser::new(&mut inf.ctx);
+        let mut ctx = make_ctx();
+        ctx.add_type(Var::INT, Type::INT);
+        let mut parser = TypeParser::new(&mut ctx);
 
         let typ = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -125,9 +129,9 @@ mod tests {
 
     #[test]
     fn parses_simple_fn_type() {
-        let mut inf = TypeInference::new(Context::new());
-        inf.ctx.add_type(Var::INT, Type::INT);
-        let mut parser = TypeParser::new(&mut inf.ctx);
+        let mut ctx = make_ctx();
+        ctx.add_type(Var::INT, Type::INT);
+        let mut parser = TypeParser::new(&mut ctx);
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -150,9 +154,9 @@ mod tests {
 
     #[test]
     fn parses_nested_simple_fn_type() {
-        let mut inf = TypeInference::new(Context::new());
-        inf.ctx.add_type(Var::INT, Type::INT);
-        let mut parser = TypeParser::new(&mut inf.ctx);
+        let mut ctx = make_ctx();
+        ctx.add_type(Var::INT, Type::INT);
+        let mut parser = TypeParser::new(&mut ctx);
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
