@@ -4,19 +4,29 @@ use super::{
     FnType, Qualified, RigidVar, Type, TypeInference, TypeScheme, UnifiableVar,
 };
 
-pub struct Instantiate<'a> {
-    ctx: &'a mut TypeInference,
+pub trait InstantiationContext {
+    fn gen_uni_var(&mut self) -> UnifiableVar;
+}
+
+impl InstantiationContext for &mut TypeInference {
+    fn gen_uni_var(&mut self) -> UnifiableVar {
+        self.fresh_ty_var()
+    }
+}
+
+pub struct Instantiate<C> {
+    ctx: C,
     rigid_to_unif: HashMap<RigidVar, UnifiableVar>,
 }
 
-impl<'a> Instantiate<'a> {
-    pub fn new(ctx: &'a mut TypeInference) -> Self {
+impl<C: InstantiationContext> Instantiate<C> {
+    pub fn new(ctx: C) -> Self {
         Self { ctx, rigid_to_unif: HashMap::new() }
     }
 
     pub fn scheme(&mut self, scheme: TypeScheme) -> Qualified<Type> {
         self.rigid_to_unif.extend(
-            scheme.unbound.iter().map(|var| (*var, self.ctx.fresh_ty_var())),
+            scheme.unbound.iter().map(|var| (*var, self.ctx.gen_uni_var())),
         );
 
         let TypeScheme { unbound: _, ty, constraints } = scheme;
