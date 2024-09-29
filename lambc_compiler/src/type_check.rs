@@ -156,86 +156,6 @@ impl<'s> TypeChecker<'s> {
         Ok(typed_items)
     }
 
-    fn build_ctx<'a, I: Iterator<Item = &'a Item<Var>>>(
-        &mut self,
-        items: I,
-    ) -> Context {
-        let mut ctx = Context::new();
-        self.add_builtin_functions(&mut ctx);
-
-        ctx.add_type(Var::INT, Type::INT);
-        ctx.add_type(Var::NIL, Type::NIL);
-        ctx.add_type(Var::USV, Type::USV);
-        ctx.add_type(Var::BOOL, Type::BOOL);
-        ctx.add_type(Var::NEVER, Type::NEVER);
-        ctx.add_type(Var::DOUBLE, Type::DOUBLE);
-
-        for item in items {
-            match item {
-                Item::Def(id) => {
-                    let Define { ident, typ, value: _, span: _ } = id;
-                    let res = match typ
-                        .as_ref()
-                        .map(|sc| TypeParser::new(&mut ctx).parse_scheme(sc))
-                    {
-                        Some(res) => res,
-                        None => Err(Error::MissingTypeAscription),
-                    };
-
-                    let scheme = res.unwrap_or_else(|err| {
-                        self.state.add_error(err, None);
-                        TypeScheme {
-                            unbound: Default::default(),
-                            constraints: Default::default(),
-                            ty: Type::Error,
-                        }
-                    });
-
-                    ctx.vars_mut().add_scheme(*ident, scheme);
-                }
-            }
-        }
-
-        ctx
-    }
-
-    fn add_builtin_functions(&self, ctx: &mut Context) {
-        let to_simple_scheme = |t| TypeScheme {
-            unbound: Default::default(),
-            constraints: vec![],
-            ty: t,
-        };
-
-        let assert_ty = Type::fun(vec![Type::BOOL], Type::NIL);
-        ctx.vars_mut().add_scheme(Var::ASSERT, to_simple_scheme(assert_ty));
-
-        let user_char_ty = Type::fun(vec![], Type::USV);
-        ctx.vars_mut()
-            .add_scheme(Var::USER_CHAR, to_simple_scheme(user_char_ty));
-
-        let user_int_ty = Type::fun(vec![], Type::INT);
-        ctx.vars_mut()
-            .add_scheme(Var::USER_INT, to_simple_scheme(user_int_ty));
-
-        let rand_ty = Type::fun(vec![], Type::INT);
-        ctx.vars_mut().add_scheme(Var::RAND, to_simple_scheme(rand_ty));
-
-        let to_one_gen_scheme =
-            |rigid: RigidVar, make_ty: fn(RigidVar) -> Type| TypeScheme {
-                unbound: HashSet::from([rigid]),
-                constraints: vec![],
-                ty: make_ty(rigid),
-            };
-
-        let print_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
-        let print_ty = to_one_gen_scheme(ctx.gen_rigid_var(), print_ty);
-        ctx.vars_mut().add_scheme(Var::PRINT, print_ty);
-
-        let println_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
-        let println_ty = to_one_gen_scheme(ctx.gen_rigid_var(), println_ty);
-        ctx.vars_mut().add_scheme(Var::PRINTLN, println_ty);
-    }
-
     fn check_toplevel_def(
         &self,
         ctx: &mut Context,
@@ -275,6 +195,89 @@ impl<'s> TypeChecker<'s> {
             value: expr,
             span: def.span,
         })
+    }
+
+    fn build_ctx<'a, I: Iterator<Item = &'a Item<Var>>>(
+        &mut self,
+        items: I,
+    ) -> Context {
+        let mut ctx = Context::new();
+        Self::add_builtin_functions(&mut ctx);
+        Self::add_builtin_types(&mut ctx);
+
+        for item in items {
+            match item {
+                Item::Def(id) => {
+                    let Define { ident, typ, value: _, span: _ } = id;
+                    let res = match typ
+                        .as_ref()
+                        .map(|sc| TypeParser::new(&mut ctx).parse_scheme(sc))
+                    {
+                        Some(res) => res,
+                        None => Err(Error::MissingTypeAscription),
+                    };
+
+                    let scheme = res.unwrap_or_else(|err| {
+                        self.state.add_error(err, None);
+                        TypeScheme {
+                            unbound: Default::default(),
+                            constraints: Default::default(),
+                            ty: Type::Error,
+                        }
+                    });
+
+                    ctx.vars_mut().add_scheme(*ident, scheme);
+                }
+            }
+        }
+
+        ctx
+    }
+
+    fn add_builtin_functions(ctx: &mut Context) {
+        let to_simple_scheme = |t| TypeScheme {
+            unbound: Default::default(),
+            constraints: vec![],
+            ty: t,
+        };
+
+        let assert_ty = Type::fun(vec![Type::BOOL], Type::NIL);
+        ctx.vars_mut().add_scheme(Var::ASSERT, to_simple_scheme(assert_ty));
+
+        let user_char_ty = Type::fun(vec![], Type::USV);
+        ctx.vars_mut()
+            .add_scheme(Var::USER_CHAR, to_simple_scheme(user_char_ty));
+
+        let user_int_ty = Type::fun(vec![], Type::INT);
+        ctx.vars_mut()
+            .add_scheme(Var::USER_INT, to_simple_scheme(user_int_ty));
+
+        let rand_ty = Type::fun(vec![], Type::INT);
+        ctx.vars_mut().add_scheme(Var::RAND, to_simple_scheme(rand_ty));
+
+        let to_one_gen_scheme =
+            |rigid: RigidVar, make_ty: fn(RigidVar) -> Type| TypeScheme {
+                unbound: HashSet::from([rigid]),
+                constraints: vec![],
+                ty: make_ty(rigid),
+            };
+
+        let print_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
+        let print_ty = to_one_gen_scheme(ctx.gen_rigid_var(), print_ty);
+        ctx.vars_mut().add_scheme(Var::PRINT, print_ty);
+
+        let println_ty = |rig| Type::fun(vec![Type::RigidVar(rig)], Type::NIL);
+        let println_ty = to_one_gen_scheme(ctx.gen_rigid_var(), println_ty);
+        ctx.vars_mut().add_scheme(Var::PRINTLN, println_ty);
+    }
+
+    fn add_builtin_types(ctx: &mut Context) {
+        ctx.add_type(Var::INT, Type::INT);
+        ctx.add_type(Var::NIL, Type::NIL);
+        ctx.add_type(Var::USV, Type::USV);
+        ctx.add_type(Var::BOOL, Type::BOOL);
+        ctx.add_type(Var::NEVER, Type::NEVER);
+        ctx.add_type(Var::DOUBLE, Type::DOUBLE);
     }
 
     fn add_import_types(
