@@ -2,23 +2,41 @@ use crate::name_res::Var;
 
 use std::collections::HashSet;
 
-use super::{Error, FnType, Result, RigidVar, Type, TypeEnv, TypeScheme};
+use super::{
+    Error, FnType, Result, RigidVar, Type, TypeEnv, TypeInference, TypeScheme,
+};
 
 type RawType = lambc_parse::Type<Var>;
 type RawNamed = lambc_parse::NamedType<Var>;
 type RawFnType = lambc_parse::FnType<Var>;
 
-pub struct TypeParser<'a, F> {
-    env: &'a mut TypeEnv,
-    rigid_gen: F,
+pub trait ParserContext {
+    fn get_type(&mut self, var: Var) -> Result<Type>;
+    fn add_type(&mut self, var: Var, ty: Type);
+    fn new_rigid_var(&mut self) -> RigidVar;
 }
 
-impl<'a, F> TypeParser<'a, F>
-where
-    F: FnMut() -> RigidVar,
-{
-    pub fn new(env: &'a mut TypeEnv, f: F) -> TypeParser<'a, F> {
-        Self { env, rigid_gen: f }
+impl ParserContext for (&mut TypeInference, &mut TypeEnv) {
+    fn get_type(&mut self, var: Var) -> Result<Type> {
+        self.1.get_type(var)
+    }
+
+    fn add_type(&mut self, var: Var, ty: Type) {
+        self.1.add_type(var, ty)
+    }
+
+    fn new_rigid_var(&mut self) -> RigidVar {
+        self.0.gen_rigidvar()
+    }
+}
+
+pub struct TypeParser<P> {
+    ctx: P,
+}
+
+impl<P: ParserContext> TypeParser<P> {
+    pub fn new(ctx: P) -> TypeParser<P> {
+        Self { ctx }
     }
 
     pub fn parse_scheme(&mut self, raw: &RawType) -> Result<TypeScheme> {
@@ -27,9 +45,9 @@ where
                 let mut unbound = HashSet::new();
                 if let Some(gens) = fntype.gens.as_ref() {
                     for gen in &gens.params {
-                        let rigid = (self.rigid_gen)();
+                        let rigid = self.ctx.new_rigid_var();
                         unbound.insert(rigid);
-                        self.env.add_type(gen.id, Type::RigidVar(rigid));
+                        self.ctx.add_type(gen.id, Type::RigidVar(rigid));
                     }
                 }
 
@@ -47,7 +65,7 @@ where
         }
     }
 
-    fn parse_type(&self, raw: &RawType) -> Result<Type> {
+    fn parse_type(&mut self, raw: &RawType) -> Result<Type> {
         match raw {
             RawType::Fn(fntype) => self.parse_fn(fntype, false),
             RawType::Named(named) => self.parse_named(named),
@@ -55,7 +73,7 @@ where
     }
 
     fn parse_fn(
-        &self,
+        &mut self,
         fntype: &RawFnType,
         allow_generics: bool,
     ) -> Result<Type> {
@@ -77,7 +95,7 @@ where
         Ok(Type::Fun(FnType { args, ret_type: Box::new(ret_type) }))
     }
 
-    fn parse_named(&self, named: &RawNamed) -> Result<Type> {
+    fn parse_named(&mut self, named: &RawNamed) -> Result<Type> {
         let RawNamed { name, gens, span: _ } = named;
         let generic_count = gens.as_ref().map_or(0, |g| g.params.len());
         match (*name, generic_count) {
@@ -86,7 +104,7 @@ where
                 let ty = self.parse_type(first)?;
                 Ok(Type::List(Box::new(ty)))
             }
-            (name, 0) => self.env.get_type(name),
+            (name, 0) => self.ctx.get_type(name),
             (_unknown, c) => {
                 Err(Error::TypeParamCountMismatch { got: c, expected: 0 })
             }
@@ -105,10 +123,11 @@ mod tests {
 
     #[test]
     fn parses_simple_named_type() {
-        let gen = || panic!("This should never be called");
         let mut env = TypeEnv::default();
         env.add_type(Var::INT, Type::INT);
-        let parser = TypeParser::new(&mut env, gen);
+
+        let mut inf = TypeInference::new();
+        let mut parser = TypeParser::new((&mut inf, &mut env));
 
         let typ = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -122,11 +141,11 @@ mod tests {
 
     #[test]
     fn parses_simple_fn_type() {
-        let gen = || panic!("This should never be called");
         let mut env = TypeEnv::default();
         env.add_type(Var::INT, Type::INT);
 
-        let parser = TypeParser::new(&mut env, gen);
+        let mut inf = TypeInference::new();
+        let mut parser = TypeParser::new((&mut inf, &mut env));
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,
@@ -149,11 +168,11 @@ mod tests {
 
     #[test]
     fn parses_nested_simple_fn_type() {
-        let gen = || panic!("This should never be called");
         let mut env = TypeEnv::default();
         env.add_type(Var::INT, Type::INT);
 
-        let parser = TypeParser::new(&mut env, gen);
+        let mut inf = TypeInference::new();
+        let mut parser = TypeParser::new((&mut inf, &mut env));
 
         let raw_int = RawType::Named(Box::new(RawNamed {
             name: Var::INT,

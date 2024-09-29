@@ -1038,7 +1038,7 @@ impl TypeInference {
         ty_env.add_type(Var::NEVER, Type::NEVER);
         ty_env.add_type(Var::DOUBLE, Type::DOUBLE);
 
-        let mut parser = TypeParser::new(&mut ty_env, || self.gen_rigidvar());
+        let mut parser = TypeParser::new((self, &mut ty_env));
         let res = parser.parse_scheme(&ty);
         let sc = res.unwrap_or_else(|_| todo!("Add state to TypeInference so that this error can be reported"));
         assert_eq!(

@@ -174,7 +174,7 @@ impl<'s> TypeChecker<'s> {
         ty_env.add_type(Var::NEVER, Type::NEVER);
         ty_env.add_type(Var::DOUBLE, Type::DOUBLE);
 
-        let mut parser = TypeParser::new(&mut ty_env, || inf.gen_rigidvar());
+        let mut parser = TypeParser::new((&mut *inf, &mut ty_env));
 
         for item in items {
             match item {
