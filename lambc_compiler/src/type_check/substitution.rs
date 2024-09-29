@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use lambc_parse::{
     ArrayPattern, Binary, Block, Call, Case, CaseArm, Define, Else, Expr,
@@ -9,13 +9,40 @@ use lambc_parse::{
 use super::{Constraint, FnType, RigidVar, Type, TypeInference, UnifiableVar};
 use crate::type_check::TypedVar;
 
-pub struct Substitute<'a> {
-    ctx: &'a mut TypeInference,
+pub trait SubstitutionContext {
+    /// Returns the current value of `var`
+    fn get_value(&mut self, var: UnifiableVar) -> Option<Type>;
+
+    /// Given a `UnifiableVar`, returns the current root
+    fn get_root(&mut self, var: UnifiableVar) -> UnifiableVar;
+
+    /// Returns a new `RigidVar`
+    fn gen_rigid_var(&mut self) -> RigidVar;
 }
 
-impl<'a> Substitute<'a> {
-    pub fn new(ctx: &'a mut TypeInference) -> Self {
-        Self { ctx }
+impl SubstitutionContext for &mut TypeInference {
+    fn get_value(&mut self, var: UnifiableVar) -> Option<Type> {
+        self.uni_table.probe_value(var)
+    }
+
+    fn get_root(&mut self, var: UnifiableVar) -> UnifiableVar {
+        self.uni_table.find(var)
+    }
+
+    fn gen_rigid_var(&mut self) -> RigidVar {
+        self.gen_rigidvar()
+    }
+}
+
+pub struct Substitute<C> {
+    ctx: C,
+    // todo: this should be handled by the `Types` struct as opposed to a single substitute instance
+    unif_to_rigid: HashMap<UnifiableVar, RigidVar>,
+}
+
+impl<C: SubstitutionContext> Substitute<C> {
+    pub fn new(ctx: C) -> Self {
+        Self { ctx, unif_to_rigid: Default::default() }
     }
     /// Performs substitution of `UnifiableVar` for `RigidVar`. This is used
     /// after unification to create a type with unbound type variables.
@@ -29,8 +56,8 @@ impl<'a> Substitute<'a> {
                 (unbound, Type::List(Box::new(elem)))
             }
             Type::UnifiableVar(v) => {
-                let root = self.ctx.uni_table.find(v);
-                match self.ctx.uni_table.probe_value(root) {
+                let root = self.ctx.get_root(v);
+                match self.ctx.get_value(root) {
                     Some(ty) => self.rigidify(ty),
                     None => {
                         let tyvar = self.tyvar_for_unifier(root);
@@ -421,9 +448,9 @@ impl<'a> Substitute<'a> {
     }
 
     fn tyvar_for_unifier(&mut self, var: UnifiableVar) -> RigidVar {
-        *self.ctx.subst_unifiers_to_tyvars.entry(var).or_insert_with(|| {
-            self.ctx.next_tyvar += 1;
-            RigidVar(self.ctx.next_tyvar - 1)
-        })
+        *self
+            .unif_to_rigid
+            .entry(var)
+            .or_insert_with(|| self.ctx.gen_rigid_var())
     }
 }

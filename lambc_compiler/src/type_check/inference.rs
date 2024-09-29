@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use ena::unify::InPlaceUnificationTable;
 use lambc_parse::{
     ArrayPattern, Binary, BinaryOp, Block, Call, Case, CaseArm, Define, Else,
@@ -19,7 +17,6 @@ use crate::{
 
 pub struct TypeInference {
     pub uni_table: InPlaceUnificationTable<UnifiableVar>,
-    pub subst_unifiers_to_tyvars: HashMap<UnifiableVar, RigidVar>,
     pub next_tyvar: u32,
     pub ret_type: Vec<Type>,
 }
@@ -28,7 +25,6 @@ impl TypeInference {
     pub fn new() -> Self {
         Self {
             uni_table: Default::default(),
-            subst_unifiers_to_tyvars: Default::default(),
             next_tyvar: 0,
             ret_type: Default::default(),
         }
