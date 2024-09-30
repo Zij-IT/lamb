@@ -108,12 +108,16 @@ impl<'s> TypeChecker<'s> {
         let mut export_map = HashMap::new();
         for module in modules.iter_mut() {
             let imports = std::mem::take(&mut module.imports);
-            import_map
-                .insert(module.path, self.add_import_types(&typemap, imports));
+            import_map.insert(
+                module.path,
+                Self::add_import_types(&typemap, imports),
+            );
 
             let exports = std::mem::take(&mut module.exports);
-            export_map
-                .insert(module.path, self.add_export_types(&typemap, exports));
+            export_map.insert(
+                module.path,
+                Self::add_export_types(&typemap, exports),
+            );
         }
 
         modules
@@ -281,7 +285,6 @@ impl<'s> TypeChecker<'s> {
     }
 
     fn add_import_types(
-        &self,
         globals: &HashMap<Var, &TypedVar>,
         imports: Vec<Import<Var, PathRef>>,
     ) -> Vec<Import<TypedVar, PathRef>> {
@@ -294,7 +297,7 @@ impl<'s> TypeChecker<'s> {
                     name: None,
                     items: items
                         .into_iter()
-                        .map(|i| self.add_import_item_type(globals, i))
+                        .map(|i| Self::add_import_item_type(globals, i))
                         .collect(),
                     star,
                     span,
@@ -305,7 +308,6 @@ impl<'s> TypeChecker<'s> {
     }
 
     fn add_import_item_type(
-        &self,
         globals: &HashMap<Var, &TypedVar>,
         i: ImportItem<Var>,
     ) -> ImportItem<TypedVar> {
@@ -317,7 +319,6 @@ impl<'s> TypeChecker<'s> {
     }
 
     fn add_export_types(
-        &self,
         globals: &HashMap<Var, &TypedVar>,
         exports: Vec<Export<Var>>,
     ) -> Vec<Export<TypedVar>> {
@@ -326,7 +327,7 @@ impl<'s> TypeChecker<'s> {
             .map(|Export { items, span }| Export {
                 items: items
                     .into_iter()
-                    .map(|e| self.add_export_item_type(globals, e))
+                    .map(|e| Self::add_export_item_type(globals, e))
                     .collect(),
                 span,
             })
@@ -334,7 +335,6 @@ impl<'s> TypeChecker<'s> {
     }
 
     fn add_export_item_type(
-        &self,
         globals: &HashMap<Var, &TypedVar>,
         i: ExportItem<Var>,
     ) -> ExportItem<TypedVar> {
