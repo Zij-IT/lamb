@@ -58,6 +58,9 @@ pub enum Error {
     #[diagnostic(code("type-checking::missing-type"))]
     #[error("top-level definitions require a type, but none was provided")]
     MissingTypeAscription,
+    #[diagnostic(code("type-checking::return-out-of-function"))]
+    #[error("return expressions must be within a function")]
+    ReturnOutOfFunction,
 }
 
 pub struct TypeChecker<'s> {

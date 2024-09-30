@@ -50,6 +50,10 @@ impl InferenceContext for Context<'_> {
     fn vars_mut(&mut self) -> &mut VarEnv {
         Context::vars_mut(self)
     }
+
+    fn add_error(&mut self, err: Error) {
+        self.state.add_error(err, None)
+    }
 }
 
 impl UnificationContext for Context<'_> {

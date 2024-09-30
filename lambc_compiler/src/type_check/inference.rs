@@ -11,7 +11,8 @@ use super::{
     parsing::ParserContext,
     substitution::SubstitutionContext,
     unification::UnificationContext,
-    Constraint, FnType, Qualified, TyClass, Type, TypedVar, UnifiableVar,
+    Constraint, Error, FnType, Qualified, TyClass, Type, TypedVar,
+    UnifiableVar,
 };
 use crate::{name_res::Var, type_check::parsing::TypeParser};
 
@@ -20,6 +21,7 @@ pub trait InferenceContext:
 {
     fn vars_mut(&mut self) -> &mut VarEnv;
     fn new_unif_var(&mut self) -> UnifiableVar;
+    fn add_error(&mut self, err: Error);
 }
 
 pub struct TypeInference<'ctx, C> {
@@ -893,9 +895,10 @@ where
         ret: Return<Var>,
     ) -> (Qualified<Expr<TypedVar>>, Type) {
         let Return { value, span } = ret;
-        let ret_ty = self.ret_type.last().cloned().expect(
-                "Return outside of a function should have been handled somehow already :/",
-            );
+        let ret_ty = self.ret_type.last().cloned().unwrap_or_else(|| {
+            self.ctx.add_error(Error::ReturnOutOfFunction);
+            Type::Error
+        });
 
         let (value, cons) = match value {
             Some(val) => {
@@ -999,8 +1002,14 @@ where
 
     fn parse_ty(&mut self, ty: lambc_parse::Type<Var>) -> Type {
         let mut parser = TypeParser::new(self.ctx);
-        let res = parser.parse_scheme(&ty);
-        let sc = res.unwrap_or_else(|_| todo!("Add state to TypeInference so that this error can be reported"));
+        let sc = match parser.parse_scheme(&ty) {
+            Ok(sc) => sc,
+            Err(err) => {
+                self.ctx.add_error(err);
+                return Type::Error;
+            }
+        };
+
         assert_eq!(
             sc.unbound.len(),
             0,
