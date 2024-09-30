@@ -100,15 +100,35 @@ impl<'ctx, C: ParserContext> TypeParser<'ctx, C> {
 mod tests {
     use lambc_parse::Span;
 
-    use crate::type_check::context::Context;
+    use crate::type_check::TypeEnv;
 
     use super::*;
     use pretty_assertions::assert_eq;
 
     const SPAN: Span = Span::new(0, 0);
 
+    struct Context {
+        types: TypeEnv,
+        rig_count: u32,
+    }
+
+    impl ParserContext for Context {
+        fn get_type(&mut self, var: Var) -> Result<Type> {
+            self.types.get_type(var)
+        }
+
+        fn add_type(&mut self, var: Var, ty: Type) {
+            self.types.add_type(var, ty)
+        }
+
+        fn new_rigid_var(&mut self) -> RigidVar {
+            self.rig_count += 1;
+            RigidVar(self.rig_count - 1)
+        }
+    }
+
     fn make_ctx() -> impl ParserContext {
-        Context::new()
+        Context { types: TypeEnv::new(), rig_count: 0 }
     }
 
     #[test]

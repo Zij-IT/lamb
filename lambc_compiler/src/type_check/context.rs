@@ -1,6 +1,6 @@
 use ena::unify::InPlaceUnificationTable;
 
-use crate::name_res::Var;
+use crate::{name_res::Var, State};
 
 use super::{
     inference::InferenceContext, instantiate::InstantiationContext,
@@ -9,16 +9,18 @@ use super::{
     UnifiableVar, VarEnv,
 };
 
-pub struct Context {
+pub struct Context<'s> {
+    pub state: &'s mut State,
     vars: VarEnv,
     types: TypeEnv,
     uni_table: InPlaceUnificationTable<UnifiableVar>,
     next_tyvar: u32,
 }
 
-impl Context {
-    pub fn new() -> Self {
+impl<'s> Context<'s> {
+    pub fn new(state: &'s mut State) -> Self {
         Self {
+            state,
             vars: VarEnv::new(),
             types: TypeEnv::new(),
             uni_table: InPlaceUnificationTable::new(),
@@ -40,7 +42,7 @@ impl Context {
     }
 }
 
-impl InferenceContext for Context {
+impl InferenceContext for Context<'_> {
     fn new_unif_var(&mut self) -> UnifiableVar {
         Context::new_unif_var(self)
     }
@@ -50,7 +52,7 @@ impl InferenceContext for Context {
     }
 }
 
-impl UnificationContext for Context {
+impl UnificationContext for Context<'_> {
     fn unify_var_var(
         &mut self,
         v1: UnifiableVar,
@@ -76,7 +78,7 @@ impl UnificationContext for Context {
     }
 }
 
-impl SubstitutionContext for Context {
+impl SubstitutionContext for Context<'_> {
     fn get_value(&mut self, var: UnifiableVar) -> Option<Type> {
         self.uni_table.probe_value(var)
     }
@@ -90,7 +92,7 @@ impl SubstitutionContext for Context {
     }
 }
 
-impl ParserContext for Context {
+impl ParserContext for Context<'_> {
     fn get_type(&mut self, var: Var) -> Result<Type> {
         self.types.get_type(var)
     }
@@ -104,7 +106,7 @@ impl ParserContext for Context {
     }
 }
 
-impl InstantiationContext for Context {
+impl InstantiationContext for Context<'_> {
     fn gen_uni_var(&mut self) -> UnifiableVar {
         self.new_unif_var()
     }

@@ -82,7 +82,7 @@ impl<'s> TypeChecker<'s> {
             let items = std::mem::take(&mut module.items);
             // If this errors we can't properly build the import map because the types
             // of all the variables aren't able to be used.
-            let mut imp = TypeCheckerImpl::new(&mut ctx, &mut self.state);
+            let mut imp = TypeCheckerImpl::new(&mut ctx);
             let items =
                 imp.check_items(module.path, items).unwrap_or_default();
 
@@ -136,7 +136,7 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         items: I,
     ) -> Context {
-        let mut ctx = Context::new();
+        let mut ctx = Context::new(&mut self.state);
         Self::add_builtin_functions(&mut ctx);
         Self::add_builtin_types(&mut ctx);
 
@@ -153,7 +153,7 @@ impl<'s> TypeChecker<'s> {
                     };
 
                     let scheme = res.unwrap_or_else(|err| {
-                        self.state.add_error(err, None);
+                        ctx.state.add_error(err, None);
                         TypeScheme {
                             unbound: Default::default(),
                             constraints: Default::default(),
@@ -278,13 +278,12 @@ impl<'s> TypeChecker<'s> {
 }
 
 struct TypeCheckerImpl<'c, 's> {
-    ctx: &'c mut Context,
-    state: &'s mut State,
+    ctx: &'c mut Context<'s>,
 }
 
 impl<'c, 's> TypeCheckerImpl<'c, 's> {
-    fn new(ctx: &'c mut Context, state: &'s mut State) -> Self {
-        Self { ctx, state }
+    fn new(ctx: &'c mut Context<'s>) -> Self {
+        Self { ctx }
     }
 
     fn check_items(
@@ -301,13 +300,13 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
 
                     match res {
                         Ok(ast) => typed_items.push(Item::Def(ast)),
-                        Err(er) => self.state.add_error(er, Some(path)),
+                        Err(er) => self.ctx.state.add_error(er, Some(path)),
                     }
                 }
             }
         }
 
-        if self.state.has_errors() {
+        if self.ctx.state.has_errors() {
             return Err(());
         }
 
@@ -424,9 +423,9 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut ctx = Context::new();
         let mut state = State::default();
-        let mut imp = TypeCheckerImpl::new(&mut ctx, &mut state);
+        let mut ctx = Context::new(&mut state);
+        let mut imp = TypeCheckerImpl::new(&mut ctx);
         let typed_id = imp
             .check_toplevel_def(def, scheme.clone())
             .expect("Type checking to succeed");
@@ -460,8 +459,9 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut ctx = Context::new();
-        let typed_id = TypeCheckerImpl::new(&mut ctx, &mut State::default())
+        let mut state = State::default();
+        let mut ctx = Context::new(&mut state);
+        let typed_id = TypeCheckerImpl::new(&mut ctx)
             .check_toplevel_def(def, scheme)
             .expect("Type checking to succeed");
 
@@ -503,9 +503,10 @@ mod test {
 
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
-        let mut ctx = Context::new();
-        let err = TypeCheckerImpl::new(&mut ctx, &mut State::default())
-            .check_toplevel_def(def, scheme);
+        let mut state = State::default();
+        let mut ctx = Context::new(&mut state);
+        let err =
+            TypeCheckerImpl::new(&mut ctx).check_toplevel_def(def, scheme);
 
         assert_eq!(
             err,
