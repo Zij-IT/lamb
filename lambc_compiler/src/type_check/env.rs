@@ -1,6 +1,10 @@
+use ena::unify::InPlaceUnificationTable;
+
 use crate::name_res::Var;
 
-use super::{Error, Qualified, Result, Type, TypeScheme};
+use super::{
+    Error, Qualified, Result, RigidVar, Type, TypeScheme, UnifiableVar,
+};
 
 /// A map from `Var` to their `Type(Scheme)`.
 #[derive(Clone)]
@@ -51,7 +55,9 @@ impl VarEnv {
 /// A map from `Var` to the actual Lamb `Type` being referred to.
 #[derive(Clone, Default)]
 pub struct TypeEnv {
+    pub uni_table: InPlaceUnificationTable<UnifiableVar>,
     inner: im::HashMap<Var, Type>,
+    next_tyvar: u32,
 }
 
 impl TypeEnv {
@@ -68,5 +74,14 @@ impl TypeEnv {
 
     pub fn get_type(&self, var: Var) -> Result<Type> {
         self.inner.get(&var).cloned().ok_or(Error::UnknownType)
+    }
+
+    pub fn new_unif_var(&mut self) -> UnifiableVar {
+        self.uni_table.new_key(None)
+    }
+
+    pub fn new_rigid_var(&mut self) -> RigidVar {
+        self.next_tyvar += 1;
+        RigidVar(self.next_tyvar - 1)
     }
 }
