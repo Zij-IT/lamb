@@ -82,9 +82,9 @@ impl<'s> TypeChecker<'s> {
             let items = std::mem::take(&mut module.items);
             // If this errors we can't properly build the import map because the types
             // of all the variables aren't able to be used.
-            let items = self
-                .check_items(&mut ctx, module.path, items)
-                .unwrap_or_default();
+            let mut imp = TypeCheckerImpl::new(&mut ctx, &mut self.state);
+            let items =
+                imp.check_items(module.path, items).unwrap_or_default();
 
             item_map.insert(module.path, items);
         }
@@ -130,75 +130,6 @@ impl<'s> TypeChecker<'s> {
                 span: m.span,
             })
             .collect()
-    }
-
-    fn check_items(
-        &mut self,
-        ctx: &mut Context,
-        path: PathRef,
-        items: Vec<Item<Var>>,
-    ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
-        let mut typed_items = Vec::with_capacity(items.len());
-        for item in items {
-            match item {
-                Item::Def(def) => {
-                    let scheme = ctx.vars_mut().type_of(def.ident);
-                    let res = self.check_toplevel_def(ctx, def, scheme);
-
-                    match res {
-                        Ok(ast) => typed_items.push(Item::Def(ast)),
-                        Err(er) => self.state.add_error(er, Some(path)),
-                    }
-                }
-            }
-        }
-
-        if self.state.has_errors() {
-            return Err(());
-        }
-
-        Ok(typed_items)
-    }
-
-    fn check_toplevel_def(
-        &self,
-        ctx: &mut Context,
-        def: Define<Var>,
-        scheme: TypeScheme,
-    ) -> Result<Define<TypedVar>> {
-        if def.value.is_recursive() {
-            // Nothing to do in the case of a recursive bound because top-level definitions
-            // now require types.
-        }
-
-        let mut inf = TypeInference::new(ctx);
-        let mut qual_value = inf.check_expr(def.value, scheme.ty.clone());
-        qual_value.cons.extend(scheme.constraints.clone());
-        Unifier::new(inf.ctx).unify(qual_value.cons.clone())?;
-
-        let mut sub = Substitute::new(inf.ctx);
-        let (mut unbound, ty) = sub.rigidify(scheme.ty);
-        let (ast_unbound, expr) = sub.rigidify_expr(qual_value.item);
-        unbound.extend(ast_unbound);
-
-        let (con_unbound, _cons) = sub.rigidify_constraints(qual_value.cons);
-        let ambiguities = con_unbound.difference(&unbound).count();
-        assert_eq!(ambiguities, 0);
-
-        let new_unbound = con_unbound.difference(&unbound);
-        if new_unbound.count() != 0 {
-            // Handle new generic types being added
-            return Err(Error::NewUnboundTypes);
-        }
-
-        // let reduced = inf.reduce_constraints(&unbound, cons);
-
-        Ok(Define {
-            ident: TypedVar(def.ident, ty),
-            typ: None,
-            value: expr,
-            span: def.span,
-        })
     }
 
     fn build_ctx<'a, I: Iterator<Item = &'a Item<Var>>>(
@@ -346,6 +277,84 @@ impl<'s> TypeChecker<'s> {
     }
 }
 
+struct TypeCheckerImpl<'c, 's> {
+    ctx: &'c mut Context,
+    state: &'s mut State,
+}
+
+impl<'c, 's> TypeCheckerImpl<'c, 's> {
+    fn new(ctx: &'c mut Context, state: &'s mut State) -> Self {
+        Self { ctx, state }
+    }
+
+    fn check_items(
+        &mut self,
+        path: PathRef,
+        items: Vec<Item<Var>>,
+    ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
+        let mut typed_items = Vec::with_capacity(items.len());
+        for item in items {
+            match item {
+                Item::Def(def) => {
+                    let scheme = self.ctx.vars_mut().type_of(def.ident);
+                    let res = self.check_toplevel_def(def, scheme);
+
+                    match res {
+                        Ok(ast) => typed_items.push(Item::Def(ast)),
+                        Err(er) => self.state.add_error(er, Some(path)),
+                    }
+                }
+            }
+        }
+
+        if self.state.has_errors() {
+            return Err(());
+        }
+
+        Ok(typed_items)
+    }
+
+    fn check_toplevel_def(
+        &mut self,
+        def: Define<Var>,
+        scheme: TypeScheme,
+    ) -> Result<Define<TypedVar>> {
+        if def.value.is_recursive() {
+            // Nothing to do in the case of a recursive bound because top-level definitions
+            // now require types.
+        }
+
+        let mut inf = TypeInference::new(self.ctx);
+        let mut qual_value = inf.check_expr(def.value, scheme.ty.clone());
+        qual_value.cons.extend(scheme.constraints.clone());
+        Unifier::new(inf.ctx).unify(qual_value.cons.clone())?;
+
+        let mut sub = Substitute::new(inf.ctx);
+        let (mut unbound, ty) = sub.rigidify(scheme.ty);
+        let (ast_unbound, expr) = sub.rigidify_expr(qual_value.item);
+        unbound.extend(ast_unbound);
+
+        let (con_unbound, _cons) = sub.rigidify_constraints(qual_value.cons);
+        let ambiguities = con_unbound.difference(&unbound).count();
+        assert_eq!(ambiguities, 0);
+
+        let new_unbound = con_unbound.difference(&unbound);
+        if new_unbound.count() != 0 {
+            // Handle new generic types being added
+            return Err(Error::NewUnboundTypes);
+        }
+
+        // let reduced = inf.reduce_constraints(&unbound, cons);
+
+        Ok(Define {
+            ident: TypedVar(def.ident, ty),
+            typ: None,
+            value: expr,
+            span: def.span,
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashSet;
@@ -353,11 +362,12 @@ mod test {
     use lambc_parse::{Binary, BinaryOp, Define, Expr, FnDef, Span};
     use pretty_assertions::assert_eq;
 
-    use super::{Error, TypeChecker};
+    use super::Error;
     use crate::{
         name_res::Var,
         type_check::{
-            context::Context, RigidVar, TyClass, Type, TypeScheme, TypedVar,
+            context::Context, RigidVar, TyClass, Type, TypeCheckerImpl,
+            TypeScheme, TypedVar,
         },
         State,
     };
@@ -415,8 +425,10 @@ mod test {
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
         let mut ctx = Context::new();
-        let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut ctx, def, scheme.clone())
+        let mut state = State::default();
+        let mut imp = TypeCheckerImpl::new(&mut ctx, &mut state);
+        let typed_id = imp
+            .check_toplevel_def(def, scheme.clone())
             .expect("Type checking to succeed");
 
         let rigid_x = RigidVar(a);
@@ -449,8 +461,8 @@ mod test {
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
         let mut ctx = Context::new();
-        let typed_id = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut ctx, def, scheme)
+        let typed_id = TypeCheckerImpl::new(&mut ctx, &mut State::default())
+            .check_toplevel_def(def, scheme)
             .expect("Type checking to succeed");
 
         let typed_x = TypedVar(x, Type::BOOL);
@@ -492,8 +504,8 @@ mod test {
         let def = Define { ident: id, typ: None, value: id_value, span: SPAN };
 
         let mut ctx = Context::new();
-        let err = TypeChecker::new(&mut State::default())
-            .check_toplevel_def(&mut ctx, def, scheme);
+        let err = TypeCheckerImpl::new(&mut ctx, &mut State::default())
+            .check_toplevel_def(def, scheme);
 
         assert_eq!(
             err,
