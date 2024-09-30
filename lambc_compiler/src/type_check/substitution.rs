@@ -22,7 +22,6 @@ pub trait SubstitutionContext {
 
 pub struct Substitute<'ctx, C> {
     ctx: &'ctx mut C,
-    // todo: this should be handled by the `Types` struct as opposed to a single substitute instance
     unif_to_rigid: HashMap<UnifiableVar, RigidVar>,
 }
 
@@ -309,13 +308,6 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
             Statement::Define(def) => {
                 let Define { ident, typ, value, span } = def;
                 let (mut unbound, ty) = self.rigidify(ident.1);
-
-                if typ.is_some() {
-                    todo!(
-                        "Now is the time to handle 'typ' during substitution"
-                    )
-                }
-
                 let (un, ex) = self.rigidify_expr(value);
                 unbound.extend(un);
 
