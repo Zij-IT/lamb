@@ -1156,7 +1156,7 @@ mod tests {
             match ty {
                 Type::Error | Type::Con(_) => false,
                 Type::RigidVar(rig) => unbound.contains(rig),
-                Type::List(elem_ty) => self.has_unbound(unbound, &elem_ty),
+                Type::List(elem_ty) => self.has_unbound(unbound, elem_ty),
                 Type::Fun(f) => {
                     f.args.iter().any(|t| self.has_unbound(unbound, t))
                         || self.has_unbound(unbound, &f.ret_type)
@@ -2087,7 +2087,7 @@ mod tests {
             }))
         }
 
-        let x = Var(u32::MAX - 0);
+        let x = Var(u32::MAX);
         let y = Var(u32::MAX - 1);
 
         // fn(x) -> { return true; x };
@@ -2166,7 +2166,7 @@ mod tests {
             }))
         }
 
-        let x = Var(u32::MAX - 0);
+        let x = Var(u32::MAX);
 
         // fn(x) -> return return;
         let Expr::FnDef(test) = fndef(
@@ -2445,7 +2445,7 @@ mod tests {
             assert_eq!(expr, call(typed_id, vec![ty_expr]));
             assert_eq!(
                 scheme,
-                TypeScheme { unbound: set![], constraints: vec![], ty: ty }
+                TypeScheme { unbound: set![], constraints: vec![], ty }
             );
         }
     }

@@ -139,7 +139,7 @@ impl<'s> TypeChecker<'s> {
         &mut self,
         items: I,
     ) -> Context {
-        let mut ctx = Context::new(&mut self.state);
+        let mut ctx = Context::new(self.state);
         Self::add_builtin_functions(&mut ctx);
         Self::add_builtin_types(&mut ctx);
 
