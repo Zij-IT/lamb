@@ -399,6 +399,7 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
 
         // If no match arms are taken, use `Op::Pop`
         self.write_op(Op::Pop(NZ_ONE_U16));
+        self.lower_abort_for_case(c.span);
         self.write_const_op(Value::Nil);
 
         for jmp in after_case {
@@ -549,5 +550,19 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
             self.write_const_op(Value::Nil);
             self.write_op(Op::Return);
         }
+    }
+
+    fn lower_abort_for_case(&mut self, span: lambc_parse::Span) {
+        let abort = Expr::Call(Box::new(lambc_parse::Call {
+            callee: Expr::Ident(Ident {
+                raw: "nonexhaustive case".into(),
+                span,
+            }),
+            args: vec![Expr::Bool(BoolLit { value: false, span })],
+            span,
+        }));
+
+        self.lower_expr(&abort);
+        self.write_op(Op::Pop(NZ_ONE_U16));
     }
 }

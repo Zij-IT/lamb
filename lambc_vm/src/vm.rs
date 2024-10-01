@@ -98,6 +98,10 @@ pub enum Error {
     #[diagnostic(code("runtime::no-such-export"))]
     #[error("Module '{1}' doesn't export an item named '{0}'")]
     NoExportViaName(String, String),
+
+    #[diagnostic(code("runtime::nonexhaustive-case"))]
+    #[error("Arms of case do not cover all possible branches")]
+    CaseIsNotExhaustive,
 }
 
 // todo: value should have functions for these operations and this should
@@ -201,6 +205,11 @@ impl<'gc> Vm<'gc> {
         this.define_native("rand", Self::native_rand);
         this.define_native("user_int", Self::native_user_int);
         this.define_native("user_char", Self::native_user_char);
+        this.define_native(
+            "nonexhaustive case",
+            Self::native_nonexhaustive_case,
+        );
+
         this
     }
 
@@ -981,6 +990,13 @@ impl<'gc> Vm<'gc> {
                 .parse()
                 .map_err(|_| Error::InputConv(Value::Char('o').type_name()))?,
         ))
+    }
+
+    fn native_nonexhaustive_case(
+        _vm: &Vm<'_>,
+        _args: &[Value],
+    ) -> Result<Value> {
+        Err(Error::CaseIsNotExhaustive)
     }
 }
 
