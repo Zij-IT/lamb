@@ -3,34 +3,12 @@ source: lambc_parse/src/parse.rs
 expression: parser.parse_atom()
 ---
 Ok(
-    Path(
-        Path {
-            head: Ident {
-                raw: "one",
-                span: Span {
-                    start: 0,
-                    end: 3,
-                },
-            },
-            tail: [
-                Ident {
-                    raw: "two",
-                    span: Span {
-                        start: 5,
-                        end: 8,
-                    },
-                },
-                Ident {
-                    raw: "three",
-                    span: Span {
-                        start: 10,
-                        end: 15,
-                    },
-                },
-            ],
+    Ident(
+        Ident {
+            raw: "one",
             span: Span {
                 start: 0,
-                end: 15,
+                end: 3,
             },
         },
     ),

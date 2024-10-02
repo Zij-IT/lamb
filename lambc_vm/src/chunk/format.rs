@@ -34,7 +34,6 @@ impl<'a, 'b, 'c> ChunkFormatter<'a, 'b, 'c> {
     ) -> std::fmt::Result {
         print!("{offset:04} ");
         match op {
-            Op::Access => writeln!(f, "Access"),
             Op::Add => writeln!(f, "Add"),
             Op::Sub => writeln!(f, "Sub"),
             Op::BinAnd => writeln!(f, "BinAnd"),

@@ -225,7 +225,6 @@ impl<'a, 'b> Lowerer<'a, 'b> {
     fn write_op(&mut self, op: Op) {
         match op {
             Op::Add
-            | Op::Access
             | Op::BinAnd
             | Op::BinOr
             | Op::BinXor

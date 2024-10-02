@@ -17,7 +17,7 @@ use crate::{
     CharLit, CharText, Define, Else, Export, ExportItem, Expr, ExprStatement,
     F64Lit, FnDef, FnType, Generic, Generics, Group, I64Base, I64Lit, Ident,
     IdentPattern, If, IfCond, Import, ImportItem, Index, InnerPattern, Item,
-    Lexer, List, LiteralPattern, Module, NamedType, NilLit, Path, Pattern,
+    Lexer, List, LiteralPattern, Module, NamedType, NilLit, Pattern,
     RestPattern, Return, SimpleGeneric, SimpleGenerics, Span, Statement,
     StrLit, StrText, TokKind, Token, Type, Unary, UnaryOp,
 };
@@ -551,9 +551,6 @@ impl<'a> Parser<'a> {
             TokKind::If => self.parse_if()?,
             TokKind::Case => self.parse_case()?,
             TokKind::Return => self.parse_return()?,
-            TokKind::Ident if self.peek2().kind == TokKind::PathSep => {
-                self.parse_path()?
-            }
             _ => self.parse_literal()?,
         })
     }
@@ -967,27 +964,6 @@ impl<'a> Parser<'a> {
         Ok(Ident { raw: tok.slice.into(), span: tok.span })
     }
 
-    fn parse_path(&mut self) -> Result<Expr<Ident>> {
-        let head = self.parse_ident()?;
-        let mut tail = Vec::new();
-        self.expect(TokKind::PathSep)?;
-        let end_span = loop {
-            let ident = self.parse_ident()?;
-            let span = ident.span;
-            tail.push(ident);
-
-            if self.eat(TokKind::PathSep).is_none() {
-                break span;
-            }
-        };
-
-        Ok(Expr::Path(Box::new(Path {
-            span: Span::connect(head.span, end_span),
-            tail,
-            head,
-        })))
-    }
-
     /// Parses a series of comma separated `T`, with a trailing comma allowed.
     fn parse_node_list<T, F>(
         &mut self,
@@ -1388,7 +1364,6 @@ mod tests {
             }
         "#
         );
-        atom!("one::two::three");
     }
 
     #[test]

@@ -351,7 +351,6 @@ impl<'s> Resolver<'s> {
             Expr::Nil(n) => Expr::Nil(n),
             Expr::I64(i) => Expr::I64(i),
             Expr::F64(f) => Expr::F64(f),
-            Expr::Path(p) => Expr::Path(p),
             Expr::Char(c) => Expr::Char(c),
             Expr::Bool(b) => Expr::Bool(b),
             Expr::String(s) => Expr::String(s),

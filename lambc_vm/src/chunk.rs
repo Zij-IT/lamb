@@ -10,7 +10,6 @@ use crate::{gc::LambGc, value::Value};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Op {
     Add,
-    Access,
     BinAnd,
     BinNeg,
     BinOr,

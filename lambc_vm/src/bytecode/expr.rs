@@ -82,7 +82,6 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
             Expr::List(list) => self.lower_list(list),
             Expr::Group(gr) => self.lower_expr(&gr.value),
             Expr::Return(ret) => self.lower_return(ret),
-            Expr::Path(path) => self.lower_path(path),
         }
     }
 
@@ -289,40 +288,6 @@ impl<'a, 'b> super::Lowerer<'a, 'b> {
         self.write_op(Op::Pop(NZ_ONE_U16));
         self.lower_expr(rhs);
         self.patch_jump(idx);
-    }
-
-    fn lower_path(&mut self, path: &lambc_parse::Path) {
-        // Module::item1::item2
-        // ^^^^^^  ^^^^^  ^^^^^
-        //     |   |      |
-        //     |   |      +--> ModuleItemRef
-        //     |   |
-        //     |   +--> ModuleItemRef
-        //     |
-        //     +--> Expr
-        let first = &path.head;
-        let rest = &path.tail;
-        self.lower_ident(first);
-
-        let mut iter = rest.chunks_exact(2);
-        while let Some(
-            &[Ident { raw: ref left, .. }, Ident { raw: ref right, .. }],
-        ) = iter.next()
-        {
-            let left = Value::ModulePath(self.gc.intern(left));
-            let right = Value::ModulePath(self.gc.intern(right));
-            self.write_const_op(left);
-            self.write_op(Op::Access);
-            self.write_const_op(right);
-        }
-
-        let path = match iter.remainder() {
-            &[Ident { ref raw, .. }] => Value::ModulePath(self.gc.intern(raw)),
-            _ => return,
-        };
-
-        self.write_const_op(path);
-        self.write_op(Op::Access);
     }
 
     fn lower_if_expr(&mut self, if_: &If<Ident>) {

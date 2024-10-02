@@ -671,38 +671,6 @@ impl<'gc> Vm<'gc> {
                 Op::NumNeg => num_un_op!(-, self),
                 Op::BinNeg => self.num_un_op(ops::Not::not, "~")?,
                 Op::LogNeg => self.bool_un_op(ops::Not::not, "!")?,
-
-                Op::Access => {
-                    let rhs = self.pop();
-                    let lhs = self.pop();
-                    let (Value::ModulePath(path), Value::ModulePath(item)) =
-                        (lhs, rhs)
-                    else {
-                        return self.error(Error::NotAModule(lhs.type_name()));
-                    };
-
-                    let item = self
-                        .modules
-                        .get(&path)
-                        .ok_or_else(|| {
-                            Error::NoSuchModule(
-                                self.gc.deref(path).0.to_string(),
-                            )
-                        })
-                        .and_then(|module| {
-                            module.get_export(item).ok_or_else(|| {
-                                Error::NoExportViaName(
-                                    self.gc.deref(path).0.to_string(),
-                                    self.gc.deref(item).0.to_string(),
-                                )
-                            })
-                        });
-
-                    match item {
-                        Ok(v) => self.push(v),
-                        Err(e) => return self.error(e),
-                    }
-                }
                 Op::Add => self.add_op()?,
                 Op::Sub => num_bin_op!(-, self),
                 Op::Div => num_bin_op!(/, self),

@@ -840,33 +840,6 @@ pub struct Return<IdKind> {
     pub span: Span,
 }
 
-/// A path expression
-///
-/// This type of expression is created by using `::` for accessing the contents
-/// of a module.
-///
-/// # Breakdown
-///
-/// ```text
-/// |---------------------------| span
-/// module_name::sub_module::item
-/// |---------|  |--------------|
-/// ^ head       ^ tail
-/// ```
-// TODO:
-// Since this is supposed to be something that is done at compiled time, there
-// is probably a better way to represent this. Why is `head` separated from the
-// rest of the items?
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Path {
-    /// The initial variable to access
-    pub head: Ident,
-    /// The rest of the path elements
-    pub tail: Vec<Ident>,
-    /// The span of the entire path expression
-    pub span: Span,
-}
-
 /// All possible expressions found within Lamb
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr<IdKind> {
@@ -906,8 +879,6 @@ pub enum Expr<IdKind> {
     Binary(Box<Binary<IdKind>>),
     /// A return expression
     Return(Box<Return<IdKind>>),
-    /// A path expression
-    Path(Box<Path>),
 }
 
 impl<IdKind> Expr<IdKind> {
@@ -940,7 +911,6 @@ impl<IdKind: Spanned> Expr<IdKind> {
             Expr::Unary(e) => e.span,
             Expr::Binary(e) => e.span,
             Expr::Return(e) => e.span,
-            Expr::Path(e) => e.span,
         }
     }
 
@@ -958,7 +928,6 @@ impl<IdKind: Spanned> Expr<IdKind> {
             | Expr::List(_)
             | Expr::Index(_)
             | Expr::Call(_)
-            | Expr::Path(_)
             | Expr::Group(_) => false,
             Expr::Return(r) => {
                 r.value.as_ref().map_or(false, |e| e.ends_with_block())

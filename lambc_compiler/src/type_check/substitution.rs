@@ -247,7 +247,6 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
                 )
             }
             Expr::Case(c) => self.rigidify_case(*c),
-            Expr::Path(_) => todo!(),
             Expr::Return(e) => {
                 let Return { value, span } = *e;
                 if let Some(value) = value {

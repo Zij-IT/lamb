@@ -157,8 +157,6 @@ pub enum TokKind {
     Arrow,
     /// `..`
     DotDot,
-    /// `::`
-    PathSep,
 
     // Meta
     /// Used to indicate a comment
@@ -244,7 +242,6 @@ impl TokKind {
             TokKind::Bind => "a '@'",
             TokKind::Arrow => "a '->'",
             TokKind::DotDot => "the '..' pattern",
-            TokKind::PathSep => "a '::'",
             TokKind::Comment => "a comment",
             TokKind::End => "the end of the input",
             TokKind::Invalid => "an unrecognized token",
@@ -328,7 +325,7 @@ impl<'a> Lexer<'a> {
             b'<' => self.less(),
             b'>' => self.greater(),
             b'.' => self.dot(),
-            b':' => self.colon(),
+            b':' => self.simple(TokKind::Colon),
             b'-' => self.dash(),
             b'!' => self.bang(),
             b'|' => self.pipe(),
@@ -685,14 +682,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn colon(&mut self) -> Token<'a> {
-        let start = self.at;
-        match self.next() {
-            b':' => self.token_from(start, start + 2, TokKind::PathSep),
-            _ => self.token_from(start, start + 1, TokKind::Colon),
-        }
-    }
-
     fn dash(&mut self) -> Token<'a> {
         let start = self.at;
         match self.next() {
@@ -928,7 +917,6 @@ mod tests {
     #[test]
     fn lexes_colon_start() {
         lex_one(":", TokKind::Colon);
-        lex_one("::", TokKind::PathSep);
 
         let input = ":=:";
         let kinds = [TokKind::Colon, TokKind::Eq, TokKind::Colon];

@@ -117,7 +117,6 @@ where
             ),
             // The harder cases!
             Expr::Case(case) => self.infer_case(*case),
-            Expr::Path(_) => todo!(),
             Expr::If(iff) => self.infer_if(*iff),
             Expr::Group(g) => self.infer_group(*g),
             Expr::Return(ret) => self.infer_return(*ret),
@@ -1072,7 +1071,6 @@ fn does_expr_unconditionally_return<T>(e: &Expr<T>) -> bool {
             does_expr_unconditionally_return(&b.lhs)
                 || does_expr_unconditionally_return(&b.rhs)
         }
-        Expr::Path(_) => todo!(),
     }
 }
 
