@@ -12,7 +12,7 @@ This chapter will go through some of the types available in Lamb.
 assert_eq(nil, {});
 assert_eq(nil, if true {});
 assert_eq(nil, case 1 {});
-assert_eq(nil, println());
+assert_eq(nil, println(""));
 ```
 
 ## Boolean
@@ -90,13 +90,13 @@ Functions are just like other values, and can be passed around as variables to b
 ```
 -- This will fail because the function is not marked as recursive and so `fib` is
 -- not defined
-fib := fn(i) -> case i {
+let fib := fn(i) -> case i {
   0 | 1 -> 1,
   _ -> fib(i - 1) + fib(i - 2),
 };
 
 -- Now it will work!
-fib := rec fn(i) -> case i {
+let fib := rec fn(i) -> case i {
   0 | 1 -> 1,
   _ -> fib(i - 1) + fib(i - 2),
 };
@@ -108,10 +108,9 @@ Functions in Lamb are able to capture items from outside their scope, and becaus
 
 ---
 
-An array is a collection of any other kind of values. Unlike in other languages, those values are not required to share a type. Thus, the following are all valid arrays:
+An array is a collection of any other kind of values. Like in other languages, those values are required to share a type. Thus, the following are all valid arrays:
 
 ```
-[1, nil, "hi"]
 [1, 2, 3]
 [fn(i) -> i + 1, fn(i) -> i - 1]
 ```

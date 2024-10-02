@@ -21,7 +21,7 @@ Lamb only features lime comments, and these begin with a `--`:
 Lamb doesn't feature many reserved words: 
 
 ```
-fn case if elif else return struct union struct from import
+fn case if elif else return struct union struct from import let def
 ```
 
 So... just don't go using these for variable names.
@@ -42,18 +42,28 @@ _x_123
 
 Identifiers are case sensitive in Lamb, though choosing between camelCase and snake_case is a matter of personal preference.
 
+## Top-Level Definitions
+
+Top level definitions are bindings written in the outermost scope, and they begin with the `def` keyword. Top level definitions are required to have a type annotation.
+
+```
+def answer: int = 42; 
+def greeting: list[usv] = "hello there"; 
+```
+
 ## Blocks
 
 ---
 
-Blocks in Lamb are denoted by `{` `}` and are allowed to contain any series of statements followed by an expression. In fact, blocks themselves are expressions, and when the final item in a block is a statement, they evaluate to `nil`.
+Blocks in Lamb are denoted by `{` `}` and are allowed to contain any series of statements followed by an expression. In fact, blocks themselves are expressions, and when the final item in a block is a statement, they evaluate to `nil`. Blocks can also contain local definitions, denoted by the `let` keyword. Locals don't need type ascriptions.
 
 ```
-block := {
+def block: list[usv] = {
   print("hello");
   print(" world");
   println(" I am writing from Lamb!");
-  "And the value of this block is this string!"
+  let local := "And the value of this block is this string!";
+  local
 }; 
 ```
 
@@ -64,13 +74,13 @@ block := {
 Function definitions in Lamb take the form `fn(<args>) -> <expr>`. This allows them to either be in the short form, like:
 
 ```
-inc := fn(x) -> x + 1;  
+def inc := fn(x) -> x + 1;  
 ```
 
 or the more familiar form (from the perspective of a C developer):
 
 ```
-inc := fn(x) -> {
+def inc := fn(x) -> {
   x + 1
 };  
 ```
@@ -78,7 +88,7 @@ inc := fn(x) -> {
 Because blocks are just expressions, you can omit a return statement in a block if you would like, though you can of course still use one:
 
 ```
-inc := fn(x) -> {
+def inc := fn(x) -> {
   return x + 1;
 };  
 ```

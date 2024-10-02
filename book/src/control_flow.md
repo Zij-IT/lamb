@@ -67,7 +67,7 @@ case arr {
 Patterns can be arbitrarily nested and you can even bind patterns to values. For example, to sum an array, one could write:
 
 ```
-sum := rec fn(xs) -> case xs {
+let sum := rec fn(xs) -> case xs {
   [x, rest @ ..] -> x + sum(rest),
   [] -> 0,
 };
