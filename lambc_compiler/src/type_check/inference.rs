@@ -594,21 +594,10 @@ where
 
         // All types are required to be equal to the first, and the first determines
         // the expected type.
-        //
-        // todo: if there are no arms, then the type is never, as the code
-        //       will never progress past that point. The behavior of case
-        //       expressions with no arms should be specified in #25.
-        let case_ty = arm_tys
-            .into_iter()
-            .reduce(|l, r| {
-                cons.push(Constraint::TypeEqual {
-                    expected: l.clone(),
-                    got: r,
-                });
-                l
-            })
-            .unwrap_or(Type::NEVER);
+        let case_ty = Self::constrain_tys_eq(arm_tys)
+            .unwrap_or(Qualified::unconstrained(Type::NEVER));
 
+        cons.extend(case_ty.cons);
         (
             Qualified::constrained(
                 Expr::Case(Box::new(Case {
@@ -618,7 +607,7 @@ where
                 })),
                 cons,
             ),
-            case_ty,
+            case_ty.item,
         )
     }
 
@@ -693,18 +682,15 @@ where
             std::mem::swap(self.ctx.vars_mut(), &mut envs[0]);
         }
 
-        let ty = inner_tys
-            .into_iter()
-            .reduce(|l, r| {
-                cons.push(Constraint::TypeEqual {
-                    expected: l.clone(),
-                    got: r,
-                });
-                l
-            })
-            .unwrap();
+        let ty = Self::constrain_tys_eq(inner_tys)
+            .expect("A pattern must have at least one item");
 
-        (Qualified::constrained(Pattern { inner: ty_inners, span }, cons), ty)
+        cons.extend(ty.cons);
+
+        (
+            Qualified::constrained(Pattern { inner: ty_inners, span }, cons),
+            ty.item,
+        )
     }
 
     fn infer_inner_pattern(
@@ -794,23 +780,21 @@ where
             ty_patterns.push(ty_pat.item);
         }
 
-        let elem_typ = element_tys
-            .into_iter()
-            .reduce(|l, r| {
-                constraints.push(Constraint::TypeEqual {
-                    expected: l.clone(),
-                    got: r,
-                });
-                l
-            })
-            .unwrap_or_else(|| Type::UnifiableVar(self.fresh_ty_var()));
+        let elem_typ =
+            Self::constrain_tys_eq(element_tys).unwrap_or_else(|| {
+                Qualified::unconstrained(Type::UnifiableVar(
+                    self.fresh_ty_var(),
+                ))
+            });
+
+        constraints.extend(elem_typ.cons);
 
         // There should only ever be one. Before this but after name resolution
         // there should be a syntactic analysis step which transforms the AST so
         // that the fact there should only be one is built into the type.
         for rest in rest_tys {
             constraints.push(Constraint::TypeEqual {
-                expected: Type::List(Box::new(elem_typ.clone())),
+                expected: Type::List(Box::new(elem_typ.item.clone())),
                 got: rest.clone(),
             });
         }
@@ -823,7 +807,7 @@ where
                 })),
                 constraints,
             ),
-            Type::List(Box::new(elem_typ)),
+            Type::List(Box::new(elem_typ.item)),
         )
     }
 
@@ -1016,6 +1000,22 @@ where
         );
 
         sc.ty
+    }
+
+    // Constrains a list of types to be equal to the first item in the list.
+    fn constrain_tys_eq(
+        v: impl IntoIterator<Item = Type>,
+    ) -> Option<Qualified<Type>> {
+        let mut iter = v.into_iter();
+        let first = iter.next()?;
+        let cons = iter
+            .map(|ty| Constraint::TypeEqual {
+                expected: first.clone(),
+                got: ty,
+            })
+            .collect();
+
+        Some(Qualified::constrained(first, cons))
     }
 }
 
