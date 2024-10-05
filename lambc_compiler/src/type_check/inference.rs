@@ -669,17 +669,16 @@ where
 
         // Add constraints so that all patterns must declare all variables to have
         // the same types.
-        if let Some(first_env) = envs.first() {
-            let rest = envs.iter().skip(1);
+        if let Some((first, rest)) = envs.split_first_mut() {
             for env in rest {
-                let first = idents.iter().map(|v| first_env.type_of(*v).ty);
-                let next = idents.iter().map(|v| env.type_of(*v).ty);
-                for (l, r) in first.zip(next) {
-                    cons.push(Constraint::TypeEqual { expected: l, got: r });
+                for id in idents.iter().copied() {
+                    let expected = first.type_of(id).ty;
+                    let got = env.type_of(id).ty;
+                    cons.push(Constraint::TypeEqual { expected, got });
                 }
             }
 
-            std::mem::swap(self.ctx.vars_mut(), &mut envs[0]);
+            std::mem::swap(self.ctx.vars_mut(), first);
         }
 
         let ty = Self::constrain_tys_eq(inner_tys)
