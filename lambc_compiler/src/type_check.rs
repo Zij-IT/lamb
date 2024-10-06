@@ -83,20 +83,11 @@ impl<'s> TypeChecker<'s> {
         let mut item_map = HashMap::new();
         for module in modules.iter_mut() {
             let items = std::mem::take(&mut module.items);
-            // If this errors we can't properly build the import map because the types
-            // of all the variables aren't able to be used.
             let mut imp = TypeCheckerImpl::new(&mut ctx);
             let items =
                 imp.check_items(module.path, items).unwrap_or_default();
 
             item_map.insert(module.path, items);
-        }
-
-        // If we have an error from type-checking such that we can't rebuild the types
-        // for each of the variables for the input map, then we need to bail before we try
-        // to build the import map.
-        if self.state.has_errors() {
-            return Default::default();
         }
 
         let typemap = item_map
