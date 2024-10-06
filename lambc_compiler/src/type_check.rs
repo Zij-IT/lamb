@@ -98,32 +98,26 @@ impl<'s> TypeChecker<'s> {
             })
             .collect();
 
-        let mut import_map = HashMap::new();
-        let mut export_map = HashMap::new();
-        for module in modules.iter_mut() {
-            let imports = std::mem::take(&mut module.imports);
-            import_map.insert(
-                module.path,
-                Self::add_import_types(&typemap, imports),
-            );
+        let mut modules = modules
+            .into_iter()
+            .map(|m| Module {
+                exports: Self::add_export_types(&typemap, m.exports),
+                imports: Self::add_import_types(&typemap, m.imports),
+                items: vec![],
+                path: m.path,
+                span: m.span,
+            })
+            .collect::<Vec<Module<TypedVar, _>>>();
 
-            let exports = std::mem::take(&mut module.exports);
-            export_map.insert(
-                module.path,
-                Self::add_export_types(&typemap, exports),
+        for m in &mut modules {
+            m.items = std::mem::take(
+                item_map
+                    .get_mut(&m.path)
+                    .expect("Module should not have been removed"),
             );
         }
 
         modules
-            .into_iter()
-            .map(|m| Module {
-                exports: export_map.remove(&m.path).unwrap(),
-                imports: import_map.remove(&m.path).unwrap(),
-                items: item_map.remove(&m.path).unwrap(),
-                path: m.path,
-                span: m.span,
-            })
-            .collect()
     }
 
     fn build_ctx<'a, I: Iterator<Item = &'a Item<Var>>>(
