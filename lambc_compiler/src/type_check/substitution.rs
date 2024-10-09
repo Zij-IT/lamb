@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use lambc_parse::{
+use super::tree::{
     ArrayPattern, Binary, Block, Call, Case, CaseArm, Define, Else, Expr,
-    ExprStatement, FnDef, Group, IdentPattern, If, IfCond, Index,
-    InnerPattern, List, Pattern, Return, Statement, Unary,
+    ExprStmt, FnDef, Group, IdentPattern, If, IfCond, Index, InnerPattern,
+    List, Pattern, Return, Stmt, Unary,
 };
 
 use super::{Constraint, FnType, RigidVar, Type, UnifiableVar};
@@ -107,13 +107,13 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
     /// Substitutes the [`UnifiableVar`](`UnifiableVar`) within an [`Expr`] for the [`RigidVar`]
     pub(super) fn rigidify_expr(
         &mut self,
-        expr: Expr<TypedVar>,
-    ) -> (HashSet<RigidVar>, Expr<TypedVar>) {
+        expr: Expr,
+    ) -> (HashSet<RigidVar>, Expr) {
         match expr {
             Expr::Nil(n) => (HashSet::new(), Expr::Nil(n)),
-            Expr::I64(i) => (HashSet::new(), Expr::I64(i)),
-            Expr::F64(f) => (HashSet::new(), Expr::F64(f)),
-            Expr::Char(c) => (HashSet::new(), Expr::Char(c)),
+            Expr::Int(i) => (HashSet::new(), Expr::Int(i)),
+            Expr::Double(f) => (HashSet::new(), Expr::Double(f)),
+            Expr::Usv(c) => (HashSet::new(), Expr::Usv(c)),
             Expr::Bool(b) => (HashSet::new(), Expr::Bool(b)),
             Expr::String(s) => (HashSet::new(), Expr::String(s)),
             Expr::Ident(TypedVar(var, ty)) => {
@@ -121,7 +121,7 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
                 (unbound, Expr::Ident(TypedVar(var, ty)))
             }
             Expr::List(list) => {
-                let List { values, span } = list;
+                let List { values, span } = *list;
                 let mut unbound = HashSet::new();
                 let values = values
                     .into_iter()
@@ -132,7 +132,7 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
                     })
                     .collect();
 
-                (unbound, Expr::List(List { values, span }))
+                (unbound, Expr::List(Box::new(List { values, span })))
             }
             Expr::Group(g) => {
                 let Group { value, span } = *g;
@@ -270,8 +270,8 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
 
     fn rigidify_ifcond(
         &mut self,
-        ifcond: IfCond<TypedVar>,
-    ) -> (HashSet<RigidVar>, IfCond<TypedVar>) {
+        ifcond: IfCond,
+    ) -> (HashSet<RigidVar>, IfCond) {
         let IfCond { cond, body, span } = ifcond;
         let (mut unbound, cond) = self.rigidify_expr(cond);
         let (un, block) = self.rigidify_block_raw(body);
@@ -282,8 +282,8 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
 
     fn rigidify_block_raw(
         &mut self,
-        block: Block<TypedVar>,
-    ) -> (HashSet<RigidVar>, Block<TypedVar>) {
+        block: Block,
+    ) -> (HashSet<RigidVar>, Block) {
         let Block { statements, value, span } = block;
         let mut unbound = HashSet::new();
 
@@ -299,12 +299,9 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
         (unbound, Block { statements, value, span })
     }
 
-    fn rigidify_stmt(
-        &mut self,
-        stmt: Statement<TypedVar>,
-    ) -> (HashSet<RigidVar>, Statement<TypedVar>) {
+    fn rigidify_stmt(&mut self, stmt: Stmt) -> (HashSet<RigidVar>, Stmt) {
         match stmt {
-            Statement::Define(def) => {
+            Stmt::Def(def) => {
                 let Define { ident, typ, value, span } = def;
                 let (mut unbound, ty) = self.rigidify(ident.1);
                 let (un, ex) = self.rigidify_expr(value);
@@ -312,7 +309,7 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
 
                 (
                     unbound,
-                    Statement::Define(Define {
+                    Stmt::Def(Define {
                         ident: TypedVar(ident.0, ty),
                         typ,
                         value: ex,
@@ -320,18 +317,15 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
                     }),
                 )
             }
-            Statement::Expr(ex) => {
-                let ExprStatement { expr, span } = ex;
+            Stmt::Expr(ex) => {
+                let ExprStmt { expr, span } = ex;
                 let (unbound, expr) = self.rigidify_expr(expr);
-                (unbound, Statement::Expr(ExprStatement { expr, span }))
+                (unbound, Stmt::Expr(ExprStmt { expr, span }))
             }
         }
     }
 
-    fn rigidify_case(
-        &mut self,
-        c: Case<TypedVar>,
-    ) -> (HashSet<RigidVar>, Expr<TypedVar>) {
+    fn rigidify_case(&mut self, c: Case) -> (HashSet<RigidVar>, Expr) {
         let Case { scrutinee, arms, span } = c;
         let (mut un, scrutinee) = self.rigidify_expr(scrutinee);
         let arms = arms
@@ -348,8 +342,8 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
 
     fn rigidify_case_arm(
         &mut self,
-        arm: CaseArm<TypedVar>,
-    ) -> (HashSet<RigidVar>, CaseArm<TypedVar>) {
+        arm: CaseArm,
+    ) -> (HashSet<RigidVar>, CaseArm) {
         let CaseArm { pattern, body, span } = arm;
         let (mut un, pattern) = self.rigidify_pattern(pattern);
         let (u, body) = self.rigidify_expr(body);
@@ -360,8 +354,8 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
 
     fn rigidify_pattern(
         &mut self,
-        pattern: Pattern<TypedVar>,
-    ) -> (HashSet<RigidVar>, Pattern<TypedVar>) {
+        pattern: Pattern,
+    ) -> (HashSet<RigidVar>, Pattern) {
         let Pattern { inner, span } = pattern;
         let mut un = HashSet::default();
         let inner = inner
@@ -378,8 +372,8 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
 
     fn rigidify_inner_pattern(
         &mut self,
-        ip: InnerPattern<TypedVar>,
-    ) -> (HashSet<RigidVar>, InnerPattern<TypedVar>) {
+        ip: InnerPattern,
+    ) -> (HashSet<RigidVar>, InnerPattern) {
         match ip {
             InnerPattern::Rest(_) => (HashSet::default(), ip),
             InnerPattern::Literal(..) => (HashSet::default(), ip),

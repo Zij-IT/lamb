@@ -10,6 +10,7 @@ use super::{
     instantiate::{Instantiate, InstantiationContext},
     parsing::ParserContext,
     substitution::SubstitutionContext,
+    tree,
     unification::UnificationContext,
     Constraint, Error, FnType, Qualified, TyClass, Type, TypedVar,
     UnifiableVar,
@@ -43,25 +44,27 @@ where
         &mut self,
         expr: Expr<Var>,
         typ: Type,
-    ) -> Qualified<Expr<TypedVar>> {
+    ) -> Qualified<tree::Expr> {
         match (expr, typ) {
-            (Expr::Nil(n), Type::NIL) => {
-                Qualified::unconstrained(Expr::Nil(n))
-            }
-            (Expr::I64(i), Type::INT) => {
-                Qualified::unconstrained(Expr::I64(i))
-            }
-            (Expr::Char(c), Type::USV) => {
-                Qualified::unconstrained(Expr::Char(c))
-            }
-            (Expr::Bool(b), Type::BOOL) => {
-                Qualified::unconstrained(Expr::Bool(b))
-            }
-            (Expr::F64(f), Type::DOUBLE) => {
-                Qualified::unconstrained(Expr::F64(f))
-            }
+            (Expr::Nil(n), Type::NIL) => Qualified::unconstrained(
+                tree::Expr::Nil(convert_nil_literal(n)),
+            ),
+            (Expr::I64(i), Type::INT) => Qualified::unconstrained(
+                tree::Expr::Int(convert_int_literal(i)),
+            ),
+            (Expr::Char(c), Type::USV) => Qualified::unconstrained(
+                tree::Expr::Usv(convert_usv_literal(c)),
+            ),
+            (Expr::Bool(b), Type::BOOL) => Qualified::unconstrained(
+                tree::Expr::Bool(convert_bool_literal(b)),
+            ),
+            (Expr::F64(f), Type::DOUBLE) => Qualified::unconstrained(
+                tree::Expr::Double(convert_double_literal(f)),
+            ),
             (Expr::String(s), Type::List(e)) if *e == Type::USV => {
-                Qualified::unconstrained(Expr::String(s))
+                Qualified::unconstrained(tree::Expr::String(
+                    convert_str_literal(s),
+                ))
             }
             (expr, expected_ty) => {
                 let (mut out, actual_ty) = self.infer_expr(expr);
@@ -82,37 +85,54 @@ where
         expr: Expr<Var>,
         // todo: The type is what is actually constrained here, so move `Qualified`
         // over to the type.
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         match expr {
             // The easy cases!
-            Expr::Nil(n) => {
-                (Qualified::unconstrained(Expr::Nil(n)), Type::NIL)
-            }
-            Expr::I64(i) => {
-                (Qualified::unconstrained(Expr::I64(i)), Type::INT)
-            }
-            Expr::F64(f) => {
-                (Qualified::unconstrained(Expr::F64(f)), Type::DOUBLE)
-            }
-            Expr::Char(c) => {
-                (Qualified::unconstrained(Expr::Char(c)), Type::USV)
-            }
-            Expr::Bool(b) => {
-                (Qualified::unconstrained(Expr::Bool(b)), Type::BOOL)
-            }
+            Expr::Nil(n) => (
+                Qualified::unconstrained(tree::Expr::Nil(
+                    convert_nil_literal(n),
+                )),
+                Type::NIL,
+            ),
+            Expr::I64(i) => (
+                Qualified::unconstrained(tree::Expr::Int(
+                    convert_int_literal(i),
+                )),
+                Type::INT,
+            ),
+            Expr::F64(f) => (
+                Qualified::unconstrained(tree::Expr::Double(
+                    convert_double_literal(f),
+                )),
+                Type::DOUBLE,
+            ),
+            Expr::Char(c) => (
+                Qualified::unconstrained(tree::Expr::Usv(
+                    convert_usv_literal(c),
+                )),
+                Type::USV,
+            ),
+            Expr::Bool(b) => (
+                Qualified::unconstrained(tree::Expr::Bool(
+                    convert_bool_literal(b),
+                )),
+                Type::BOOL,
+            ),
             Expr::Ident(i) => {
                 let ty = self.ctx.vars_mut().type_of(i);
                 let ty = Instantiate::new(self.ctx).scheme(ty);
                 (
                     Qualified::constrained(
-                        Expr::Ident(TypedVar(i, ty.item.clone())),
+                        tree::Expr::Ident(TypedVar(i, ty.item.clone())),
                         ty.cons,
                     ),
                     ty.item,
                 )
             }
             Expr::String(s) => (
-                Qualified::unconstrained(Expr::String(s)),
+                Qualified::unconstrained(tree::Expr::String(
+                    convert_str_literal(s),
+                )),
                 Type::List(Box::new(Type::USV)),
             ),
             // The harder cases!
@@ -133,7 +153,7 @@ where
     fn infer_fndef(
         &mut self,
         fndef: FnDef<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let FnDef { args, body, recursive, span } = fndef;
         let mut new_args = Vec::with_capacity(args.len());
         let mut typs = Vec::with_capacity(args.len());
@@ -158,7 +178,7 @@ where
         (
             Qualified {
                 cons: body_out.cons,
-                item: Expr::FnDef(Box::new(FnDef {
+                item: tree::Expr::FnDef(Box::new(tree::FnDef {
                     args: new_args,
                     body: body_out.item,
                     recursive,
@@ -179,7 +199,7 @@ where
     fn infer_call(
         &mut self,
         call: Call<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let mut cons = Vec::new();
         let mut asts = Vec::new();
         let mut typs = Vec::new();
@@ -202,7 +222,7 @@ where
 
         (
             Qualified::constrained(
-                Expr::Call(Box::new(Call {
+                tree::Expr::Call(Box::new(tree::Call {
                     callee: fn_out.item,
                     args: asts,
                     span: call.span,
@@ -213,10 +233,7 @@ where
         )
     }
 
-    fn infer_idx(
-        &mut self,
-        idx: Index<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    fn infer_idx(&mut self, idx: Index<Var>) -> (Qualified<tree::Expr>, Type) {
         let list_elem_ty = self.fresh_ty_var();
         let list_ty = Type::List(Box::new(Type::UnifiableVar(list_elem_ty)));
 
@@ -236,7 +253,7 @@ where
 
         (
             Qualified::constrained(
-                Expr::Index(Box::new(Index {
+                tree::Expr::Index(Box::new(tree::Index {
                     lhs: idxee_out.item,
                     rhs: index_out.item,
                     span: idx.span,
@@ -250,11 +267,11 @@ where
     fn infer_group(
         &mut self,
         group: Group<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let (res, ty) = self.infer_expr(group.value);
         (
             Qualified::constrained(
-                Expr::Group(Box::new(Group {
+                tree::Expr::Group(Box::new(tree::Group {
                     value: res.item,
                     span: group.span,
                 })),
@@ -267,7 +284,7 @@ where
     fn infer_list(
         &mut self,
         list: List<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let mut values = list.values.into_iter();
         let (mut cons, mut asts, first_ty) = match values.next() {
             Some(e) => {
@@ -285,7 +302,10 @@ where
 
         (
             Qualified::constrained(
-                Expr::List(List { values: asts, span: list.span }),
+                tree::Expr::List(Box::new(tree::List {
+                    values: asts,
+                    span: list.span,
+                })),
                 cons,
             ),
             Type::List(Box::new(first_ty)),
@@ -295,24 +315,33 @@ where
     fn infer_unary(
         &mut self,
         unary: Unary<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let Unary { rhs, op, span, op_span } = unary;
         let (out, ty) = self.infer_expr(rhs);
+        let (con, op) = match op {
+            UnaryOp::Nneg => (
+                Constraint::IsIn(TyClass::Num, ty.clone()),
+                tree::UnaryOp::Nneg,
+            ),
+            UnaryOp::Lnot => (
+                Constraint::TypeEqual {
+                    expected: Type::BOOL,
+                    got: ty.clone(),
+                },
+                tree::UnaryOp::Lnot,
+            ),
+            UnaryOp::Bneg => (
+                Constraint::TypeEqual { expected: Type::INT, got: ty.clone() },
+                tree::UnaryOp::Bneg,
+            ),
+        };
 
         let mut cons = out.cons;
-        cons.push(match op {
-            UnaryOp::Nneg => Constraint::IsIn(TyClass::Num, ty.clone()),
-            UnaryOp::Lnot => {
-                Constraint::TypeEqual { expected: Type::BOOL, got: ty.clone() }
-            }
-            UnaryOp::Bneg => {
-                Constraint::TypeEqual { expected: Type::INT, got: ty.clone() }
-            }
-        });
+        cons.push(con);
 
         (
             Qualified::constrained(
-                Expr::Unary(Box::new(Unary {
+                tree::Expr::Unary(Box::new(tree::Unary {
                     rhs: out.item,
                     op,
                     span,
@@ -329,7 +358,7 @@ where
     fn infer_binary(
         &mut self,
         binary: Binary<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let (lhs, rhs, cons, ty) = match binary.op {
             // These operators require that both the `[l|r]hs` is a function type
             // with a singular argument, and `[r|l]hs` is the type of the parameter
@@ -512,25 +541,50 @@ where
             }
         };
 
-        let bin = Binary {
+        let op = match binary.op {
+            BinaryOp::Appl => tree::BinaryOp::Appl,
+            BinaryOp::Appr => tree::BinaryOp::Appr,
+            BinaryOp::Cpsl => tree::BinaryOp::Cpsl,
+            BinaryOp::Cpsr => tree::BinaryOp::Cpsr,
+            BinaryOp::Land => tree::BinaryOp::Land,
+            BinaryOp::Lor => tree::BinaryOp::Lor,
+            BinaryOp::Eq => tree::BinaryOp::Eq,
+            BinaryOp::Ne => tree::BinaryOp::Ne,
+            BinaryOp::Ge => tree::BinaryOp::Ge,
+            BinaryOp::Gt => tree::BinaryOp::Gt,
+            BinaryOp::Le => tree::BinaryOp::Le,
+            BinaryOp::Lt => tree::BinaryOp::Lt,
+            BinaryOp::Bor => tree::BinaryOp::Bor,
+            BinaryOp::Bxor => tree::BinaryOp::Bxor,
+            BinaryOp::Band => tree::BinaryOp::Band,
+            BinaryOp::Shr => tree::BinaryOp::Shr,
+            BinaryOp::Shl => tree::BinaryOp::Shl,
+            BinaryOp::Add => tree::BinaryOp::Add,
+            BinaryOp::Sub => tree::BinaryOp::Sub,
+            BinaryOp::Div => tree::BinaryOp::Div,
+            BinaryOp::Mod => tree::BinaryOp::Mod,
+            BinaryOp::Mul => tree::BinaryOp::Mul,
+        };
+
+        let bin = tree::Binary {
             lhs,
             rhs,
-            op: binary.op,
+            op,
             span: binary.span,
             op_span: binary.op_span,
         };
 
-        (Qualified::constrained(Expr::Binary(Box::new(bin)), cons), ty)
+        (Qualified::constrained(tree::Expr::Binary(Box::new(bin)), cons), ty)
     }
 
     fn infer_block(
         &mut self,
         block: Block<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let (res, ty) = self.infer_block_raw(block);
         (
             Qualified::constrained(
-                Expr::Block(Box::new(Block {
+                tree::Expr::Block(Box::new(tree::Block {
                     statements: res.item.statements,
                     value: res.item.value,
                     span: res.item.span,
@@ -544,7 +598,7 @@ where
     pub(super) fn infer_block_raw(
         &mut self,
         block: Block<Var>,
-    ) -> (Qualified<Block<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Block>, Type) {
         let returns = does_block_unconditionally_return(&block);
         let Block { statements, value, span } = block;
 
@@ -568,7 +622,7 @@ where
 
         (
             Qualified::constrained(
-                Block { statements: stmts, value: val, span },
+                tree::Block { statements: stmts, value: val, span },
                 cons,
             ),
             ty,
@@ -578,7 +632,7 @@ where
     fn infer_case(
         &mut self,
         case: Case<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let Case { scrutinee, arms, span } = case;
         let (scrut, scrut_ty) = self.infer_expr(scrutinee);
         let mut cons = scrut.cons;
@@ -600,7 +654,7 @@ where
         cons.extend(case_ty.cons);
         (
             Qualified::constrained(
-                Expr::Case(Box::new(Case {
+                tree::Expr::Case(Box::new(tree::Case {
                     scrutinee: scrut.item,
                     arms: ty_arms,
                     span,
@@ -615,7 +669,7 @@ where
         &mut self,
         arm: CaseArm<Var>,
         scrut_ty: Type,
-    ) -> (Qualified<CaseArm<TypedVar>>, Type) {
+    ) -> (Qualified<tree::CaseArm>, Type) {
         let CaseArm { pattern, body, span } = arm;
         let (pat, pat_ty) = self.infer_pattern(pattern);
         let (body, body_ty) = self.infer_expr(body);
@@ -627,7 +681,7 @@ where
 
         (
             Qualified::constrained(
-                CaseArm { pattern: pat.item, body: body.item, span },
+                tree::CaseArm { pattern: pat.item, body: body.item, span },
                 cons,
             ),
             body_ty,
@@ -637,7 +691,7 @@ where
     fn infer_pattern(
         &mut self,
         pat: Pattern<Var>,
-    ) -> (Qualified<Pattern<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Pattern>, Type) {
         let mut idents: Vec<Var> =
             pat.binding_names().into_iter().copied().collect();
         idents.sort_by_key(|v| v.0);
@@ -687,7 +741,10 @@ where
         cons.extend(ty.cons);
 
         (
-            Qualified::constrained(Pattern { inner: ty_inners, span }, cons),
+            Qualified::constrained(
+                tree::Pattern { inner: ty_inners, span },
+                cons,
+            ),
             ty.item,
         )
     }
@@ -695,39 +752,63 @@ where
     fn infer_inner_pattern(
         &mut self,
         pat: InnerPattern<Var>,
-    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+    ) -> (Qualified<tree::InnerPattern>, Type) {
         use InnerPattern as Ip;
         match pat {
             Ip::Literal(lit) => self.infer_literal_pattern(*lit),
             Ip::Array(arr) => self.infer_array_pattern(*arr),
             Ip::Ident(id) => self.infer_ident_pattern(*id),
-            Ip::Rest(r) => (
-                Qualified::unconstrained(Ip::Rest(r)),
-                Type::List(Box::new(Type::UnifiableVar(self.fresh_ty_var()))),
-            ),
+            Ip::Rest(r) => {
+                let rest = tree::RestPattern { span: r.span };
+                (
+                    Qualified::unconstrained(tree::InnerPattern::Rest(
+                        Box::new(rest),
+                    )),
+                    Type::List(Box::new(Type::UnifiableVar(
+                        self.fresh_ty_var(),
+                    ))),
+                )
+            }
         }
     }
 
     fn infer_literal_pattern(
         &mut self,
         lit: LiteralPattern,
-    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+    ) -> (Qualified<tree::InnerPattern>, Type) {
         use LiteralPattern as Lp;
         let (lit, ty) = match lit {
-            Lp::String(s) => (Lp::String(s), Type::List(Box::new(Type::USV))),
-            Lp::Bool(b) => (Lp::Bool(b), Type::BOOL),
-            Lp::Char(c) => (Lp::Char(c), Type::USV),
-            Lp::I64(i) => (Lp::I64(i), Type::INT),
-            Lp::Nil(n) => (Lp::Nil(n), Type::NIL),
+            Lp::String(s) => (
+                tree::LiteralPattern::String(convert_str_literal(s)),
+                Type::List(Box::new(Type::USV)),
+            ),
+            Lp::Bool(b) => (
+                tree::LiteralPattern::Bool(convert_bool_literal(b)),
+                Type::BOOL,
+            ),
+            Lp::Char(c) => {
+                (tree::LiteralPattern::Usv(convert_usv_literal(c)), Type::USV)
+            }
+            Lp::I64(i) => {
+                (tree::LiteralPattern::Int(convert_int_literal(i)), Type::INT)
+            }
+            Lp::Nil(n) => {
+                (tree::LiteralPattern::Nil(convert_nil_literal(n)), Type::NIL)
+            }
         };
 
-        (Qualified::unconstrained(InnerPattern::Literal(Box::new(lit))), ty)
+        (
+            Qualified::unconstrained(tree::InnerPattern::Literal(Box::new(
+                lit,
+            ))),
+            ty,
+        )
     }
 
     fn infer_ident_pattern(
         &mut self,
         id: IdentPattern<Var>,
-    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+    ) -> (Qualified<tree::InnerPattern>, Type) {
         let IdentPattern { ident, bound, span } = id;
         let (bound, ty, mut cons) = match bound {
             Some(pat) => {
@@ -745,7 +826,7 @@ where
 
         (
             Qualified::constrained(
-                InnerPattern::Ident(Box::new(IdentPattern {
+                tree::InnerPattern::Ident(Box::new(tree::IdentPattern {
                     ident: TypedVar(ident, ty.clone()),
                     bound,
                     span,
@@ -759,7 +840,7 @@ where
     fn infer_array_pattern(
         &mut self,
         arr: ArrayPattern<Var>,
-    ) -> (Qualified<InnerPattern<TypedVar>>, Type) {
+    ) -> (Qualified<tree::InnerPattern>, Type) {
         let ArrayPattern { patterns, span } = arr;
 
         let mut constraints = vec![];
@@ -800,7 +881,7 @@ where
 
         (
             Qualified::constrained(
-                InnerPattern::Array(Box::new(ArrayPattern {
+                tree::InnerPattern::Array(Box::new(tree::ArrayPattern {
                     patterns: ty_patterns,
                     span,
                 })),
@@ -813,12 +894,12 @@ where
     pub(super) fn infer_if(
         &mut self,
         iff: If<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let If { cond, elif, els_, span } = iff;
         let cond_out = self.check_expr(cond.cond, Type::BOOL);
         let (body_out, body_ty) = self.infer_block_raw(cond.body);
 
-        let first = IfCond {
+        let first = tree::IfCond {
             cond: cond_out.item,
             body: body_out.item,
             span: cond.span,
@@ -840,7 +921,7 @@ where
                 got: elif_ty.clone(),
             });
 
-            elifs.push(IfCond {
+            elifs.push(tree::IfCond {
                 cond: cond_out.item,
                 body: body_out.item,
                 span,
@@ -855,12 +936,12 @@ where
                 got: else_ty.clone(),
             });
 
-            Else { body: body_out.item, span }
+            tree::Else { body: body_out.item, span }
         });
 
         (
             Qualified::constrained(
-                Expr::If(Box::new(If {
+                tree::Expr::If(Box::new(tree::If {
                     cond: first,
                     elif: elifs,
                     els_,
@@ -875,7 +956,7 @@ where
     fn infer_return(
         &mut self,
         ret: Return<Var>,
-    ) -> (Qualified<Expr<TypedVar>>, Type) {
+    ) -> (Qualified<tree::Expr>, Type) {
         let Return { value, span } = ret;
         let ret_ty = self.ret_type.last().cloned().unwrap_or_else(|| {
             self.ctx.add_error(Error::ReturnOutOfFunction);
@@ -896,24 +977,18 @@ where
             ),
         };
 
-        let ret = Expr::Return(Box::new(Return { value, span }));
+        let ret = tree::Expr::Return(Box::new(tree::Return { value, span }));
         (Qualified::constrained(ret, cons), Type::NEVER)
     }
 
-    fn process_stmt(
-        &mut self,
-        stmt: Statement<Var>,
-    ) -> Qualified<Statement<TypedVar>> {
+    fn process_stmt(&mut self, stmt: Statement<Var>) -> Qualified<tree::Stmt> {
         match stmt {
             Statement::Define(def) => self.process_def_stmt(def),
             Statement::Expr(expr) => self.process_expr_stmt(expr),
         }
     }
 
-    fn process_def_stmt(
-        &mut self,
-        def: Define<Var>,
-    ) -> Qualified<Statement<TypedVar>> {
+    fn process_def_stmt(&mut self, def: Define<Var>) -> Qualified<tree::Stmt> {
         let Define { ident, typ, value, span } = def;
 
         // Add an entry in for the identifier with a new type
@@ -961,7 +1036,12 @@ where
         }
 
         Qualified::constrained(
-            Statement::Define(Define { ident, typ, value: out.item, span }),
+            tree::Stmt::Def(tree::Define {
+                ident,
+                typ,
+                value: out.item,
+                span,
+            }),
             cons,
         )
     }
@@ -969,11 +1049,11 @@ where
     fn process_expr_stmt(
         &mut self,
         expr: ExprStatement<Var>,
-    ) -> Qualified<Statement<TypedVar>> {
+    ) -> Qualified<tree::Stmt> {
         let ExprStatement { expr, span } = expr;
         let (out, _ty) = self.infer_expr(expr);
         Qualified::constrained(
-            Statement::Expr(ExprStatement { expr: out.item, span }),
+            tree::Stmt::Expr(tree::ExprStmt { expr: out.item, span }),
             out.cons,
         )
     }
@@ -1081,6 +1161,39 @@ fn does_block_unconditionally_return<T>(b: &Block<T>) -> bool {
 fn does_ifcond_unconditionally_return<T>(i: &IfCond<T>) -> bool {
     does_expr_unconditionally_return(&i.cond)
         || does_block_unconditionally_return(&i.body)
+}
+
+fn convert_str_literal(s: lambc_parse::StrLit) -> tree::StrLit {
+    let text = s.text.map(|t| tree::StrText { inner: t.inner, span: t.span });
+    tree::StrLit { text, span: s.span }
+}
+
+fn convert_bool_literal(b: lambc_parse::BoolLit) -> tree::BoolLit {
+    tree::BoolLit { value: b.value, span: b.span }
+}
+
+fn convert_usv_literal(c: lambc_parse::CharLit) -> tree::UsvLit {
+    let text = c.text.map(|t| tree::UsvText { inner: t.inner, span: t.span });
+    tree::UsvLit { text, span: c.span }
+}
+
+fn convert_int_literal(i: lambc_parse::I64Lit) -> tree::IntLit {
+    let base = match i.base {
+        lambc_parse::I64Base::Bin => tree::IntBase::Bin,
+        lambc_parse::I64Base::Oct => tree::IntBase::Oct,
+        lambc_parse::I64Base::Dec => tree::IntBase::Dec,
+        lambc_parse::I64Base::Hex => tree::IntBase::Hex,
+    };
+
+    tree::IntLit { base, value: i.value, span: i.span }
+}
+
+fn convert_double_literal(f: lambc_parse::F64Lit) -> tree::DoubleLit {
+    tree::DoubleLit { value: f.value, span: f.span }
+}
+
+fn convert_nil_literal(n: lambc_parse::NilLit) -> tree::NilLit {
+    tree::NilLit { span: n.span }
 }
 
 #[cfg(test)]

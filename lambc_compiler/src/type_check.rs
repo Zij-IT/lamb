@@ -6,6 +6,7 @@ mod instantiate;
 mod parsing;
 mod scheme;
 mod substitution;
+pub mod tree;
 mod types;
 mod unification;
 
@@ -76,7 +77,7 @@ impl<'s> TypeChecker<'s> {
     pub fn check_modules(
         &mut self,
         mut modules: Vec<Module<Var, PathRef>>,
-    ) -> Vec<Module<TypedVar, PathRef>> {
+    ) -> Vec<tree::Module> {
         let mut ctx =
             self.build_ctx(modules.iter().flat_map(|i| i.items.as_slice()));
 
@@ -90,24 +91,16 @@ impl<'s> TypeChecker<'s> {
             item_map.insert(module.path, items);
         }
 
-        let typemap = item_map
-            .values()
-            .flatten()
-            .map(|i| match i {
-                Item::Def(def) => (def.ident.0, &def.ident),
-            })
-            .collect();
-
         let mut modules = modules
             .into_iter()
-            .map(|m| Module {
-                exports: Self::add_export_types(&typemap, m.exports),
-                imports: Self::add_import_types(&typemap, m.imports),
+            .map(|m| tree::Module {
+                exports: Self::add_export_types(m.exports),
+                imports: Self::add_import_types(m.imports),
                 items: vec![],
                 path: m.path,
                 span: m.span,
             })
-            .collect::<Vec<Module<TypedVar, _>>>();
+            .collect::<Vec<tree::Module>>();
 
         for m in &mut modules {
             m.items = std::mem::take(
@@ -204,19 +197,18 @@ impl<'s> TypeChecker<'s> {
     }
 
     fn add_import_types(
-        globals: &HashMap<Var, &TypedVar>,
         imports: Vec<Import<Var, PathRef>>,
-    ) -> Vec<Import<TypedVar, PathRef>> {
+    ) -> Vec<tree::Import> {
         imports
             .into_iter()
             .map(|Import { file, name: _, items, star, span, path_span }| {
-                Import {
+                tree::Import {
                     file,
                     // TODO: Add a type for `name`. This should be done in `build_env`
                     name: None,
                     items: items
                         .into_iter()
-                        .map(|i| Self::add_import_item_type(globals, i))
+                        .map(Self::add_import_item_type)
                         .collect(),
                     star,
                     span,
@@ -226,42 +218,25 @@ impl<'s> TypeChecker<'s> {
             .collect()
     }
 
-    fn add_import_item_type(
-        globals: &HashMap<Var, &TypedVar>,
-        i: ImportItem<Var>,
-    ) -> ImportItem<TypedVar> {
-        ImportItem {
-            item: globals[&i.item].clone(),
-            alias: i.alias.map(|a| globals[&a].clone()),
-            span: i.span,
-        }
+    fn add_import_item_type(i: ImportItem<Var>) -> tree::ImportItem {
+        tree::ImportItem { item: i.item, alias: i.alias, span: i.span }
     }
 
-    fn add_export_types(
-        globals: &HashMap<Var, &TypedVar>,
-        exports: Vec<Export<Var>>,
-    ) -> Vec<Export<TypedVar>> {
+    fn add_export_types(exports: Vec<Export<Var>>) -> Vec<tree::Export> {
         exports
             .into_iter()
-            .map(|Export { items, span }| Export {
+            .map(|Export { items, span }| tree::Export {
                 items: items
                     .into_iter()
-                    .map(|e| Self::add_export_item_type(globals, e))
+                    .map(Self::add_export_item_type)
                     .collect(),
                 span,
             })
             .collect()
     }
 
-    fn add_export_item_type(
-        globals: &HashMap<Var, &TypedVar>,
-        i: ExportItem<Var>,
-    ) -> ExportItem<TypedVar> {
-        ExportItem {
-            item: globals[&i.item].clone(),
-            alias: i.alias.map(|a| globals[&a].clone()),
-            span: i.span,
-        }
+    fn add_export_item_type(i: ExportItem<Var>) -> tree::ExportItem {
+        tree::ExportItem { item: i.item, alias: i.alias, span: i.span }
     }
 }
 
@@ -278,7 +253,7 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
         &mut self,
         path: PathRef,
         items: Vec<Item<Var>>,
-    ) -> std::result::Result<Vec<Item<TypedVar>>, ()> {
+    ) -> std::result::Result<Vec<tree::Item>, ()> {
         let mut typed_items = Vec::with_capacity(items.len());
         for item in items {
             match item {
@@ -287,7 +262,7 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
                     let res = self.check_toplevel_def(def, scheme);
 
                     match res {
-                        Ok(ast) => typed_items.push(Item::Def(ast)),
+                        Ok(ast) => typed_items.push(tree::Item::Def(ast)),
                         Err(er) => self.ctx.state.add_error(er, Some(path)),
                     }
                 }
@@ -305,7 +280,7 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
         &mut self,
         def: Define<Var>,
         scheme: TypeScheme,
-    ) -> Result<Define<TypedVar>> {
+    ) -> Result<tree::Define> {
         if def.value.is_recursive() {
             // Nothing to do in the case of a recursive bound because top-level definitions
             // now require types.
@@ -333,7 +308,7 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
 
         // let reduced = inf.reduce_constraints(&unbound, cons);
 
-        Ok(Define {
+        Ok(tree::Define {
             ident: TypedVar(def.ident, ty),
             typ: None,
             value: expr,
