@@ -1036,7 +1036,7 @@ where
         }
 
         Qualified::constrained(
-            tree::Stmt::Def(tree::Define {
+            tree::Stmt::Def(tree::LocalDefine {
                 ident,
                 typ,
                 value: out.item,

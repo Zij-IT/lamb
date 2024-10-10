@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use super::tree::{
-    ArrayPattern, Binary, Block, Call, Case, CaseArm, Define, Else, Expr,
-    ExprStmt, FnDef, Group, IdentPattern, If, IfCond, Index, InnerPattern,
-    List, Pattern, Return, Stmt, Unary,
+    ArrayPattern, Binary, Block, Call, Case, CaseArm, Else, Expr, ExprStmt,
+    FnDef, Group, IdentPattern, If, IfCond, Index, InnerPattern, List,
+    LocalDefine, Pattern, Return, Stmt, Unary,
 };
 
 use super::{Constraint, FnType, RigidVar, Type, UnifiableVar};
@@ -302,14 +302,14 @@ impl<'ctx, C: SubstitutionContext> Substitute<'ctx, C> {
     fn rigidify_stmt(&mut self, stmt: Stmt) -> (HashSet<RigidVar>, Stmt) {
         match stmt {
             Stmt::Def(def) => {
-                let Define { ident, typ, value, span } = def;
+                let LocalDefine { ident, typ, value, span } = def;
                 let (mut unbound, ty) = self.rigidify(ident.1);
                 let (un, ex) = self.rigidify_expr(value);
                 unbound.extend(un);
 
                 (
                     unbound,
-                    Stmt::Def(Define {
+                    Stmt::Def(LocalDefine {
                         ident: TypedVar(ident.0, ty),
                         typ,
                         value: ex,

@@ -133,13 +133,12 @@ pub struct ExportItem {
 /// For now this consists of top-level variable definitions.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Item {
-    Def(Define),
+    Def(TopDefine),
 }
 
-/// A variable definition
+/// A top-level variable definition
 ///
-/// This node is used both for item definitions, as well as local variable
-/// definitions. The distinction is soley based on the parent node.
+/// This node is used both for item definitions.
 ///
 /// # Breakdown
 ///
@@ -153,7 +152,34 @@ pub enum Item {
 /// ^ ident
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Define {
+pub struct TopDefine {
+    /// The name of the item or local variable being defined
+    pub ident: TypedVar,
+    /// The type of the `value`
+    pub typ: super::TypeScheme,
+    /// The expression whose value will be assigned to `ident`
+    pub value: Expr,
+    /// The span of the entire definition
+    pub span: Span,
+}
+
+/// A local definition
+///
+/// This node definitions of local variables
+///
+/// # Breakdown
+///
+/// ```text
+///
+/// |------------------------| span
+/// my_var : string = "hello";
+/// |----|   |----|   |-----|
+/// |        |        ^ value
+/// |        ^ typ
+/// ^ ident
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocalDefine {
     /// The name of the item or local variable being defined
     pub ident: TypedVar,
     /// The expected type of the `value`
@@ -864,7 +890,7 @@ pub struct Return {
 /// A definition, or an expression, which ends in a semicolon
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Stmt {
-    Def(Define),
+    Def(LocalDefine),
     Expr(ExprStmt),
 }
 

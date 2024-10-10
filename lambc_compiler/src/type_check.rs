@@ -280,7 +280,7 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
         &mut self,
         def: Define<Var>,
         scheme: TypeScheme,
-    ) -> Result<tree::Define> {
+    ) -> Result<tree::TopDefine> {
         if def.value.is_recursive() {
             // Nothing to do in the case of a recursive bound because top-level definitions
             // now require types.
@@ -296,7 +296,7 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
         let (ast_unbound, expr) = sub.rigidify_expr(qual_value.item);
         unbound.extend(ast_unbound);
 
-        let (con_unbound, _cons) = sub.rigidify_constraints(qual_value.cons);
+        let (con_unbound, cons) = sub.rigidify_constraints(qual_value.cons);
         let ambiguities = con_unbound.difference(&unbound).count();
         assert_eq!(ambiguities, 0);
 
@@ -308,9 +308,9 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
 
         // let reduced = inf.reduce_constraints(&unbound, cons);
 
-        Ok(tree::Define {
-            ident: TypedVar(def.ident, ty),
-            typ: None,
+        Ok(tree::TopDefine {
+            ident: TypedVar(def.ident, ty.clone()),
+            typ: TypeScheme { unbound, constraints: cons, ty },
             value: expr,
             span: def.span,
         })
