@@ -1198,6 +1198,8 @@ fn convert_nil_literal(n: lambc_parse::NilLit) -> tree::NilLit {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use lambc_parse::{
         Block, BoolLit, Call, CharLit, CharText, Define, Expr, ExprStatement,
         F64Lit, FnDef, Group, I64Base, I64Lit, If, IfCond, Index, List,
@@ -1210,13 +1212,11 @@ mod tests {
         type_check::{
             context::Context, scheme::TypeScheme, substitution::Substitute,
             unification::Unifier, Constraint, Error, FnType, Qualified,
-            RigidVar, TyClass, Type, TypeInference, TypedVar, UnifiableVar,
+            Result, RigidVar, TyClass, Type, TypeInference, TypedVar,
+            UnifiableVar,
         },
         State,
     };
-
-    use crate::type_check::Result;
-    use std::collections::HashSet;
 
     impl<'ctx, 'state> TypeInference<'ctx, Context<'state>> {
         fn infer(

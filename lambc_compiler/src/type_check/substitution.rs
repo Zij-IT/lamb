@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use super::tree::{
-    ArrayPattern, Binary, Block, Call, Case, CaseArm, Else, Expr, ExprStmt,
-    FnDef, Group, IdentPattern, If, IfCond, Index, InnerPattern, List,
-    LocalDefine, Pattern, Return, Stmt, Unary,
+use super::{
+    tree::{
+        ArrayPattern, Binary, Block, Call, Case, CaseArm, Else, Expr,
+        ExprStmt, FnDef, Group, IdentPattern, If, IfCond, Index, InnerPattern,
+        List, LocalDefine, Pattern, Return, Stmt, Unary,
+    },
+    Constraint, FnType, RigidVar, Type, UnifiableVar,
 };
-
-use super::{Constraint, FnType, RigidVar, Type, UnifiableVar};
 use crate::type_check::TypedVar;
 
 pub trait SubstitutionContext {

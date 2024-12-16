@@ -18,6 +18,7 @@
 //! The start file and any ones imported are run through the compiler pipeline
 //! which at this point consists of name resolution and type-checking.
 //!
+mod analysis;
 mod module_parser;
 mod name_res;
 mod state;

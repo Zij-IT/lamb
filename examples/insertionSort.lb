@@ -1,0 +1,26 @@
+def insertionSort
+  : fn[t](list[t]) -> list[t]
+  = fn(xs) -> {
+
+    -- fn(m a, a) -> m a
+    let insert := rec fn(ys, y) -> case ys {
+      [head, rest @ ..] -> if y > head { [head] + insert(rest, y) } else { [y] + ys },
+      [] -> [y],
+    };
+
+    -- fn(m a, m a) -> m a
+    let impl := rec fn(xs, acc) -> case xs {
+      [a, rest @ ..] -> impl(rest, insert(a, acc)),
+      [] -> acc,
+    };
+
+    -- impl(xs, [])
+  };
+
+def main
+  : fn() -> nil
+  = fn() -> {
+    [1, 5, 2, 3, 7] $> insertionSort .> println;
+  };
+
+def _start: nil = main();

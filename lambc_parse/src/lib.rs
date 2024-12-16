@@ -35,6 +35,14 @@ impl Span {
     pub const fn connect(start: Self, end: Self) -> Self {
         Self { start: start.start, end: end.end }
     }
+
+    pub const fn start(self) -> usize {
+        self.start
+    }
+
+    pub const fn end(self) -> usize {
+        self.end
+    }
 }
 
 impl From<Span> for SourceSpan {

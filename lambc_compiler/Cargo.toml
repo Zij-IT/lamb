@@ -10,6 +10,7 @@ ena = "0.14.3"
 im = "15.1.0"
 lambc_parse = { path = "../lambc_parse" }
 miette = "7.2.0"
+ordered-float = "4.3.0"
 pretty_assertions = "1.4.0"
 slotmap = "1.0.7"
 thiserror = "1.0.56"

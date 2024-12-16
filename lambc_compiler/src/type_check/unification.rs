@@ -86,7 +86,8 @@ impl<'ctx, C: UnificationContext> Unifier<'ctx, C> {
             (Type::Con(c1), Type::Con(c2)) if c1 == c2 => Ok(()),
             (Type::List(l), Type::List(r)) => self.unify_ty_ty(*l, *r),
             (Type::UnifiableVar(l), Type::UnifiableVar(r)) => {
-                self.ctx.unify_var_var(l, r)
+                self.ctx.unify_var_var(l, r)?;
+                Ok(())
             }
             (Type::Fun(l), Type::Fun(r)) => {
                 if l.args.len() != r.args.len() {
@@ -123,7 +124,8 @@ impl<'ctx, C: UnificationContext> Unifier<'ctx, C> {
             }
             (Type::UnifiableVar(v), ty) | (ty, Type::UnifiableVar(v)) => {
                 self.occurs_check(&ty, v)?;
-                self.ctx.unify_var_value(v, Some(ty))
+                self.ctx.unify_var_value(v, Some(ty))?;
+                Ok(())
             }
             (Type::RigidVar(a), Type::RigidVar(b)) if a == b => Ok(()),
             (Type::Error, ..) | (.., Type::Error) => Ok(()),

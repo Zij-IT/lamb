@@ -16,7 +16,6 @@ use context::Context;
 use lambc_parse::{
     Define, Export, ExportItem, Import, ImportItem, Item, Module,
 };
-
 use miette::Diagnostic;
 use parsing::ParserContext;
 use substitution::{Substitute, SubstitutionContext};
@@ -285,7 +284,6 @@ impl<'c, 's> TypeCheckerImpl<'c, 's> {
             // Nothing to do in the case of a recursive bound because top-level definitions
             // now require types.
         }
-
         let mut inf = TypeInference::new(self.ctx);
         let mut qual_value = inf.check_expr(def.value, scheme.ty.clone());
         qual_value.cons.extend(scheme.constraints.clone());

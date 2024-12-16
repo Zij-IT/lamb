@@ -1,11 +1,10 @@
-use crate::{name_res::Var, State};
-
 use super::{
     inference::InferenceContext, instantiate::InstantiationContext,
     parsing::ParserContext, substitution::SubstitutionContext,
     unification::UnificationContext, Error, Result, RigidVar, Type, TypeEnv,
     UnifiableVar, VarEnv,
 };
+use crate::{name_res::Var, State};
 
 pub struct Context<'s> {
     pub state: &'s mut State,
