@@ -37,6 +37,9 @@ pub trait UnificationContext {
 
     /// Returns the current value of the `key`
     fn get(&mut self, key: UnifiableVar) -> Option<Type>;
+
+    /// Returns the root of the `key`
+    fn get_root(&mut self, key: UnifiableVar) -> UnifiableVar;
 }
 
 pub struct Unifier<'ctx, C> {
@@ -145,7 +148,7 @@ impl<'ctx, C: UnificationContext> Unifier<'ctx, C> {
             }),
             Type::UnifiableVar(v) => match self.ctx.get(v) {
                 Some(ty) => self.normalize_ty(ty),
-                None => Type::UnifiableVar(v),
+                None => Type::UnifiableVar(self.ctx.get_root(v)),
             },
         }
     }

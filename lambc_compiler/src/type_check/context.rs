@@ -62,6 +62,10 @@ impl UnificationContext for Context<'_> {
     fn get(&mut self, key: UnifiableVar) -> Option<Type> {
         self.types.uni_table.probe_value(key)
     }
+
+    fn get_root(&mut self, key: UnifiableVar) -> UnifiableVar {
+        self.types.uni_table.find(key)
+    }
 }
 
 impl SubstitutionContext for Context<'_> {

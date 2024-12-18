@@ -1,0 +1,5 @@
+def main
+  : fn()
+  = fn() -> {
+    let inf := rec fn(xs, acc) -> inf(acc[0], xs);
+  };
