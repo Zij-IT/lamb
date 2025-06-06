@@ -3,3 +3,5 @@ def id: fn[a](a) -> a = fn(x) -> x;
 def main
   : fn[t]() -> fn(t) -> t
   = fn() -> (id .> id .> id);
+
+def _result: fn(nil)->nil = main();

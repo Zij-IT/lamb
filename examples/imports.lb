@@ -8,3 +8,5 @@ def main
     -- state
     -- println(E::sub(3, 1));
   };
+
+def _result: nil = main();

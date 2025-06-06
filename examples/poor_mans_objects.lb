@@ -39,3 +39,5 @@ def main
 		print("Norm of v1:: ");
 		println(v1("norm"));
 	};
+
+def _result: nil = main();

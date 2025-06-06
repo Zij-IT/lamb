@@ -19,3 +19,5 @@ def num3: int = num_id(2);
 def main
   : fn(int) -> int
   = id1;
+
+def _result: nil = main();

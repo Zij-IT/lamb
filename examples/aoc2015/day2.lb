@@ -112,3 +112,5 @@ def main
     println(part_one);
     println(part_two);
   };
+
+def _result: nil = main();

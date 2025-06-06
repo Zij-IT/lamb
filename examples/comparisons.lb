@@ -61,3 +61,5 @@ def main
     assert([1,2] <= [1,2,3]);
     assert(([1,2,3,4] <= [1,2,3]) = false);
   };
+
+def _result: nil = main();

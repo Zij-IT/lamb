@@ -5,3 +5,5 @@ def int
 def main
   : fn() -> nil
   = fn() -> { int; };
+
+def _result: nil = main();

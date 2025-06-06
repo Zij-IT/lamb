@@ -11,3 +11,5 @@ def main
 
     0x; 0b; 0o; -- Prefixed number literals without an actual number
   };
+
+def _result: nil = main();

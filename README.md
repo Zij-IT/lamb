@@ -15,8 +15,14 @@ def part_one
     [] -> 0,
   };
 
-  print("Part One:: ");
-  input $> part_one .> println;
+def main
+  : fn()
+  = {
+    print("Part One:: ");
+    input $> part_one .> println;
+  };
+
+def _result = main();
 ```
 
 More examples can be found in the [examples](./examples) folder (though these are only updated per release, and not in between).

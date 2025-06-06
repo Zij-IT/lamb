@@ -11,3 +11,5 @@ def main
 		println("Enter a number to get the nth fibonacci number (n < 30 probably best)");
 		print(fib(user_int()));
 	};
+
+def _result: nil = main();

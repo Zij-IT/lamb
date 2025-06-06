@@ -29,3 +29,5 @@ def main
 		-- 	_ -> fib(x - 1) + fib(x - 2),
 		-- };	
 	};
+
+def _result: nil = main();

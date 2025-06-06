@@ -15,3 +15,5 @@ def main
     print("Should print 5:: ");
     2 $> inc .> dub .> dec .> println;
   };
+
+def _result: nil = main();
